@@ -63,17 +63,25 @@ export function createTeamProcessMethods(options: {
             case 'list': {
               const payload = object(envelope.payload, ['cursor']);
               const cursor = payload.cursor;
-              if (cursor !== undefined &&
-                  (typeof cursor !== 'string' ||
-                   /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.exec(cursor)?.[0] !== cursor))
+              if (
+                cursor !== undefined &&
+                (typeof cursor !== 'string' ||
+                  /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.exec(cursor)?.[0] !== cursor)
+              )
                 throw new Error('process:invalid');
               // Bind before native observation; another request id never changes the original catalog.
               const key = digest({ pageKey, binding: envelope.binding });
-              const rows = await call(() => target.commands.windows
-                ? target.commands.windows.list(deadline) : target.commands.list());
+              const rows = await call(() =>
+                target.commands.windows
+                  ? target.commands.windows.list(deadline)
+                  : target.commands.list()
+              );
               target.assertCurrent();
-              result = pageProcessCatalog({ rows, key,
-                ...(cursor === undefined ? {} : { cursor }) });
+              result = pageProcessCatalog({
+                rows,
+                key,
+                ...(cursor === undefined ? {} : { cursor }),
+              });
               break;
             }
             case 'pending.read':
@@ -83,9 +91,13 @@ export function createTeamProcessMethods(options: {
             case 'lookup': {
               const payload = object(envelope.payload, ['originalCommandId']);
               const originalCommandId = text(payload.originalCommandId);
-              result = receipt(await call(() => target.commands.windows
-                ? target.commands.windows.lookup(originalCommandId, deadline)
-                : target.commands.lookup(originalCommandId)));
+              result = receipt(
+                await call(() =>
+                  target.commands.windows
+                    ? target.commands.windows.lookup(originalCommandId, deadline)
+                    : target.commands.lookup(originalCommandId)
+                )
+              );
               break;
             }
             case 'register': {
@@ -102,18 +114,32 @@ export function createTeamProcessMethods(options: {
                   throw new Error('process:invalid');
               if (payload.port !== undefined && typeof payload.port !== 'number')
                 throw new Error('process:invalid');
-              const input = payload as { pid: number; label: string; port?: number; url?: string; command?: string };
-              result = receipt(await call(() => target.commands.windows
-                ? target.commands.windows.register(commandId, input, deadline)
-                : target.commands.register(commandId, input)));
+              const input = payload as {
+                pid: number;
+                label: string;
+                port?: number;
+                url?: string;
+                command?: string;
+              };
+              result = receipt(
+                await call(() =>
+                  target.commands.windows
+                    ? target.commands.windows.register(commandId, input, deadline)
+                    : target.commands.register(commandId, input)
+                )
+              );
               break;
             }
             case 'terminate': {
               const payload = object(envelope.payload, ['processRef']);
               const processRef = reference(payload.processRef);
-              result = receipt(await call(() => target.commands.windows
-                ? target.commands.windows.terminate(commandId, processRef, deadline)
-                : target.commands.terminate(commandId, processRef)));
+              result = receipt(
+                await call(() =>
+                  target.commands.windows
+                    ? target.commands.windows.terminate(commandId, processRef, deadline)
+                    : target.commands.terminate(commandId, processRef)
+                )
+              );
               break;
             }
             default: {

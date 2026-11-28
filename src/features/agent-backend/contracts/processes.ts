@@ -149,14 +149,24 @@ export function readBackendProcessCatalog(value: unknown): BackendProcessCatalog
   if (Array.isArray(value)) return readBackendProcesses(value);
   if (!value || typeof value !== 'object') throw new Error('Invalid process catalog page');
   const page = value as Record<string, unknown>;
-  const total = page.total, revision = page.revision, nextCursor = page.nextCursor;
-  if (page.kind !== 'process-catalog-page' || typeof total !== 'number' ||
-      !Number.isSafeInteger(total) || total < 1 || total > 1024 ||
-      typeof revision !== 'string' || revision.length !== 64 || !/^[a-f0-9]{64}$/.test(revision) ||
-      (nextCursor !== null && !isProcessCatalogCursor(nextCursor)))
+  const total = page.total,
+    revision = page.revision,
+    nextCursor = page.nextCursor;
+  if (
+    page.kind !== 'process-catalog-page' ||
+    typeof total !== 'number' ||
+    !Number.isSafeInteger(total) ||
+    total < 1 ||
+    total > 1024 ||
+    typeof revision !== 'string' ||
+    revision.length !== 64 ||
+    !/^[a-f0-9]{64}$/.test(revision) ||
+    (nextCursor !== null && !isProcessCatalogCursor(nextCursor))
+  )
     throw new Error('Invalid process catalog page');
   const processes = readBackendProcesses(page.processes);
-  if (!processes.length || processes.length > total) throw new Error('Invalid process catalog page');
+  if (!processes.length || processes.length > total)
+    throw new Error('Invalid process catalog page');
   return { kind: 'process-catalog-page', processes, total, revision, nextCursor };
 }
 

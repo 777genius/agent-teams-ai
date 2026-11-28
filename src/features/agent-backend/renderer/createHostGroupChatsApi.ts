@@ -129,12 +129,17 @@ export function createHostGroupChatsApi(
   }
   return {
     async list(request) {
-      if (!isHostTeamSelectionKey(request.teamName)) return legacy.list(request);
+      const { teamName } = request;
+      if (!isHostTeamSelectionKey(teamName)) return legacy.list(request);
       const scope = captureScope();
       return readHostGroupCatalog(
-        async (cursor) => (await invoke(request.teamName, {
-          operation: 'group.list', payload: cursor === undefined ? {} : { cursor },
-        })).value,
+        async (cursor) =>
+          (
+            await invoke(teamName, {
+              operation: 'group.list',
+              payload: cursor === undefined ? {} : { cursor },
+            })
+          ).value,
         () => {
           if (!scope()) throw new Error('Host group context changed');
         }

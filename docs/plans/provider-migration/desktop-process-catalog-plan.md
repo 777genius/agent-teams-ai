@@ -47,6 +47,7 @@ getData captures a copy of the original handle once and uses this reader for the
 The original independent Codex review reproduced the large accepted catalog through the real Desktop handler and HostOutput on e16383cc5a65706d508acdb6bc8965655125f0ba; the relevant source blobs are unchanged through the published plan. Retain that reported execution as baseline evidence. The new regression reaches the same handler and asserts actual frame admission before inspecting a page, so the old unbounded response fails at the transport boundary. Local execution of this new regression remains pending.
 
 After the change:
+
 - Real canonical process registration/public projection of at least 250 4096-character command rows, actual createTeamProcessMethods and actual HostOutput: each bounded frame accepted, no priority_overflow, decoded wire pages reconstruct every exact row in order under the unchanged default and review-v1 process frame cap.
 - Host negative controls: malformed/unknown cursor payload before Owner read; foreign binding/Host cursor; changed rows; revoked owner after an async Windows list; small and empty old shape.
 - Main input + actual process output projector + collector: complete large catalog, page kind/total/revision/cursor validation, duplicate/incomplete/mixed/repeated/overflow cases, 128-page ceiling, allowlisted rows and capabilities.
@@ -70,8 +71,16 @@ The local executor became unavailable before this slice could run. Independent s
 
 The independent baseline reproduction above is attributed to the original review, not to a local run by this implementation owner. The new Host and Main/renderer regressions, canonical package build, strict test compilation and current-source native acceptance are all pending at delivery. No local hook, compiler, unit, native or end-to-end PASS is claimed.
 
-The canonical Host test command builds the package, checks tsconfig.test.json, and includes tests/*.test.ts. Normal PR CI must establish the result. A failure requires a source or fixture correction followed by the normal checks on the resulting commit. No manual CI run, rerun, cancellation, change of limits or substitution of skipped/old results is authorized by this note.
+The canonical Host test command builds the package, checks tsconfig.test.json, and includes tests/\*.test.ts. Normal PR CI must establish the result. A failure requires a source or fixture correction followed by the normal checks on the resulting commit. No manual CI run, rerun, cancellation, change of limits or substitution of skipped/old results is authorized by this note.
 
 ## Delivery and coordination
 
 Review this plan twice against the actual call graph before publishing it. Publish the reviewed plan on the existing PR branch before production edits. Keep the branch open/unmerged, preserve incoming work and the reserved macOS files, and update by a normal fast-forward lease only. No external messages, manual CI reruns/dispatch/cancellation or default Host activation are included.
+
+## Local qualification after executor recovery — 2026-11-28
+
+The published process implementation was retained on `d4f4d989f126317642843381e573926ed9c8a30a` and executed locally after restoring that exact tree. Its six Host cases passed inside the 186-case combined Host cohort. This includes 250 canonical registrations with accepted 4096-character commands through the actual Desktop handler and `HostOutput`, unchanged default/review-v1 frame limits, complete decoded wire reconstruction, foreign binding/factory refusal, source drift, malformed payloads, small-array compatibility and the original asynchronous Windows observation port.
+
+The three Main files passed 132/132 cases with no skips: process catalog (42), existing team reads/getData (81), and process snapshot pages (9). The large catalog crosses the actual Main input/output projection and `getData`, preserving fresh termination capability and pending Stop identity while the independently paginated snapshot reports unknown observations. Context, owner handle and read-order changes reject the complete read without returning a partial catalog.
+
+Canonical Host build and the complete Host test typecheck passed. Scoped standard Prettier, fast lint and the whole-tree source-size guard passed; the formatted process handler is 188 lines and `createHostTeamsApi` is 751 lines. Formatting was compared byte-for-byte with the formatter output from the tested source and changed no behavior. The original baseline failure remains attributed to the original independent review; it was not rerun locally against an older implementation. Full current-head CI/native qualification remains outstanding.

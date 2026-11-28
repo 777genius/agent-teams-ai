@@ -8,16 +8,21 @@ export async function readHostProcessCatalog(
   assertCurrent: () => void
 ): Promise<BackendProcess[]> {
   const rows: BackendProcess[] = [];
-  const seen = new Set<string>(), cursors = new Set<string>();
+  const seen = new Set<string>(),
+    cursors = new Set<string>();
   let cursor: string | undefined, revision: string | undefined, total: number | undefined;
   for (let index = 0; index < 128; index++) {
     assertCurrent();
     let value: unknown;
-    try { value = await request(cursor); }
-    finally { assertCurrent(); }
+    try {
+      value = await request(cursor);
+    } finally {
+      assertCurrent();
+    }
     const result = readBackendProcessCatalog(value);
     if (Array.isArray(result)) {
-      if (cursor !== undefined || revision !== undefined) throw new Error('Mixed Host process pages');
+      if (cursor !== undefined || revision !== undefined)
+        throw new Error('Mixed Host process pages');
       assertCurrent();
       return result;
     }

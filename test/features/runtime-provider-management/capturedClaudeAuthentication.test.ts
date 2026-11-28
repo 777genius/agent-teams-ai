@@ -1,4 +1,7 @@
 // @vitest-environment node
+import crypto from 'node:crypto';
+import { syncBuiltinESMExports } from 'node:module';
+
 import { expect, it, vi } from 'vitest';
 
 import { readCapturedClaudeAuthentication } from '../../../src/features/runtime-provider-management/main/adapters/output/capturedClaudeAuthentication';
@@ -261,34 +264,67 @@ it('expires the original account token without a new capture or native command',
 it('retains finite original auth outcomes and context/decoding failures without private response text', async () => {
   const secret = 'TEST-private-account-error-and-path';
   const entries: unknown[] = [];
-  const stop = addLogSink(entry => {
+  const stop = addLogSink((entry) => {
     if (entry.namespace === 'RuntimeProvider:ClaudeAuthentication') entries.push(entry.args[1]);
   });
-  const value = { profileId: secret, configRevision: secret, loggedIn: true,
-    authMethod: 'api_key', canLogin: false, canLogout: false };
+  const value = {
+    profileId: secret,
+    configRevision: secret,
+    loggedIn: true,
+    authMethod: 'api_key',
+    canLogin: false,
+    canLogout: false,
+  };
   let current = true;
   let response: JsonValue = { ok: true, value };
   let failure: Error | undefined;
-  const target: CapturedProviderManagement = { targetId: secret, profileId: secret, configRevision: secret,
-    isCurrent: () => current, async request() { if (failure) throw failure; return response; } };
+  const target: CapturedProviderManagement = {
+    targetId: secret,
+    profileId: secret,
+    configRevision: secret,
+    isCurrent: () => current,
+    async request() {
+      if (failure) throw failure;
+      return response;
+    },
+  };
   try {
-    await expect(readCapturedClaudeAuthentication(target)).resolves.toMatchObject({ loggedIn: true, authMethod: 'api_key', canLogin: false });
+    await expect(readCapturedClaudeAuthentication(target)).resolves.toMatchObject({
+      loggedIn: true,
+      authMethod: 'api_key',
+      canLogin: false,
+    });
     response = { ok: true, value: { ...value, loggedIn: false, authMethod: 'none' } };
-    await expect(readCapturedClaudeAuthentication(target)).resolves.toMatchObject({ loggedIn: false });
+    await expect(readCapturedClaudeAuthentication(target)).resolves.toMatchObject({
+      loggedIn: false,
+    });
     response = { ok: false, code: 'held', error: secret };
-    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow('Provider management outcome unavailable');
+    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow(
+      'Provider management outcome unavailable'
+    );
     response = { ok: false, code: secret };
-    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow('Provider management outcome unavailable');
+    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow(
+      'Provider management outcome unavailable'
+    );
     response = { ok: true, value: { ...value, profileId: 'TEST-wrong-profile' } };
-    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow('Claude auth state unavailable');
+    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow(
+      'Claude auth state unavailable'
+    );
     response = { ok: true, value };
     current = false;
-    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow('Claude auth state unavailable');
+    await expect(readCapturedClaudeAuthentication(target)).rejects.toThrow(
+      'Claude auth state unavailable'
+    );
     current = true;
     failure = new Error(secret);
     await expect(readCapturedClaudeAuthentication(target)).rejects.toBe(failure);
     expect(entries).toEqual([
-      { profileHash: expect.stringMatching(/^[a-f0-9]{64}$/), stage: 'result', code: 'logged-in', authMethod: 'api_key' },
+      {
+        profileHash: expect.stringMatching(/^[a-f0-9]{64}$/),
+        stage: 'result',
+        code: 'logged-in',
+        authMethod: 'api_key',
+      },
       { profileHash: expect.any(String), stage: 'result', code: 'logged-out', authMethod: 'none' },
       { profileHash: expect.any(String), stage: 'outcome', code: 'host.held' },
       { profileHash: expect.any(String), stage: 'outcome', code: 'invalid-response' },
@@ -297,15 +333,19 @@ it('retains finite original auth outcomes and context/decoding failures without 
       { profileHash: expect.any(String), stage: 'request', code: 'unavailable' },
     ]);
     expect(JSON.stringify(entries)).not.toContain(secret);
-  } finally { stop(); }
+  } finally {
+    stop();
+  }
 });
 
 it.each(['target', 'account-read'] as const)(
   'cancels the original Claude caller during %s before creating an OAuth intent',
-  async stage => {
-    const f = fixture(), form = await f.load();
+  async (stage) => {
+    const f = fixture(),
+      form = await f.load();
     const input = f.input(form.setupForm!.connectionContextToken!);
-    const entered = Promise.withResolvers<void>(), released = Promise.withResolvers<void>();
+    const entered = Promise.withResolvers<void>(),
+      released = Promise.withResolvers<void>();
     const originalRequest = f.target.request.bind(f.target);
     const isCurrent = f.target.isCurrent.bind(f.target);
     f.target.isCurrent = () => {
@@ -314,28 +354,37 @@ it.each(['target', 'account-read'] as const)(
     };
     f.target.request = async (operation, payload) => {
       if (stage === 'account-read' && operation === 'claude.auth') {
-        entered.resolve(); await released.promise;
+        entered.resolve();
+        await released.promise;
       }
       return originalRequest(operation, payload);
     };
     const before = f.requests.length;
-    let settled = false, cancelStarted = false;
+    let settled = false,
+      cancelStarted = false;
     // Queue cancellation before the original target promise resumes, or while its account read waits.
     const cancellation = entered.promise.then(() => {
       cancelStarted = true;
       return f.oauth.cancel({ operationId: input.oauthOperationId });
     });
-    const pending = f.port.connectProvider(input).then(value => { settled = true; return value; });
+    const pending = f.port.connectProvider(input).then((value) => {
+      settled = true;
+      return value;
+    });
     try {
       await vi.waitFor(() => expect(cancelStarted).toBe(true), { timeout: 2_000 });
       const cancelled = await cancellation;
       released.resolve();
-      await vi.waitFor(() => expect(settled ||
-        f.requests.some(request => request.operation === 'oauth.start')).toBe(true));
+      await vi.waitFor(() =>
+        expect(settled || f.requests.some((request) => request.operation === 'oauth.start')).toBe(
+          true
+        )
+      );
       expect(cancelled).toEqual({ ok: true });
       expect(f.intents.size).toBe(0);
-      expect(f.requests.slice(before).map(request => request.operation))
-        .toEqual(stage === 'account-read' ? ['claude.auth'] : []);
+      expect(f.requests.slice(before).map((request) => request.operation)).toEqual(
+        stage === 'account-read' ? ['claude.auth'] : []
+      );
       expect(f.capture).toHaveBeenCalledTimes(1);
       expect(f.openExternal).not.toHaveBeenCalled();
       expect(f.fallback).not.toHaveBeenCalled();
@@ -349,3 +398,61 @@ it.each(['target', 'account-read'] as const)(
     }
   }
 );
+
+it('G1d fences a revoked connect sender during KDF while its earlier Claude form target stays current', async () => {
+  const f = fixture();
+  const form = await f.load();
+  const token = form.setupForm?.connectionContextToken;
+  if (!token) throw new Error('Expected original TEST form token');
+  const entered = Promise.withResolvers<void>(),
+    release = Promise.withResolvers<void>();
+  const originalScrypt = crypto.scrypt;
+  const mock = vi
+    .spyOn(crypto, 'scrypt')
+    .mockImplementation((...args: Parameters<typeof crypto.scrypt>) => {
+      entered.resolve();
+      void release.promise.then(() => originalScrypt(...args));
+    });
+  syncBuiltinESMExports();
+  let currentSender = true;
+  const originalRequest = f.target.request.bind(f.target);
+  f.target.request = async (operation, payload) => {
+    if (operation !== 'oauth.start') return originalRequest(operation, payload);
+    // Make the wrong late start finite while preserving the real dispatch counter.
+    f.requests.push({ operation, payload: structuredClone(payload) });
+    return {
+      ok: true,
+      value: {
+        operationId: String(payload.operationId),
+        profileId: f.target.profileId,
+        configRevision: f.target.configRevision,
+        providerId: 'anthropic',
+        methodIndex: 0,
+        phase: 'completed',
+        completionMethod: 'code',
+        sequence: 1,
+        expiresAt: Date.now() + 60000,
+      },
+    };
+  };
+  const pending = f.port.connectProvider(f.input(token), {
+    isCurrent: () => currentSender,
+  });
+  try {
+    await entered.promise;
+    currentSender = false;
+    expect(f.target.isCurrent()).toBe(true);
+    release.resolve();
+    const result = await pending;
+    expect(result.error).toBeDefined();
+    expect(f.intents.size).toBe(0);
+    expect(f.requests.filter((request) => request.operation === 'oauth.start')).toEqual([]);
+    expect(f.openExternal).not.toHaveBeenCalled();
+    expect(f.capture).toHaveBeenCalledTimes(1);
+  } finally {
+    release.resolve();
+    await pending;
+    mock.mockRestore();
+    syncBuiltinESMExports();
+  }
+});

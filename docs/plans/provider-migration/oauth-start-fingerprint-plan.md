@@ -1,6 +1,6 @@
 # PR #982 — G1d: protect OAuth start-field fingerprints and retain one original operation
 
-Status: focused execution qualification completed with the original-cleanup presentation correction below; full current-source PR qualification remains pending. The plan was published before G1d production changes. Its reviewed G1c baseline was 606 lines (SHA-256 e11c1629381d4713b8aafef68f7a39fc8b3056ed514c9985fed15c9c444dbd0f).
+Status: focused execution qualification completed with the original-cleanup presentation correction and the subsequent reconciliation below; full current-source PR qualification remains pending. The plan was published before G1d production changes. Its reviewed G1c baseline was 606 lines (SHA-256 e11c1629381d4713b8aafef68f7a39fc8b3056ed514c9985fed15c9c444dbd0f).
 
 ## Confirmed source problem and public flow
 
@@ -88,18 +88,15 @@ An initial write-then-throw has no admitted ActiveOAuth. Its pending-start clean
 ## Exact expected source ownership
 
 Main owner (frontend_parity):
+
 1. src/features/runtime-provider-management/main/adapters/output/CapturedProviderOAuth.ts
 2. src/features/runtime-provider-management/main/infrastructure/FileProviderOAuthIntentStore.ts
 3. src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderManagementClient.ts
 4. src/features/runtime-provider-management/main/adapters/output/withCapturedClaudeAuthentication.ts
 
-Host owner (root, after G1c freeze; provider_team_parity reviews read-only):
-5. packages/legacy-agent-host/src/management/OAuthOperationOwner.ts
-6. packages/legacy-agent-host/src/management/commandRecords.ts
+Host owner (root, after G1c freeze; provider_team_parity reviews read-only): 5. packages/legacy-agent-host/src/management/OAuthOperationOwner.ts 6. packages/legacy-agent-host/src/management/commandRecords.ts
 
-Shared narrow export (frontend_parity, coordinated with root):
-7. packages/legacy-agent-host/src/management/secretFingerprint.ts — serializer re-export only; algorithm unchanged.
-8. packages/legacy-agent-host/package.json — Node-only secret-fingerprint subpath, no dependency/lock/runtime changes.
+Shared narrow export (frontend_parity, coordinated with root): 7. packages/legacy-agent-host/src/management/secretFingerprint.ts — serializer re-export only; algorithm unchanged. 8. packages/legacy-agent-host/package.json — Node-only secret-fingerprint subpath, no dependency/lock/runtime changes.
 
 No G2 capture/profile/checkpoint schema or native SPI changes. No changes in reserved Mac sources. The reviewed G1c owner is 606 lines, so G1d has 194 additional physical lines in that file and must remain <=800 without a cap exception. If exact G1c final LOC makes that impossible, stop before G1d publication and review a narrow pure start-identity helper explicitly; do not silently split state ownership or expand this manifest.
 
@@ -108,6 +105,7 @@ No G2 capture/profile/checkpoint schema or native SPI changes. No changes in res
 First add failing functional regressions against unmodified G1d production. All credentials and roots are TEST-only; no native vendor launch.
 
 Main:
+
 - Real one-character secret field and empty-field start persist a descriptor; journal contains neither raw value nor old fast hash. Independently reproduce the original canonical legacy vector and new KDF bytes.
 - Exact duplicate before first read and during KDF invokes preparation/KDF/Host start once; changed fields/context conflicts. Mutating caller metadata after call has no effect.
 - Actual OpenCode caller cancel while capture and while catalog are blocked; actual Claude caller cancel while target/account read is blocked. Release those awaits and assert no Main intent/native start/browser/auto effect; callback never selects another target.
@@ -119,6 +117,7 @@ Main:
 - Existing Claude/OpenCode presentation, original code/cancel controls, native-owned browser and auto completion tests remain green.
 
 Host:
+
 - Real one-character fields and empty fields get private start descriptors, no fast parallel digest; original field order/canonical bytes and exact native inputs unchanged.
 - Controlled KDF barriers cover same-ID duplicate/different input, different resource same-ID claim, same namespace different ID, input mutation and original record replacement/missing.
 - Cancel/expiry/seal/close before KDF settlement: no initial receipt/native authorize; cancellation/cleanup do not wait for crypto; late callback cannot revive or release a successor. Original deadline verified with mocked Date before timer callback and checked remaining timeout.
@@ -140,7 +139,7 @@ The reviewed candidate changes the eight planned production files (+491/-156 lin
 
 Independent source reviews covered both owners, actual callers, original receipt replay, helper export and test barriers. They caught and corrected two draft issues before publication: preparation must capture the caller's original context before the first journal await; a receipt appearing during derivation or cleanup must permanently prevent a clean preclaim reservation release. These were draft findings, not claimed executions against the published baseline. A final source check also corrected the new import ordering.
 
-The local executor is unavailable. The planned local RED step, new runtime tests, compiler checks and hooks have not run for this candidate; no local PASS is claimed. Delivery uses the existing PR branch and the ordinary source-triggered CI. The ready-PR selectors include all affected files: the Host test job builds the package, strictly checks its tests and executes tests/*.test.ts; the Main shards include the three changed Vitest files; validate includes workspace types/build and the unchanged source-size guard. Those jobs must actually succeed on the resulting source, including the existing G1b/G1c and related integration tests. Source review or the presence of a queued job is not execution evidence.
+At that delivery the local executor was unavailable. The planned local RED step, new runtime tests, compiler checks and hooks had not run for that candidate; no local PASS was claimed. Delivery used the existing PR branch and the ordinary source-triggered CI. The ready-PR selectors include all affected files: the Host test job builds the package, strictly checks its tests and executes tests/\*.test.ts; the Main shards include the three changed Vitest files; validate includes workspace types/build and the unchanged source-size guard. Those jobs must actually succeed on the resulting source, including the existing G1b/G1c and related integration tests. Source review or the presence of a queued job is not execution evidence.
 
 The exact candidate preserves the independently published Desktop process catalog changes. No manual workflow control, CI rule change, merge into main, default Host activation, dependency/runtime pin change or native acceptance claim accompanies this delivery. CodeQL/G2 investigation and separately owned genuine native/macOS qualification remain distinct outstanding checks.
 
@@ -157,3 +156,38 @@ The first complete eight-file Main run exposed seven failures: six existing pres
 With that correction, the complete Main cohort passed 223/223 across eight files, zero skipped. It includes actual Main IPC, captured Desktop ownership, a standalone Host and a separate TEST process, plus new and legacy replay, cancellation barriers, complete process catalog reconstruction and snapshot paging. It launches no vendor CLI, uses only TEST roots and loopback HTTP, and does not qualify genuine native/macOS behavior. The normal pre-commit formatter applies only to the changed Main source; the existing production size limit remains intact.
 
 These results are finite local execution evidence. Required whole-PR CI on the resulting commit, the open CodeQL/G2 investigation and separately owned native/macOS acceptance still require their own successful results. No CI controls, protection changes, default activation, runtime pin changes or merge into main are part of this correction.
+
+## Current-source reconciliation and local execution — 2026-11-28
+
+After the executor recovered, the complete `d4f4d989f126317642843381e573926ed9c8a30a` source tree was restored and verified against its Git object hashes. The independently published candidate was compared with the earlier reviewed work before applying changes. Its immediate caller-context capture before the first journal await, original cancellation token, all incoming regressions, and Host preclaim cleanup/namespace-release behavior were preserved.
+
+The reconciliation stays within the existing owners. Main carries the current Claude sender assertion through fresh admission, checks the immutable original after its own create and around retained Host reads, refuses cancellation through a foreign winning route, returns the same public Promise to exact direct duplicates, and clears confirmed cancellation presentation once under original authority. Progress checks authority before every listener. Host adds an original-admission check immediately after the final receipt read and immediately after the first claim write; a loss at the latter boundary preserves the uncertain original claim and held custody without native authorization or a public success transition.
+
+Root and an independent reviewer checked the exact two Host guards before implementation. Frontend, root and coordination reviews checked the minimal Main reconciliation; its two production paths preserve the incoming preparation order. The changes introduce no owner, persistence format, wire operation, KDF implementation, dependency pin or raised limit.
+
+| Executed check                                                         | Result                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Main baseline on unchanged `d4f4d989`                                  | 16 FAIL / 39 PASS across the OAuth and Claude files. Failures include six existing terminal-clear assertions and the focused context/receipt/cancellation controls.                                                                          |
+| Host baseline on unchanged `d4f4d989` build                            | All eight new read/write-boundary cases FAIL because admission incorrectly succeeds after writer, target, seal or original-deadline loss.                                                                                                    |
+| Host boundary cases after the two guards                               | 8/8 PASS, zero skipped.                                                                                                                                                                                                                      |
+| Main OAuth, Claude and public management-client cohort                 | 87/87 PASS, zero skipped, including the incoming context-before-journal control.                                                                                                                                                             |
+| Combined Host management and catalog cohort                            | 186/186 PASS, zero skipped, across 13 files: original G1b/G1c, new G1d, durable cleanup, credentials, store, identity, fingerprint, OpenCode/Claude adapters, actual Desktop process frames, native MCP/HTTP process pages and group frames. |
+| Canonical Host build and complete Host test typecheck                  | PASS using Node 24.21.0 and the existing TypeScript 7.0.2 compiler.                                                                                                                                                                          |
+| Strict scoped Desktop compilation                                      | PASS for 21 source/test roots with inherited canonical compiler options and source declarations. This is not the whole Desktop project.                                                                                                      |
+| Scoped standard formatting, fast lint and whole-tree source-size guard | PASS. Formatted Main OAuth is 707 lines; Host OAuth is 735 lines. Caps and frozen exceptions are unchanged.                                                                                                                                  |
+
+These cohorts are separate evidence, not an assertion that overlapping focused checks add unique tests. The full canonical Desktop typecheck was stopped with exit 137 without compiler diagnostics and is not a PASS. Scoped type-aware ESLint was also terminated with SIGKILL before a verdict; the successful fast lint does not replace it. Current-head CI, type-aware qualification, genuine native scenarios and the independent G2 investigation remain required. Local fixture and HTTP/process-port tests do not qualify real vendor/native behavior.
+
+### Reconciliation with the incoming cleanup correction
+
+The subsequent `b26f085a65b982be213750795926614b154cb9b0` correction and its four regressions were retained. The integrated Main helper handles the same five observed cleanup states. An original-operation high-water mark records sequence, public phase and completion method before listeners run: an older reply cannot regress newer progress, an identical projection is emitted once, and a genuinely later outcome remains visible. Normal progress, explicit cancel and failure cleanup use that same helper.
+
+A cold cancel uses a request-local immutable original intent and the restored original target. Its presentation requires an unchanged original journal, original target/profile/configuration, current foreground and absence of a new active operation. Each listener receives a fresh authority check. Suppressing stale presentation does not turn an actually confirmed native cancellation into a failed control response. No persistent tombstone, new owner or fresh target selection is introduced.
+
+The four incoming outcomes and two ordering controls failed against the preceding local helper. A separate cold-control run, after correcting a fixture observation typo, produced two behavioral failures and three passes; fixture setup errors are not counted as regressions. One unrelated timing failure from the first full RED run passed when its unchanged control was run alone, without a timeout or assertion change.
+
+After the reviewed merge, OAuth passed 57/57, Claude 9/9 and the captured management client 32/32, all with zero skips. Root and the independent reviewer approved the exact formatted 757-line OAuth owner and its controls. The first merged OAuth invocation was killed before a result; the successful run used one fork worker and a smaller 384 MiB heap with the same test code and deadlines. The current 21-root strict Desktop compilation then passed again using inherited canonical compiler options. Scoped fast lint, standard formatting, the whole-tree source-size guard and whitespace checks also passed.
+
+The actual IPC-to-Host controlled-process E2E was attempted with one fork worker at 384 MiB, one fork worker at 256 MiB, and one thread worker at 384 MiB. The first lost its worker IPC channel; the latter attempts were killed with SIGKILL. No invocation produced a test verdict or final receipt. The second TEST root records one fixture process launch; it is not reported as effect-free. The cause of the termination was not established, and no OOM claim is made. Assertions, the original test deadline and the Host/native fixture were unchanged. These attempts do not qualify the current source, and no further unchanged resource retry was performed.
+
+The later `7a66b8eb58d2ab46a98a5a6a8dce082561681d86` commit adds only the separate OpenCode auth-progress plan. Its document was imported without changing any tested source. That six-file implementation belongs to the parallel owner; this reconciliation does not replace it.
