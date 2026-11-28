@@ -7,6 +7,7 @@ import { createFilesystemTeamOwner } from '@agent-teams/legacy-agent-host/team/f
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { boundProductCommandReceipt } from '../../../packages/legacy-agent-host/dist/team/boundProductCommandReceipt.js';
+import { runtimeInputFits } from '../../../packages/legacy-agent-host/dist/runtime/runtimeDelivery.js';
 import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
 
 import type { CommandReceipt } from '../../../packages/legacy-agent-host/src/team/contracts';
@@ -74,6 +75,8 @@ describe('original Host message delivery projection', () => {
   it('acknowledges a large accepted message and recovers its original delivery without repeating the effect', () => {
     const owner = createFilesystemTeamOwner({
       root: join(root, 'large-message'), binding,
+      // This projection fixture represents a captured Runtime with a 1 MiB input budget.
+      inputPreflight: ({ content }) => runtimeInputFits(content, 1024 * 1024),
       members: [{ memberId: delivery.memberId, name: 'alice', role: 'member', delivery }],
       grants: [{ principalId: 'TEST-human', memberName: 'user', permissions: ['read', 'message.write'] }],
     });
@@ -88,6 +91,9 @@ describe('original Host message delivery projection', () => {
     const receipt = human.execute(command);
     expect(receipt.phase).toBe('completed');
     const saved = structuredClone(receipt);
+    expect(Buffer.byteLength(JSON.stringify({ ok: true, value: saved }))).toBeGreaterThan(
+      768 * 1024
+    );
     for (const operation of ['message.send', 'command.lookup'] as const) {
       const response = boundProductCommandReceipt(
         operation === 'command.lookup' ? human.lookup(command.commandId)! : receipt

@@ -664,16 +664,18 @@ describe('selected Team attachment publication', () => {
       payload: { to: 'captain', text: 'Inspect', attachments: [reference] },
     });
     const intent = f.connection.pendingDeliveries()[0]!;
+    const profile = {
+      provider: 'claude',
+      model: 'claude-haiku-4-5',
+      principalId: 'TEST-human',
+      configRevision: 'TEST-revision',
+    };
     const entry = {
       team: f.hosted,
       binding: f.delivery,
       delivery: f.delivery,
-      profile: {
-        provider: 'claude',
-        model: 'claude-haiku-4-5',
-        principalId: 'TEST-human',
-        configRevision: 'TEST-revision',
-      },
+      baseProfile: profile,
+      profile,
     } as unknown as MemberEntry;
     const operationRef = 'TEST-operation';
     const record = {

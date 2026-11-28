@@ -46,7 +46,7 @@ const id = z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value));
 export const localModelReadinessTransferSchema = z.object({
   preparationId: id,
   remainingMs: z.number().int().min(1).max(100000),
-  probes: z.array(z.object({ commandId: id, selection: teamModelProbeSelectionSchema }).strict())
+  probes: z.array(z.object({ commandId: id, selection: z.lazy(() => teamModelProbeSelectionSchema) }).strict())
     .min(1).max(256),
   roster: z.object({ commandId: id, expected: replaceRosterPayloadSchema }).strict(),
   projectContext: projectReadinessLocatorSchema.optional(),
