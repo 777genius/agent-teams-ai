@@ -341,15 +341,17 @@ export function shouldReadWindowsHostRowsForMemberLane(params: {
   adapterRuntimeAlive: boolean | undefined;
   adapterBootstrapConfirmed: boolean | undefined;
 }): boolean {
+  const nativeProcess = !params.isOpenCodeLaneMember && params.backendType === 'process';
   return (
     params.platform === 'win32' &&
     (params.isOpenCodeLaneMember || params.backendType !== 'tmux') &&
     (params.evidenceOwner === 'primary' ||
       (params.evidenceOwner === 'secondary' && params.isOpenCodeLaneMember) ||
       (params.evidenceOwner === 'none' &&
-        params.isOpenCodeLaneMember &&
+        (params.isOpenCodeLaneMember || nativeProcess) &&
         params.recordedRuntimePid != null)) &&
     (params.evidenceOwner === 'secondary' ||
+      (nativeProcess && params.recordedRuntimePid != null) ||
       (params.adapterRuntimeAlive !== true && params.adapterBootstrapConfirmed !== true))
   );
 }

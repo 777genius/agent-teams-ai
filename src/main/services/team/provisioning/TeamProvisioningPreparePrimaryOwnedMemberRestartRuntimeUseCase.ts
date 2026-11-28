@@ -1,3 +1,6 @@
+import { execFileSync } from 'node:child_process';
+import { win32 } from 'node:path';
+
 import {
   killTmuxPaneForCurrentPlatformSync,
   listRuntimeProcessTableForCurrentPlatform,
@@ -6,6 +9,7 @@ import {
 } from '@features/tmux-installer/main';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
+import { processProbeDiagnostic } from '@main/utils/processProbeDiagnostics';
 import { createLogger } from '@shared/utils/logger';
 
 import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
@@ -27,6 +31,7 @@ export interface PrimaryOwnedMemberRestartLiveRuntimeMetadata {
   alive?: boolean;
   backendType?: string;
   pid?: number;
+  metricsPid?: number;
 }
 
 export interface PreparePrimaryOwnedMemberRestartRuntimeInput {
@@ -83,11 +88,59 @@ export type PreparePrimaryOwnedMemberRestartRuntimeUseCase = (
   input: PreparePrimaryOwnedMemberRestartRuntimeInput
 ) => Promise<PreparePrimaryOwnedMemberRestartRuntimeResult>;
 
+// Restart needs one fresh native command, not a whole-table census that can
+// time out even when the tracked worker is still present.
+function readRestartProcessCommandByPid(pid: number): string | null {
+  if (process.platform !== 'win32') return readProcessCommandByPid(pid);
+  if (!Number.isSafeInteger(pid) || pid <= 0) return null;
+  const script = [
+    '$ErrorActionPreference = "Stop"',
+    '$ProgressPreference = "SilentlyContinue"',
+    '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
+    `(Get-CimInstance Win32_Process -Filter 'ProcessId = ${pid}' -ErrorAction Stop).CommandLine`,
+  ].join('; ');
+  // Use the same native executable and bounded probe budget as the Windows
+  // product evidence collector; the Electron sandbox PATH may differ.
+  const powershell = win32.join(
+    process.env.SystemRoot || 'C:\\Windows',
+    'System32',
+    'WindowsPowerShell',
+    'v1.0',
+    'powershell.exe'
+  );
+  const timeoutMs = 15_000;
+  const startedAt = performance.now();
+  let command: string;
+  try {
+    command = execFileSync(
+      powershell,
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-EncodedCommand',
+        Buffer.from(script, 'utf16le').toString('base64'),
+      ],
+      { encoding: 'utf8', timeout: timeoutMs, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] }
+    ).trim();
+  } catch (error) {
+    // Never copy native stdout/stderr or the command itself into the error.
+    throw new Error(processProbeDiagnostic(
+      'windows_restart_pid_command', startedAt, timeoutMs, 'probe failed', error
+    ));
+  }
+  if (!command) {
+    throw new Error(processProbeDiagnostic(
+      'windows_restart_pid_command', startedAt, timeoutMs, 'empty native command'
+    ));
+  }
+  return command;
+}
+
 export function createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase(): PreparePrimaryOwnedMemberRestartRuntimeUseCase {
   return createPreparePrimaryOwnedMemberRestartRuntimeUseCase({
     listTmuxPaneRuntimeInfo: (paneIds) => listTmuxPaneRuntimeInfoForCurrentPlatform(paneIds),
     listRuntimeProcesses: (options) => listRuntimeProcessTableForCurrentPlatform(options),
-    readProcessCommandByPid,
+    readProcessCommandByPid: readRestartProcessCommandByPid,
     killTmuxPane: (paneId) => killTmuxPaneForCurrentPlatformSync(paneId),
     killProcess: (pid) => killProcessByPid(pid),
     waitForPidsToExit,
@@ -99,7 +152,8 @@ export function createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase(): Prep
 }
 
 export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
-  ports: PreparePrimaryOwnedMemberRestartRuntimeUseCasePorts
+  ports: PreparePrimaryOwnedMemberRestartRuntimeUseCasePorts,
+  platform: NodeJS.Platform = process.platform
 ): PreparePrimaryOwnedMemberRestartRuntimeUseCase {
   return async (input) => {
     const targetMemberName = input.memberName.trim();
@@ -125,6 +179,7 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
 
     const livePids = new Set<number>();
     let hasAliveRuntimeWithoutPid = false;
+    let nativePidFailure: string | undefined;
     for (const [candidateName, metadata] of liveRuntimeByMember.entries()) {
       if (!matchesMemberNameOrBase(candidateName, input.memberName)) {
         continue;
@@ -139,13 +194,45 @@ export function createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
         continue;
       }
       if (metadata.alive) {
+        const nativePid = metadata.metricsPid;
+        // The Windows snapshot can have a telemetry PID but no actionable PID.
+        // Verify the exact native command anew; never kill based on telemetry alone.
+        if (
+          platform === 'win32' &&
+          metadata.backendType?.trim().toLowerCase() === 'process' &&
+          typeof nativePid === 'number' &&
+          Number.isSafeInteger(nativePid) &&
+          nativePid > 0
+        ) {
+          const command = ports.readProcessCommandByPid(nativePid) ?? '';
+          const teamMatches = commandArgEquals(command, '--team-name', input.teamName);
+          const agentMatches = commandArgEquals(
+            command,
+            '--agent-id',
+            `${candidateName}@${input.teamName}`
+          );
+          if (teamMatches && agentMatches) {
+            livePids.add(nativePid);
+            continue;
+          }
+          nativePidFailure = !command
+            ? 'native command unavailable'
+            : !teamMatches
+              ? 'native team identity not verified'
+              : 'native agent identity not verified';
+        } else if (platform === 'win32') {
+          nativePidFailure =
+            metadata.backendType?.trim().toLowerCase() !== 'process'
+              ? 'direct process backend not established'
+              : 'native telemetry pid unavailable';
+        }
         hasAliveRuntimeWithoutPid = true;
       }
     }
 
     if (hasAliveRuntimeWithoutPid) {
       throw new Error(
-        `Member "${input.memberName}" is running, but its backend does not expose a restartable pid yet`
+        `Member "${input.memberName}" is running, but its backend does not expose a restartable pid yet${nativePidFailure ? ` (${nativePidFailure})` : ''}`
       );
     }
 

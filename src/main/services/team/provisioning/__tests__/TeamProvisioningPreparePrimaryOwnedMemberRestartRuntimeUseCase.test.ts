@@ -576,6 +576,45 @@ describe('TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase', () =>
     expect(noPidPorts.calls.killedPids).toEqual([]);
   });
 
+  it.each([
+    { command: 'claude.exe --team-name team-a --agent-id Worker@team-a', verified: true },
+    { command: 'claude.exe --team-name team-b --agent-id Worker@team-b', verified: false },
+    { command: 'claude.exe --team-name team-a --agent-id Other@team-a', verified: false },
+    { command: null, verified: false },
+  ])(
+    'verifies the Windows telemetry PID before restart: $command',
+    async ({ command, verified }) => {
+      const { calls, ports } = createPorts({
+        processCommandByPid: (pid) => (pid === 222 ? command : null),
+      });
+      const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(
+        ports,
+        'win32'
+      );
+      const restart = prepareRestartRuntime({
+        teamName: 'team-a',
+        memberName: 'Worker',
+        persistedRuntimeMembers: [{ name: 'Worker', backendType: 'process' }],
+        invalidateRuntimeSnapshotCaches: () => undefined,
+        loadLiveRuntimeByMember: async () =>
+          new Map([['Worker', { alive: true, backendType: 'process', metricsPid: 222 }]]),
+      });
+
+      if (verified) {
+        await expect(restart).resolves.toEqual({
+          directTmuxRestartPaneId: null,
+          shouldDirectProcessRestart: true,
+        });
+        expect(calls.killedPids).toEqual([222]);
+        expect(calls.waitPidCalls.map((call) => call.pids)).toEqual([[222]]);
+      } else {
+        await expect(restart).rejects.toThrow('does not expose a restartable pid yet');
+        expect(calls.killedPids).toEqual([]);
+        expect(calls.waitPidCalls).toEqual([]);
+      }
+    }
+  );
+
   it('rejects live in-process runtime metadata with a pid before stop attempts', async () => {
     const { calls, ports } = createPorts();
     const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);

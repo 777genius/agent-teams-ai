@@ -1828,6 +1828,32 @@ describe('shouldReadWindowsHostRowsForMemberLane', () => {
     ).toBe(true);
   });
 
+  it('discovers registered native process identities after bootstrap', () => {
+    const nativeMember = {
+      ...laneDefaults,
+      platform: 'win32' as const,
+      isOpenCodeLaneMember: false,
+      evidenceOwner: 'none' as const,
+      adapterRuntimeAlive: true,
+      adapterBootstrapConfirmed: true,
+    };
+    for (const evidenceOwner of ['primary', 'none'] as const) {
+      expect(shouldReadWindowsHostRowsForMemberLane({ ...nativeMember, evidenceOwner })).toBe(true);
+    }
+    for (const platform of ['linux', 'darwin'] as const) {
+      expect(shouldReadWindowsHostRowsForMemberLane({ ...nativeMember, platform })).toBe(false);
+    }
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({ ...nativeMember, recordedRuntimePid: undefined })
+    ).toBe(false);
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({ ...nativeMember, backendType: 'tmux' })
+    ).toBe(false);
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({ ...nativeMember, evidenceOwner: 'secondary' })
+    ).toBe(false);
+  });
+
   it('does not read the host table for a tmux-backed member that is not an OpenCode lane', () => {
     expect(
       shouldReadWindowsHostRowsForMemberLane({
