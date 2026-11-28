@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChildProcess } from 'child_process';
 
-vi.mock('child_process', () => ({ execFile: vi.fn() }));
+vi.mock('child_process', () => {
+  const execFile = vi.fn();
+  return { execFile, default: { execFile } };
+});
 import { execFile } from 'child_process';
 import {
   captureWindowsProcessTree,

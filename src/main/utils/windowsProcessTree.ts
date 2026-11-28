@@ -1,4 +1,4 @@
-import { execFile, type ChildProcess } from 'child_process';
+import { type ChildProcess, execFile } from 'child_process';
 import path from 'path';
 
 /** Original Win32 PID plus creation time; numeric PID alone is not ownership. */
@@ -79,8 +79,7 @@ export function captureWindowsProcessTree(
     byParent.set(row.parentPid, siblings);
   }
   const captured = [root], seen = new Set([root.pid]);
-  for (let i = 0; i < captured.length; i++) {
-    const parent = captured[i]!;
+  for (const parent of captured) {
     for (const child of byParent.get(parent.pid) ?? []) {
       if (seen.has(child.pid)) continue;
       if (!child.birth) throw new Error('Windows descendant identity unavailable');
@@ -109,8 +108,7 @@ export function extendObservedWindowsProcessTree(
   }
   const observed = [...originals];
   const known = new Set(observed.map(row => row.pid + ':' + row.birth));
-  for (let i = 0; i < observed.length; i++) {
-    const parent = observed[i]!;
+  for (const parent of observed) {
     if (!parent.birth) throw new Error('Windows observed parent identity unavailable');
     for (const child of byParent.get(parent.pid) ?? []) {
       // A reused PID is not the same original birth; fail conservatively if
