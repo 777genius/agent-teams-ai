@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+
 import {
   killTmuxPaneForCurrentPlatformSync,
   listRuntimeProcessTableForCurrentPlatform,
@@ -6,7 +8,6 @@ import {
 } from '@features/tmux-installer/main';
 import { isProcessAlive } from '@main/utils/processHealth';
 import { killProcessByPid } from '@main/utils/processKill';
-import { execFileSync } from 'node:child_process';
 import { createLogger } from '@shared/utils/logger';
 
 import { commandArgEquals } from '../TeamRuntimeLivenessResolver';
