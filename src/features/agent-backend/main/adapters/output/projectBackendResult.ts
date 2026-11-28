@@ -3,8 +3,8 @@ import { isDeepStrictEqual } from 'node:util';
 import { attachmentReferenceSchema } from '@agent-teams/legacy-agent-host/attachments/contracts';
 import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import {
-  readGroupCommand,
   readGroupCatalogValue,
+  readGroupCommand,
   readGroupReaction,
 } from '@agent-teams/legacy-agent-host/group-chats/public-values';
 

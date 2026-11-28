@@ -51,7 +51,7 @@ export class TeamQueuedMessages {
       if (receipt.command.operation === 'message.send' && (digest({ ...(source as Record<string, unknown>), read: false }) !== digest(original) ||
         receipt.effects.deliveryId !== intent.deliveryId || receipt.principalId !== intent.principalId || receipt.authorityRevision !== intent.authorityRevision ||
         digest(receipt.deliveryBinding) !== digest(intent.binding) ||
-        formatTeamMessage(receipt.command.payload, 'user', receipt.effects.messageId, receipt.messageRecipientRole, receipt.crossTeam) !== intent.content)) throw new TeamOwnerError('hold');
+        formatTeamMessage(receipt.command.payload, 'user', receipt.effects.messageId, receipt.messageRecipientRole, receipt.crossTeam, receipt.group) !== intent.content)) throw new TeamOwnerError('hold');
       return [{ row, rowDigest: digest(source), intent: structuredClone(intent) }];
     });
   }

@@ -239,8 +239,7 @@ function payload(
         !['todo', 'in_progress', 'done', 'review', 'approved'].includes(p.columnId)
       )
         throw new InvalidBackendOperation();
-      if (!Array.isArray(p.orderedTaskIds) || p.orderedTaskIds.length > 1000)
-        throw new InvalidBackendOperation();
+      if (!Array.isArray(p.orderedTaskIds)) throw new InvalidBackendOperation();
       const orderedTaskIds = p.orderedTaskIds.map((id) => text(id));
       if (new Set(orderedTaskIds).size !== orderedTaskIds.length)
         throw new InvalidBackendOperation();

@@ -8,7 +8,7 @@ import { processTable } from './desktop-backend-observations.ts';
 import { openDesktopEmulatedBootChat } from './desktop-emulated-boot-chat.ts';
 import { readDesktopEmulatedRuntimeEffects, verifyDesktopEmulatedRuntimeFixture, type prepareDesktopEmulatedRuntimeFixture } from './desktop-emulated-runtime-fixture.ts';
 import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
-import { sendDesktopNativeCommandFromComposer } from './desktop-native-commands-ui-proof.ts';
+import { captureDesktopCodexCostReply, sendDesktopNativeCommandFromComposer } from './desktop-native-commands-ui-proof.ts';
 import { json, record, rows } from './desktop-resume-records.ts';
 import { revealDesktopReply } from './desktop-reply-visibility.ts';
 import { EDITED_SCHEDULE_LABEL, LEGACY_SCHEDULE_ID, LEGACY_SCHEDULE_LABEL } from './desktop-schedule-fixture.ts';
@@ -393,18 +393,10 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
     assert.deepEqual((await session()).inputs, inputsBeforeCost);
     assert.equal((await effects()).filter(row => row.event === 'input').length, turnsBeforeCost);
     assert.ok(typeof cost.reply.messageId === 'string' && cost.reply.messageId.length > 0);
-    const costCard = `[data-timeline-row-key=${literal(cost.reply.messageId)}] article.activity-timeline-card`;
-    const expanded = await ui.waitRead(`(()=>{const rows=document.querySelectorAll(${literal(costCard)});return rows.length===1?rows[0].getAttribute('data-expanded'):null})()`, 'one original Codex /cost report card');
-    assert.ok(expanded === 'true' || expanded === 'false');
-    if (expanded === 'false') {
-      const header = `${costCard} > div[role="button"]`;
-      await ui.scrollTo(header, 'original Codex /cost report header');
-      await ui.click(header, 'expand original Codex /cost report once');
-      await ui.waitRead(`document.querySelector(${literal(costCard)})?.getAttribute('data-expanded')==='true'`, 'original Codex /cost report expanded');
-    }
-    await revealDesktopReply(cdp, String(cost.reply.text), { messageId: cost.reply.messageId,
-      assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value) });
-    proof.costScreenshot = await screenshot('cost'); proof.cost = cost;
+    proof.costScreenshot = await captureDesktopCodexCostReply(cdp, ui,
+      { messageId: cost.reply.messageId, text: String(cost.reply.text) },
+      { assertOwnedRenderer: options.assertOwnedRenderer, step: value => steps.push(value), screenshot: () => screenshot('cost') });
+    proof.cost = cost;
   } else if (provider === 'claude') {
     const expectedCatalog = ['/compact', '/cost', '/review', '/test-desktop-skill'], commandProofs: Row[] = [];
     for (const [name, args, expected] of [

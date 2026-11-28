@@ -3,7 +3,6 @@ import { digest, effectId } from '../team/identity.js';
 import { assertTeamExecutionAllowed } from '../team/teamLifecycleAdmission.js';
 import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { parseLiveRosterResponse } from '../team/liveRosterMembership.js';
-import { runtimeDigest } from '../runtime/identity.js';
 import { assertProjectLifecycleIdle } from './projectLifecyclePlan.js';
 import { assertProjectReviewFlowIdle } from './HostProjectReviewFlow.js';
 import { activeProjectDefinitionPlan, readProjectDefinitionPlan, writeProjectDefinitionPlan,
@@ -165,8 +164,8 @@ export class HostProjectDefinitionEdits {
         if (response.ok && 'liveRosterCapture' in response) return { ...response, projectDefinition: {
           logicalCommandId: input.commandId, logicalHandleId: target.handleId,
           logicalTeamId: target.team.definition.binding.teamId, logicalExpectedRevision: original.expectedRevision,
-          logicalRequestDigest: runtimeDigest({ commandId: input.commandId, payload: original }),
-          selectionDigest: runtimeDigest({ handleId: captured.record.binding.handleId,
+          logicalRequestDigest: digest({ commandId: input.commandId, payload: original }),
+          selectionDigest: digest({ handleId: captured.record.binding.handleId,
             scope: captured.record.binding.scope, payload: captured.payload, liveRosterCapture: response.liveRosterCapture }),
         } };
         if (!response.ok || !('value' in response)) return held();

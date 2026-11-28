@@ -96,7 +96,6 @@ export function validateTeamCommand(command: TeamCommand): void {
       if (
         !['todo', 'in_progress', 'done', 'review', 'approved'].includes(columnId) ||
         !Array.isArray(orderedTaskIds) ||
-        orderedTaskIds.length > 1000 ||
         new Set(orderedTaskIds).size !== orderedTaskIds.length
       )
         throw new TeamOwnerError('invalid');

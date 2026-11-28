@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createHostTeamsApi } from '../../../src/features/agent-backend/renderer/createHostTeamsApi';
+import { createHostDefinitionEdits } from '../../../src/features/agent-backend/renderer/createHostDefinitionEdits';
 import { prepareHostProjectLaunch } from '../../../src/features/agent-backend/renderer/createHostProjectContextApi';
 import { projectHostTeamSummaries } from '../../../src/features/agent-backend/renderer/projectHostTeamSummaries';
 import { hostTeamSelectionKey } from '../../../src/features/agent-backend/contracts/teamSelection';
@@ -14,7 +15,7 @@ const revision = 'a'.repeat(64), nextRevision = 'b'.repeat(64);
 const rootHandle = { handleId: 'TEST-logical' }, childHandle = { handleId: 'TEST-child' };
 const key = hostTeamSelectionKey(rootHandle.handleId), childKey = hostTeamSelectionKey(childHandle.handleId);
 function fixture() {
-  let current = true;
+  let current = true, scopeVersion = 0;
   const bindings: BackendConnectionSnapshot['bindings'] = [
     { handle: { ...rootHandle }, label: 'TEST logical', ownerResourceRef: 'TEST-owner', teamResourceRef: 'TEST-root-resource', projectContextMode: 'per_project', members: [] },
     { handle: { ...childHandle }, label: 'TEST history', ownerResourceRef: 'TEST-owner', teamResourceRef: 'TEST-child-resource',
@@ -49,7 +50,32 @@ function fixture() {
   const legacy = { getProjectContextView: vi.fn(), updateConfig: vi.fn(), updateMemberSettings: vi.fn(), getMemberSettingsTarget: vi.fn(),
     definitionEdits: { updateConfig: vi.fn() } } as unknown as TeamsAPI;
   return { backend, legacy, configuration, bindings, current: () => current, revoke: () => { current = false; },
-    teams: createHostTeamsApi(legacy, backend, () => () => current) };
+    replaceScope: () => { scopeVersion++; },
+    teams: createHostTeamsApi(legacy, backend, () => {
+      const originalScope = scopeVersion;
+      return () => current && scopeVersion === originalScope;
+    }) };
+}
+function settingsRequest(commandId = 'TEST-retry-settings') {
+  return {
+    commandId,
+    idempotencyKey: commandId,
+    teamName: key,
+    memberName: 'alice',
+    expectedFingerprint: 'd'.repeat(64),
+    targetKind: 'member' as const,
+    settings: {
+      role: 'Reviewer',
+      workflow: null,
+      isolation: null,
+      providerId: null,
+      providerBackendId: null,
+      model: null,
+      effort: null,
+      fastMode: null,
+      mcpPolicy: null,
+    },
+  };
 }
 function launch(): TeamLaunchRequest {
   return { teamName: key, cwd: '/TEST/project', command: { commandId: 'TEST-launch', idempotencyKey: 'TEST-launch' },
@@ -149,4 +175,238 @@ describe('Host project definition boundary', () => {
     f.bindings[1].ownerResourceRef = 'TEST-foreign';
     expect(projectHostTeamSummaries(rows, f.bindings)).toHaveLength(2);
   });
+
+  it('retries a failed initial discovery with the same reserved settings command', async () => {
+    const f = fixture(), request = settingsRequest();
+    vi.mocked(f.backend.getConnections).mockRejectedValueOnce(new Error('TEST discovery unavailable'));
+    await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('TEST discovery unavailable');
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+
+    expect(await f.teams.updateMemberSettings(request)).toMatchObject({
+      outcome: 'completed', effect: 'persisted_only', replayed: true,
+    });
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(2);
+    const replacements = vi.mocked(f.backend.invoke).mock.calls
+      .filter(([row]) => row.operation === 'team.roster.replace');
+    expect(replacements).toHaveLength(1);
+    expect(replacements[0]![0]).toMatchObject({
+      handle: rootHandle, commandId: request.commandId,
+      payload: { expectedRevision: revision },
+    });
+    expect(f.legacy.updateMemberSettings).not.toHaveBeenCalled();
+  });
+
+  it('retries the failed roster read only at the already resolved cloned handle', async () => {
+    const f = fixture(), request = settingsRequest();
+    vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error('TEST roster unavailable'));
+    await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('TEST roster unavailable');
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+
+    Object.assign(f.bindings[0]!.handle, { handleId: 'TEST-replacement-owner' });
+    vi.mocked(f.backend.getConnections).mockRejectedValue(new Error('TEST discovery must not repeat'));
+    expect(await f.teams.updateMemberSettings(request)).toMatchObject({ outcome: 'completed' });
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+    for (const [operation] of vi.mocked(f.backend.invoke).mock.calls)
+      expect(operation.handle).toEqual(rootHandle);
+    expect(vi.mocked(f.backend.invoke).mock.calls
+      .filter(([row]) => row.operation === 'team.roster.replace')).toHaveLength(1);
+  });
+
+  it.each(['discovery', 'configuration'] as const)(
+    'concurrent retries share one %s capture and one settings mutation',
+    async (stage) => {
+      const f = fixture(), request = settingsRequest();
+      if (stage === 'discovery')
+        vi.mocked(f.backend.getConnections).mockRejectedValueOnce(new Error('TEST first capture'));
+      else vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error('TEST first capture'));
+      await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('TEST first capture');
+
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let entered = 0;
+      if (stage === 'discovery') {
+        vi.mocked(f.backend.getConnections).mockImplementationOnce(async () => {
+          entered++;
+          await gate;
+          return { state: 'ready', bindings: f.bindings };
+        });
+      } else {
+        const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+        vi.mocked(f.backend.invoke).mockImplementationOnce(async (operation) => {
+          entered++;
+          await gate;
+          return invoke(operation);
+        });
+      }
+      const pending = Promise.all([
+        f.teams.updateMemberSettings(request),
+        f.teams.updateMemberSettings(structuredClone(request)),
+      ]);
+      void pending.catch(() => {});
+      try {
+        await vi.waitFor(() => expect(entered).toBe(1));
+        expect(vi.mocked(f.backend.invoke).mock.calls
+          .filter(([row]) => row.operation === 'team.roster.replace')).toHaveLength(0);
+        release();
+        const [first, second] = await pending;
+        expect(first).toMatchObject({ outcome: 'completed' });
+        expect(second).toEqual(first);
+        expect(entered).toBe(1);
+        expect(f.backend.getConnections).toHaveBeenCalledTimes(stage === 'discovery' ? 2 : 1);
+        expect(vi.mocked(f.backend.invoke).mock.calls
+          .filter(([row]) => row.operation === 'team.roster.replace')).toHaveLength(1);
+        expect(vi.mocked(f.backend.invoke).mock.calls
+          .filter(([row]) => row.operation === 'team.roster.read'))
+          .toHaveLength(stage === 'configuration' ? 3 : 2);
+      } finally {
+        release();
+        await pending.catch(() => {});
+      }
+    }
+  );
+
+  it('a failed capture keeps the command signature reserved against a changed payload or target', async () => {
+    const f = fixture(), request = settingsRequest();
+    vi.mocked(f.backend.getConnections).mockRejectedValueOnce(new Error('TEST first capture'));
+    await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('TEST first capture');
+    for (const changed of [
+      { ...request, settings: { ...request.settings, role: 'TEST different role' } },
+      { ...request, teamName: childKey },
+    ])
+      await expect(f.teams.updateMemberSettings(changed)).rejects.toMatchObject({
+        code: 'intent-conflict', outcome: 'not-dispatched',
+      });
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    expect(await f.teams.updateMemberSettings(request)).toMatchObject({ outcome: 'completed' });
+  });
+
+  it('a revoked resolved owner is refused instead of rediscovering another owner after a read failure', async () => {
+    const f = fixture(), request = settingsRequest();
+    vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error('TEST first roster read'));
+    await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('TEST first roster read');
+    Object.assign(f.bindings[0]!.handle, { handleId: 'TEST-other-owner' });
+    vi.mocked(f.backend.invoke).mockResolvedValue({
+      ok: false, code: 'forbidden', outcome: 'not-dispatched',
+    });
+    await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('forbidden');
+    expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(f.backend.invoke).mock.calls).toHaveLength(2);
+    for (const [operation] of vi.mocked(f.backend.invoke).mock.calls)
+      expect(operation).toMatchObject({ handle: rootHandle, operation: 'team.roster.read' });
+  });
+
+  it.each(['discovery', 'configuration'] as const)(
+    'a new valid scope cannot replace the original scope after failed %s capture',
+    async (stage) => {
+      const f = fixture(), request = settingsRequest();
+      if (stage === 'discovery')
+        vi.mocked(f.backend.getConnections).mockRejectedValueOnce(new Error('TEST first capture'));
+      else vi.mocked(f.backend.invoke).mockRejectedValueOnce(new Error('TEST first capture'));
+      await expect(f.teams.updateMemberSettings(request)).rejects.toThrow('TEST first capture');
+      const reads = vi.mocked(f.backend.invoke).mock.calls.length;
+      f.replaceScope();
+      await expect(f.teams.updateMemberSettings(request)).rejects.toMatchObject({
+        code: 'context-changed', outcome: 'not-dispatched',
+      });
+      expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(f.backend.invoke).mock.calls).toHaveLength(reads);
+      expect(await f.teams.updateMemberSettings(settingsRequest('TEST-new-scope-command')))
+        .toMatchObject({ outcome: 'completed' });
+    }
+  );
+
+  it('refuses scope loss during resolve before reading the roster, including an identical retry', async () => {
+    const f = fixture();
+    let current = true;
+    const resolve = vi.fn(async () => {
+      current = false;
+      return { handle: { ...rootHandle } };
+    });
+    const edits = createHostDefinitionEdits({
+      backend: f.backend,
+      captureScope: () => () => current,
+      resolve,
+      invalidateReads: vi.fn(),
+    });
+    const request = settingsRequest();
+    for (let attempt = 0; attempt < 2; attempt++)
+      await expect(edits.updateMemberSettings(request)).rejects.toMatchObject({
+        code: 'context-changed', outcome: 'not-dispatched',
+      });
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+  });
+
+  it.each(['replace', 'receipt'] as const)(
+    'an unknown %s response retains the successful original capture and recovers its receipt',
+    async (stage) => {
+      const f = fixture(), request = settingsRequest();
+      const invoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+      let accepted: Awaited<ReturnType<AgentBackendApi['invoke']>> | undefined;
+      let effects = 0, lookups = 0;
+      vi.mocked(f.backend.invoke).mockImplementation(async (operation) => {
+        if (operation.operation === 'team.roster.replace') {
+          // The controlled owner replays its existing receipt without applying the edit again.
+          if (accepted) return structuredClone(accepted);
+          accepted = await invoke(operation);
+          effects++;
+          if (stage === 'replace') throw new Error('TEST lost mutation response');
+          return accepted;
+        }
+        if (operation.operation === 'team.roster.lookup' && lookups++ === 0)
+          return { ok: false, code: 'hold', outcome: 'unknown' };
+        return invoke(operation);
+      });
+      await expect(f.teams.updateMemberSettings(request)).rejects.toMatchObject({
+        code: stage === 'replace' ? 'transport-unavailable' : 'hold',
+        outcome: 'unknown', commandId: request.commandId,
+      });
+      expect(f.configuration.revision).toBe(nextRevision);
+      expect(effects).toBe(1);
+      expect(vi.mocked(f.backend.invoke).mock.calls
+        .filter(([row]) => row.operation === 'team.roster.read')).toHaveLength(1);
+      vi.mocked(f.backend.getConnections).mockRejectedValue(new Error('TEST owner already captured'));
+
+      const completed = await f.teams.updateMemberSettings(request);
+      expect(completed).toMatchObject({
+        outcome: 'completed', previousFingerprint: request.expectedFingerprint,
+        currentFingerprint: 'e'.repeat(64), replayed: true,
+      });
+      const replacements = vi.mocked(f.backend.invoke).mock.calls
+        .filter(([row]) => row.operation === 'team.roster.replace').map(([row]) => row);
+      expect(replacements).toHaveLength(2);
+      expect(replacements[1]).toEqual(replacements[0]);
+      expect(replacements[0]).toMatchObject({
+        handle: rootHandle, commandId: request.commandId,
+        payload: {
+          expectedRevision: revision,
+          memberSettingsRelaunch: {
+            expectedTeamSettingsFingerprint: revision,
+            baseline: [
+              { memberName: 'team-lead', expectedFingerprint: 'c'.repeat(64) },
+              { memberName: 'alice', expectedFingerprint: 'd'.repeat(64) },
+            ],
+          },
+        },
+      });
+      const receipts = vi.mocked(f.backend.invoke).mock.calls
+        .filter(([row]) => row.operation === 'team.roster.lookup').map(([row]) => row);
+      expect(receipts).toHaveLength(2);
+      for (const receipt of receipts)
+        expect(receipt).toMatchObject({ handle: rootHandle, commandId: request.commandId });
+      expect(receipts[0]!.payload).toEqual(stage === 'replace'
+        ? { expected: replacements[0]!.payload } : {});
+      expect(receipts[1]!.payload).toEqual({});
+      expect(vi.mocked(f.backend.invoke).mock.calls
+        .filter(([row]) => row.operation === 'team.roster.read')).toHaveLength(2);
+      expect(f.backend.getConnections).toHaveBeenCalledTimes(1);
+      expect(effects).toBe(1);
+
+      const calls = vi.mocked(f.backend.invoke).mock.calls.length;
+      expect(await f.teams.updateMemberSettings(request)).toEqual({ ...completed, replayed: true });
+      expect(vi.mocked(f.backend.invoke).mock.calls).toHaveLength(calls);
+      expect(effects).toBe(1);
+    }
+  );
 });
