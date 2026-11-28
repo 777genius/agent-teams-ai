@@ -21,6 +21,7 @@ import {
   Calendar,
   FileText,
   Gauge,
+  GitPullRequest,
   Inbox,
   LayoutDashboard,
   Network,
@@ -63,6 +64,7 @@ const TAB_ICONS = {
   schedules: Calendar,
   graph: Network,
   'token-usage': Gauge,
+  'pr-monitor': GitPullRequest,
 } as const;
 
 export const SortableTab = ({

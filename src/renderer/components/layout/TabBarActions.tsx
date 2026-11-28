@@ -1,3 +1,4 @@
+import { PrMonitorAction } from '@features/pr-monitor/renderer';
 /**
  * TabBarActions - Right-side action buttons for the tab bar row.
  * Extracted from TabBar to render once (not per-pane).
@@ -98,6 +99,7 @@ export const TabBarActions = (): React.JSX.Element => {
       className="ml-2 flex shrink-0 items-center gap-1"
       style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
     >
+      <PrMonitorAction />
       {/* Update app button — compact header action so tabs stay usable */}
       {(updateStatus === 'error' ||
         updateStatus === 'available' ||

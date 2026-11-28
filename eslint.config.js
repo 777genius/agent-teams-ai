@@ -17,6 +17,7 @@ import globals from 'globals';
 import { featureOverrides } from './eslint.feature-overrides.mts';
 import { gatewayBoundaries } from './eslint.gateway-boundaries.mts';
 import { reviewFlowBoundaries } from './eslint.review-flow-boundaries.mts';
+import { prMonitorBoundaries } from './eslint.pr-monitor-boundaries.mts';
 
 export default defineConfig([
   // Global ignores
@@ -1148,6 +1149,7 @@ export default defineConfig([
 
   ...gatewayBoundaries,
   ...reviewFlowBoundaries,
+  ...prMonitorBoundaries,
 
   // The existing JavaScript compatibility entrypoint is outside the TS project.
   // Its replacement graph stays type-aware; retain normal JS/security lint here.
@@ -1161,8 +1163,6 @@ export default defineConfig([
     },
   },
 
-  // === IMPORTANT: eslint-config-prettier MUST be LAST ===
-  // This disables all ESLint rules that conflict with Prettier
-  // Prettier handles formatting, ESLint handles code quality
+  // Keep Prettier last so formatting rules do not conflict with its output.
   eslintConfigPrettier,
 ]);

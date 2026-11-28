@@ -14,6 +14,7 @@ const TAB_TYPES: Record<Tab['type'], true> = {
   schedules: true,
   graph: true,
   'token-usage': true,
+  'pr-monitor': true,
 };
 const COUNT_FIELDS = [
   'paneCount',

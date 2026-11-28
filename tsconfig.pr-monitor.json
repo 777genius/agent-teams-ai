@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/features/pr-monitor/**/*",
+    "src/main/startPrMonitorFeature.ts",
+    "src/main/http/localAccess.ts",
+    "test/features/pr-monitor/**/*",
+    "src/types/**/*.d.ts",
+    "src/renderer/vite-env.d.ts",
+    "src/features/localization/renderer/i18next.d.ts",
+    "src/features/localization/renderer/resources.d.ts",
+    "eslint.pr-monitor-boundaries.mts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dist-electron"
+  ]
+}

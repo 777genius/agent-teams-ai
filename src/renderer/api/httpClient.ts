@@ -1,3 +1,4 @@
+import { createPrMonitorHttpClient } from '@features/pr-monitor';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *
@@ -463,6 +464,8 @@ export class HttpAPIClient implements ElectronAPI {
     (_callback: (event: unknown, snapshot: CodexAccountSnapshotDto) => void): (() => void) =>
     () =>
       undefined;
+
+  prMonitor = createPrMonitorHttpClient((url, body) => this.post(url, body));
 
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');

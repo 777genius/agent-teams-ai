@@ -2,6 +2,13 @@ import importPlugin from 'eslint-plugin-import';
 
 import type { Linter } from 'eslint';
 
+export const gatewayPublicImports = [
+  '**/gateway-provider/core/**',
+  // The import rule also resolves public barrels to their index.ts files.
+  '**/gateway-provider/{contracts,main,preload,renderer}/!(index|index.ts){,/**}',
+  '**/gateway-provider/{contracts,main,preload,renderer}/*/*/**',
+];
+
 const runtimeLayers = [
   '@main/**',
   '@renderer/**',
@@ -52,12 +59,7 @@ export const gatewayBoundaries: Linter.Config[] = [
       'import/no-internal-modules': [
         'error',
         {
-          forbid: [
-            '**/gateway-provider/core/**',
-            // The import rule also resolves public barrels to their index.ts files.
-            '**/gateway-provider/{contracts,main,preload,renderer}/!(index|index.ts){,/**}',
-            '**/gateway-provider/{contracts,main,preload,renderer}/*/*/**',
-          ],
+          forbid: gatewayPublicImports,
         },
       ],
     },

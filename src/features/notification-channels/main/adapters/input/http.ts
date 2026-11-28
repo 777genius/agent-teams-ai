@@ -1,27 +1,11 @@
+import { isLocalHttpRead as isLocalNotificationChannelsRead, localHttpOrigin } from '@main/http/localAccess';
+
 import { NOTIFICATION_CHANNELS_HTTP } from '../../../contracts';
 
 import type { NotificationChannelsFeatureFacade } from '../../composition/createNotificationChannelsFeature';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 
-/** Canonical HTTP origin for an exact loopback Host, including the default port. */
-function localHttpOrigin(host: string): string | null {
-  if (!/^(127\.0\.0\.1|localhost)(:[0-9]{1,5})?$/.test(host)) return null;
-  const port = host.split(':')[1];
-  if (port !== undefined && (Number(port) < 1 || Number(port) > 65535)) return null;
-  // eslint-disable-next-line sonarjs/no-clear-text-protocols -- normalize only the validated local origin
-  return new URL('http://' + host).origin;
-}
-/** The settings API is local-only, including metadata reads. */
-export function isLocalNotificationChannelsRead(request: FastifyRequest): boolean {
-  const expectedOrigin = localHttpOrigin(request.headers.host ?? '');
-  const origin = request.headers.origin;
-  const site = request.headers['sec-fetch-site'];
-  if (expectedOrigin === null) return false;
-  // eslint-disable-next-line sonarjs/no-hardcoded-ip -- exact loopback allowlist, never a remote destination
-  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.ip)) return false;
-  if (origin !== undefined && origin !== expectedOrigin) return false;
-  return site === undefined || site === 'same-origin' || site === 'none';
-}
+export { isLocalHttpRead as isLocalNotificationChannelsRead } from '@main/http/localAccess';
 
 export function isLocalNotificationChannelsMutation(request: FastifyRequest): boolean {
   return (

@@ -13,6 +13,7 @@ import sonarjs from 'eslint-plugin-sonarjs';
 import tailwindcss from 'eslint-plugin-tailwindcss';
 import globals from 'globals';
 import { gatewayBoundaries } from './eslint.gateway-boundaries.mts';
+import { prMonitorBoundaries } from './eslint.pr-monitor-boundaries.mts';
 
 export default defineConfig([
   {
@@ -255,4 +256,5 @@ export default defineConfig([
     },
   },
   ...gatewayBoundaries,
+  ...prMonitorBoundaries,
 ]);

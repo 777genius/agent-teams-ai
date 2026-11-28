@@ -26,6 +26,7 @@ const ExtensionStoreView = lazy(() =>
     default: module.ExtensionStoreView,
   }))
 );
+const PrMonitorTab = lazy(() => import('@features/pr-monitor/renderer').then((module) => ({ default: module.PrMonitorTab })));
 const AttentionInboxView = lazy(() =>
   import('@features/user-attention/renderer').then((module) => ({
     default: module.AttentionInboxView,
@@ -174,6 +175,7 @@ const PaneTabSlot = ({ tab, isActive, isPaneFocused }: PaneTabSlotProps): React.
           {tab.type === 'dashboard' && <DashboardView isActive={isActive} />}
           {tab.type === 'notifications' && <NotificationsView />}
           {tab.type === 'attention' && <AttentionInboxView />}
+          {tab.type === 'pr-monitor' && tab.projectId && <PrMonitorTab projectId={tab.projectId} isActive={isActive} />}
           {tab.type === 'settings' && <SettingsView isActive={isActive} />}
           {tab.type === 'teams' && <TeamListView tabId={tab.id} isActive={isActive} />}
           {tab.type === 'organizations' && (
