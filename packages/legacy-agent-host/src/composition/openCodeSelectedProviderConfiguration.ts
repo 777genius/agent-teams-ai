@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { resolveOpenCodeEnvironment } from '../adapters/providers/resolveOpenCodeEnvironment.js';
 import { openCodeConfiguredModelSchema } from './openCodeConfigurationReference.js';
+import { shadowOpenCodeSelectedModelEnvironment } from './openCodeSelectedModelEnvironment.js';
 
 import type { OpenCodeConfiguredModel } from './openCodeConfigurationReference.js';
 
@@ -197,22 +198,19 @@ export function mapOpenCodeV2SelectedModel(modelId: string, raw: unknown): Recor
 }
 
 /** Resolve only selected values against the original profile environment, never process.env. */
-function environmentValues(value: unknown, environment: Readonly<Record<string, string>>): unknown {
+function environmentValues(
+  value: unknown, environment: Readonly<Record<string, string>>, budget: { remaining: number }
+): unknown {
   if (typeof value === 'string') {
-    if (value.includes('{file:')) invalid(); // Only separately qualified app-owned credential files may be materialized.
-    return value.replace(
-      /\{env:([A-Za-z_][A-Za-z0-9_]*)\}|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/gu,
-      (_match: string, braced: string | undefined, shell: string | undefined) => {
-        const selected = environment[braced ?? shell!];
-        if (selected === undefined || selected.includes('\0')) invalid();
-        return selected;
-      }
-    );
+    const selected = resolveOpenCodeEnvironment(value, environment, budget.remaining, invalid);
+    if (typeof selected !== 'string') invalid();
+    budget.remaining -= Buffer.byteLength(selected);
+    return selected;
   }
-  if (Array.isArray(value)) return value.map((item) => environmentValues(item, environment));
+  if (Array.isArray(value)) return value.map((item) => environmentValues(item, environment, budget));
   if (record(value))
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, environmentValues(item, environment)])
+      Object.entries(value).map(([key, item]) => [key, environmentValues(item, environment, budget)])
     );
   return value;
 }
@@ -253,13 +251,16 @@ export function selectOpenCodeV2ProviderConfiguration(
   const selectedKey = selectOpenCodeV2ConfigurationKey(rawOptions.apiKey, environment);
   const { apiKey: _rawKey, ...remainingOptions } = rawOptions;
   const selectedModel = record(raw.models) ? raw.models[selection.modelId] : undefined;
+  const modelEnvironment = shadowOpenCodeSelectedModelEnvironment(selectedModel, environment, invalid);
   const provider = environmentValues(
     {
       ...(raw.npm === undefined ? {} : { npm: raw.npm }),
       ...(raw.options === undefined ? {} : { options: remainingOptions }),
-      ...(selectedModel === undefined ? {} : { models: { [selection.modelId]: selectedModel } }),
+      ...(selectedModel === undefined ? {} : { models: { [selection.modelId]: modelEnvironment } }),
     },
-    environment
+    environment,
+    // Every surviving string reaches the output; only the two checked aliases can duplicate it.
+    { remaining: 2 * 256 * 1024 }
   );
   if (!record(provider)) invalid();
   const options = provider.options === undefined ? {} : provider.options;
