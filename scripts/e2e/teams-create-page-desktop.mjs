@@ -726,7 +726,7 @@ class CdpClient {
         target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
         // Layout may change between the wait and final sample. Only re-observe
         // before any press, within this click's original deadline.
-      } while (!prepared && !target && Date.now() < cutoff);
+      } while (!prepared && target === null && Date.now() < cutoff);
       try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
       assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
       assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);

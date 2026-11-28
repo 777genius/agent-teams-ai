@@ -347,8 +347,8 @@ export class TeamGoals {
       const receipt = readProductCommand(this.options.store, intent.commandId)!;
       const goal = this.state().autonomousGoal;
       if (!goal || goal.goalId !== association.goalId || goal.revision !== association.revision) return false;
-      // The original authenticated user submission isn't an automatic attempt.
-      if (receipt.goal?.kind === 'intake') return goal.disposition === 'active';
+      // The original authenticated user input keeps its ordinary path, including after Goal Stop.
+      if (receipt.goal?.kind === 'intake') return true;
       if (goal.disposition !== 'active' || expired(goal)) return false;
       if (!this.continuationCurrent(receipt, goal)) return false;
       const witness = goal.debits[raw.inputId];

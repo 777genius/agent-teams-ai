@@ -125,3 +125,68 @@ test('Stop retires an admitted automatic head without refunding its debit or str
   assert.equal(f.goal()!.disposition, 'stopped');
   assert.notEqual(f.goal()!.published, true);
 });
+
+test('Stop preserves a queued original human Goal intake and Resume continues from that same settled input', async t => {
+  const f = await goalHost(t);
+  await f.open('lead');
+  await f.open('worker');
+  success(await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'lead',
+    text: 'TEST ordinary work already occupying the lead', actionMode: 'ask' } }, 'TEST-intake-stop-ordinary'));
+  await eventually(() => f.runtime('lead')?.inputs[0]?.phase === 'consumed', 'ordinary human input is active');
+  success(await f.rpc('team.execute', { operation: 'message.send', payload: { to: 'lead',
+    text: 'TEST original human objective queued behind ordinary work', actionMode: 'do',
+    autonomousGoal: { durationHours: 12, maxAttempts: 8 } } }, 'TEST-intake-stop-goal'));
+  await eventually(() => f.runtime('lead')?.inputs[1]?.phase === 'admitted', 'original Goal intake is durably queued');
+  const original = structuredClone(f.runtime('lead')!.inputs[1]!);
+  const originalGoal = structuredClone(f.goal()!);
+  assert.deepEqual(originalGoal.rootBinding, f.runtimeBinding('lead'));
+  assert.equal(f.session().submits.length, 1, 'the active ordinary input is not preempted');
+  assert.deepEqual(originalGoal.debits, {});
+  const stopped = success<GoalStatus>(await f.rpc('team.goal.control', {
+    goalId: originalGoal.goalId, expectedRevision: originalGoal.revision, action: 'stop',
+  }, 'TEST-intake-stop-control'));
+  assert.equal(stopped.disposition, 'stopped');
+  f.session().finish(0);
+  await eventually(() => ['consumed', 'rejected', 'cancelled', 'not-sent'].includes(
+    f.runtime('lead')!.inputs.find(row => row.intent.inputId === original.intent.inputId)!.phase),
+  'the original queued intake reaches its original dispatch decision');
+  const dispatched = f.runtime('lead')!.inputs.find(row => row.intent.inputId === original.intent.inputId)!;
+  assert.equal(dispatched.phase, 'consumed', 'Stop continuation must not irreversibly reject the original human request');
+  assert.deepEqual(dispatched.intent, original.intent);
+  assert.equal(dispatched.fingerprint, original.fingerprint);
+  assert.equal(dispatched.operationRef, original.operationRef);
+  assert.equal(f.session().submits.length, 2);
+  assert.equal(f.session().submits[1]!.inputId, original.intent.inputId);
+  assert.equal(f.session().submits[1]!.operationRef, original.operationRef);
+  assert.deepEqual(f.goal()!.debits, {}, 'the original human request is not an automatic attempt');
+  assert.equal(f.goal()!.disposition, 'stopped');
+  f.session().finish(1);
+  await eventually(() => f.runtime('lead')!.inputs.find(row => row.intent.inputId === original.intent.inputId)?.terminal === 'succeeded',
+    'the same original human input settles while continuation is stopped');
+  for (let read = 0; read < 3; read++) {
+    const status = success<{ autonomousGoal: GoalStatus }>(await f.rpc('team.snapshot', {})).autonomousGoal;
+    assert.equal(status.disposition, 'stopped');
+  }
+  assert.equal(f.session().submits.length, 2, 'Stop still prevents automatic continuation');
+  assert.equal(f.session('worker').submits.length, 0);
+  assert.deepEqual(f.goal()!.debits, {});
+  assert.notEqual(f.goal()!.published, true);
+  const resumed = success<GoalStatus>(await f.rpc('team.goal.control', {
+    goalId: originalGoal.goalId, expectedRevision: originalGoal.revision, action: 'resume',
+  }, 'TEST-intake-stop-resume'));
+  assert.equal(resumed.disposition, 'active');
+  await eventually(() => f.session().submits.length === 3, 'Resume continues from the successful original Goal input');
+  assert.equal(f.goal()!.goalId, originalGoal.goalId);
+  assert.equal(f.goal()!.revision, originalGoal.revision);
+  assert.deepEqual(f.goal()!.rootBinding, originalGoal.rootBinding);
+  assert.equal(f.session().submits.filter(input => input.inputId === original.intent.inputId).length, 1);
+  assert.deepEqual(Object.keys(f.goal()!.debits), [f.session().submits[2]!.inputId]);
+  assert.equal((await f.tool('lead', 'goal_propose', {
+    commandId: 'TEST-intake-stop-result', result: 'TEST original queued objective completed after Resume',
+  }) as GoalStatus).disposition, 'finalizing');
+  f.session().finish(2);
+  await eventually(() => f.goal()?.published === true, 'one fresh result publishes after the resumed input settles');
+  assert.equal(f.session().submits.length, 3);
+  const page = success<{ messages: { messageId?: string }[] }>(await f.rpc('team.messages.page', {}));
+  assert.equal(page.messages.filter(row => row.messageId === f.goal()!.proposal!.resultMessageId).length, 1);
+});
