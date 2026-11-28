@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
 import { startTeamMcpEndpoint } from '../dist/mcp/index.js';
 import type { TeamMcpConnection } from '../dist/mcp/index.js';
@@ -44,12 +45,12 @@ test('real authenticated HTTP MCP process_list reconstructs oversized retained m
   assert.equal(expected.length, rows.length);
   assert.ok(Buffer.byteLength(JSON.stringify(expected)) > 256 * 1024);
   let reads = 0;
-  const native = {
+  const native: NonNullable<TeamMcpConnection['process']> = {
     list: () => { reads++; return originalPort.list(); },
     register: async () => { throw new Error('Unexpected native register'); },
     metadata: async () => { throw new Error('Unexpected metadata effect'); },
     lookup: () => null,
-  } as unknown as TeamMcpConnection['process'];
+  };
   const endpoint = await startTeamMcpEndpoint({
     connection: { ...owner.connect('alice'), process: native },
     binding: delivery, expiresAtMs: 10_000,
@@ -67,10 +68,10 @@ test('real authenticated HTTP MCP process_list reconstructs oversized retained m
   let cursor: string | undefined;
   let count = 0;
   do {
-    const response = await client.callTool({
+    const response = CallToolResultSchema.parse(await client.callTool({
       name: 'process_list',
       arguments: cursor === undefined ? {} : { cursor },
-    });
+    }));
     const item = response.content[0];
     assert.ok(item?.type === 'text');
     const result = JSON.parse(item.text) as {

@@ -6,6 +6,8 @@ import { test } from 'node:test';
 import { FileManagementCommandStore } from '../dist/adapters/providers/FileManagementCommandStore.js';
 import { ManagementResourceFence } from '../dist/management/ManagementResourceFence.js';
 import { OAuthOperationOwner } from '../dist/management/OAuthOperationOwner.js';
+import type { ManagementCommandStore } from '../src/management/commandRecords.ts';
+import type { ProviderOAuthSnapshot } from '../src/management/contracts.ts';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -27,16 +29,38 @@ async function until(check: () => boolean) {
     await new Promise<void>(done => setImmediate(done));
   assert.ok(check(), 'native operation reached expected phase');
 }
-function fixture(timeoutMs = 30_000) {
+function fixture(timeoutMs = 30_000, fault?: {
+  phase: 'cancelling' | 'cancelled'; timing: 'before-commit' | 'after-commit';
+}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-oauth-durable-cleanup-')));
   const store = new FileManagementCommandStore(root);
+  const file = () => join(root, 'management-commands',
+    readdirSync(join(root, 'management-commands'))[0]!);
+  const bytes = () => readFileSync(file(), 'utf8');
+  const writePhases: string[] = [];
+  let uncertainBytes: string | undefined;
+  const publicationStore: ManagementCommandStore = fault ? {
+    read: id => store.read(id),
+    list: () => store.list(),
+    write(record) {
+      writePhases.push(record.phase);
+      if (record.kind === 'oauth' && record.phase === fault.phase) {
+        if (fault.timing === 'after-commit') store.write(record);
+        uncertainBytes = bytes();
+        throw new Error('TEST cleanup publication acknowledgement lost');
+      }
+      store.write(record);
+    },
+  } : store;
+  const fence = new ManagementResourceFence(store.list());
+  const events: ProviderOAuthSnapshot[] = [];
   const authorize = deferred<{
     authorizationUrl: string; instructions: string; completionMethod: 'code';
   }>();
   const complete = deferred<boolean>(), close = deferred<boolean>();
   let closeCalls = 0, completeCalls = 0;
   const owner = new OAuthOperationOwner({
-    store, fence: new ManagementResourceFence(store.list()),
+    store: publicationStore, fence,
     assertWriter() {},
     select: () => ({
       profileId: input.profileId, configRevision: input.configRevision,
@@ -48,11 +72,10 @@ function fixture(timeoutMs = 30_000) {
       complete: async () => { completeCalls++; return complete.promise; },
       close: async () => { closeCalls++; return close.promise; },
     }),
+    onProgress: snapshot => { events.push(structuredClone(snapshot)); },
   });
-  const file = () => join(root, 'management-commands',
-    readdirSync(join(root, 'management-commands'))[0]!);
-  const bytes = () => readFileSync(file(), 'utf8');
-  return { owner, store, authorize, complete, close, file, bytes,
+  return { owner, store, fence, events, authorize, complete, close, file, bytes,
+    writePhases, uncertainBytes: () => uncertainBytes,
     get closeCalls() { return closeCalls; },
     get completeCalls() { return completeCalls; },
     async waiting() {
@@ -139,3 +162,40 @@ test('OAuth final cleanup does not resurrect a receipt removed while native clos
   await assert.rejects(f.owner.close(), { code: 'held' });
   assert.equal(f.store.read(input.operationId), undefined);
 });
+
+for (const phase of ['cancelling', 'cancelled'] as const)
+  for (const timing of ['before-commit', 'after-commit'] as const)
+    test('OAuth cleanup progress remains ordered after unknown ' + phase + ' publication ' + timing, async t => {
+      const f = fixture(30_000, { phase, timing }); t.after(() => f.cleanup());
+      await f.waiting();
+      const cancelled = f.owner.cancel(original);
+      await until(() => f.closeCalls === 1);
+      assert.equal(f.owner.read(original)?.phase, 'cancelling', 'live cleanup remains pending until native close');
+      assert.deepEqual(f.events.map(event => [event.phase, event.sequence]), [
+        ['authorizing', 1], ['waiting-for-code', 2], ['cancelling', 3],
+      ]);
+      assert.throws(() => f.fence.assertAvailable('b'.repeat(64)), { code: 'busy' });
+      f.close.resolve(true);
+      const final = await cancelled;
+      assert.equal(final.phase, 'held');
+      assert.equal(final.sequence, 4);
+      assert.deepEqual(f.events.map(event => [event.phase, event.sequence]), [
+        ['authorizing', 1], ['waiting-for-code', 2], ['cancelling', 3], ['held', 4],
+      ]);
+      const retained = f.uncertainBytes();
+      assert.notEqual(retained, undefined);
+      assert.equal(f.bytes(), retained, 'unknown publication bytes are never overwritten by cleanup');
+      assert.deepEqual(f.writePhases, phase === 'cancelling'
+        ? ['authorizing', 'waiting-for-code', 'cancelling']
+        : ['authorizing', 'waiting-for-code', 'cancelling', 'cancelled']);
+      assert.equal(f.closeCalls, 1);
+      assert.equal(f.completeCalls, 0);
+      assert.throws(() => f.fence.assertAvailable('b'.repeat(64)), { code: 'held' });
+      const coldFence = new ManagementResourceFence(f.store.list());
+      // A committed final receipt follows successful native close; only its live acknowledgement is unknown.
+      if (phase === 'cancelled' && timing === 'after-commit')
+        assert.doesNotThrow(() => coldFence.assertAvailable('b'.repeat(64)));
+      else assert.throws(() => coldFence.assertAvailable('b'.repeat(64)), { code: 'held' });
+      await assert.rejects(f.owner.close(), { code: 'held' });
+      assert.equal(f.bytes(), retained);
+    });

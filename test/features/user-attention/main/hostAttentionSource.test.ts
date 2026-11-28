@@ -161,7 +161,7 @@ function seedRetainedGroups(f: ReturnType<typeof capturedHostTeamReadsFixture>,
   writeFileSync(join(path, 'user.json'), JSON.stringify([{
     messageId: 'TEST-attention-group-physical', groupMessageId: 'TEST-attention-group-physical',
     groupChatId: chosen.id, groupChatProtocolVersion: 1,
-    from: 'alice', to: 'user', text: 'TEST group reply', read: false,
+    from: 'alice', to: 'user', text: '@user TEST group reply', read: false,
     timestamp: '2026-11-28T00:00:00.000Z',
     groupRecipientNames: ['team-lead', 'alice'],
     groupRecipientRunKeys: { 'team-lead': 'TEST-lead-run', alice: 'TEST-alice-run' },

@@ -27,7 +27,7 @@ function transport() {
   return { output, failures, frames };
 }
 
-test('Desktop group pages fit the actual HostOutput priority frame even in review-v1', () => {
+test('Desktop group pages fit the actual HostOutput priority frame even in review-v1', async () => {
   const max = hostMethodFrameLimit('team.group.list', 'review-v1');
   assert.equal(max, DEFAULT_HOST_LIMITS.maxFrameBytes);
   const whole = JSON.stringify({ jsonrpc: '2.0', id: 'TEST', result: { ok: true, value: groups } });
@@ -41,7 +41,11 @@ test('Desktop group pages fit the actual HostOutput priority frame even in revie
       rows: groups, key: 'TEST-page-key', principalId: 'TEST-original',
       binding: 'TEST-team',
       ...(cursor === undefined ? {} : { cursor }),
-    }) as { kind: string; groups: unknown[]; nextCursor: string | null };
+    });
+    assert.ok(page && typeof page === 'object' && !Array.isArray(page));
+    assert.equal(page.kind, 'group-catalog-page');
+    assert.ok(Array.isArray(page.groups));
+    assert.ok(page.nextCursor === null || typeof page.nextCursor === 'string');
     const message = { jsonrpc: '2.0' as const, id: 'TEST', result: { ok: true, value: page } };
     assert.ok(bounded.output.sendPriority(message, max));
     received.push(...page.groups);
@@ -50,6 +54,7 @@ test('Desktop group pages fit the actual HostOutput priority frame even in revie
   } while (cursor);
   assert.ok(pages > 1);
   assert.deepEqual(received, groups);
+  await new Promise<void>(resolve => setImmediate(resolve));
   assert.deepEqual(bounded.failures, []);
   assert.equal(bounded.frames.length, pages);
   for (const frame of bounded.frames) assert.ok(frame.length <= max + 1);

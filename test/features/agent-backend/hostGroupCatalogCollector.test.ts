@@ -69,8 +69,13 @@ it('rejects repeated, malformed and incomplete pages before returning group data
   expect(first.kind).toBe('group-catalog-page');
   await expect(readHostGroupCatalog(async cursor => {
     if (!cursor) return first;
-    return { ...first, nextCursor: cursor };
+    const next = pageGroupCatalog({ ...option, rows, cursor });
+    if (!next || typeof next !== 'object' || Array.isArray(next))
+      throw new Error('Expected continued Host group page');
+    return { ...next, nextCursor: cursor };
   }, () => {})).rejects.toThrow('Repeated Host group cursor');
+  await expect(readHostGroupCatalog(async () => first, () => {}))
+    .rejects.toThrow('Duplicate Host group');
   await expect(readHostGroupCatalog(async () => ({ ...first, nextCursor: null }), () => {}))
     .rejects.toThrow('Incomplete Host group catalog');
   await expect(readHostGroupCatalog(async () => ({ ...first, groups: [] }), () => {}))

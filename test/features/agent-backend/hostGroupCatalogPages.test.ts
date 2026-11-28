@@ -62,10 +62,10 @@ it('Main validates and Desktop assembles 4000 real-shape groups without a priori
   const first = f.router.request.mock.results[0];
   if (!first || first.type !== 'return') throw new Error('Missing original Host response');
   const response = await first.value;
+  if (!response || typeof response !== 'object' || Array.isArray(response) || !('value' in response))
+    throw new Error('Invalid original Host response');
   expect(response.ok).toBe(true);
-  if (response.ok) {
-    expect(Buffer.byteLength(JSON.stringify(response.value))).toBeLessThanOrEqual(240 * 1024);
-  }
+  expect(Buffer.byteLength(JSON.stringify(response.value))).toBeLessThanOrEqual(240 * 1024);
   expect(f.legacy.list).not.toHaveBeenCalled();
 });
 

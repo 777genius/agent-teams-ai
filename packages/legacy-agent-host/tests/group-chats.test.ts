@@ -40,6 +40,8 @@ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesyste
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { OwnerBackupResourceAccess } from '../dist/adapters/lifecycle/OwnerBackupResourceAccess.js';
 import { createTeamMcpTools } from '../dist/mcp/tools.js';
+import { formatToolResult } from '../dist/mcp/toolDefinition.js';
+import { parseGroupRegistry } from '../dist/group-chats/storageSchema.js';
 import { digest } from '../dist/team/identity.js';
 import { teamCommandPath, validateCommandEntry } from '../dist/team/commandEntries.js';
 import type { GroupMutation } from '../dist/group-chats/operations.js';
@@ -777,6 +779,59 @@ test('native group port accepts the actual captured Team snapshot and preserves 
   assert.equal(receipt.principalId, 'alice');
   assert.equal(receipt.actor, 'alice');
   assert.deepEqual(receipt.binding, f.binding);
+});
+
+test('captured native group port retains lossless pages and rejects foreign or stale continuations', async (t) => {
+  const f = await capturedGroupPort(t);
+  const file = join(f.root, 'teams', f.binding.teamName, 'group-chats.json');
+  const original = parseGroupRegistry(JSON.parse(readFileSync(file, 'utf8')));
+  const groups = [...original, ...Array.from({ length: 350 }, (_, index) => ({
+    ...original[0]!,
+    id: index.toString(16).padStart(8, '0') + '-0000-4000-8000-000000000000',
+    name: '漢😀' + '\u0001'.repeat(90) + index,
+    archivedAt: original[0]!.createdAt,
+  }))];
+  // One validated retained-history fixture; no command or native effect per row.
+  const document = { version: 1, groups };
+  assert.deepEqual(parseGroupRegistry(document), groups);
+  writeFileSync(file, JSON.stringify(document));
+  const before = f.snapshot();
+  const expected = readGroupList(await f.agent.read('list', {}, guard));
+  assert.ok(Buffer.byteLength(JSON.stringify(expected)) > 256 * 1024);
+  const received: ReturnType<typeof readGroupList> = [];
+  let cursor: string | undefined, firstCursor: string | undefined, pages = 0;
+  do {
+    const page = await f.port.list(cursor);
+    assert.ok(page && typeof page === 'object' && !Array.isArray(page));
+    assert.ok('kind' in page && page.kind === 'group-catalog-page');
+    assert.ok('groups' in page && 'nextCursor' in page);
+    assert.ok(page.nextCursor === null || typeof page.nextCursor === 'string');
+    const formatted = formatToolResult(page, false);
+    assert.deepEqual(formatted.structuredContent?.result, page);
+    const content = formatted.content[0];
+    assert.ok(content?.type === 'text');
+    assert.equal(content.text, JSON.stringify(page));
+    assert.ok(Buffer.byteLength(content.text) <= 256 * 1024);
+    const rows = readGroupList(page.groups);
+    assert.ok(rows.length > 0);
+    received.push(...rows);
+    firstCursor ??= page.nextCursor ?? undefined;
+    cursor = page.nextCursor ?? undefined;
+    assert.ok(++pages < 8);
+  } while (cursor !== undefined);
+  assert.ok(pages > 1 && firstCursor);
+  assert.deepEqual(received, expected);
+  await assert.rejects(f.makePort().list(firstCursor), { code: 'hold' });
+  assert.deepEqual(f.snapshot(), before);
+  const binding = f.entry.binding;
+  f.entry.binding = { ...binding, generation: 'TEST-stale-capture' };
+  await assert.rejects(f.port.list(firstCursor), { code: 'forbidden' });
+  assert.deepEqual(f.snapshot(), before);
+  f.entry.binding = binding;
+  f.owner.connect('human').revoke('alice');
+  const revoked = f.snapshot();
+  await assert.rejects(f.port.list(firstCursor), { code: 'forbidden' });
+  assert.deepEqual(f.snapshot(), revoked);
 });
 
 test('native group port never adopts a missing or replaced canonical Team or stale captured authority', async (t) => {

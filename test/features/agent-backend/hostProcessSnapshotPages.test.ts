@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { pageOwnerSnapshot } from '../../../packages/legacy-agent-host/src/team/pageOwnerSnapshot';
 import { readHostPagedSnapshot } from '../../../src/features/agent-backend/core/application/readHostPagedSnapshot';
 import { TeamProductReadOrder } from '../../../src/features/agent-backend/core/application/TeamProductReadOrder';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
@@ -103,4 +104,73 @@ it('refuses a changed original process total, changed revision and malformed pro
     .toThrow('Invalid Host process page');
   expect(() => projectTeamSnapshot({ ...first, processes: undefined }))
     .toThrow('Invalid Host process page');
+});
+
+it.each([128 * 1024, 384 * 1024])(
+  'restores exact process history through real %i-byte Host pages and the Desktop projection',
+  async (maxBytes) => {
+    const rows = Array.from({ length: 100 }, (_, index) => ({
+      ...process(index), command: '漢😀\u0001"\\'.repeat(500) + index,
+    }));
+    const source = rawPage(rows), before = JSON.stringify(source), sizes: number[] = [];
+    const order = new TeamProductReadOrder(), accepted = vi.spyOn(order, 'acceptSnapshot');
+    const invoke = vi.fn<AgentBackendApi['invoke']>(async (request) => {
+      expect(request.handle).toEqual(connection.handle);
+      if (request.operation !== 'team.snapshot') throw new Error('Unexpected TEST operation');
+      expect(accepted).not.toHaveBeenCalled();
+      const raw = pageOwnerSnapshot({
+        principalId: 'TEST-reader', key: 'TEST-page-key', snapshot: source, maxBytes,
+        ...(request.payload.cursor === undefined ? {} : { cursor: request.payload.cursor }),
+      });
+      sizes.push(Buffer.byteLength(JSON.stringify(raw)));
+      return { ok: true, value: projectTeamSnapshot(raw) };
+    });
+    const result = await readHostPagedSnapshot({ invoke }, connection, () => true, order);
+    result.assertCurrent();
+    expect(result.data.processes).toEqual(rows);
+    expect(result.data.nextCursor).toBeUndefined();
+    expect(result.data.processTotal).toBeUndefined();
+    expect(sizes.length).toBeGreaterThan(1);
+    expect(sizes.every((size) => size <= maxBytes)).toBe(true);
+    expect(accepted).toHaveBeenCalledExactlyOnceWith(connection.handle.handleId, result.data);
+    expect(JSON.stringify(source)).toBe(before);
+  },
+);
+
+it.each([1024, 1025])('enforces the whole-history limit for %i individually valid process rows', async (count) => {
+  const rows = Array.from({ length: count }, (_, index) => ({
+    ...process(index), command: 'TEST short retained command',
+  }));
+  const pages = [
+    rawPage(rows.slice(0, 512), { total: count, cursor }),
+    rawPage(rows.slice(512), { total: count }),
+  ].map(projectTeamSnapshot);
+  const order = new TeamProductReadOrder(), accepted = vi.spyOn(order, 'acceptSnapshot');
+  const invoke = vi.fn<AgentBackendApi['invoke']>(async (request) => {
+    if (request.operation !== 'team.snapshot') throw new Error('Unexpected TEST operation');
+    const value = request.payload.cursor === undefined ? pages[0] : pages[1];
+    if (!value) throw new Error('Missing TEST page');
+    return { ok: true, value };
+  });
+  const pending = readHostPagedSnapshot({ invoke }, connection, () => true, order);
+  if (count > 1024) {
+    await expect(pending).rejects.toThrow('Invalid Host process history');
+    expect(accepted).not.toHaveBeenCalled();
+  } else {
+    const result = await pending;
+    result.assertCurrent();
+    expect(result.data.processes).toEqual(rows);
+    expect(accepted).toHaveBeenCalledExactlyOnceWith(connection.handle.handleId, result.data);
+  }
+  expect(invoke).toHaveBeenCalledTimes(2);
+});
+
+it('preserves the legacy complete process array repeated on every page without a total', async () => {
+  const rows = [process(8), process(9)];
+  const { result, invoke } = await read([rawPage(rows, { cursor }), rawPage(rows)]);
+  result.assertCurrent();
+  expect(result.data.processes).toEqual(rows);
+  expect(result.data.processTotal).toBeUndefined();
+  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(invoke.mock.calls[1]?.[0].payload).toEqual({ cursor });
 });

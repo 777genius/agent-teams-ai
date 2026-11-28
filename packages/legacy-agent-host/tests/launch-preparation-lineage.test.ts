@@ -3,8 +3,10 @@ import { test } from 'node:test';
 import { runtimeDigest } from '../dist/runtime/identity.js';
 import { launchPreparationFingerprint } from '../dist/team-launch/launchPreparation.js';
 import { validateLaunchRecord } from '../dist/team-launch/validateLaunchRecord.js';
+import { liveRosterValidationRecord } from '../dist/team-launch/liveRosterMembership.js';
 import type { MemberActionRecord } from '../src/team-launch/memberActions.ts';
 import type { ExpectedLaunchMember, TeamLaunchRecord } from '../src/team-launch/contracts.ts';
+import type { LiveLaunchIntent, LiveLaunchMembership } from '../src/team-launch/liveRosterMembership.ts';
 
 const d = runtimeDigest;
 const binding = {
@@ -121,4 +123,81 @@ test('a forged Skip and changed prepared bytes cannot authorize the original lau
   const changedPreparation = makeRecord(false);
   changedPreparation.preparation!.members[0]!.configurationDigest = d('TEST-forged-preparation');
   assert.throws(() => checked(changedPreparation), /Team launch hold/);
+});
+
+test('prepared origin survives a qualified Restore followed by fresh Restart and Skip', () => {
+  const record = changed(makeRecord(true)), previous = record.definition.members[0]!;
+  const reference = 'cp1-' + d('TEST-checkpoint');
+  const restored: ExpectedLaunchMember = {
+    ...previous, skipped: false,
+    binding: { ...binding, generation: 'TEST-restored-generation' },
+    runtimeGeneration: 3, configurationDigest: d('TEST-restored-recipe'),
+    restore: { commandId: 'TEST-restore', reference, sourceBinding: previous.binding! },
+  };
+  record.restorations = [{
+    commandId: 'TEST-restore', fingerprint: d({ memberId: binding.memberId, reference }),
+    member: restored,
+  }];
+  const { restore: _restore, ...fresh } = restored;
+  const restarted: ExpectedLaunchMember = {
+    ...fresh, binding: { ...binding,
+      generation: 'restart-' + d({ commandId: 'TEST-restart-after-restore', sourceBinding: restored.binding }),
+    },
+    runtimeGeneration: 4, configurationDigest: d('TEST-restarted-restored-recipe'),
+  };
+  const restart = action('TEST-restart-after-restore', restored, restarted, 'restart');
+  const skip = action('TEST-skip-after-restore', restarted, { ...restarted, skipped: true }, 'skip');
+  record.memberActions!.push(restart, skip);
+  record.definition.members = [skip.selected];
+  const prepared = JSON.stringify(record.preparation);
+  assert.doesNotThrow(() => checked(record));
+  assert.doesNotThrow(() => checked(changed(record)));
+  assert.equal(JSON.stringify(record.preparation), prepared);
+  const unmatched = changed(record);
+  const row = unmatched.restorations![0]!;
+  row.member = { ...row.member, configurationDigest: d('TEST-unmatched-restore') };
+  assert.equal(unmatched.memberActions!.at(-2)!.source.configurationDigest, restored.configurationDigest);
+  assert.throws(() => checked(unmatched), /Team launch hold/);
+});
+
+test('prepared Restart and Skip remain readable through the live Remove and Restore owning wrapper', () => {
+  const record = changed(makeRecord(true)), previous = record.definition.members[0]!;
+  const intent = (commandId: string, kind: 'remove' | 'restore'): LiveLaunchIntent => ({
+    commandId, kind, requestDigest: d(commandId), originalFingerprint: d('TEST-original-command'),
+    authorityRevision: 1, principalId: 'TEST-human', launchId: binding.runId,
+    sourceCaptureDigest: d(previous), expectedRevision: d('TEST-expected-roster'),
+    hostIncarnation: 'TEST-host', cutoff: 1000, memberId: binding.memberId,
+    source: previous, previous,
+  });
+  const removed = intent('TEST-live-remove', 'remove');
+  const restored = intent('TEST-live-restore', 'restore');
+  const next: ExpectedLaunchMember = {
+    ...previous, skipped: false,
+    binding: { ...binding, generation: 'live-' + d({
+      commandId: restored.commandId, requestDigest: restored.requestDigest,
+      previous: previous.binding,
+    }) },
+    runtimeGeneration: 3, configurationDigest: d('TEST-fresh-base'),
+    baseConfigurationDigest: d('TEST-fresh-base'), configRevision: 'TEST-fresh-revision',
+    contextDigest: d('TEST-fresh-context'),
+  };
+  const capture = { provider: 'TEST-fresh-provider' };
+  const rows: LiveLaunchMembership[] = [
+    { intent: removed, fingerprint: d(removed), phase: 'removed', rosterRevision: d('TEST-removed') },
+    { intent: restored, fingerprint: d(restored), phase: 'selected', rosterRevision: d('TEST-restored'),
+      selected: next, capture, captureDigest: d(capture) },
+  ];
+  record.liveMembership = rows;
+  record.definition.members = [next];
+  record.fingerprint = d(record.definition);
+  const before = JSON.stringify(record);
+  const check = (value: TeamLaunchRecord) => validateLaunchRecord(
+    liveRosterValidationRecord(value), value.fingerprint, value.members.length
+  );
+  assert.doesNotThrow(() => check(record));
+  assert.doesNotThrow(() => check(changed(record)));
+  assert.equal(JSON.stringify(record), before, 'historical preparation and graph bytes stay immutable');
+  const forged = changed(record);
+  forged.preparation!.members[0]!.configurationDigest = d('TEST-forged-prepared-origin');
+  assert.throws(() => check(forged), /Team launch hold/);
 });
