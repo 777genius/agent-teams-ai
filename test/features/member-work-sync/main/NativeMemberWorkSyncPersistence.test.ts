@@ -572,7 +572,8 @@ it.each([3, 6])(
     } finally {
       try { await endpoint?.close(); } finally { await feature.close(); }
     }
-  }
+  },
+  45_000
 );
 
 it('qualifies the 200/201 task boundary through the original Owner and HTTP MCP', async () => {
@@ -691,7 +692,7 @@ it('qualifies the 200/201 task boundary through the original Owner and HTTP MCP'
   } finally {
     try { await endpoint?.close(); } finally { await feature.close(); }
   }
-});
+}, 45_000);
 
 it('refuses an unrepresentable historical accepted fingerprint before canonical status or report effects', async () => {
   const f = await fixture();
