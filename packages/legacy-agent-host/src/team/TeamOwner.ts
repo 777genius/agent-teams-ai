@@ -20,6 +20,7 @@ import { withNativeMemberActionAuthority } from './NativeMemberActionAuthority.j
 import type { NativeMemberActionRequest } from './NativeMemberActionAuthority.js';
 import { captureNativeMcpAuthority } from './NativeMcpAuthority.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import { runtimeInputFits } from '../runtime/runtimeDelivery.js';
 import { initializeTeamOwner } from './initializeTeamOwner.js';
 import { assertTeamExecutionAllowed } from './teamLifecycleAdmission.js';
 import { createTeamReadQueries } from './createTeamReadQueries.js';
@@ -49,7 +50,7 @@ import { teamRosterRevision } from './rosterSchema.js';
 import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js';
 
 import type {
-  TaskMutationPort,
+  TaskMutationPort, TeamInputPreflight,
   TeamPolicyPort,
   TeamStore,
   TeamTask,
@@ -83,6 +84,7 @@ export interface TeamOwnerOptions {
   policy: TeamPolicyPort;
   taskMutations: TaskMutationPort;
   runtimeBindings?: TeamRuntimeBindings;
+  inputPreflight?: TeamInputPreflight;
   /** Synchronous Runtime proof; absent composition permits only product-only members. */
   assertRosterEditable?(members: readonly TeamMember[]): void;
   groupStorage?: GroupStorageFactory;
@@ -108,6 +110,7 @@ export class TeamOwner {
   private readonly snapshotPageKey = randomUUID();
   private readonly store: TeamStore;
   private readonly policy: TeamPolicyPort;
+  private readonly inputPreflight: TeamInputPreflight;
   private readonly binding: TeamBinding;
   private readonly deliveryRecovery: DeliveryRecovery;
   private readonly deliveryAuthority: ReturnType<typeof createTeamDeliveryAuthority>;
@@ -122,6 +125,7 @@ export class TeamOwner {
     this.store = options.store;
     this.runtimeBindings = options.runtimeBindings;
     this.policy = options.policy;
+    this.inputPreflight = options.inputPreflight ?? ((input) => runtimeInputFits(input.content));
     this.contextReminders = new TeamContextReminders({
       store: this.store,
       policy: this.policy,
@@ -176,9 +180,7 @@ export class TeamOwner {
       this.store,
       options.taskMutations,
       (receipt) => this.taskAuthorityCurrent(receipt),
-      (receipt) => {
-        this.execute(receipt.principalId, receipt.command);
-      }
+      (receipt) => { this.execute(receipt.principalId, receipt.command); }, this.inputPreflight
     );
     this.deliveryAuthority = createTeamDeliveryAuthority({
       binding: this.binding,
@@ -779,7 +781,7 @@ export class TeamOwner {
         binding: this.binding,
         store: this.store,
         policy: this.policy,
-        taskRecovery: this.taskRecovery,
+        taskRecovery: this.taskRecovery, inputPreflight: this.inputPreflight,
         assertTaskGroupAssociation: (principal, groupChatId) =>
           this.commandAccess.groups.assertTaskAssociation(principal, groupChatId),
         state: () => this.state(),

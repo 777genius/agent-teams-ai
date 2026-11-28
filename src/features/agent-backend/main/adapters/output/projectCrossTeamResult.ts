@@ -1,3 +1,4 @@
+import { MAX_CROSS_TEAM_TEXT_LENGTH } from '../../../contracts/crossTeam';
 import { InvalidBackendOperation, text } from '../input/validateBackendOperation';
 
 import type {
@@ -48,7 +49,7 @@ function outboxRow(value: unknown): BackendCrossTeamOutboxRow {
     fromMember: text(r.fromMember),
     toMember: text(r.toMember),
     conversationId: text(r.conversationId),
-    text: text(r.text, 48_000),
+    text: text(r.text, MAX_CROSS_TEAM_TEXT_LENGTH),
     timestamp: text(r.timestamp),
     chainDepth: Number(r.chainDepth),
     ...optional(r, ['fromHandleId', 'toHandleId', 'replyToConversationId']),

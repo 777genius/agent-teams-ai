@@ -1,4 +1,7 @@
-import { crossTeamOutboxRecord } from './crossTeamRecords.js';
+import { crossTeamOutboxRecord, crossTeamPublicOutboxRow } from './crossTeamRecords.js';
+import { assertCrossTeamOutboxRowFits } from './pageCrossTeamOutbox.js';
+import { validateCrossTeamIntent } from './validateCrossTeamIntent.js';
+import { MAX_CROSS_TEAM_ENVELOPE_BYTES } from './contracts.js';
 import { randomUUID } from 'node:crypto';
 import { TeamOwnerError } from '../team/contracts.js';
 import { effectId } from '../team/identity.js';
@@ -24,6 +27,8 @@ export interface TargetCrossTeamReceipt {
   phase: 'prepared' | 'applying' | 'completed' | 'held' | 'rejected';
 }
 export interface CapturedCrossTeamTarget {
+  /** Read-only fresh admission; the source receipt does not exist yet. */
+  preflight(intent: CapturedCrossTeamIntent): void;
   /** Read-only lookup of the existing ordinary target message command receipt. */
   lookup(commandId: string): TargetCrossTeamReceipt | undefined;
   /** Reuses ordinary Team message preparation/commit and native delivery intent. */
@@ -113,7 +118,13 @@ export function createHostCrossTeamCoordinator(options: {
             commandId
           ),
         };
-        return { ...original, authorityFingerprint: crossTeamIntentFingerprint(original) };
+        const intent = { ...original, authorityFingerprint: crossTeamIntentFingerprint(original) };
+        if (Buffer.byteLength(JSON.stringify(intent), 'utf8') > MAX_CROSS_TEAM_ENVELOPE_BYTES)
+          throw new TeamOwnerError('invalid');
+        validateCrossTeamIntent(intent);
+        assertCrossTeamOutboxRowFits(crossTeamPublicOutboxRow(intent));
+        originalTarget(intent).preflight(intent);
+        return intent;
       });
       const intent = source.intent;
       const target = originalTarget(intent);

@@ -7,10 +7,27 @@ import { validateWorkSyncNudge } from './workSyncNudge.js';
 
 import type { JsonValue } from '../contracts.js';
 import type { CommandReceipt, DeliveryIntent, TeamMember } from './contracts.js';
-import type { TeamStore, TeamPolicyPort, TeamAttachmentPort } from './ports.js';
+import type { TeamStore, TeamPolicyPort, TeamAttachmentPort, TeamInputPreflight } from './ports.js';
 
 function json(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
+}
+
+/** Format the exact original delivery before any new inbox or receipt publication. */
+export function preflightTeamMessage(
+  receipt: CommandReceipt, actor: string, inputPreflight: TeamInputPreflight
+): string {
+  if (receipt.command.operation !== 'message.send') throw new TeamOwnerError('invalid');
+  const payload = receipt.command.payload;
+  const content = formatTeamMessage(payload, actor, receipt.effects.messageId,
+    receipt.messageRecipientRole, receipt.crossTeam, receipt.group);
+  if (payload.to !== 'user' && !receipt.hostCommand) {
+    if (!receipt.deliveryBinding) throw new TeamOwnerError('hold');
+    if (!inputPreflight({ binding: receipt.deliveryBinding, content,
+      ...(payload.attachments?.length ? { attachments: payload.attachments } : {}) }))
+      throw new TeamOwnerError('invalid');
+  }
+  return content;
 }
 
 export function commitTeamMessage(
@@ -19,6 +36,7 @@ export function commitTeamMessage(
   members: TeamMember[],
   store: TeamStore,
   policy: TeamPolicyPort,
+  inputPreflight: TeamInputPreflight,
   attachments?: TeamAttachmentPort
 ): JsonValue {
   if (receipt.command.operation !== 'message.send') throw new TeamOwnerError('invalid');
@@ -27,14 +45,7 @@ export function commitTeamMessage(
   const payload = receipt.command.payload;
   const { to, text, taskRefs } = payload;
   if (receipt.workSyncNudge && actor !== to) throw new TeamOwnerError('forbidden');
-  const content = formatTeamMessage(
-    payload,
-    actor,
-    receipt.effects.messageId,
-    receipt.messageRecipientRole,
-    receipt.crossTeam,
-    receipt.group
-  );
+  const content = preflightTeamMessage(receipt, actor, inputPreflight);
   const member = members.find((candidate) => candidate.name === to);
   if (receipt.messageRecipientRole !== undefined && member?.role !== receipt.messageRecipientRole)
     throw new TeamOwnerError('hold');

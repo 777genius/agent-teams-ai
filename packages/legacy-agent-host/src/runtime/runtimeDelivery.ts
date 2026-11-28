@@ -8,6 +8,12 @@ import type {
   RuntimeSessionRecord,
 } from './contracts.js';
 
+/** Shared technical fallback; captured Host composition supplies its exact smaller provider budget. */
+export function runtimeInputFits(content: string, maxBytes = 64 * 1024): boolean {
+  return typeof content === 'string' && Number.isSafeInteger(maxBytes) && maxBytes > 0 &&
+    Buffer.byteLength(content) <= maxBytes;
+}
+
 /** Canonical delivery identity and immutable original admission receipt; shared by owner paths. */
 export function normalizeRuntimeDelivery(raw: RuntimeDelivery, maxBytes: number): RuntimeDelivery {
   if (raw.attachments !== undefined) messageAttachmentReferencesSchema.parse(raw.attachments);
@@ -26,8 +32,7 @@ export function normalizeRuntimeDelivery(raw: RuntimeDelivery, maxBytes: number)
     [intent.inputId, intent.messageId].some(
       (value) => typeof value !== 'string' || !value || value.length > 256
     ) ||
-    typeof intent.content !== 'string' ||
-    Buffer.byteLength(intent.content) > maxBytes
+    !runtimeInputFits(intent.content, maxBytes)
   )
     throw new RuntimeOwnerError('invalid');
   return intent;

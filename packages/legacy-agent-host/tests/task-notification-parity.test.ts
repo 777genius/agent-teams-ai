@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -16,8 +17,11 @@ import { TaskEffectPlan } from '../dist/adapters/team/TaskEffectPlan.js';
 import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { createTeamMcpTools } from '../dist/mcp/tools.js';
 import { TeamOwnerError } from '../dist/team/contracts.js';
+import { digest } from '../dist/team/identity.js';
+import { deliveryFingerprint } from '../dist/runtime/identity.js';
 import type { FilesystemTeamOwnerOptions } from '../dist/adapters/team/createFilesystemTeamOwner.js';
-import type { CommandReceipt, TeamCommand } from '../dist/team/contracts.js';
+import type { CommandReceipt, DeliveryAdmission, DeliveryIntent, TeamCommand, TeamRuntimeDeliveryPort } from '../dist/team/contracts.js';
+import type { TeamInputPreflight } from '../dist/team/ports.js';
 import type { TestContext } from 'node:test';
 
 class InterruptedStore extends TeamOwnerStore {
@@ -49,7 +53,7 @@ interface InboxRow {
   from: string;
 }
 
-function fixture(t: TestContext, settings: { live?: boolean; lead?: boolean } = {}) {
+function fixture(t: TestContext, settings: { live?: boolean; lead?: boolean; inputPreflight?: TeamInputPreflight } = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-task-notice-parity-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-notices' };
@@ -60,6 +64,7 @@ function fixture(t: TestContext, settings: { live?: boolean; lead?: boolean } = 
     binding,
     store,
     taskMutations: plan,
+    ...(settings.inputPreflight ? { inputPreflight: settings.inputPreflight } : {}),
     members: ['Lead', 'alice', 'bob'].map((name) => ({
       name,
       memberId: `${name}-id`,
@@ -115,6 +120,174 @@ function fixture(t: TestContext, settings: { live?: boolean; lead?: boolean } = 
 }
 
 const hold = (error: unknown) => error instanceof TeamOwnerError && error.code === 'hold';
+
+test('task byte refusal preserves title, board, inboxes and task plan before publication', t => {
+  let limit = 256 * 1024;
+  const seen: Parameters<TeamInputPreflight>[0][] = [];
+  const f = fixture(t, { inputPreflight(input) {
+    seen.push(structuredClone(input)); return Buffer.byteLength(input.content) <= limit;
+  } });
+  const original = f.human.getTask(f.taskId);
+  const before = f.store.productFingerprint(f.binding.teamName);
+  const plans = f.store.list('task-plans').length, obligations = f.store.list('task-obligations').length;
+  limit = 64 * 1024;
+  const receipt = f.human.execute({ commandId: 'TEST-large-title', operation: 'task.update',
+    payload: { taskId: f.taskId, subject: '界'.repeat(30_000) } });
+  t.diagnostic(JSON.stringify({ phase: receipt.phase,
+    productChanged: f.store.productFingerprint(f.binding.teamName) !== before,
+    planCreated: f.plan.load(receipt) !== undefined }));
+  assert.equal(receipt.phase, 'rejected');
+  assert.deepEqual(f.human.getTask(f.taskId), original);
+  assert.equal(f.store.productFingerprint(f.binding.teamName), before);
+  assert.equal(f.plan.load(receipt), undefined);
+  assert.equal(f.store.list('task-plans').length, plans);
+  assert.equal(f.store.list('task-obligations').length, obligations);
+  assert.ok(seen.some(input => input.binding.memberId === 'Lead-id' && Buffer.byteLength(input.content) > limit));
+  assert.equal(readdirSync(f.root, { encoding: 'utf8', recursive: true }).some(name => name.endsWith('.stage')), false);
+});
+
+for (const kind of ['start', 'comment', 'answer'] as const) {
+  test(`oversized ${kind} notification leaves the original task and every inbox unchanged`, t => {
+    let limit = 256 * 1024;
+    const seen: Parameters<TeamInputPreflight>[0][] = [];
+    const f = fixture(t, { inputPreflight(input) {
+      seen.push(structuredClone(input)); return Buffer.byteLength(input.content) <= limit;
+    } });
+    const text = '界'.repeat(30_000);
+    if (kind === 'start') f.human.execute({ commandId: 'TEST-start-details', operation: 'task.update',
+      payload: { taskId: f.taskId, description: text } });
+    if (kind === 'answer') f.human.execute({ commandId: 'TEST-answer-question', operation: 'task.clarification',
+      payload: { taskId: f.taskId, value: 'user' } });
+    const original = f.human.getTask(f.taskId);
+    const command: TeamCommand = kind === 'start'
+      ? { commandId: 'TEST-large-start', operation: 'task.start', payload: { taskId: f.taskId, notification: 'user' } }
+      : { commandId: 'TEST-large-' + kind, operation: 'task.comment', payload: { taskId: f.taskId, text,
+        ...(kind === 'answer' ? { answerClarificationRequestId: String(original.clarificationRequestId) } : {}) } };
+    const before = f.store.productFingerprint(f.binding.teamName);
+    const plans = f.store.list('task-plans').length, obligations = f.store.list('task-obligations').length;
+    seen.length = 0; limit = 64 * 1024;
+    const receipt = f.human.execute(command);
+    assert.equal(receipt.phase, 'rejected');
+    assert.deepEqual(f.human.getTask(f.taskId), original);
+    assert.equal(f.store.productFingerprint(f.binding.teamName), before);
+    assert.equal(f.plan.load(receipt), undefined);
+    assert.equal(f.store.list('task-plans').length, plans);
+    assert.equal(f.store.list('task-obligations').length, obligations);
+    assert.ok(seen.some(input => input.binding.memberId === 'alice-id' && Buffer.byteLength(input.content) > limit));
+    assert.equal(readdirSync(f.root, { encoding: 'utf8', recursive: true }).some(name => name.endsWith('.stage')), false);
+  });
+}
+
+test('a later oversized reassignment recipient rejects the whole canonical notification batch', t => {
+  let enforce = false;
+  const seen: string[] = [];
+  const f = fixture(t, { inputPreflight(input) {
+    if (enforce) seen.push(input.binding.memberId);
+    return Buffer.byteLength(input.content) <= (enforce && input.binding.memberId === 'bob-id' ? 64 * 1024 : 256 * 1024);
+  } });
+  f.owner.connect('alice').execute({ commandId: 'TEST-agent-long-title', operation: 'task.update',
+    payload: { taskId: f.taskId, subject: '界'.repeat(30_000) } });
+  const before = f.store.productFingerprint(f.binding.teamName);
+  enforce = true;
+  const receipt = f.human.execute({ commandId: 'TEST-batch-overflow', operation: 'task.assign',
+    payload: { taskId: f.taskId, owner: 'bob' } });
+  assert.equal(receipt.phase, 'rejected');
+  assert.equal(f.store.productFingerprint(f.binding.teamName), before);
+  assert.equal(f.human.getTask(f.taskId).owner, 'alice');
+  assert.equal(f.plan.load(receipt), undefined);
+  assert.ok(seen.indexOf('alice-id') >= 0 && seen.indexOf('alice-id') < seen.indexOf('bob-id'));
+  assert.equal(readdirSync(f.root, { encoding: 'utf8', recursive: true }).some(name => name.endsWith('.stage')), false);
+});
+
+test('preflight authority errors stay held and do not become known Task policy rejections', t => {
+  let changed = false;
+  const f = fixture(t, { inputPreflight() {
+    if (changed) throw new TeamOwnerError('forbidden'); return true;
+  } });
+  const before = f.store.productFingerprint(f.binding.teamName);
+  changed = true;
+  assert.throws(() => f.human.execute(f.edit), hold);
+  const receipt = f.human.lookup(f.edit.commandId)!;
+  assert.equal(receipt.phase, 'held'); assert.equal(f.plan.load(receipt), undefined);
+  assert.equal(f.store.productFingerprint(f.binding.teamName), before);
+  assert.equal(readdirSync(f.root, { encoding: 'utf8', recursive: true }).some(name => name.endsWith('.stage')), false);
+});
+
+test('large non-notifying fields and offline members keep their existing product behavior', t => {
+  const text = '界'.repeat(30_000);
+  const live = fixture(t, { inputPreflight: input => Buffer.byteLength(input.content) <= 64 * 1024 });
+  assert.equal(live.human.execute({ commandId: 'TEST-long-description', operation: 'task.update',
+    payload: { taskId: live.taskId, description: text } }).phase, 'completed');
+  assert.equal(live.human.getTask(live.taskId).description, text);
+  const offline = fixture(t, { live: false, inputPreflight() { assert.fail('offline inbox is product-only'); } });
+  assert.equal(offline.human.execute({ commandId: 'TEST-offline-title', operation: 'task.update',
+    payload: { taskId: offline.taskId, subject: text } }).phase, 'completed');
+  assert.equal(offline.human.getTask(offline.taskId).subject, text);
+  assert.deepEqual(offline.human.pendingDeliveries(), []);
+});
+
+for (const stage of ['before-lookup', 'before-cancel', 'before-lookup-proof', 'before-cancel-proof'] as const) {
+  test(`loaded task notifications remain held ${stage} without publishing retraction effects`, async t => {
+    let enforce = false;
+    const f = fixture(t, { inputPreflight(input) {
+      return Buffer.byteLength(input.content) <= (enforce && input.binding.memberId === 'bob-id' ? 64 * 1024 : 256 * 1024);
+    } });
+    f.human.execute({ commandId: 'TEST-long-dependent', operation: 'task.create',
+      payload: { subject: '界'.repeat(30_000), owner: 'bob', blockedBy: [f.taskId] } });
+    const command: TeamCommand = { commandId: 'TEST-delete-blocker', operation: 'task.lifecycle',
+      payload: { taskId: f.taskId, action: 'delete' } };
+    assert.throws(() => f.human.execute(command), hold);
+    const receipt = f.human.lookup(command.commandId)!;
+    const plan = f.plan.load(receipt)!;
+    assert.ok(plan.notifications.some(row => row.member === 'bob' && Buffer.byteLength(row.content) > 64 * 1024));
+    const key = `task-obligations/${digest(command.commandId)}.json`;
+    const original = f.store.read<{ retractions: { intent: DeliveryIntent }[] }>(key)!;
+    assert.ok(original.retractions.length > 0, 'real deletion combines original cancellation and a dependent wakeup');
+    const before = f.store.productFingerprint(f.binding.teamName);
+    const obligations = JSON.stringify(original), planBytes = JSON.stringify(plan);
+    const outbox = JSON.stringify(f.store.list('outbox'));
+    let lookups = 0, cancellations = 0;
+    const gate = Promise.withResolvers<DeliveryAdmission>();
+    const cancelled = (intent: DeliveryIntent): DeliveryAdmission => {
+      const { backendId, teamId, runId, memberId, generation } = intent.binding;
+      return { inputId: intent.inputId, outcome: 'not_admitted', receipt: {
+        schemaVersion: 1, inputId: intent.inputId, binding: { backendId, teamId, runId, memberId, generation },
+        fingerprint: deliveryFingerprint(intent), operationRef: 'TEST-' + intent.inputId, phase: 'cancelled',
+      } };
+    };
+    const port: TeamRuntimeDeliveryPort = {
+      fingerprintDelivery: deliveryFingerprint,
+      async admitDelivery() { assert.fail('task recovery cannot admit a replacement input'); },
+      async lookupDelivery(intent) {
+        lookups++;
+        return stage === 'before-cancel-proof' ? { inputId: intent.inputId, outcome: 'unknown' } : gate.promise;
+      },
+      async cancelDelivery() { cancellations++; return gate.promise; },
+    };
+    if (stage === 'before-lookup') enforce = true;
+    const resumed = f.owner.resumeTaskCommands(port);
+    if (stage !== 'before-lookup') {
+      const entered = () => stage === 'before-cancel-proof' ? cancellations === 1 : lookups === 1;
+      const deadline = performance.now() + 2000;
+      try {
+        while (!entered() && performance.now() < deadline) await new Promise<void>(done => setImmediate(done));
+        assert.ok(entered(), 'the original controlled Runtime boundary was reached');
+        enforce = true;
+      } finally {
+        const intent = original.retractions[0]!.intent;
+        gate.resolve(stage === 'before-cancel' ? { inputId: intent.inputId, outcome: 'unknown' } : cancelled(intent));
+      }
+    }
+    assert.deepEqual(await resumed, [{ commandId: command.commandId, outcome: 'held' }]);
+    assert.equal(lookups, stage === 'before-lookup' ? 0 : 1);
+    assert.equal(cancellations, stage === 'before-cancel-proof' ? 1 : 0);
+    assert.equal(f.store.productFingerprint(f.binding.teamName), before);
+    assert.equal(JSON.stringify(f.store.read(key)), obligations);
+    assert.equal(JSON.stringify(f.plan.load(receipt)), planBytes);
+    assert.equal(JSON.stringify(f.store.list('outbox')), outbox);
+    assert.equal(f.human.lookup(command.commandId)!.phase, 'held');
+  });
+}
 
 /** The examples are consumed as tool inputs, not only checked for familiar text. */
 function examples(text: string): { name: string; args: Record<string, unknown> }[] {

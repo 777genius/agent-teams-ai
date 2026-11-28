@@ -1,21 +1,70 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import { mkdirSync, readFileSync, readdirSync, realpathSync, symlinkSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, symlinkSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { dirname, join } from 'node:path';
 import { test } from 'node:test';
 
 import { AttachmentArtifactStore } from '../dist/attachments/AttachmentArtifactStore.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
 import { resolveAgentAttachmentArtifactPath } from '../dist/attachments/storage.js';
 import { bindOpenCodeV2AttachmentPort } from '../dist/adapters/providers/OpenCodeV2AttachmentPort.js';
 import { createMemberAttachmentPort } from '../dist/composition/createMemberAttachmentPort.js';
+import { createTeamContextPreparation } from '../dist/composition/createTeamContextPreparation.js';
 import { digest } from '../dist/team/identity.js';
+import { deliveryFingerprint, runtimeDigest } from '../dist/runtime/identity.js';
 import { assertSafeRuntimeProjection } from './fixtures/native-host.ts';
 import { NATIVE_MESSAGE_PNG } from './fixtures/native-message-image.ts';
 import { fixture } from './native-member-actions-fixture.ts';
 
 import type { Input } from '@agent-teams/provider-session-contracts';
+
+test('context admission refuses oversized saved-file decoration even without a pending context epoch', async (t) => {
+  const f = await fixture(t);
+  const entry = f.lead, bytes = Buffer.from('TEST bounded file');
+  const artifacts = new AttachmentArtifactStore(f.root, f.team.definition.binding, f.store);
+  const uploaded = artifacts.upload({
+    uploadId: 'TEST-context-file', purpose: { kind: 'message', member: 'leader' },
+    attachment: { id: 'TEST-context-file', filename: 'документ<漢>.zip', mimeType: 'application/zip', size: bytes.length },
+    digest: sha(bytes), offset: 0, base64: bytes.toString('base64'),
+  });
+  assert.ok(uploaded.reference);
+  const content = 'TEST original content';
+  entry.profile.limits.inputBytes = entry.baseProfile.limits.inputBytes = Buffer.byteLength(content) + 1;
+  const callbacks = createTeamContextPreparation({
+    entries: f.entries, principalId: 'profile-admin', storageRoot: f.root,
+    assertCurrent() {},
+  });
+  const request = {
+    sessionRef: 'TEST-session-L-1', inputId: 'TEST-budget-input', operationRef: 'TEST-budget-operation',
+    intentFingerprint: 'a'.repeat(64), originalContent: content,
+    originalContentBytes: Buffer.byteLength(content), attachments: [uploaded.reference],
+    epochs: [], priorProofs: [],
+  };
+  const before = readFileSync(join(f.root, 'teams', entry.delivery.teamName, '.host-owner', 'state.json'), 'utf8');
+  assert.throws(() => callbacks.prepareInput!(entry.binding, request), /hold/);
+  assert.equal(readFileSync(join(f.root, 'teams', entry.delivery.teamName, '.host-owner', 'state.json'), 'utf8'), before);
+  assert.deepEqual(Buffer.from(artifacts.resolve(uploaded.reference).bytes), bytes);
+});
+
+test('context admission applies the captured content limit before preserving a native slash command', async (t) => {
+  const f = await fixture(t), entry = f.lead;
+  const callbacks = createTeamContextPreparation({
+    entries: f.entries, principalId: 'profile-admin', storageRoot: f.root,
+    assertCurrent() {},
+  });
+  const content = '/compact ' + '漢'.repeat(50);
+  const request = {
+    sessionRef: 'TEST-session-L-1', inputId: 'TEST-slash-input', operationRef: 'TEST-slash-operation',
+    intentFingerprint: 'b'.repeat(64), originalContent: content,
+    originalContentBytes: Buffer.byteLength(content), epochs: [], priorProofs: [],
+  };
+  entry.profile.limits.inputBytes = entry.baseProfile.limits.inputBytes = Buffer.byteLength(content) - 1;
+  assert.throws(() => callbacks.prepareInput!(entry.binding, request), /hold/);
+  entry.profile.limits.inputBytes++; entry.baseProfile.limits.inputBytes++;
+  assert.equal(callbacks.prepareInput!(entry.binding, request), undefined);
+});
 
 const sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const inputHash = (input: Input) =>
@@ -205,6 +254,9 @@ test('captured mixed attachment delivery retains custody identity and native ord
   });
   const intent = f.human.pendingDeliveries().find((value) => value.commandId === commandId)!;
   const before = structuredClone(intent);
+  const { projectMemberInput } = await import('../dist/composition/projectMemberInput.js');
+  const admittedProjection = projectMemberInput({ entry, storageRoot: f.root, input: intent,
+    assertCurrent() {} });
   // Complete the earlier controlled fixture input; this new command has its own input ID.
   f.runtimeStore.fenced(entry.binding, (tx) => {
     const record = tx.get()!;
@@ -226,6 +278,8 @@ test('captured mixed attachment delivery retains custody identity and native ord
       /hold/
     );
     const projected = delivery.prepareInput(original);
+    assert.equal(projected.content, admittedProjection.content);
+    assert.deepEqual(projected.attachments, admittedProjection.attachments);
     assert.deepEqual(projected.attachments, [refs[0], refs[2]]);
     assert.equal(projected.inputId, original.inputId);
     assert.equal(projected.operationRef, original.operationRef);
@@ -414,6 +468,8 @@ for (const provider of ['claude', 'codex'] as const) {
               nativeOptions: { approvalPolicy: 'never' as const, sandbox: 'read-only' as const },
             },
           };
+    // This explicit TEST Codex capture has the same original base and effective profile.
+    entry.baseProfile = structuredClone(entry.profile);
     const store = new AttachmentArtifactStore(f.root, f.team.definition.binding, f.store);
     const refs = [
       {
@@ -617,4 +673,117 @@ test('native Host fixture admits only closed boolean and native media attachment
   assert.throws(() => assertSafeRuntimeProjection({ ...safe,
     sessionCommands: [{ name: 'cost', description: 'TEST cost' }, { name: 'cost', description: 'duplicate' }],
   }));
+});
+
+for (const removed of ['owner', 'team'] as const) {
+  test('read-only attachment namespace does not recreate a missing ' + removed + ' directory', async t => {
+    const f = await fixture(t), entry = f.lead;
+    const artifacts = new AttachmentArtifactStore(f.root, f.team.definition.binding, f.store);
+    const bytes = Buffer.from('TEST retained original file');
+    const uploaded = artifacts.upload({
+      uploadId: 'TEST-namespace-file', purpose: { kind: 'message', member: 'leader' },
+      attachment: { id: 'TEST-namespace-file', filename: 'original.zip', mimeType: 'application/zip', size: bytes.length },
+      digest: sha(bytes), offset: 0, base64: bytes.toString('base64'),
+    });
+    assert.ok(uploaded.reference);
+    const reference = uploaded.reference;
+    const nativePath = artifacts.resolve(reference).nativePath;
+    const teamDirectory = join(f.root, 'teams', entry.delivery.teamName);
+    const directory = removed === 'owner' ? join(teamDirectory, '.host-owner') : teamDirectory;
+    rmSync(directory, { recursive: true });
+    assert.throws(() => new TeamOwnerStore(f.root, entry.delivery.teamName, { createNamespace: false }), /hold/);
+    assert.equal(existsSync(directory), false);
+    const { projectMemberInput } = await import('../dist/composition/projectMemberInput.js');
+    assert.throws(() => projectMemberInput({ entry, storageRoot: f.root,
+      input: { content: 'TEST original', attachments: [reference] }, assertCurrent() {} }), /hold/);
+    assert.equal(existsSync(directory), false);
+    assert.deepEqual(readFileSync(nativePath), bytes);
+    const ordinary = new TeamOwnerStore(f.root, entry.delivery.teamName);
+    assert.equal(existsSync(ordinary.directory), true, 'ordinary namespace creation remains available');
+  });
+}
+
+test('context budgets the exact attachment suffix and retains original prefix plus raw proof bytes', async t => {
+  const f = await fixture(t), entry = f.lead;
+  const { projectMemberInput } = await import('../dist/composition/projectMemberInput.js');
+  const artifacts = new AttachmentArtifactStore(f.root, f.team.definition.binding, f.store);
+  const refs = [
+    { id: 'TEST-budget-image', filename: 'image.png', mimeType: 'image/png', bytes: NATIVE_MESSAGE_PNG },
+    { id: 'TEST-budget-file', filename: 'план<漢>.zip', mimeType: 'application/zip', bytes: Buffer.from('TEST file') },
+  ].map(file => {
+    const uploaded = artifacts.upload({ uploadId: file.id,
+      purpose: { kind: 'message', member: 'leader' },
+      attachment: { id: file.id, filename: file.filename, mimeType: file.mimeType, size: file.bytes.length },
+      digest: sha(file.bytes), offset: 0, base64: file.bytes.toString('base64'),
+    });
+    assert.ok(uploaded.reference);
+    return uploaded.reference;
+  });
+  const intent = { binding: entry.binding, deliveryId: 'TEST-budget-delivery',
+    inputId: 'TEST-budget-input', messageId: 'TEST-budget-message', content: 'TEST original content', attachments: refs };
+  const projected = projectMemberInput({ entry, storageRoot: f.root, input: intent, assertCurrent() {} });
+  assert.deepEqual(projected.attachments, [refs[0]]);
+  assert.ok(Buffer.byteLength(projected.content) > Buffer.byteLength(intent.content));
+  const callbacks = createTeamContextPreparation({ entries: f.entries, principalId: 'profile-admin',
+    storageRoot: f.root, assertCurrent() {} });
+  const request = { sessionRef: f.drivers.get('L:1')!.sessionRef, inputId: intent.inputId,
+    operationRef: 'TEST-budget-operation', intentFingerprint: deliveryFingerprint(intent),
+    originalContent: intent.content, originalContentBytes: Buffer.byteLength(intent.content),
+    attachments: refs, epochs: [], priorProofs: [] };
+  const prepare = f.owner.contextReminders.prepare.bind(f.owner.contextReminders);
+  let offered: number | undefined;
+  t.mock.method(f.owner.contextReminders, 'prepare',
+    (...args: Parameters<typeof f.owner.contextReminders.prepare>) => {
+      offered = args[1].maxPrefixBytes;
+      return prepare(...args);
+    });
+  const statePath = join(f.root, 'teams', entry.delivery.teamName, '.host-owner', 'state.json');
+  const before = readFileSync(statePath, 'utf8');
+  const setBound = (bytes: number) => {
+    entry.profile.limits.inputBytes = entry.baseProfile.limits.inputBytes = bytes;
+  };
+  const exactBytes = Buffer.byteLength(projected.content);
+  setBound(exactBytes - 1);
+  assert.throws(() => callbacks.prepareInput!(entry.binding, request), /hold/);
+  assert.equal(offered, undefined, 'oversized original refuses before preparing any Team context');
+  setBound(exactBytes);
+  assert.equal(callbacks.prepareInput!(entry.binding, request), undefined);
+  assert.equal(offered, 0);
+  setBound(exactBytes + 17);
+  assert.equal(callbacks.prepareInput!(entry.binding, request), undefined);
+  assert.equal(offered, 17, 'native binary media does not consume the text prefix budget');
+  const epoch = { sessionRef: request.sessionRef, sourceRef: 'TEST-prefix-epoch',
+    epochId: runtimeDigest({ binding: entry.binding, sessionRef: request.sessionRef, sourceRef: 'TEST-prefix-epoch' }) };
+  assert.throws(() => callbacks.prepareInput!(entry.binding, { ...request, epochs: [epoch] }), /hold/);
+  assert.equal(readFileSync(statePath, 'utf8'), before, 'an unfit mandatory prefix has no preparation write');
+  setBound(exactBytes + 64 * 1024);
+  const prepared = callbacks.prepareInput!(entry.binding, { ...request, epochs: [epoch] });
+  assert.ok(prepared);
+  const native = projectMemberInput({ entry, storageRoot: f.root,
+    input: { content: prepared.prefix + intent.content, attachments: refs }, assertCurrent() {} });
+  assert.equal(native.content, prepared.prefix + projected.content);
+  assert.ok(Buffer.byteLength(native.content) <= entry.profile.limits.inputBytes);
+  assert.deepEqual(native.attachments, [refs[0]]);
+  assert.equal(request.originalContent, intent.content);
+  assert.equal(request.intentFingerprint, deliveryFingerprint(intent));
+});
+
+test('context holds changed original profiles without attachments and accepts the original selected profile', async t => {
+  const f = await fixture(t), entry = f.lead;
+  const callbacks = createTeamContextPreparation({ entries: f.entries, principalId: 'profile-admin',
+    storageRoot: f.root, assertCurrent() {} });
+  const request = { sessionRef: f.drivers.get('L:1')!.sessionRef, inputId: 'TEST-profile-input',
+    operationRef: 'TEST-profile-operation', intentFingerprint: 'c'.repeat(64),
+    originalContent: 'TEST profile', originalContentBytes: 12, epochs: [], priorProofs: [] };
+  assert.equal(callbacks.prepareInput!(entry.binding, request), undefined);
+  const before = readFileSync(join(f.root, 'teams', entry.delivery.teamName, '.host-owner', 'state.json'), 'utf8');
+  entry.profile.limits.inputBytes++;
+  assert.throws(() => callbacks.prepareInput!(entry.binding, request), /hold/);
+  assert.equal(readFileSync(join(f.root, 'teams', entry.delivery.teamName, '.host-owner', 'state.json'), 'utf8'), before);
+  entry.selection = { binding: entry.binding, generation: entry.profile.generation,
+    baseConfigurationDigest: runtimeDigest(entry.baseProfile), configurationDigest: runtimeDigest(entry.profile) };
+  assert.equal(callbacks.prepareInput!(entry.binding, request), undefined,
+    'an actual selected profile can differ from its separately pinned original base');
+  entry.selection.baseConfigurationDigest = 'd'.repeat(64);
+  assert.throws(() => callbacks.prepareInput!(entry.binding, request), /hold/);
 });

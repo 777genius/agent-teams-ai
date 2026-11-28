@@ -1,13 +1,25 @@
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
+import { MAX_CROSS_TEAM_ENVELOPE_BYTES } from './contracts.js';
 
 import type { BackendCrossTeamOutbox, BackendCrossTeamOutboxRow } from './contracts.js';
 
-const MAX_PAGE_BYTES = 240 * 1024;
+const MAX_PAGE_BYTES = MAX_CROSS_TEAM_ENVELOPE_BYTES;
 const MAX_ROWS = 1000;
 const CURSOR = /^([1-9][0-9]{0,8})\.([a-f0-9]{64})$/;
 
-/** The original intent already fits 96 KiB; retain whole validated public rows.
+function emptyPage(revision: string): BackendCrossTeamOutbox {
+  return { kind: 'cross-team-outbox', rows: [], revision, nextCursor: null };
+}
+
+/** New rows must still fit after growing history requires a signed continuation. */
+export function assertCrossTeamOutboxRowFits(row: BackendCrossTeamOutboxRow): void {
+  const bytes = Buffer.byteLength(JSON.stringify(emptyPage('0'.repeat(64)))) + 256 +
+    Buffer.byteLength(JSON.stringify(row)) + 1;
+  if (bytes > MAX_PAGE_BYTES) throw new TeamOwnerError('invalid');
+}
+
+/** Original records retain whole validated public rows.
  * Only the growing collection is paged, within both MCP and Main's row budget.
  */
 export function pageCrossTeamOutbox(options: {
@@ -32,9 +44,7 @@ export function pageCrossTeamOutbox(options: {
     if (offset >= options.rows.length || match[2] !== signature(offset))
       throw new TeamOwnerError('hold');
   }
-  const page: BackendCrossTeamOutbox = {
-    kind: 'cross-team-outbox', rows: [], revision, nextCursor: null,
-  };
+  const page = emptyPage(revision);
   // Reserve the complete signed continuation before admitting another whole row.
   let bytes = Buffer.byteLength(JSON.stringify(page)) + 256;
   let end = offset;

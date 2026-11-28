@@ -29,7 +29,7 @@ export function groupTargetCommand(
     },
   };
 }
-export function groupInboundText(intent: CapturedGroupIntent): string {
+export function groupInboundText(intent: Pick<CapturedGroupIntent, 'message'>): string {
   return [
     agentBlocks.wrapAgentBlock(
       [

@@ -10,7 +10,7 @@ import {
 } from './commandEntries.js';
 import { applyTeamTask } from './applyTeamTask.js';
 import { requiresHumanTaskActor } from './taskStartIntent.js';
-import { commitTeamMessage } from './commitTeamMessage.js';
+import { commitTeamMessage, preflightTeamMessage } from './commitTeamMessage.js';
 import { digest, effectId } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
 import { TaskPolicyRejected } from './ports.js';
@@ -24,13 +24,14 @@ import type { CapturedGroupIntent } from '../group-chats/groupCommandRecords.js'
 import type { CapturedCrossTeamIntent } from '../cross-team/contracts.js';
 import type { OwnerState } from './ownerState.js';
 import type { TaskRecovery } from './TaskRecovery.js';
-import type { TeamStore, TeamPolicyPort } from './ports.js';
+import type { TeamStore, TeamPolicyPort, TeamInputPreflight } from './ports.js';
 import type { TeamBinding, TeamGrant, TeamCommand, CommandReceipt } from './contracts.js';
 
 interface TeamCommandExecution {
   binding: TeamBinding;
   store: TeamStore;
   policy: TeamPolicyPort;
+  inputPreflight: TeamInputPreflight;
   taskRecovery: Pick<TaskRecovery, 'hasPlan' | 'commit'>;
   assertTaskGroupAssociation(principalId: string, groupChatId: string): void;
   state(): OwnerState;
@@ -214,6 +215,8 @@ export function executeTeamCommand(
       };
       validateHostCostCommand(receipt);
       validateWorkSyncNudge(receipt);
+      if (command.operation === 'message.send')
+        preflightTeamMessage(receipt, grant.memberName, options.inputPreflight);
       options.store.write(location, receipt);
     }
     receipt.phase = 'applying';
@@ -227,6 +230,7 @@ export function executeTeamCommand(
           options.state().members,
           options.store,
           options.policy,
+          options.inputPreflight,
           options.policy.attachments
         );
       else {

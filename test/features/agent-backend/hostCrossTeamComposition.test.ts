@@ -10,6 +10,8 @@ import { createHostCrossTeamComposition } from '../../../packages/legacy-agent-h
 import { capturedTeam } from '../../../packages/legacy-agent-host/src/composition/runtimeCaptureSource';
 import { startTeamMcpEndpoint } from '../../../packages/legacy-agent-host/src/mcp/endpoint';
 import { CrossTeamOutbox } from '../../../packages/legacy-agent-host/src/cross-team/CrossTeamOutbox';
+import { CascadeGuard } from '../../../packages/legacy-agent-host/src/cross-team/CascadeGuard';
+import { memberBinding } from '../../../packages/legacy-agent-host/src/team/DeliveryRecovery';
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
 import { createHostCrossTeamApi } from '../../../src/features/agent-backend/renderer/createHostCrossTeamApi';
 import { hostTeamSelectionKey } from '../../../src/features/agent-backend/renderer/hostTeamRouting';
@@ -51,6 +53,11 @@ function fixture(projectRouting: Pick<Parameters<typeof createHostCrossTeamCompo
   };
   const teams = new Map<string, HostedTeam>(),
     active = new Map<string, readonly ImmutableDelivery[]>();
+  const inputBytes = new Map(['alpha', 'beta', 'gamma'].map(name => [name, 64 * 1024]));
+  const inputPreflight = vi.fn((input: Pick<ImmutableDelivery, 'binding' | 'content' | 'attachments'>) => {
+    expect(memberBinding(input.binding)).toEqual(binding(input.binding.teamId));
+    return Buffer.byteLength(input.content, 'utf8') <= (inputBytes.get(input.binding.teamId) ?? 0);
+  });
   let current = true;
   const composition = createHostCrossTeamComposition({
     profile,
@@ -59,6 +66,7 @@ function fixture(projectRouting: Pick<Parameters<typeof createHostCrossTeamCompo
       if (!current) throw new Error('TEST owner retired');
     },
     activeInputs: (binding) => active.get(binding.teamId) ?? [],
+    inputPreflight,
     ...projectRouting,
   });
   for (const name of ['alpha', 'beta', 'gamma']) {
@@ -88,6 +96,7 @@ function fixture(projectRouting: Pick<Parameters<typeof createHostCrossTeamCompo
       root,
       ...definition,
       crossTeamSourceAuthority: composition.sourceAuthorized,
+      inputPreflight,
     });
     teams.set(name, { definition, owner, connection: owner.connect('human') });
   }
@@ -181,6 +190,8 @@ function fixture(projectRouting: Pick<Parameters<typeof createHostCrossTeamCompo
     binding,
     captured,
     composition,
+    inputBytes,
+    inputPreflight,
     active,
     endpoint,
     revoke() {
@@ -193,6 +204,7 @@ it('pages retained cross-Team outbox through real HTTP without losing accepted t
   let now = Date.now();
   vi.spyOn(Date, 'now').mockImplementation(() => now);
   const f = fixture();
+  f.inputBytes.set('beta', 8 * 1024 * 1024);
   const alpha = await f.endpoint('alpha');
   const target = alpha.port.listTargets().find((row) => row.teamName === 'beta')!;
   const texts = Array.from({ length: 6 }, (_, index) => String(index).repeat(48_000));
@@ -210,7 +222,7 @@ it('pages retained cross-Team outbox through real HTTP without losing accepted t
       expect(small.rows[0]?.text).toBe(text);
     }
   }
-  for (const [index, text] of ['漢'.repeat(28_000), 'TEST \u0001\"\\😀'.repeat(4_000)].entries()) {
+  for (const [index, text] of ['漢'.repeat(50_000), '😀'.repeat(25_000), 'TEST \u0001\"\\😀'.repeat(4_000)].entries()) {
     now += 3_000;
     await alpha.port.send({ commandId: 'TEST-outbox-extra-' + index, toTeam: target.resourceRef, text });
     texts.push(text);
@@ -498,4 +510,118 @@ it('captured cross-Team ports refuse canonical replacement and stale identity wi
   f.teams.set('alpha', { ...source });
   expect(() => unbound.listTargets(), 'no late canonical adoption').toThrow(/forbidden/);
   expect(snapshot(f.root)).toEqual(before);
+});
+
+function mainCrossTeam(f: ReturnType<typeof fixture>) {
+  const binding = (name: string) => ({
+    schemaVersion: 1, handleId: name, owner: f.profile.owner, scope: f.team(name).definition.scope,
+  });
+  const context = { requestId: 'TEST-main-cross-request', signal: new AbortController().signal };
+  const router = {
+    requestPair: vi.fn<BackendOwnerRouter['requestPair']>(async (source, target, command) => {
+      return f.composition.methods[command.method]!.handle({
+        commandId: command.commandId, binding: binding(source.handleId),
+        payload: { request: command.payload, targetBinding: binding(target.handleId) },
+      }, context);
+    }),
+    request: vi.fn<BackendOwnerRouter['request']>(async (source, command) =>
+      f.composition.methods[command.method]!.handle({
+        commandId: command.commandId, binding: binding(source.handleId), payload: command.payload,
+      }, context)),
+    lookup: vi.fn<BackendOwnerRouter['lookup']>(),
+  };
+  return { router, facade: new BackendOperationsFacade(router) };
+}
+
+function crossRequest(text: string) {
+  return {
+    handle: { handleId: 'alpha' }, commandId: 'TEST-main-unicode', operation: 'crossTeam.send',
+    payload: {
+      target: { handleId: 'beta' }, fromMember: 'user', messageId: 'TEST-main-unicode',
+      conversationId: 'TEST-original-conversation', text, timestamp: '2026-11-27T00:00:00.000Z',
+    },
+  };
+}
+
+function crossFiles(directory: string): unknown {
+  return readdirSync(directory, { withFileTypes: true }).map(entry => [
+    entry.name, entry.isDirectory() ? crossFiles(join(directory, entry.name)) :
+      readFileSync(join(directory, entry.name), 'utf8'),
+  ]);
+}
+
+it.each([
+  ['ASCII', 'a'.repeat(50_000)], ['CJK', '漢'.repeat(50_000)], ['emoji', '😀'.repeat(25_000)],
+])('Main/Host sends and reads the exact50k-unit %s message and replays the original without re-admission', async (_label, text) => {
+  const f = fixture(), { facade } = mainCrossTeam(f), request = crossRequest(text);
+  f.inputBytes.set('beta', 8 * 1024 * 1024);
+  expect(await facade.invoke(request)).toMatchObject({ ok: true, value: { phase: 'completed' } });
+  expect(await facade.invoke({
+    handle: request.handle, commandId: 'TEST-read-original', operation: 'crossTeam.outbox.read', payload: {},
+  })).toMatchObject({ ok: true, value: { rows: [{ text, messageId: request.commandId }] } });
+  const pending = f.team('beta').connection.pendingDeliveries();
+  expect(pending).toHaveLength(1);
+  expect(pending[0]!.content.endsWith(text)).toBe(true);
+  expect(f.inputPreflight.mock.calls.some(([input]) => input.content === pending[0]!.content)).toBe(true);
+  const before = crossFiles(f.root), preflights = f.inputPreflight.mock.calls.length;
+  f.inputBytes.set('beta', 1);
+  expect(await facade.invoke(request)).toMatchObject({ ok: true, value: { phase: 'completed', deduplicated: true } });
+  expect(f.inputPreflight).toHaveBeenCalledTimes(preflights);
+  expect(crossFiles(f.root)).toEqual(before);
+});
+
+it('Main rejects50001units before dispatch and leaves every source/target file unchanged', async () => {
+  const f = fixture(), { facade, router } = mainCrossTeam(f), before = crossFiles(f.root);
+  expect(await facade.invoke(crossRequest('a'.repeat(50_001)))).toMatchObject({
+    ok: false, code: 'invalid', outcome: 'not-dispatched',
+  });
+  expect(router.requestPair).not.toHaveBeenCalled();
+  expect(crossFiles(f.root)).toEqual(before);
+});
+
+it.each(['escaped-body', 'combined-metadata'] as const)(
+  'Host rejects a fresh oversized serialized %s before source receipt/cascade/target/sender effects',
+  async kind => {
+    const f = fixture(), { facade } = mainCrossTeam(f);
+    const record = vi.spyOn(CascadeGuard.prototype, 'record');
+    const request = crossRequest(kind === 'escaped-body' ? '\u0001'.repeat(50_000) : '漢'.repeat(50_000));
+    const payload = kind === 'escaped-body' ? request.payload : {
+      ...request.payload,
+      taskRefs: Array.from({ length: 100 }, () => ({
+        taskId: '漢'.repeat(256), displayId: '字'.repeat(256), team: 'source' as const,
+      })),
+    };
+    const before = crossFiles(f.root);
+    expect(await facade.invoke({ ...request, payload })).toMatchObject({
+      ok: false, code: 'invalid', outcome: 'rejected',
+    });
+    expect(record).not.toHaveBeenCalled();
+    expect(f.inputPreflight).not.toHaveBeenCalled();
+    expect(crossFiles(f.root)).toEqual(before);
+    expect(f.team('alpha').owner.crossTeamCommands('human').lookup(request.commandId)).toBeUndefined();
+    expect(f.team('beta').connection.pendingDeliveries()).toEqual([]);
+  }
+);
+
+it('cross-Team checks the complete captured receiver envelope before any source effect and admits the exact boundary with the same ID', async () => {
+  const f = fixture(), { facade } = mainCrossTeam(f), request = crossRequest('TEST body');
+  const record = vi.spyOn(CascadeGuard.prototype, 'record');
+  f.inputBytes.set('beta', 1);
+  const before = crossFiles(f.root);
+  expect(await facade.invoke(request)).toMatchObject({ ok: false, code: 'invalid', outcome: 'rejected' });
+  const input = f.inputPreflight.mock.calls[0]?.[0];
+  expect(input).toBeDefined();
+  if (!input) throw new Error('TEST missing captured preflight');
+  const exactBytes = Buffer.byteLength(input.content, 'utf8');
+  expect(exactBytes).toBeGreaterThan(Buffer.byteLength(request.payload.text));
+  expect(record).not.toHaveBeenCalled();
+  expect(crossFiles(f.root)).toEqual(before);
+  f.inputBytes.set('beta', exactBytes - 1);
+  expect(await facade.invoke(request)).toMatchObject({ ok: false, code: 'invalid', outcome: 'rejected' });
+  expect(record).not.toHaveBeenCalled();
+  expect(crossFiles(f.root)).toEqual(before);
+  f.inputBytes.set('beta', exactBytes);
+  expect(await facade.invoke(request)).toMatchObject({ ok: true, value: { phase: 'completed' } });
+  expect(record).toHaveBeenCalledTimes(1);
+  expect(f.team('beta').connection.pendingDeliveries()[0]!.content).toBe(input.content);
 });

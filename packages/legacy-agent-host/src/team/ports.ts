@@ -1,7 +1,10 @@
 import type { AttachmentReference, AttachmentUpload } from '../attachments/uploadContracts.js';
 import type { AttachmentMetadata } from '../attachments/contracts.js';
 import type { JsonValue } from '../contracts.js';
-import type { CommandReceipt, RuntimeMemberBinding, TeamReviewFlowSettings } from './contracts.js';
+import type { CommandReceipt, ImmutableDelivery, RuntimeMemberBinding, TeamReviewFlowSettings } from './contracts.js';
+
+/** Readonly check of the original captured native input; authority errors remain exceptions. */
+export type TeamInputPreflight = (input: Readonly<Pick<ImmutableDelivery, 'binding' | 'content' | 'attachments'>>) => boolean;
 
 /** Private launch-owned technical selection; Team retains business membership/grants. */
 export interface TeamRuntimeSelection {
@@ -152,7 +155,8 @@ export interface TaskMutationPort {
   prepare(
     receipt: CommandReceipt,
     actor: string,
-    apply: (board: TaskBoardPolicy) => JsonValue
+    apply: (board: TaskBoardPolicy) => JsonValue,
+    validateNotifications?: (notifications: readonly TaskNotification[]) => void
   ): PreparedTaskMutation;
   validate(receipt: CommandReceipt): void;
   publish(receipt: CommandReceipt): void;

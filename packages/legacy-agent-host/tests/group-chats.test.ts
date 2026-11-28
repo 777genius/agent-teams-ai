@@ -1,4 +1,6 @@
 import { groupMutationSchema } from '../dist/group-chats/operations.js';
+import { DEFAULT_TEAM_GROUP_CHAT_ID } from '../dist/group-chats/contracts.js';
+import { groupInboundText } from '../dist/group-chats/groupDelivery.js';
 import { createTeamGroupChatsFeature } from '../dist/group-chats/createTeamGroupChatsFeature.js';
 import {
   groupReceiptFingerprint,
@@ -9,7 +11,8 @@ import {
   readGroupReaction,
   readGroupCommand,
 } from '../dist/group-chats/publicValues.js';
-import { selectCurrentGroupEntry } from '../dist/composition/readGroupRuntime.js';
+import { readGroupRuntime, selectCurrentGroupEntry } from '../dist/composition/readGroupRuntime.js';
+import { preflightMemberInput } from '../dist/composition/runtimeDeliveryPort.js';
 import { createHostGroupComposition } from '../dist/composition/createHostGroupComposition.js';
 import { capturedTeam } from '../dist/composition/runtimeCaptureSource.js';
 import { createMemberEntry } from '../dist/composition/createMemberEntry.js';
@@ -42,6 +45,9 @@ import { teamCommandPath, validateCommandEntry } from '../dist/team/commandEntri
 import type { GroupMutation } from '../dist/group-chats/operations.js';
 import type { GroupCommandReceipt } from '../dist/group-chats/groupCommandRecords.js';
 import type { GroupMessage } from '../dist/group-chats/message.js';
+import type { ImmutableDelivery } from '../dist/team/contracts.js';
+import type { GroupChatStorage } from '../dist/group-chats/storage.js';
+import type { GroupChat } from '../dist/group-chats/model.js';
 const id = '10000000-0000-4000-8000-000000000001';
 const postId = '20000000-0000-4000-8000-000000000001';
 const replyId = '30000000-0000-4000-8000-000000000001';
@@ -56,8 +62,14 @@ function fixture(t: TestContext, memberNames: string[] = ['lead', 'alice']) {
     role: index === 0 ? ('lead' as const) : ('member' as const),
     delivery: { ...binding, memberId: name, runId: 'TEST-run', generation: '1' },
   }));
+  const inputBytes = new Map<string, number | undefined>(memberNames.map((name) => [name, 64 * 1024]));
+  const preflightInputs: Pick<ImmutableDelivery, 'binding' | 'content' | 'attachments'>[] = [];
   const options = {
     root,
+    inputPreflight(input: Pick<ImmutableDelivery, 'binding' | 'content' | 'attachments'>) {
+      preflightInputs.push(structuredClone(input));
+      return Buffer.byteLength(input.content, 'utf8') <= (inputBytes.get(input.binding.memberId) ?? 0);
+    },
     binding,
     members,
     grants: [
@@ -76,8 +88,10 @@ function fixture(t: TestContext, memberNames: string[] = ['lead', 'alice']) {
   const owner = createFilesystemTeamOwner(options),
     store = new TeamOwnerStore(root, binding.teamName);
   const runtime = {
+    inputBytes,
     async getRun(name: string) {
       const member = members.find((member) => member.name === name);
+      const inputBytes = runtime.inputBytes.get(name);
       return member
         ? {
             provider: 'host' as const,
@@ -85,6 +99,7 @@ function fixture(t: TestContext, memberNames: string[] = ['lead', 'alice']) {
             groupReactionProtocolVersion: 1 as const,
             binding: member.delivery,
             runKey: 'TEST-original-' + name,
+            ...(inputBytes === undefined ? {} : { inputBytes }),
             isCurrent: async () => true,
           }
         : null;
@@ -120,6 +135,7 @@ function fixture(t: TestContext, memberNames: string[] = ['lead', 'alice']) {
     owner,
     store,
     runtime,
+    preflightInputs,
     human,
     agent,
     create,
@@ -1042,4 +1058,175 @@ test('group projection admits the full Team roster and one human reaction withou
       sent.commandId
     )
   );
+});
+
+function assertUnpublishedGroup(f: ReturnType<typeof fixture>, commandId: string) {
+  assert.equal(existsSync(join(f.root, 'teams', f.binding.teamName, 'group-chats.json')), false);
+  for (const name of ['user', 'lead', 'alice'])
+    assert.equal(existsSync(join(f.root, 'teams', f.binding.teamName, 'inboxes', name + '.json')), false);
+  assert.equal(f.owner.connect('human').pendingDeliveries().length, 0);
+  const original = f.store.fenced(() => f.store.read<GroupCommandReceipt>(teamCommandPath(commandId))!);
+  assert.equal(original.phase, 'held');
+  assert.equal(original.publication, 'not-requested');
+  assert.deepEqual(original.deliveries, []);
+  assert.equal(f.preflightInputs.length, 0, 'no individual target publication was attempted');
+}
+
+test('Host group preflight rejects a later oversized recipient before default group or any inbox publication', async (t) => {
+  const f = fixture(t);
+  f.runtime.inputBytes.set('lead', 8 * 1024 * 1024);
+  f.runtime.inputBytes.set('alice', 256 * 1024);
+  await assert.rejects(f.human.execute('TEST-group-byte-budget', {
+    operation: 'send', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID, messageId: postId,
+    text: '漢'.repeat(50_000),
+  }, guard), /input|limit|large|budget/i);
+  assertUnpublishedGroup(f, 'TEST-group-byte-budget');
+});
+
+for (const limit of [undefined, 0, -1, NaN, Infinity, 1.5, 8 * 1024 * 1024 + 1])
+  test('Host group refuses an unavailable or invalid captured bound: ' + String(limit), async (t) => {
+    const f = fixture(t);
+    f.runtime.inputBytes.set('alice', limit);
+    await assert.rejects(f.human.execute('TEST-group-invalid-budget', {
+      operation: 'send', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID, messageId: postId,
+      text: 'TEST valid message',
+    }, guard), /input limit/i);
+    assertUnpublishedGroup(f, 'TEST-group-invalid-budget');
+  });
+
+test('capable Host group preserves the complete50k CJK envelope and original replay without another fanout', async (t) => {
+  const f = fixture(t), text = '漢'.repeat(50_000);
+  for (const name of ['lead', 'alice']) f.runtime.inputBytes.set(name, 8 * 1024 * 1024);
+  const request = { operation: 'send', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID, messageId: postId, text };
+  const sent = await f.human.execute('TEST-group-capable', request, guard);
+  assert.equal(sent.phase, 'completed');
+  assert.equal(f.inbox('user')[0]!.text, text);
+  const pending = f.owner.connect('human').pendingDeliveries();
+  assert.equal(pending.length, 2);
+  for (const input of pending) {
+    const physical = f.inbox(input.binding.memberId)[0]!;
+    assert.equal(physical.text, text);
+    assert.ok(typeof physical.messageId === 'string' && physical.messageId.length > 0);
+    assert.ok(typeof physical.to === 'string' && physical.to.length > 0);
+    assert.equal(input.content, groupInboundText({
+      message: { ...physical, messageId: physical.messageId, to: physical.to },
+    }));
+    assert.ok(Buffer.byteLength(input.content, 'utf8') > 256 * 1024);
+    assert.ok(f.preflightInputs.some(candidate => candidate.binding.memberId === input.binding.memberId &&
+      candidate.content === input.content));
+  }
+  const before = f.preflightInputs.length;
+  f.runtime.inputBytes.set('lead', 1);
+  f.runtime.inputBytes.set('alice', 1);
+  assert.deepEqual(await f.human.execute('TEST-group-capable', request, guard), sent);
+  assert.equal(f.preflightInputs.length, before);
+  assert.deepEqual(f.owner.connect('human').pendingDeliveries(), pending);
+});
+
+test('Host group currency pins the full original profile without changing the existing run key', async (t) => {
+  const f = await capturedGroupPort(t);
+  f.entry.endpoint = {
+    url: 'http://127.0.0.1:1/TEST-no-listener', bearerToken: 'TEST-unused',
+    binding: f.entry.delivery, revoke() {}, async close() {},
+    getCatalogReceipt: () => ({
+      binding: f.entry.delivery, sequence: 1, servedAtMs: 1,
+      toolNames: ['group_chat_list', 'group_chat_create', 'group_chat_send', 'group_chat_react', 'group_chat_lookup'],
+    }),
+  };
+  const options = { entry: f.entry, current: () => true,
+    read: () => ({ record: f.record, attached: true }) };
+  const original = readGroupRuntime(options);
+  assert.ok(original);
+  assert.equal(original.inputBytes, 8192);
+  const originalProfile = structuredClone(f.entry.profile);
+  f.entry.profile = { ...f.entry.profile, limits: { ...f.entry.profile.limits, inputBytes: 4096 } };
+  assert.equal(await original.isCurrent?.(), false);
+  assert.equal(readGroupRuntime(options), null, 'a fresh read cannot adopt a changed original profile');
+  f.entry.profile = originalProfile;
+  const current = readGroupRuntime(options);
+  assert.ok(current);
+  assert.equal(current.runKey, original.runKey, 'the persisted identity and old fingerprints stay unchanged');
+  assert.equal(current.inputBytes, 8192);
+  assert.equal(await original.isCurrent?.(), true);
+  for (const limit of [0, -1, NaN, Infinity, 1.5, 8 * 1024 * 1024 + 1]) {
+    f.entry.profile.limits.inputBytes = limit;
+    assert.equal(readGroupRuntime(options), null);
+  }
+  Reflect.deleteProperty(f.entry.profile.limits, 'inputBytes');
+  assert.equal(readGroupRuntime(options), null);
+});
+
+test('legacy group runs keep their existing admission without a Host input bound', async () => {
+  const groups: GroupChat[] = [], inboxes = new Map<string, GroupMessage[]>();
+  const physical: GroupMessage[] = [];
+  const storage: GroupChatStorage = {
+    async teamRoot() { return 'TEST-memory-team'; },
+    async logicalPost(_key, action) { return action(); },
+    async readCreationOriginal() { return {}; },
+    async readReactions() { return []; },
+    async withReactions(_team, action) { return action([], async () => {}); },
+    async withRegistry(_team, action) { return action(groups, async () => {}); },
+    async withInbox(_team, member, action) {
+      const rows = inboxes.get(member) ?? [];
+      inboxes.set(member, rows);
+      return action(rows, async () => {});
+    },
+  };
+  const feature = createTeamGroupChatsFeature({
+    roster: async () => ['lead', 'alice'],
+    getRun: async (_team, member) => ({
+      provider: member === 'lead' ? 'lead' : 'native',
+      runKey: 'TEST-legacy-' + member, protocolVersion: 1, isCurrent: async () => true,
+    }),
+    configurationOperation: async (_team, action) => action(),
+    async deliver(_team, message) { physical.push(structuredClone(message)); return 'queued'; },
+  }, storage);
+  const sent = await feature.send({
+    teamName: 'test-team', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+    messageId: postId, text: 'TEST legacy message',
+  });
+  assert.equal(sent.saved, true);
+  assert.equal(physical.length, 2);
+  assert.equal(inboxes.get('user')?.length, 1);
+});
+
+test('Host group refuses profile drift before capture without default-group or canonical publication', async (t) => {
+  const f = await capturedGroupPort(t);
+  f.entry.endpoint = {
+    url: 'http://127.0.0.1:1/TEST-no-listener', bearerToken: 'TEST-unused',
+    binding: f.entry.delivery, revoke() {}, async close() {},
+    getCatalogReceipt: () => ({ binding: f.entry.delivery, sequence: 1, servedAtMs: 1,
+      toolNames: ['group_chat_list', 'group_chat_create', 'group_chat_send', 'group_chat_react', 'group_chat_lookup'] }),
+  };
+  f.entry.profile = { ...f.entry.profile, limits: { ...f.entry.profile.limits, inputBytes: 8 * 1024 * 1024 } };
+  f.runtime.inputBytes.set('lead', 8 * 1024 * 1024);
+  const original = { entry: f.entry, current: () => true,
+    read: () => ({ record: f.record, attached: true }) };
+  let targetPreflights = 0;
+  const owner = createFilesystemTeamOwner({ ...f.options, inputPreflight(input) {
+    targetPreflights++;
+    return input.binding.memberId === 'alice'
+      ? preflightMemberInput({ entry: f.entry, storageRoot: f.root, input, assertCurrent() {} })
+      : f.options.inputPreflight(input);
+  } });
+  const runtime = { async getRun(member: string) {
+    return member === 'alice' ? readGroupRuntime(original) : f.runtime.getRun(member);
+  } };
+  const canonicalBefore = f.inbox('user');
+  const productBefore = f.store.fenced(() => f.store.productFingerprint(f.binding.teamName));
+  const pendingBefore = owner.connect('human').pendingDeliveries();
+  const outcome = await Promise.allSettled([owner.groupCommands('human', runtime).execute(
+    'TEST-group-profile-before-capture', {
+      operation: 'send', groupChatId: DEFAULT_TEAM_GROUP_CHAT_ID,
+      messageId: '40000000-0000-4000-8000-000000000001', text: '漢'.repeat(50_000),
+    }, guard
+  )]);
+  assert.equal(f.inbox('user').length, canonicalBefore.length,
+    'no canonical group post may precede the original profile check');
+  assert.deepEqual(f.inbox('user'), canonicalBefore);
+  assert.equal(f.store.fenced(() => f.store.productFingerprint(f.binding.teamName)), productBefore);
+  assert.deepEqual(owner.connect('human').pendingDeliveries(), pendingBefore);
+  assert.equal(targetPreflights, 0, 'no individual target may be attempted after a stale profile');
+  assert.equal(outcome[0]!.status, 'rejected');
+  assert.equal(readGroupRuntime(original), null);
 });

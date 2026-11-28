@@ -60,7 +60,7 @@ interface ActiveOAuth {
     result: Promise<ProviderOAuthSnapshot>;
     settled: Promise<void>;
   };
-  completionPublicationUnknown?: true;
+  publicationUnknown?: true;
   receiptConflict?: true;
   retired: boolean;
 }
@@ -148,9 +148,11 @@ export class OAuthOperationOwner {
   authorization(raw: unknown): ProviderOAuthAuthorization | null {
     const input = identity.parse(raw);
     this.assertAdmission();
+    const entry = this.active.get(input.operationId);
+    if (entry && (entry.saved.profileId !== input.profileId ||
+        entry.saved.configRevision !== input.configRevision)) throw new ManagementCommandError('conflict');
     const saved = this.readOriginal(input);
     if (!saved) return null;
-    const entry = this.active.get(saved.commandId);
     if (
       !entry ||
       entry.retired ||
@@ -158,6 +160,8 @@ export class OAuthOperationOwner {
     )
       return null;
     this.assertBound(entry);
+    this.assertStoredOriginal(entry);
+    if (Date.now() >= entry.saved.expiresAt) throw new ManagementCommandError('held');
     return entry.authorization ? { ...entry.authorization } : null;
   }
 
@@ -168,6 +172,7 @@ export class OAuthOperationOwner {
       const entry = this.active.get(input.operationId);
       const captured = entry && entry.saved.profileId === input.profileId &&
         entry.saved.configRevision === input.configRevision ? entry : undefined;
+      if (entry && !captured) throw new ManagementCommandError('conflict');
       const closeChanged = captured !== undefined && !captured.retired && !captured.saved.completionCommandId;
       let saved: StoredOAuthCommand | undefined;
       try { saved = this.readOriginal(input); }
@@ -266,26 +271,34 @@ export class OAuthOperationOwner {
     return this.snapshot(entry.saved);
   }
 
-  /** Synchronous read/write custody gate: no await between original comparison and publication. */
-  private storedOriginalMatches(entry: ActiveOAuth): boolean {
+  /** Pure original-record gate, also usable after seal while cleanup owns the capture. */
+  private assertStoredOriginal(entry: ActiveOAuth, expected = entry.saved): void {
+    this.options.assertWriter();
+    if (this.active.get(expected.commandId) !== entry || entry.receiptConflict || entry.publicationUnknown)
+      throw new ManagementCommandError('held');
+    let stored;
     try {
-      const stored = this.options.store.read(entry.saved.commandId);
-      return stored?.kind === 'oauth' && managementValuesEqual(stored, entry.saved);
-    } catch {
-      return false;
+      stored = this.options.store.read(expected.commandId);
+    } catch (error) {
+      entry.receiptConflict = true;
+      throw error;
     }
-  }
-
-  private assertStoredOriginal(entry: ActiveOAuth): void {
-    if (!this.storedOriginalMatches(entry)) {
-      this.fenceChangedReceipt(entry, true);
+    if (stored?.kind !== 'oauth' || !managementValuesEqual(stored, expected)) {
+      entry.receiptConflict = true;
       throw new ManagementCommandError('conflict');
     }
   }
 
+  private writeOriginal(entry: ActiveOAuth, expected: StoredOAuthCommand, next: StoredOAuthCommand): void {
+    this.assertStoredOriginal(entry, expected);
+    try { this.options.store.write(next); }
+    catch (error) { entry.publicationUnknown = true; throw error; }
+  }
+
   private assertCompletionCurrent(entry: ActiveOAuth): void {
     this.assertBound(entry);
-    this.assertStoredOriginal(entry);
+    try { this.assertStoredOriginal(entry); }
+    catch (error) { void this.stop(entry, 'native-outcome-unknown'); throw error; }
     if (Date.now() >= entry.saved.expiresAt) {
       void this.stop(entry, 'expired');
       throw new ManagementCommandError('held');
@@ -303,13 +316,11 @@ export class OAuthOperationOwner {
     proof: { fingerprint: string; fingerprintKdf?: SecretFingerprintKdf }
   ): void {
     this.assertBound(entry);
-    this.assertStoredOriginal(entry);
     const next: StoredOAuthCommand = { ...entry.saved, phase: 'completing', sequence: entry.saved.sequence + 1,
       completionCommandId: commandId, completionFingerprint: proof.fingerprint,
       ...(proof.fingerprintKdf ? { completionFingerprintKdf: proof.fingerprintKdf } : {}) };
-    try { this.options.store.write(next); }
+    try { this.writeOriginal(entry, entry.saved, next); }
     catch (error) {
-      entry.completionPublicationUnknown = true;
       void this.stop(entry, 'native-outcome-unknown');
       throw error;
     }
@@ -323,6 +334,7 @@ export class OAuthOperationOwner {
     const entry = this.active.get(input.operationId);
     const captured = entry && entry.saved.profileId === input.profileId &&
       entry.saved.configRevision === input.configRevision ? entry : undefined;
+    if (entry && !captured) throw new ManagementCommandError('conflict');
     let saved: StoredOAuthCommand | undefined;
     try { saved = this.readOriginal(input); }
     catch (error) { this.fenceChangedReceipt(captured, true); throw error; }
@@ -364,7 +376,7 @@ export class OAuthOperationOwner {
 
   private assertBound(entry: ActiveOAuth): void {
     this.assertAdmission();
-    if (entry.retired || entry.receiptConflict || this.active.get(entry.saved.commandId) !== entry)
+    if (entry.retired || entry.receiptConflict || entry.publicationUnknown || this.active.get(entry.saved.commandId) !== entry)
       throw new ManagementCommandError('held');
     assertManagementTarget(
       entry.saved,
@@ -424,12 +436,10 @@ export class OAuthOperationOwner {
     patch: Partial<StoredOAuthCommand> = {}
   ): void {
     this.assertBound(entry);
-    this.assertStoredOriginal(entry);
     const next = { ...entry.saved, ...patch, phase, sequence: entry.saved.sequence + 1 };
     try {
-      this.options.store.write(next);
+      this.writeOriginal(entry, entry.saved, next);
     } catch (error) {
-      entry.completionPublicationUnknown = true;
       void this.stop(entry, 'native-outcome-unknown');
       throw error;
     }
@@ -442,9 +452,9 @@ export class OAuthOperationOwner {
     fields: Record<string, string> | undefined
   ): Promise<void> {
     try {
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       const result = await entry.native.authorize(fields, entry.abort.signal);
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       const url = new URL(result.authorizationUrl);
       if (
         url.username ||
@@ -511,9 +521,9 @@ export class OAuthOperationOwner {
 
   private async finish(entry: ActiveOAuth, code: string | undefined): Promise<void> {
     try {
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       const ok = await entry.native.complete(code, entry.abort.signal);
-      this.assertBound(entry);
+      this.assertCompletionCurrent(entry);
       if (!ok) {
         await this.stop(entry, 'native-outcome-unknown');
         return;
@@ -530,6 +540,7 @@ export class OAuthOperationOwner {
     reason: NonNullable<StoredOAuthCommand['reason']>
   ): Promise<void> {
     if (entry.closing) return entry.closing;
+    let expected = structuredClone(entry.saved), publicationAllowed = true;
     entry.retired = true; // Fence before abort/await; late native replies cannot publish.
     entry.closing = Promise.resolve().then(async () => {
       let clean = false;
@@ -538,7 +549,7 @@ export class OAuthOperationOwner {
       } catch {
         /* Retain unknown writer custody. */
       }
-      if (entry.completionPublicationUnknown || entry.receiptConflict) clean = false;
+      if (!publicationAllowed || entry.publicationUnknown || entry.receiptConflict) clean = false;
       const final: StoredOAuthCommand = {
         ...entry.saved,
         phase: !clean ? 'held'
@@ -547,24 +558,16 @@ export class OAuthOperationOwner {
         resourceHeld: !clean,
         sequence: entry.saved.sequence + 1,
       };
-      if (!entry.completionPublicationUnknown && !entry.receiptConflict) {
+      if (publicationAllowed) {
         try {
-          this.options.assertWriter();
-          if (!this.storedOriginalMatches(entry)) {
-            entry.receiptConflict = true;
-            clean = false;
-          } else {
-            // No await between the second durable comparison and final write.
-            this.options.store.write(final);
-            entry.saved = final;
-          }
+          this.writeOriginal(entry, expected, final);
+          entry.saved = final;
         } catch {
-          entry.completionPublicationUnknown = true;
           clean = false;
         }
       }
       if (!clean) {
-        entry.saved = { ...entry.saved, phase: 'held', resourceHeld: true };
+        entry.saved = { ...final, phase: 'held', resourceHeld: true };
       }
       this.emit(entry);
       this.retire(entry, clean);
@@ -580,23 +583,14 @@ export class OAuthOperationOwner {
       sequence: entry.saved.sequence + 1,
       resourceHeld: true,
     };
-    if (!entry.completionPublicationUnknown && !entry.receiptConflict) {
-      try {
-        this.options.assertWriter();
-        if (!this.storedOriginalMatches(entry)) {
-          entry.receiptConflict = true;
-        } else {
-          // First cancellation write is also synchronous and original-bound.
-          this.options.store.write(cancelling);
-          entry.saved = cancelling;
-        }
-      } catch {
-        // Unknown write outcome must not be overwritten during later cleanup.
-        entry.completionPublicationUnknown = true;
-      }
+    try {
+      this.writeOriginal(entry, expected, cancelling);
+      expected = cancelling;
+    } catch {
+      publicationAllowed = false;
     }
-    if (entry.receiptConflict || entry.completionPublicationUnknown)
-      entry.saved = { ...entry.saved, phase: 'held', resourceHeld: true };
+    // Live cleanup progress is separate from the last confirmed durable predecessor.
+    entry.saved = cancelling;
     this.emit(entry);
     return entry.closing;
   }

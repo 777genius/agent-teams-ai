@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import {
   mkdir,
   mkdtemp,
@@ -807,4 +808,133 @@ test('closed Runtime with unfinished sealing still publishes actual admission ca
   await runtime.stopCapturedSession(binding());
   assert.equal(JSON.stringify(f.store.readActivity(binding())), settled);
   assert.equal(f.opens(), 0);
+});
+
+test('P1 fresh captured input preflight precedes writes and never rechecks an original receipt', async (t) => {
+  const f = await setup(t);
+  let allowed = true, checked = 0;
+  const runtime = f.make('host-1', {
+    maxInputBytes: 8 * 1024 * 1024,
+    inputPreflight: input => { checked++; assert.deepEqual(input.binding, binding()); return allowed; },
+  });
+  const original = { ...delivery('TEST-unicode-original'), content: '界'.repeat(30_000) };
+  const accepted = await runtime.admitDelivery(original);
+  assert.equal(checked, 1);
+  const before = runtimeDigest(runtime.readSession(binding()).record);
+  allowed = false;
+  assert.deepEqual(await runtime.admitDelivery(original), accepted);
+  assert.deepEqual(await runtime.lookupDelivery(original), accepted);
+  assert.equal(runtime.fingerprintDelivery(original), accepted.receipt &&
+    typeof accepted.receipt === 'object' && !Array.isArray(accepted.receipt) ? accepted.receipt.fingerprint : undefined);
+  await assert.rejects(runtime.admitDelivery({ ...delivery('TEST-too-large'), content: 'TEST raw fits' }),
+    { code: 'invalid' });
+  assert.equal(runtimeDigest(runtime.readSession(binding()).record), before);
+  assert.equal(checked, 2);
+  assert.equal((await runtime.cancelDelivery(original)).outcome, 'not_admitted');
+  assert.equal(checked, 2, 'original cancellation and replay never need attachment re-resolution');
+  assert.equal(f.opens(), 0);
+});
+
+test('P1 queued original text has an exact 8 MiB aggregate without changing the 128-input limit', async (t) => {
+  const f = await setup(t), bytes = 8 * 1024 * 1024;
+  const options = { maxInputBytes: bytes, maxQueuedInputBytes: bytes };
+  for (const maxQueuedInputBytes of [0, -1, 0.5, Number.NaN, Number.POSITIVE_INFINITY])
+    assert.throws(() => f.make('TEST-invalid', { maxQueuedInputBytes }), { code: 'invalid' });
+  const runtime = f.make('host-1', options);
+  const first = { ...delivery('TEST-half-one'), content: 'x'.repeat(bytes / 2) };
+  const second = { ...delivery('TEST-half-two'), content: 'x'.repeat(bytes / 2) };
+  const accepted = await runtime.admitDelivery(first);
+  await runtime.admitDelivery(second);
+  const before = runtimeDigest(runtime.readSession(binding()).record);
+  await assert.rejects(runtime.admitDelivery({ ...delivery('TEST-extra-byte'), content: 'x' }), { code: 'busy' });
+  assert.equal(runtimeDigest(runtime.readSession(binding()).record), before);
+  assert.deepEqual(await runtime.admitDelivery(first), accepted, 'a full byte budget cannot break original replay');
+  await runtime.cancelDelivery(first);
+  assert.equal((await runtime.admitDelivery({ ...delivery('TEST-freed-byte'), content: 'x' })).outcome, 'admitted');
+  const counted = f.make('host-1', options), target = binding('TEST-count');
+  for (let index = 0; index < 128; index++)
+    await counted.admitDelivery({ ...delivery('TEST-count-' + index, target), content: 'x' });
+  await assert.rejects(counted.admitDelivery({ ...delivery('TEST-count-overflow', target), content: 'x' }), { code: 'busy' });
+  assert.equal((await counted.admitDelivery({ ...delivery('TEST-count-0', target), content: 'x' })).outcome, 'admitted');
+  assert.equal(f.opens(), 0);
+});
+
+test('P1 claimed consumed and unknown inputs retain their queued bytes until terminal settlement', async (t) => {
+  for (const phase of ['claimed', 'consumed', 'unknown'] as const) {
+    const f = await setup(t);
+    const runtime = f.make('host-1', { maxInputBytes: 32, maxQueuedInputBytes: 12 });
+    await runtime.openSession({ binding: binding(), config: config() });
+    const session = f.sessions.get('session-A')!, handoff = deferred<Reply<Handoff>>();
+    if (phase === 'claimed') session.submitAction = () => handoff.promise;
+    if (phase === 'unknown') session.submitAction = async () => { throw new Error('TEST uncertain handoff'); };
+    await runtime.admitDelivery({ ...delivery('TEST-active'), content: '界界' });
+    await runtime.admitDelivery({ ...delivery('TEST-queued'), content: '😀' });
+    const dispatch = runtime.dispatchNext(binding());
+    if (phase === 'claimed') await tick(); else await dispatch;
+    assert.equal(runtime.readSession(binding()).record?.inputs[0]?.phase, phase);
+    await assert.rejects(runtime.admitDelivery({ ...delivery('TEST-overflow'), content: 'abc' }), { code: 'busy' });
+    assert.equal(runtime.readSession(binding()).record?.inputs.length, 2);
+    if (phase === 'claimed') {
+      const input = session.submits[0]!;
+      handoff.resolve({ ok: true, value: { inputId: input.inputId, operationRef: input.operationRef,
+        delivery: 'client-consumed', providerAcceptance: 'unknown' } });
+      await dispatch;
+    }
+    session.result(); await tick();
+    assert.equal(runtime.readSession(binding()).record?.inputs[0]?.phase, 'terminal');
+    assert.equal((await runtime.admitDelivery({ ...delivery('TEST-after-settlement'), content: '12345678' })).outcome, 'admitted');
+    assert.equal(session.submits.length, 1);
+  }
+});
+
+test('P1 context preparation receives original attachment refs without changing intent or native proof bytes', async (t) => {
+  const f = await setup(t);
+  const refs = [{ artifactId: 'TEST-artifact', mimeType: 'text/plain', byteLength: 3, digest: 'a'.repeat(64) }];
+  const prefix = 'TEST context\n', original = { ...delivery('TEST-with-file'), attachments: refs };
+  let prepared = 0;
+  const runtime = f.make('host-1', {
+    prepareInput(_binding, request) {
+      assert.deepEqual(request.attachments, refs);
+      assert.equal(request.originalContent, original.content);
+      assert.equal(request.originalContentBytes, Buffer.byteLength(original.content));
+      prepared++;
+      return { prefix, epochIds: ['b'.repeat(64)], teamProof: 'c'.repeat(64) };
+    },
+  });
+  await runtime.openSession({ binding: binding(), config: config() });
+  const fingerprint = runtime.fingerprintDelivery(original);
+  await runtime.admitDelivery(original);
+  await runtime.dispatchNext(binding());
+  const saved = runtime.readSession(binding()).record?.inputs[0];
+  assert.deepEqual(saved?.intent, original);
+  assert.equal(saved?.fingerprint, fingerprint);
+  assert.equal(saved?.preparation?.nativePayloadHash, createHash('sha256').update(prefix + original.content).digest('hex'));
+  assert.equal(prepared, 1);
+  assert.deepEqual(f.sessions.get('session-A')?.submits[0]?.attachments, refs);
+  assert.equal(f.sessions.get('session-A')?.submits[0]?.content, prefix + original.content);
+});
+
+test('P1 a capable Runtime dispatches Unicode and cross/group-sized content once without changing bytes', async (t) => {
+  const f = await setup(t), maximum = 8 * 1024 * 1024;
+  await assert.rejects(f.make('TEST-standalone-default').admitDelivery({
+    ...delivery('TEST-old-default'), content: '界'.repeat(30_000),
+  }), { code: 'invalid' });
+  const runtime = f.make('host-1', { maxInputBytes: maximum, maxQueuedInputBytes: maximum });
+  await runtime.openSession({ binding: binding(), config: config() });
+  const session = f.sessions.get('session-A')!;
+  const texts = ['x'.repeat(50_000), 'Ж'.repeat(50_000), '界'.repeat(50_000),
+    '😀'.repeat(25_000), '界'.repeat(100_000)];
+  assert.equal(Buffer.byteLength(texts[2]!), 150_000, 'ordinary cross-team body scale');
+  assert.equal(Buffer.byteLength(texts[4]!), 300_000, 'group physical envelope duplicates the body');
+  for (const [index, content] of texts.entries()) {
+    const original = { ...delivery('TEST-native-unicode-' + index), content };
+    await runtime.admitDelivery(original);
+    await runtime.dispatchNext(binding());
+    assert.equal(session.submits.length, index + 1);
+    assert.equal(session.submits[index]?.content, content);
+    assert.equal(Buffer.byteLength(session.submits[index]!.content), Buffer.byteLength(content));
+    session.result(index); await tick();
+    assert.equal(runtime.readSession(binding()).record?.inputs[index]?.phase, 'terminal');
+  }
+  assert.equal(f.opens(), 1);
 });

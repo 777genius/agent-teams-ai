@@ -1,5 +1,32 @@
-import type { CapturedCrossTeamIntent } from './contracts.js';
+import type { BackendCrossTeamOutboxRow, CapturedCrossTeamIntent } from './contracts.js';
 import type { CrossTeamOutboxMessage } from './CrossTeamOutbox.js';
+
+/** The original public row, shared by fresh size admission and authorized history reads. */
+export function crossTeamPublicOutboxRow(intent: CapturedCrossTeamIntent): BackendCrossTeamOutboxRow {
+  const { source: from, target: to } = intent.pair;
+  return {
+    messageId: intent.request.messageId,
+    fromTeamResourceRef: from.teamResourceRef,
+    toTeamResourceRef: to.teamResourceRef,
+    ...(from.handleId === undefined ? {} : { fromHandleId: from.handleId }),
+    ...(to.handleId === undefined ? {} : { toHandleId: to.handleId }),
+    fromTeamName: from.teamName,
+    toTeamName: to.teamName,
+    fromMember: from.actor,
+    toMember: to.recipient.name,
+    conversationId: intent.request.conversationId,
+    text: intent.request.text,
+    timestamp: intent.timestamp,
+    chainDepth: intent.request.chainDepth ?? 0,
+    ...(intent.request.replyToConversationId === undefined
+      ? {}
+      : { replyToConversationId: intent.request.replyToConversationId }),
+    ...(intent.request.summary === undefined ? {} : { summary: intent.request.summary }),
+    ...(intent.request.taskRefs === undefined
+      ? {}
+      : { taskRefs: structuredClone(intent.request.taskRefs) }),
+  };
+}
 
 export function crossTeamTaskRefs(intent:CapturedCrossTeamIntent) {
   return intent.request.taskRefs?.map(ref=>({taskId:ref.taskId,displayId:ref.displayId,

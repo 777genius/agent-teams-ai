@@ -7,6 +7,7 @@ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesyste
 import { createGroupMcpTools } from '../dist/mcp/groupChatTools.js';
 import { formatToolResult } from '../dist/mcp/toolDefinition.js';
 import { pageGroupCatalog } from '../dist/group-chats/pageGroupCatalog.js';
+import type { JsonValue } from '../src/contracts.ts';
 
 test('canonical retained GroupCommands catalog reaches native MCP in complete signed pages', async t => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-native-group-catalog-')));
@@ -49,7 +50,8 @@ test('canonical retained GroupCommands catalog reaches native MCP in complete si
   const port = {
     list: async (cursor?: string) => {
       const rows = await service.read('list', {}, guard);
-      return pageGroupCatalog({ rows, key: privateKey,
+      // Match the Host composition's JSON boundary before native MCP paging.
+      return pageGroupCatalog({ rows: JSON.parse(JSON.stringify(rows)) as JsonValue[], key: privateKey,
         principalId: 'alice', binding: binding.teamId,
         ...(cursor === undefined ? {} : { cursor }) });
     },

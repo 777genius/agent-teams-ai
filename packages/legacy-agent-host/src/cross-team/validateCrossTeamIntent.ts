@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { TeamOwnerError } from '../team/contracts.js';
 import { effectId } from '../team/identity.js';
 import { crossTeamIntentFingerprint } from './TeamCrossTeamCommands.js';
+import { MAX_CROSS_TEAM_ENVELOPE_BYTES, MAX_CROSS_TEAM_TEXT_LENGTH } from './contracts.js';
 
 import type { CapturedCrossTeamIntent } from './contracts.js';
 
@@ -55,7 +56,7 @@ const schema = z.strictObject({
   request: z.strictObject({
     fromMember: memberName,
     toMember: memberName.optional(),
-    text: z.string().min(1).max(48_000),
+    text: z.string().min(1).max(MAX_CROSS_TEAM_TEXT_LENGTH),
     messageId: identifier,
     conversationId: identifier,
     replyToConversationId: identifier.optional(),
@@ -82,7 +83,7 @@ const schema = z.strictObject({
 /** Receipt context is private authority data, never part of the ordinary message schema. */
 export function validateCrossTeamIntent(intent: CapturedCrossTeamIntent): void {
   if (
-    Buffer.byteLength(JSON.stringify(intent), 'utf8') > 96 * 1024 ||
+    Buffer.byteLength(JSON.stringify(intent), 'utf8') > MAX_CROSS_TEAM_ENVELOPE_BYTES ||
     !schema.safeParse(intent).success ||
     intent.request.conversationId.includes('\0') ||
     intent.request.replyToConversationId?.includes('\0') ||

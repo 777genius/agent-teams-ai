@@ -42,6 +42,7 @@ export function createFilesystemTeamOwner(options: FilesystemTeamOwnerOptions): 
     grants: options.grants,
     store,
     runtimeBindings: new FileTeamRuntimeBindings(store),
+    ...(options.inputPreflight ? { inputPreflight: options.inputPreflight } : {}),
     groupStorage: (guard, original) =>
       new HostGroupStorage(options.root, options.binding.teamName, store, guard, original),
     ...(options.assertRosterEditable ? { assertRosterEditable: options.assertRosterEditable } : {}),
