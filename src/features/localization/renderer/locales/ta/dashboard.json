@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "மாதாந்திர பட்ஜெட்",
+      "teamCardUnknown": "பயன்பாடு தெரியவில்லை",
+      "teamCardBlocked": "வரம்பு எட்டப்பட்டது - தொடக்கம் தடை",
+      "editor": {
+        "onExceeded": "பட்ஜெட் வரம்பை எட்டினால் நடவடிக்கை",
+        "notifyOnly": "அறிவிப்பு மட்டும்",
+        "blockLaunch": "குழுவின் புதிய தொடக்கங்களைத் தடு",
+        "stopTeam": "இயங்கும் குழுவை நிறுத்தி புதிய தொடக்கங்களைத் தடு",
+        "enforcementHint": "பயன்பாட்டுத் தரவு இல்லையெனில் அல்லது தாமதமானால் புதிய தொடக்கங்கள் தடுக்கப்படும். செலவு மதிப்பீடு மட்டுமே; கட்டணம் வரம்பை மீறலாம்."
+      }
     }
   }
 }

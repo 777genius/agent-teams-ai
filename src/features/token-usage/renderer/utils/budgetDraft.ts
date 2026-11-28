@@ -1,6 +1,7 @@
 import { validateBudgetLimit } from '../../contracts';
 
 import type {
+  TokenUsageBudgetExceededAction,
   TokenUsageBudgetLimitDto,
   TokenUsageBudgetScope,
   TokenUsageBudgetSettingsDto,
@@ -11,6 +12,7 @@ export interface BudgetDraftLimit {
   usd: string;
   thresholds: string[];
   notificationsEnabled: boolean;
+  onExceeded: TokenUsageBudgetExceededAction;
 }
 export type BudgetDraft = Record<string, BudgetDraftLimit | null>;
 export const budgetTargetKey = (target: { scope: TokenUsageBudgetScope; id: string }): string =>
@@ -20,6 +22,7 @@ export const newBudgetDraft = (): BudgetDraftLimit => ({
   usd: '',
   thresholds: ['50', '70', '90', '100'],
   notificationsEnabled: true,
+  onExceeded: 'notify',
 });
 
 function fromLimit(limit: TokenUsageBudgetLimitDto): BudgetDraftLimit {
@@ -28,6 +31,7 @@ function fromLimit(limit: TokenUsageBudgetLimitDto): BudgetDraftLimit {
     usd: limit.monthlyApiEquivalentCostLimitUsd?.toString() ?? '',
     thresholds: limit.thresholds.map(String),
     notificationsEnabled: limit.notificationsEnabled,
+    onExceeded: limit.onExceeded ?? 'notify',
   };
 }
 export function createBudgetDraft(settings: TokenUsageBudgetSettingsDto): BudgetDraft {
@@ -69,6 +73,7 @@ export function settingsFromDraft(draft: BudgetDraft): TokenUsageBudgetSettingsD
       monthlyApiEquivalentCostLimitUsd: value.usd.trim() ? Number(value.usd) : undefined,
       thresholds: value.thresholds.map(Number),
       notificationsEnabled: value.notificationsEnabled,
+      ...(value.onExceeded === 'notify' ? {} : { onExceeded: value.onExceeded }),
     });
     const separator = key.indexOf(':');
     const scope = key.slice(0, separator);

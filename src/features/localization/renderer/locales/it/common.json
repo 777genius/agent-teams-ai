@@ -967,6 +967,18 @@
     "chats": "Chat non lette",
     "openTask": "Apri attività: {{subject}} in {{team}}",
     "timeUnknown": "Ora sconosciuta",
-    "teamAttention": "Attenzione"
+    "teamAttention": "Attenzione",
+    "filters": {
+      "title": "Filtri",
+      "description": "Scegli cosa mostrare nella posta in arrivo.",
+      "itemType": "Tipo di elemento",
+      "conversationType": "Tipo di chat",
+      "direct": "Messaggi diretti",
+      "group": "Chat di gruppo",
+      "teamFeed": "Feed del team",
+      "waiting": "Attesa dell'attività",
+      "olderDay": "Oltre 24 ore",
+      "olderWeek": "Oltre 7 giorni"
+    }
   }
 }

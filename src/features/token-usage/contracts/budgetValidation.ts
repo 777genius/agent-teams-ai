@@ -50,13 +50,26 @@ export function validateBudgetLimit(value: unknown): TokenUsageBudgetLimitDto {
   if (typeof source.notificationsEnabled !== 'boolean')
     throw new BudgetValidationError('Invalid budget notification policy');
   result.notificationsEnabled = source.notificationsEnabled;
+  if (source.onExceeded !== undefined) {
+    if (
+      source.onExceeded !== 'notify' &&
+      source.onExceeded !== 'block_launch' &&
+      source.onExceeded !== 'stop_team'
+    )
+      throw new BudgetValidationError('Invalid budget exceedance action');
+    result.onExceeded = source.onExceeded;
+  }
   return result;
 }
 
 export function validateBudgetSettings(value: unknown): TokenUsageBudgetSettingsDto {
   const source = record(value);
   const result: TokenUsageBudgetSettingsDto = {};
-  if (source.global !== undefined) result.global = validateBudgetLimit(source.global);
+  if (source.global !== undefined) {
+    result.global = validateBudgetLimit(source.global);
+    if (result.global.onExceeded && result.global.onExceeded !== 'notify')
+      throw new BudgetValidationError('Runtime enforcement is only supported for named teams');
+  }
   for (const scope of ['teams', 'projects'] as const) {
     if (source[scope] === undefined) continue;
     const entries = record(source[scope]);
@@ -64,7 +77,14 @@ export function validateBudgetSettings(value: unknown): TokenUsageBudgetSettings
       Object.entries(entries).map(([id, limit]) => {
         if (!id.trim() || id !== id.trim() || (scope === 'teams' && !isCanonicalTeamId(id)))
           throw new BudgetValidationError('Invalid budget identity');
-        return [id, validateBudgetLimit(limit)];
+        const parsed = validateBudgetLimit(limit);
+        if (
+          parsed.onExceeded &&
+          parsed.onExceeded !== 'notify' &&
+          (scope !== 'teams' || !id.startsWith('team:'))
+        )
+          throw new BudgetValidationError('Runtime enforcement is only supported for named teams');
+        return [id, parsed];
       })
     );
   }

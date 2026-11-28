@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Ngân sách tháng",
+      "teamCardUnknown": "Không rõ mức sử dụng",
+      "teamCardBlocked": "Đã đạt giới hạn - chặn khởi chạy",
+      "editor": {
+        "onExceeded": "Hành động khi đạt giới hạn",
+        "notifyOnly": "Chỉ thông báo",
+        "blockLaunch": "Chặn khởi chạy nhóm mới",
+        "stopTeam": "Dừng nhóm đang chạy và chặn khởi chạy",
+        "enforcementHint": "Nếu dữ liệu sử dụng thiếu hoặc chậm, các lần khởi chạy mới sẽ bị chặn. Chi phí chỉ là ước tính; hóa đơn có thể vượt giới hạn."
+      }
     }
   }
 }

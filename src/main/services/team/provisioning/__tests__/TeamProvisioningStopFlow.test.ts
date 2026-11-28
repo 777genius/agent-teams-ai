@@ -190,39 +190,52 @@ describe('team provisioning stop flow', () => {
 
   it('stops the original Windows app-managed member handle and waits for exit', async () => {
     const bob = originalChild(6200, 'exit');
-    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', async () => undefined))
-      .resolves.toBeUndefined();
+    await expect(
+      stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', async () => undefined)
+    ).resolves.toBeUndefined();
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
   it('attempts every original Windows member even if another handle refuses', async () => {
     const alice = originalChild(7100, 'refuse');
     const bob = originalChild(7200, 'exit');
-    await expect(stopOriginalWindowsDirectMembers(new Set([alice.child, bob.child]), 'win32', async () => undefined))
-      .rejects.toThrow('Original Windows teammate process failed on exit');
+    await expect(
+      stopOriginalWindowsDirectMembers(
+        new Set([alice.child, bob.child]),
+        'win32',
+        async () => undefined
+      )
+    ).rejects.toThrow('Original Windows teammate process failed on exit');
     expect(alice.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
   it('fails closed without a verified Job wrapper while killing the original handle', async () => {
     const bob = originalChild(8222, 'exit');
-    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
-      .rejects.toThrow('lacks verified owned Job wrapper');
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32')).rejects.toThrow(
+      'lacks verified owned Job wrapper'
+    );
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
   it('does not claim unwrapped Job containment just because the root already exited', async () => {
     const bob = originalChild(8223, 'exit');
     Object.defineProperty(bob.child, 'exitCode', { value: 0, configurable: true });
-    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32'))
-      .rejects.toThrow('lacks verified owned Job wrapper');
+    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32')).rejects.toThrow(
+      'lacks verified owned Job wrapper'
+    );
     expect(bob.kill).not.toHaveBeenCalled();
   });
 
   it('awaits custody verification before killing the original Windows handle', async () => {
     const bob = originalChild(8300, 'exit');
     let finishTree!: () => void;
-    const stopTree = vi.fn(() => new Promise<void>((resolve) => { finishTree = resolve; }));
+    const stopTree = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishTree = resolve;
+        })
+    );
     const stopping = stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree);
     expect(stopTree).toHaveBeenCalledWith(bob.child);
     expect(bob.kill).not.toHaveBeenCalled();
@@ -233,9 +246,12 @@ describe('team provisioning stop flow', () => {
 
   it('fails closed on tree failure but still retires the original Windows member', async () => {
     const bob = originalChild(8400, 'exit');
-    const stopTree = vi.fn(async () => { throw new Error('tree stop failed'); });
-    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree))
-      .rejects.toThrow('tree stop failed');
+    const stopTree = vi.fn(async () => {
+      throw new Error('tree stop failed');
+    });
+    await expect(
+      stopOriginalWindowsDirectMembers(new Set([bob.child]), 'win32', stopTree)
+    ).rejects.toThrow('tree stop failed');
     expect(bob.kill).toHaveBeenCalledExactlyOnceWith('SIGKILL');
   });
 
@@ -254,7 +270,10 @@ describe('team provisioning stop flow', () => {
     );
     let releaseLead!: () => void;
     ports.killTeamProcessAndWait.mockImplementation(
-      () => new Promise<void>((resolve) => { releaseLead = resolve; })
+      () =>
+        new Promise<void>((resolve) => {
+          releaseLead = resolve;
+        })
     );
     const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
     if (!originalPlatform) throw new Error('process.platform descriptor missing');
@@ -263,7 +282,9 @@ describe('team provisioning stop flow', () => {
       const stopping = stopTeamFlow(run.teamName, ports);
       await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
       expect(ports.stopPersistentTeamMembers).not.toHaveBeenCalled();
-      expect(ports.stopOriginalWindowsDirectMembers).toHaveBeenCalledWith(run.directMemberProcesses);
+      expect(ports.stopOriginalWindowsDirectMembers).toHaveBeenCalledWith(
+        run.directMemberProcesses
+      );
       releaseLead();
       await stopping;
       expect(ports.stopPersistentTeamMembers).toHaveBeenCalledExactlyOnceWith(run.teamName);
@@ -275,8 +296,9 @@ describe('team provisioning stop flow', () => {
 
   it('does not alter non-Windows member Stop behavior', async () => {
     const bob = originalChild(8200, 'exit');
-    await expect(stopOriginalWindowsDirectMembers(new Set([bob.child]), 'linux'))
-      .resolves.toBeUndefined();
+    await expect(
+      stopOriginalWindowsDirectMembers(new Set([bob.child]), 'linux')
+    ).resolves.toBeUndefined();
     expect(bob.kill).not.toHaveBeenCalled();
   });
 
@@ -761,6 +783,64 @@ describe('team provisioning stop flow', () => {
     expect(currentRun.anthropicApiKeyHelper).toBeNull();
     expect(ports.cleanupRun).toHaveBeenCalledWith(currentRun);
     expect(runs.has(currentRun.runId)).toBe(false);
+  });
+
+  it('keeps failed primary Stop pending until secondary lane cleanup settles', async () => {
+    const teamName = 'opencode-team-stop-drain';
+    const currentRun = makeRun('aggregate-stop-drain', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const ports = makePorts(teamName, runs, new Map(), new Map([[teamName, currentRun.runId]]));
+    ports.runtimeAdapterRunByTeam.set(teamName, {
+      runId: currentRun.runId,
+      providerId: 'opencode',
+    });
+    vi.mocked(ports.hasSecondaryRuntimeRuns).mockReturnValue(true);
+    const failure = new Error('primary Stop failed');
+    let markPrimaryRejected!: () => void;
+    const primaryRejected = new Promise<void>((resolve) => {
+      markPrimaryRejected = resolve;
+    });
+    vi.mocked(ports.stopOpenCodeRuntimeAdapterTeam).mockImplementation(async () => {
+      markPrimaryRejected();
+      throw failure;
+    });
+    let markSecondaryStarted!: () => void;
+    const secondaryStarted = new Promise<void>((resolve) => {
+      markSecondaryStarted = resolve;
+    });
+    let releaseSecondary!: () => void;
+    const secondaryReleased = new Promise<void>((resolve) => {
+      releaseSecondary = resolve;
+    });
+    vi.mocked(ports.stopMixedSecondaryRuntimeLanes).mockImplementation(async () => {
+      markSecondaryStarted();
+      await secondaryReleased;
+    });
+    let settled = false;
+    const stopping = stopTeamFlow(teamName, ports).then(
+      () => {
+        settled = true;
+        return { status: 'fulfilled' as const };
+      },
+      (reason: unknown) => {
+        settled = true;
+        return { status: 'rejected' as const, reason };
+      }
+    );
+    try {
+      await Promise.race([
+        Promise.all([primaryRejected, secondaryStarted]),
+        stopping.then(() => {
+          throw new Error('Stop settled before both cleanup branches started');
+        }),
+      ]);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+      expect(ports.cleanupRun).not.toHaveBeenCalled();
+    } finally {
+      releaseSecondary();
+    }
+    expect(await stopping).toEqual({ status: 'rejected', reason: failure });
   });
 
   it('retries aggregate lane cleanup when the tracked run was already marked stopped', async () => {

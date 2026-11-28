@@ -25,6 +25,7 @@ import type React from 'react';
 
 export const BudgetAlertsPanel = ({
   status,
+  knownTeams = [],
   budgetConfig,
   budgetTargetKey: selected,
   error,
@@ -36,6 +37,7 @@ export const BudgetAlertsPanel = ({
   t,
 }: {
   status: TokenUsageBudgetStatusDto | null;
+  knownTeams?: TokenUsageBudgetStatusDto['options'];
   budgetConfig: TokenUsageBudgetSettingsDto;
   budgetTargetKey: string;
   error: string | null;
@@ -47,8 +49,13 @@ export const BudgetAlertsPanel = ({
   t: BudgetT;
 }): React.JSX.Element => {
   const [editing, setEditing] = useState(false);
-  const options = status?.options ?? [
+  const existingOptions = status?.options ?? [
     { scope: 'global' as const, id: 'global', label: t('tokenUsage.budgets.allTeams') },
+  ];
+  const optionKeys = new Set(existingOptions.map(budgetTargetKey));
+  const options = [
+    ...existingOptions,
+    ...knownTeams.filter((team) => !optionKeys.has(budgetTargetKey(team))),
   ];
   const target = status?.targets.find((item) => budgetTargetKey(item) === selected);
   const chosen = options.find((item) => budgetTargetKey(item) === selected);

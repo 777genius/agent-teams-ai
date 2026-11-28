@@ -967,6 +967,18 @@
     "chats": "बिना पढ़ी चैट",
     "openTask": "कार्य खोलें: {{subject}} — {{team}}",
     "timeUnknown": "समय अज्ञात",
-    "teamAttention": "ध्यान दें"
+    "teamAttention": "ध्यान दें",
+    "filters": {
+      "title": "फ़िल्टर",
+      "description": "इनबॉक्स में क्या दिखे, यह चुनें।",
+      "itemType": "आइटम का प्रकार",
+      "conversationType": "चैट का प्रकार",
+      "direct": "सीधे संदेश",
+      "group": "समूह चैट",
+      "teamFeed": "टीम फ़ीड",
+      "waiting": "कार्य की प्रतीक्षा अवधि",
+      "olderDay": "24 घंटे से अधिक",
+      "olderWeek": "7 दिन से अधिक"
+    }
   }
 }

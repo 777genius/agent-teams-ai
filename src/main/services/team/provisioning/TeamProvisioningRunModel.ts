@@ -59,6 +59,8 @@ export interface ProvisioningRun {
   teamName: string;
   startedAt: string;
   progress: TeamProvisioningProgress;
+  /** The active Stop for this exact run; queued team-lock work is never published here. */
+  teamStopPromise?: Promise<void>;
   secondaryStopProgressCustody?: SecondaryStopProgressCustody;
   stdoutBuffer: string;
   stderrBuffer: string;

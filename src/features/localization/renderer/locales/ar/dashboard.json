@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "الميزانية الشهرية",
+      "teamCardUnknown": "بيانات الاستخدام غير متاحة",
+      "teamCardBlocked": "تم بلوغ الحد - التشغيل محظور",
+      "editor": {
+        "onExceeded": "الإجراء عند بلوغ الحد",
+        "notifyOnly": "إشعار فقط",
+        "blockLaunch": "منع عمليات التشغيل الجديدة للفريق",
+        "stopTeam": "إيقاف الفريق ومنع تشغيله",
+        "enforcementHint": "عند تأخر بيانات الاستخدام أو غيابها، يُمنع التشغيل الجديد. التكاليف تقديرية وقد تتجاوز الفاتورة الحد."
+      }
     }
   }
 }

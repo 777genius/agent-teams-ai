@@ -389,7 +389,12 @@
         "deletePending": "按下「儲存」時會刪除此預算。進行編輯即可還原。",
         "cancel": "取消",
         "save": "儲存",
-        "saving": "正在儲存..."
+        "saving": "正在儲存...",
+        "onExceeded": "達到預算上限時的動作",
+        "notifyOnly": "僅通知",
+        "blockLaunch": "封鎖團隊的新啟動",
+        "stopTeam": "停止執行中的團隊並封鎖啟動",
+        "enforcementHint": "使用量資料缺失或延遲時將封鎖新啟動。費用為估算值，實際帳單可能超過上限。"
       },
       "card": {
         "updated": "用量更新時間：{{time}}",
@@ -403,7 +408,10 @@
         "incomplete": "僅為已知小計，部分 API 計價成本無法取得。",
         "basis": "標準 Token 總數包含快取，所有收集到的計費模式都會計入。",
         "unavailable": "無法取得預算狀態。請載入目前設定以重試。"
-      }
+      },
+      "teamCardBudget": "每月預算",
+      "teamCardUnknown": "使用量未知",
+      "teamCardBlocked": "已達上限 - 禁止啟動"
     },
     "dateRange": {
       "allCollectedUsage": "已收集的全部應用程式用量",

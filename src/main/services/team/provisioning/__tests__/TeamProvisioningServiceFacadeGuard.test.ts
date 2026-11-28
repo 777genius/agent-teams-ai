@@ -30,6 +30,7 @@ const TEAM_PROVISIONING_SERVICE_FORMAT_OPTIONS: PrettierOptions = {
 const SUBSCRIPTION_RUNTIME_REFERENCE_PATTERN = /subscription[-_\s]+runtime|subscriptionRuntime/i;
 const TEAM_PROVISIONING_SERVICE_CLASS_NAME = 'TeamProvisioningService';
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
+  'assertTeamBudgetAdmission',
   'assessLeadRuntimeRestart',
   'createTeam',
   // The launch prompt reaches the lead through the inbox rather than the
@@ -55,6 +56,7 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
+  'assertTeamBudgetAdmission',
   'assessLeadRuntimeRestart',
   'attachLiveRosterMember',
   'buildCrossProviderMemberArgs',
@@ -264,6 +266,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     name: 'memberGatewayRuntimeSeams',
     readonly: false,
     type: 'MemberGatewayRuntimeSeams | null',
+  },
+  {
+    accessibility: 'private',
+    defaultNew: null,
+    name: 'budgetAdmission',
+    readonly: true,
+    type: '(teamName: string) => Promise<void>',
   },
 ] as const;
 

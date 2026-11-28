@@ -967,6 +967,18 @@
     "chats": "Okunmamış sohbetler",
     "openTask": "Görevi aç: {{subject}} — {{team}}",
     "timeUnknown": "Zaman bilinmiyor",
-    "teamAttention": "Dikkat"
+    "teamAttention": "Dikkat",
+    "filters": {
+      "title": "Filtreler",
+      "description": "Gelen kutusunda gösterilecek öğeleri seçin.",
+      "itemType": "Öğe türü",
+      "conversationType": "Sohbet türü",
+      "direct": "Doğrudan mesajlar",
+      "group": "Grup sohbetleri",
+      "teamFeed": "Takım akışı",
+      "waiting": "Görevin bekleme süresi",
+      "olderDay": "24 saatten fazla",
+      "olderWeek": "7 günden fazla"
+    }
   }
 }

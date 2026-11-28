@@ -3,6 +3,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import { TeamBudgetProgress, useTeamBudgetStatus } from '@features/token-usage/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -36,7 +37,6 @@ import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
 } from '@renderer/store/utils/stateResetHelpers';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import {
   buildTaskCountsByTeam,
   normalizePath,
@@ -62,13 +62,14 @@ import { assignCreatedTeamToOrganization } from './dialogs/assignCreatedTeamToOr
 import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
-import { buildCopiedTeamMembers } from './teamCopyData';
+import { buildCopiedTeamMembers, generateUniqueName } from './teamCopyData';
 import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER } from './TeamListFilterPopover';
 import { TeamListHeader } from './TeamListHeader';
+import { renderMemberNames } from './teamListMemberNames';
 import { TeamListSkeleton } from './TeamListSkeleton';
 import { TeamManagementNotice } from './TeamManagementNotice';
 import {
@@ -96,7 +97,6 @@ import type {
   TeamLaunchRequest,
   TeamMemberSnapshot,
   TeamSummary,
-  TeamSummaryMember,
 } from '@shared/types';
 
 const CreateTeamDialog = lazy(() =>
@@ -111,17 +111,6 @@ const ImportTeamDialog = lazy(() =>
 
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
-
-function generateUniqueName(sourceName: string, existingNames: string[]): string {
-  const base = sourceName.replace(/-\d+$/, '');
-  const existing = new Set(existingNames);
-  for (let i = 1; ; i++) {
-    const candidate = `${base}-${i}`;
-    if (!existing.has(candidate)) {
-      return candidate;
-    }
-  }
-}
 
 function getRecentProjects(team: TeamSummary): string[] {
   const history = team.projectPathHistory;
@@ -146,36 +135,18 @@ function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): Res
   });
 }
 
-function resolveSavedLaunchDialogMembers(members: TeamCreateRequest['members']): ResolvedTeamMember[] {
+function resolveSavedLaunchDialogMembers(
+  members: TeamCreateRequest['members']
+): ResolvedTeamMember[] {
   return members.map((member) => ({
-    ...member, joinedAt: 0, currentTaskId: null, taskCount: 0,
-    messageCount: 0, lastActiveAt: null, status: 'idle' as const,
+    ...member,
+    joinedAt: 0,
+    currentTaskId: null,
+    taskCount: 0,
+    messageCount: 0,
+    lastActiveAt: null,
+    status: 'idle' as const,
   }));
-}
-
-function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
-  const teamColorMap = buildMemberColorMap(members);
-  return (
-    <>
-      {members.map((m) => {
-        const resolvedColor = teamColorMap.get(m.name);
-        const memberColor = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-        return (
-          <span key={m.name} className="inline-flex items-center gap-1">
-            <span
-              className="text-[10px] font-medium tracking-wide"
-              style={memberColor ? { color: memberColor.text } : undefined}
-            >
-              {m.name}
-            </span>
-            {m.role ? (
-              <span className="text-[9px] text-[var(--color-text-muted)]">{m.role}</span>
-            ) : null}
-          </span>
-        );
-      })}
-    </>
-  );
 }
 
 function renderTeamRecentPaths(
@@ -231,6 +202,7 @@ type TeamT = ReturnType<typeof useAppTranslation>['t'];
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
+  budgetStatus: ReturnType<typeof useTeamBudgetStatus>;
   status: TeamStatus;
   teamColorSet: TeamColorSet;
   isLight: boolean;
@@ -256,6 +228,7 @@ interface ActiveTeamCardProps {
 const ActiveTeamCard = ({
   managementChange,
   team,
+  budgetStatus,
   status,
   teamColorSet,
   isLight,
@@ -437,6 +410,7 @@ const ActiveTeamCard = ({
             </Badge>
           )}
         </div>
+        <TeamBudgetProgress teamName={team.teamName} status={budgetStatus} />
         <div className="mt-auto">
           <TeamTaskStatusSummary counts={taskCounts} />
           {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
@@ -456,6 +430,7 @@ export const TeamListView = memo(function TeamListView({
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
+  const budgetStatus = useTeamBudgetStatus();
   const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
   const creationTab = useStore((s) =>
@@ -950,12 +925,18 @@ export const TeamListView = memo(function TeamListView({
       e.stopPropagation();
       if (!projectPath) return;
       const requestId = ++launchRequestIdRef.current;
-      const projectContextMode = teams.find((team) => team.teamName === teamName)?.projectContextMode;
+      const projectContextMode = teams.find(
+        (team) => team.teamName === teamName
+      )?.projectContextMode;
       let permissionTeamName: string | null | undefined;
       if (projectContextMode === 'per_project') {
         try {
           const context = await api.teams.getProjectContextView(teamName, projectPath);
-          permissionTeamName = resolveTeamListProjectPermissionAlias(teamName, projectPath, context);
+          permissionTeamName = resolveTeamListProjectPermissionAlias(
+            teamName,
+            projectPath,
+            context
+          );
         } catch {
           // An unverified project runtime never inherits auto-approval from the logical team.
           permissionTeamName = null;
@@ -1069,7 +1050,10 @@ export const TeamListView = memo(function TeamListView({
     void fetchAllTasks();
   }, [electronMode, fetchTeams, fetchAllTasks]);
 
-  const taskCountsByTeam = useMemo(() => buildTaskCountsByTeam(globalTasks, teams), [globalTasks, teams]);
+  const taskCountsByTeam = useMemo(
+    () => buildTaskCountsByTeam(globalTasks, teams),
+    [globalTasks, teams]
+  );
 
   const activeTeams = useMemo<ActiveTeamRef[]>(() => {
     const aliveSet = new Set(aliveTeams);
@@ -1400,6 +1384,7 @@ export const TeamListView = memo(function TeamListView({
                         <ActiveTeamCard
                           key={team.teamName}
                           team={team}
+                          budgetStatus={budgetStatus}
                           managementChange={teamManagementNoticeByTeam[team.teamName]}
                           status={status}
                           teamColorSet={teamColorSet}

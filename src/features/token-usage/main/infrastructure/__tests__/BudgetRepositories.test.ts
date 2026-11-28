@@ -50,6 +50,27 @@ const record = (
 });
 
 describe('strict Budget persistence', () => {
+  it.each(['notify', 'block_launch', 'stop_team'] as const)(
+    'preserves team enforcement action %s through settings normalization',
+    async (onExceeded) => {
+      const file = await path();
+      const repo = new JsonTokenUsageBudgetSettingsRepository(file);
+      const saved = await repo.updateSettings({
+        settings: { teams: { 'team:alpha': { ...limit, onExceeded } } },
+        teamIdentityVersion: 1,
+        expectedUpdatedAt: null,
+      });
+
+      expect(normalizeTokenUsageBudgetSettings(saved).teams?.['team:alpha']?.onExceeded).toBe(
+        onExceeded
+      );
+      expect(
+        normalizeTokenUsageBudgetSettings(await repo.getSettings()).teams?.['team:alpha']
+          ?.onExceeded
+      ).toBe(onExceeded);
+    }
+  );
+
   // Catches lost concurrent writes, client timestamp trust, v2 empty-threshold defaults, corrupt-file overwrites.
   it('CAS allows one same-revision Save, assigns monotonic server time, recovers queue after conflict', async () => {
     const file = await path();

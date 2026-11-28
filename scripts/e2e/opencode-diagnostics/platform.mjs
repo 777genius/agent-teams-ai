@@ -20,19 +20,32 @@ export function powershell(script) {
     { encoding: 'utf8', windowsHide: true, timeout: 30000 }
   );
 }
-export function parseWindowsProcesses(output) {
+function assertRequiredProcessPids(requiredPids) {
+  assert(
+    Array.isArray(requiredPids) && requiredPids.length <= 500 &&
+      requiredPids.every((pid) => Number.isSafeInteger(pid) && pid > 0),
+    'Invalid required process PIDs'
+  );
+}
+export function parseWindowsProcesses(output, requiredPids) {
+  if (requiredPids !== undefined) assertRequiredProcessPids(requiredPids);
   const parsed = JSON.parse(output.replace(/^\uFEFF/, '').trim() || '[]');
-  return (Array.isArray(parsed) ? parsed : [parsed]).map((p) => {
+  return (Array.isArray(parsed) ? parsed : [parsed]).flatMap((p) => {
     assert(
-      Number.isInteger(p.pid) && Number.isInteger(p.parent) && p.birth,
+      p && Number.isInteger(p.pid) && Number.isInteger(p.parent),
       'Invalid OS process identity'
     );
-    return {
+    const validBirth = typeof p.birth === 'string' && Number.isFinite(Date.parse(p.birth));
+    // Unrelated Windows system processes can legitimately hide their birth.
+    // A previously captured PID must remain visible and fail closed instead.
+    if (requiredPids !== undefined && !validBirth && !requiredPids.includes(p.pid)) return [];
+    assert(validBirth, 'Invalid OS process birth identity');
+    return [{
       pid: p.pid,
       parent: p.parent,
       birth: p.birth,
       ...(p.executable ? { executable: p.executable } : {}),
-    };
+    }];
   });
 }
 export function parseUnixProcesses(output) {
@@ -46,12 +59,14 @@ export function parseUnixProcesses(output) {
       return { pid: Number(m[1]), parent: Number(m[2]), birth: m[3].trim() };
     });
 }
-export function processes() {
+export function processes(requiredPids = []) {
+  assertRequiredProcessPids(requiredPids);
   if (windows)
     return parseWindowsProcesses(
       powershell(
-        "@(Get-CimInstance Win32_Process | Where-Object CreationDate | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$_.CreationDate.ToUniversalTime().ToString('o'); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress"
-      )
+        "@(Get-CimInstance Win32_Process | ForEach-Object { [pscustomobject]@{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; birth=$(if ($_.CreationDate) {$_.CreationDate.ToUniversalTime().ToString('o')} else {$null}); executable=$_.ExecutablePath} }) | ConvertTo-Json -Compress"
+      ),
+      requiredPids
     );
   return parseUnixProcesses(
     execFileSync('ps', ['-eo', 'pid=,ppid=,lstart='], {

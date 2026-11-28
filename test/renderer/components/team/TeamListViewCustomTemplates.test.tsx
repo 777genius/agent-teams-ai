@@ -81,6 +81,23 @@ vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
     teams: { getSavedRequest, getData, aliveList },
+    tokenUsage: {
+      getBudgetStatus: async () => ({
+        period: {
+          key: '2026-11',
+          from: '2026-11-01T00:00:00Z',
+          to: '2026-12-01T00:00:00Z',
+          timeZone: 'UTC',
+        },
+        computedAt: '2026-11-25T00:00:00Z',
+        stale: false,
+        degraded: false,
+        notificationPolicy: { enabled: false, nativeToasts: false },
+        options: [],
+        targets: [],
+      }),
+      onBudgetStatusChanged: () => () => undefined,
+    },
     customTeamTemplates: { preparePreview, saveTemplate, recheckSave, listTemplates },
   },
 }));

@@ -81,6 +81,57 @@ describe('TokenUsageAnalyticsService', () => {
     expect(published[0]?.byTask.map((item) => item.id)).toEqual(['task:beta:2', 'task:alpha:1']);
     expect(evaluator.snapshots[0]?.period.key).toBe('2026-06');
   });
+  it('resolves historical project aliases before exposing budget targets after month rollover', async () => {
+    const physicalName = `ptc-${'a'.repeat(24)}`;
+    const ledger = new MemoryLedgerRepository();
+    await ledger.upsertRuns([
+      run({
+        appRunId: 'historical-project-copy',
+        teamName: physicalName,
+        startedAt: '2026-06-30T23:50:00.000Z',
+      }),
+    ]);
+    await ledger.upsertEvents([
+      event({
+        id: 'historical-project-copy-event',
+        appRunId: 'historical-project-copy',
+        teamName: physicalName,
+        occurredAt: '2026-06-30T23:55:00.000Z',
+      }),
+    ]);
+    let resolvedNames: readonly string[] = [];
+    const service = new TokenUsageAnalyticsService({
+      ledger,
+      discovery: { discoverAppRuns: async () => [] },
+      importers: [],
+      clock: { now: () => new Date('2026-07-01T00:05:00.000Z') },
+      budgets: {
+        getSettings: async () => ({}),
+        updateSettings: async () => {
+          throw new Error('Budget settings must not be updated when reading status');
+        },
+      },
+      budgetTeamNameAliases: async (names) => {
+        resolvedNames = [...names];
+        return {
+          aliases: new Map([[physicalName, 'logical-team']]),
+          unresolvedNames: [],
+        };
+      },
+    });
+
+    const status = await service.getBudgetStatus();
+
+    expect(resolvedNames).toContain(physicalName);
+    expect(status.options).toContainEqual(
+      expect.objectContaining({ scope: 'team', id: 'team:logical-team' })
+    );
+    expect(status.options).not.toContainEqual(
+      expect.objectContaining({ scope: 'team', id: `team:${physicalName}` })
+    );
+    expect(status.degraded).toBe(false);
+  });
+
   it.each([false, true])(
     'same-month clock rollback refreshes after a future attempt (failed=%s)',
     async (failed) => {
