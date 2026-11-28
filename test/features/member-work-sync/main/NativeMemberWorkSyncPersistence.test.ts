@@ -1,6 +1,8 @@
+// @vitest-environment node
 import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 import * as reviewIo from '@agent-teams/task-change-ledger/review-io';
@@ -8,10 +10,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createOwnerLifecycleIdentity } from '../../../../packages/legacy-agent-host/src/adapters/lifecycle/createOwnerLifecycleIdentity.js';
 import { TeamPermanentDeletionCoordinator } from '../../../../packages/legacy-agent-host/src/adapters/lifecycle/TeamPermanentDeletionCoordinator.js';
+import { createTeamController } from '../../../../packages/legacy-agent-host/src/adapters/team/ControllerAdapter.js';
 import { TeamOwnerStore } from '../../../../packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.js';
 import { captureNativeInputAuthority } from '../../../../packages/legacy-agent-host/src/composition/captureNativeInputAuthority.js';
 import { createHostWorkSyncComposition } from '../../../../packages/legacy-agent-host/src/composition/createHostWorkSyncComposition.js';
 import { createRuntimeWorkSyncWake } from '../../../../packages/legacy-agent-host/src/composition/createRuntimeWorkSyncWake.js';
+import { startTeamMcpEndpoint } from '../../../../packages/legacy-agent-host/src/mcp/index.js';
 import { createWorkSyncMcpTools } from '../../../../packages/legacy-agent-host/src/mcp/workSyncTools.js';
 import {
   deliveryFingerprint,
@@ -380,6 +384,369 @@ it('bound MCP status/report follow-up settles one original command and cannot re
     expect(
       f.owner.workSyncCommands('native-connection').lookup('TEST-MCP-original-replaced')
     ).toBeUndefined();
+  } finally {
+    await feature.close();
+  }
+});
+
+function createHttpToolCaller(endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>>) {
+  let sequence = 0;
+  async function call(name: string, args: Record<string, unknown>) {
+    const response = await fetch(endpoint.url, {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer ' + endpoint.bearerToken,
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: ++sequence, method: 'tools/call',
+        params: { name, arguments: args },
+      }),
+    });
+    expect(response.status).toBe(200);
+    const raw = await response.text();
+    expect(Buffer.byteLength(raw, 'utf8')).toBeLessThan(1024 * 1024);
+    const envelope = JSON.parse(raw);
+    expect(envelope.error).toBeUndefined();
+    expect(envelope.result.isError).not.toBe(true);
+    const item = envelope.result.content[0];
+    expect(item.type).toBe('text');
+    expect(Buffer.byteLength(item.text, 'utf8')).toBeLessThanOrEqual(256 * 1024);
+    const result = JSON.parse(item.text);
+    expect(envelope.result.structuredContent.result).toEqual(result);
+    return result;
+  }
+  return call;
+}
+
+it.each([3, 6])(
+  'keeps %i large assigned tasks canonical through actual HTTP WorkSync status, report and replay',
+  async (count) => {
+    const f = await fixture();
+    const historicalLineage = 'L'.repeat(250_000);
+    const historicalLatch = { stoppedAt: f.status.evaluatedAt,
+      reason: '界'.repeat(100_000), controlRevision: 7 };
+    const initial = await f.persistence.statusMutations.readSnapshot(f.status);
+    if (!initial.ok) throw new Error('TEST original status authority unavailable');
+    const seeded = await f.persistence.statusMutations.compareAndWrite({
+      teamName: f.binding.teamName, memberName: 'alice',
+      incarnation: initial.snapshot.incarnation, expectedToken: initial.snapshot.token,
+      mutationId: 'TEST-historical-stopped-status',
+      nextStatus: { ...f.status, recoveryHealth: {
+        schemaVersion: 1, episodes: [], autoResumeStopLatch: historicalLatch, controlRevision: 7,
+      } },
+    });
+    if (seeded.committed !== true) throw new Error('TEST original status not seeded');
+    // This disposable historical fixture predates the current UUID lineage
+    // producer; the existing canonical decoder accepts its retained identity.
+    const historicalPath = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+    const historical = JSON.parse(await readFile(historicalPath, 'utf8'));
+    historical.status.statusRevision.lineageId = historicalLineage;
+    await writeFile(historicalPath, JSON.stringify(historical));
+    const expected = new Map<string, string>();
+    for (let index = 0; index < count; index++) {
+      const subject = '界'.repeat(29_990) + ' TEST ' + index;
+      const receipt = f.owner.connect('native-connection').execute({
+        commandId: 'TEST-large-agenda-task-' + index,
+        operation: 'task.create',
+        payload: { subject, owner: 'alice' },
+      });
+      expect(receipt.phase).toBe('completed');
+      expected.set(receipt.effects.taskId, subject);
+    }
+    const feature = createHostWorkSyncComposition({
+      teamsBasePath: join(f.root, 'teams'),
+      identity: async () => f.identity,
+      assertCurrent: f.authority.assertCurrent,
+    });
+    let endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>> | undefined;
+    try {
+      const port = feature.member({
+        teamId: f.binding.teamId,
+        teamName: f.binding.teamName,
+        owner: f.owner,
+        providerId: 'anthropic',
+        sourceRevision: runtimeDigest({ binding: f.source, configuration: f.record.config }),
+        captureSource: () => captureNativeInputAuthority(f.options),
+      });
+      const binding = { ...f.source, teamName: f.binding.teamName };
+      endpoint = await startTeamMcpEndpoint({
+        connection: { ...f.owner.connect('native-connection'), workSync: port },
+        binding,
+        expiresAtMs: 60_000,
+        now: () => 1000,
+        isCurrentBinding(captured) {
+          f.authority.assertCurrent();
+          return runtimeDigest(captured) === runtimeDigest(binding);
+        },
+      });
+      const call = createHttpToolCaller(endpoint);
+      const statusPath = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+      const journalPath = f.paths.getMemberReportsPath(f.binding.teamName, 'alice');
+      const commands = f.owner.workSyncCommands('native-connection');
+      const statusId = 'TEST-large-agenda-status';
+      const assertCanonical = async () => {
+        const raw = await readFile(statusPath, 'utf8');
+        const saved = JSON.parse(raw).status as MemberWorkSyncStatus;
+        expect(new Map(saved.agenda.items.map((item) => [item.taskId, item.subject]))).toEqual(expected);
+        expect(saved.agenda.items).toHaveLength(count);
+        expect(saved.statusRevision?.lineageId).toBe(historicalLineage);
+        expect(saved.recoveryHealth?.autoResumeStopLatch).toEqual(historicalLatch);
+        expect(Buffer.byteLength(JSON.stringify(saved), 'utf8')).toBeGreaterThan(
+          count === 6 ? 512 * 1024 : 256 * 1024
+        );
+        return { raw, saved };
+      };
+      const assertReceipt = (commandId: string, result: unknown) => {
+        const receipt = commands.lookup(commandId)!;
+        expect(receipt.phase).toBe('completed');
+        expect(receipt.nativeInput.original).toEqual(f.authority.original);
+        expect(receipt.inputAuthority).toBe(f.authority.fingerprint);
+        expect(receipt.result).toEqual(result);
+        expect(Buffer.byteLength(JSON.stringify(receipt), 'utf8')).toBeLessThanOrEqual(512 * 1024);
+        return JSON.stringify(receipt);
+      };
+
+      const status = await call('member_work_sync_status', { commandId: statusId });
+      const before = await assertCanonical();
+      expect(status).toMatchObject({
+        detailsOmitted: true,
+        agenda: { fingerprint: before.saved.agenda.fingerprint, itemsOmitted: true, totalItems: count },
+        statusOnlyIncomplete: true,
+        nextRequiredToolCall: { tool: 'member_work_sync_report' },
+      });
+      expect(status.agenda).not.toHaveProperty('items');
+      expect(status).not.toHaveProperty('statusRevision');
+      expect(status).not.toHaveProperty('pendingReportReceipt');
+      expect(status.recoveryHealth).toMatchObject({
+        autoResumeStopped: true, controlRevision: 7,
+        autoResumeStopLatch: { stoppedAt: historicalLatch.stoppedAt, controlRevision: 7 },
+      });
+      expect(status.recoveryHealth.autoResumeStopLatch).not.toHaveProperty('reason');
+      const args = status.nextRequiredToolCall.arguments as {
+        commandId: string; state: string; agendaFingerprint: string; reportToken: string;
+      };
+      expect(args).toMatchObject({
+        state: 'still_working',
+        agendaFingerprint: before.saved.agenda.fingerprint,
+        reportToken: before.saved.reportToken,
+      });
+      expect(args.reportToken).toBeTruthy();
+      expect(args).not.toHaveProperty('taskIds');
+      const statusReceipt = assertReceipt(statusId, status);
+      const report = await call('member_work_sync_report', args);
+      expect(report).toMatchObject({
+        accepted: true,
+        status: { detailsOmitted: true, agenda: { fingerprint: args.agendaFingerprint, totalItems: count } },
+      });
+      expect(report.status.recoveryHealth).toMatchObject({
+        autoResumeStopped: true, controlRevision: 7,
+      });
+      expect(report.status).not.toHaveProperty('pendingReportReceipt');
+      const reportReceipt = assertReceipt(args.commandId, report);
+      const after = await assertCanonical();
+      expect(after.saved.lastAcceptedReport ?? after.saved.report).toMatchObject({
+        accepted: true, state: 'still_working', agendaFingerprint: args.agendaFingerprint,
+      });
+      const journal = await readFile(journalPath, 'utf8');
+      expect(Object.values(JSON.parse(journal).intents)).toHaveLength(1);
+      expect(await call('member_work_sync_status', { commandId: statusId })).toEqual(status);
+      expect(await call('member_work_sync_report', args)).toEqual(report);
+      expect(assertReceipt(statusId, status)).toBe(statusReceipt);
+      expect(assertReceipt(args.commandId, report)).toBe(reportReceipt);
+      expect(await readFile(statusPath, 'utf8')).toBe(after.raw);
+      expect(await readFile(journalPath, 'utf8')).toBe(journal);
+
+      const fresh = await call('member_work_sync_status', { commandId: 'TEST-large-agenda-fresh' });
+      const freshArgs = fresh.nextRequiredToolCall.arguments;
+      for (const [id, patch, code] of [
+        ['TEST-stale-report', { agendaFingerprint: 'TEST-stale-fingerprint' }, 'stale_fingerprint'],
+        ['TEST-foreign-report', { taskIds: ['TEST-foreign-task'] }, 'foreign_task_id'],
+      ] as const) {
+        const rejected = await call('member_work_sync_report', { ...freshArgs, ...patch, commandId: id });
+        expect(rejected).toMatchObject({ accepted: false, code });
+        assertReceipt(id, rejected);
+        await assertCanonical();
+      }
+    } finally {
+      try { await endpoint?.close(); } finally { await feature.close(); }
+    }
+  }
+);
+
+it('qualifies the 200/201 task boundary through the original Owner and HTTP MCP', async () => {
+  const f = await fixture();
+  const taskStore = createRequire(import.meta.url)('agent-teams-controller/src/internal/taskStore.js') as {
+    createTask(paths: Record<string, string>, input: Record<string, unknown>): { id: string };
+  };
+  const paths = createTeamController(f.root, f.binding.teamName).context.paths;
+  const expected = new Map<string, string>();
+  // Canonical TEST storage fixture, as in mcp-task-inventory-pages; do not
+  // generate unrelated command receipts or substitute the actual agenda source.
+  const seed = (index: number) => {
+    const subject = 'TEST actionable work ' + index;
+    const task = taskStore.createTask(paths, {
+      id: index.toString(16).padStart(8, '0') + '-0000-4000-8000-000000000000',
+      subject, owner: 'alice', status: 'pending',
+      description: 'TEST canonical detail ' + 'x'.repeat(1200),
+    });
+    expected.set(task.id, subject);
+  };
+  for (let index = 1; index <= 200; index++) seed(index);
+  const feature = createHostWorkSyncComposition({
+    teamsBasePath: join(f.root, 'teams'), identity: async () => f.identity,
+    assertCurrent: f.authority.assertCurrent,
+  });
+  let endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>> | undefined;
+  try {
+    const port = feature.member({
+      teamId: f.binding.teamId, teamName: f.binding.teamName, owner: f.owner,
+      providerId: 'anthropic',
+      sourceRevision: runtimeDigest({ binding: f.source, configuration: f.record.config }),
+      captureSource: () => captureNativeInputAuthority(f.options),
+    });
+    const binding = { ...f.source, teamName: f.binding.teamName };
+    endpoint = await startTeamMcpEndpoint({
+      connection: { ...f.owner.connect('native-connection'), workSync: port },
+      binding, expiresAtMs: 60_000, now: () => 1000,
+      isCurrentBinding(captured) {
+        f.authority.assertCurrent();
+        return runtimeDigest(captured) === runtimeDigest(binding);
+      },
+    });
+    const call = createHttpToolCaller(endpoint);
+    const commands = f.owner.workSyncCommands('native-connection');
+    const statusPath = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+    const journalPath = f.paths.getMemberReportsPath(f.binding.teamName, 'alice');
+    const verifyAgenda = (value: MemberWorkSyncStatus) => {
+      expect(value.agenda.items).toHaveLength(expected.size);
+      expect(new Map(value.agenda.items.map(item => [item.taskId, item.subject]))).toEqual(expected);
+    };
+    const first = await call('member_work_sync_status', { commandId: 'TEST-boundary-200' });
+    verifyAgenda(first);
+    const oldArgs = first.nextRequiredToolCall.arguments;
+    expect(oldArgs.taskIds).toEqual(first.agenda.items.map((item: { taskId: string }) => item.taskId));
+    expect(oldArgs.taskIds).toHaveLength(200);
+    seed(201);
+    const stale = await call('member_work_sync_report', oldArgs);
+    expect(stale).toMatchObject({ accepted: false, code: 'stale_fingerprint' });
+
+    const id = 'TEST-boundary-201';
+    const status = await call('member_work_sync_status', { commandId: id });
+    verifyAgenda(status);
+    const args = status.nextRequiredToolCall.arguments;
+    expect(status.reportScope).toBe('The report covers the entire original agenda; taskIds is omitted.');
+    expect(args).not.toHaveProperty('taskIds');
+    expect(args.agendaFingerprint).toBe(status.agenda.fingerprint);
+    expect(args.agendaFingerprint).not.toBe(oldArgs.agendaFingerprint);
+    expect(args.reportToken).toBe(status.reportToken);
+    const statusReceipt = commands.lookup(id)!;
+    expect(statusReceipt.phase).toBe('completed');
+    const report = await call('member_work_sync_report', args);
+    expect(report).toMatchObject({ accepted: true, status: { state: 'still_working' } });
+    verifyAgenda(report.status);
+    const reportReceipt = commands.lookup(args.commandId)!;
+    expect(reportReceipt.phase).toBe('completed');
+    expect(reportReceipt.nativeInput.original).toEqual(f.authority.original);
+    const after = await readFile(statusPath, 'utf8');
+    const journal = await readFile(journalPath, 'utf8');
+    expect(await call('member_work_sync_status', { commandId: id })).toEqual(status);
+    expect(await call('member_work_sync_report', args)).toEqual(report);
+    expect(commands.lookup(id)).toEqual(statusReceipt);
+    expect(commands.lookup(args.commandId)).toEqual(reportReceipt);
+    expect(await readFile(statusPath, 'utf8')).toBe(after);
+    expect(await readFile(journalPath, 'utf8')).toBe(journal);
+
+    const board = new Map<string, string>();
+    const cursors = new Set<string>();
+    let cursor: string | null = null, revision: string | undefined, pages = 0;
+    do {
+      const page = await call('team_get', cursor === null ? {} : { cursor });
+      revision ??= page.revision;
+      expect(page.revision).toBe(revision);
+      for (const task of page.tasks as { id: string; subject: string }[]) {
+        expect(board.has(task.id)).toBe(false);
+        board.set(task.id, task.subject);
+      }
+      cursor = page.nextCursor;
+      if (cursor !== null) {
+        expect(cursors.has(cursor)).toBe(false);
+        cursors.add(cursor);
+      }
+      expect(++pages).toBeLessThan(128);
+    } while (cursor !== null);
+    expect(pages).toBeGreaterThan(1);
+    expect(board).toEqual(expected);
+    expect(await readFile(statusPath, 'utf8')).toBe(after);
+
+    const caughtUp = await call('member_work_sync_report', {
+      ...args, commandId: 'TEST-boundary-caught-up', state: 'caught_up',
+      reportToken: report.status.reportToken,
+    });
+    expect(caughtUp).toMatchObject({
+      accepted: false, code: 'caught_up_rejected_actionable_items_exist',
+    });
+    verifyAgenda(JSON.parse(await readFile(statusPath, 'utf8')).status);
+  } finally {
+    try { await endpoint?.close(); } finally { await feature.close(); }
+  }
+});
+
+it('refuses an unrepresentable historical accepted fingerprint before canonical status or report effects', async () => {
+  const f = await fixture();
+  const initial = await f.persistence.statusMutations.readSnapshot(f.status);
+  if (!initial.ok) throw new Error('TEST original status authority unavailable');
+  const seeded = await f.persistence.statusMutations.compareAndWrite({
+    teamName: f.binding.teamName, memberName: 'alice',
+    incarnation: initial.snapshot.incarnation, expectedToken: initial.snapshot.token,
+    mutationId: 'TEST-historical-accepted-report',
+    nextStatus: {
+      ...f.status,
+      report: {
+        teamName: f.binding.teamName, memberName: 'alice',
+        state: 'still_working', agendaFingerprint: 'x'.repeat(125_000),
+        reportedAt: f.status.evaluatedAt, accepted: true, source: 'test',
+      },
+    },
+  });
+  if (seeded.committed !== true) throw new Error('TEST original status not seeded');
+  const path = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+  const metricsPath = f.paths.getMetricsIndexPath(f.binding.teamName);
+  const journalPath = f.paths.getMemberReportsPath(f.binding.teamName, 'alice');
+  const tokenPath = f.paths.getReportTokenSecretPath(f.binding.teamName);
+  const before = await readFile(path, 'utf8');
+  const metrics = await readFile(metricsPath, 'utf8');
+  await expect(readFile(journalPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(readFile(tokenPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  const feature = createHostWorkSyncComposition({
+    teamsBasePath: join(f.root, 'teams'),
+    identity: async () => f.identity,
+    assertCurrent: f.authority.assertCurrent,
+  });
+  try {
+    const port = feature.member({
+      teamId: f.binding.teamId, teamName: f.binding.teamName, owner: f.owner,
+      providerId: 'anthropic',
+      sourceRevision: runtimeDigest({ binding: f.source, configuration: f.record.config }),
+      captureSource: () => captureNativeInputAuthority(f.options),
+    });
+    const commandId = 'TEST-historical-scalar-refusal';
+    await expect(port.status(commandId, {})).rejects.toThrow(/hold/);
+    const commands = f.owner.workSyncCommands('native-connection');
+    const retained = commands.lookup(commandId);
+    expect(retained?.phase).toBe('running');
+    expect(retained?.result).toBeUndefined();
+    await expect(port.status(commandId, {})).rejects.toThrow(/hold/);
+    expect(commands.lookup(commandId)).toEqual(retained);
+    await expect(port.report('TEST-historical-report-refusal', {
+      state: 'still_working', agendaFingerprint: 'TEST-invalid', reportToken: 'TEST-invalid',
+    })).rejects.toThrow(/hold/);
+    expect(commands.lookup('TEST-historical-report-refusal')?.phase).toBe('running');
+    expect(await readFile(path, 'utf8')).toBe(before);
+    expect(await readFile(metricsPath, 'utf8')).toBe(metrics);
+    await expect(readFile(journalPath)).rejects.toMatchObject({ code: 'ENOENT' });
+    await expect(readFile(tokenPath)).rejects.toMatchObject({ code: 'ENOENT' });
   } finally {
     await feature.close();
   }
