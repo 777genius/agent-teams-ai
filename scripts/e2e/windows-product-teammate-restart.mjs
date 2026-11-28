@@ -60,7 +60,13 @@ if(toolRequests++===0)return{id:'toolu_'+randomUUID().replaceAll('-',''),name:ba
 input:{command,description:'Isolated product Windows console verification',timeout:600000}};
 return{id:'done_'+randomUUID().replaceAll('-',''),text:'OWNED_TOOL_DISPATCHED'};
 });
-const env={...f.env,CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:cli,
+// Preserve only Windows installation plumbing needed for CIM module discovery,
+// as in isolatedEnvironment; keep the TEST profile and local model boundary.
+const windowsModuleEnv=new Set(['programfiles','programfiles(x86)','programw6432',
+'commonprogramfiles','commonprogramfiles(x86)','commonprogramw6432','psmodulepath']);
+const nativeEnv=Object.fromEntries(Object.entries(process.env)
+.filter(([key])=>windowsModuleEnv.has(key.toLowerCase())));
+const env={...nativeEnv,...f.env,CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH:cli,
 ANTHROPIC_BASE_URL:model.baseUrl,ANTHROPIC_API_KEY:'synthetic-owned-key',
 NODE_BINARY:process.execPath,CLAUDE_TEAM_PROCESS_RUNTIME_READY_TIMEOUT_MS:'180000',
 CLAUDE_TEAM_PROCESS_INBOX_POLLER_READY_TIMEOUT_MS:'180000',
