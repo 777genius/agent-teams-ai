@@ -376,18 +376,19 @@ export function createTeamProcessCommands(options: ProcessTeamOwnerContext) {
           ...admitted.receipt,
           selected: selected.map((row) => ({ id: row.id, processRef: ref(row) })),
         };
-        persist(receipt);
-        const policySelector = 'processRef' in selector ? { id: selected[0]!.id } : selector;
-        const changed =
-          operation === 'metadata-stop'
-            ? registry.stopMetadata(policySelector)
-            : registry.unregister(policySelector);
-        const result = Array.isArray(changed) ? changed.map((row) => view(row)) : view(changed);
         const completed: ProcessCommandReceipt = {
           ...receipt,
-          result,
+          phase: 'completed',
           state: { phase: 'completed', native: 'not-requested' },
         };
+        completed.fingerprint = processReceiptFingerprint(completed, digest);
+        // Even the compact terminal must fit before removal; selected refs stay immutable.
+        if (operation === 'unregister') validateProcessReceipt(completed, digest);
+        persist(receipt);
+        const policySelector = 'processRef' in selector ? { id: selected[0]!.id } : selector;
+        if (operation === 'metadata-stop') completed.result = view(registry.stopMetadata(policySelector));
+        else registry.unregister(policySelector);
+        // The current catalog has its own bounded read. It is not a mutation acknowledgement.
         persist(completed);
         options.invalidate();
         return completed;

@@ -56,20 +56,18 @@ export function projectProcessView(row: TeamProcessView): TeamProcessView {
   return result;
 }
 export function projectProcessReceipt(row: ProcessCommandReceipt | null) {
-  return row
-    ? {
-        commandId: row.commandId,
-        operation: row.operation,
-        phase: row.phase,
-        state: { ...row.state },
-        ...(row.processRef ? { originalProcessRef: row.processRef } : {}),
-        ...(row.result
-          ? {
-              result: Array.isArray(row.result)
-                ? row.result.map(projectProcessView)
-                : projectProcessView(row.result),
-            }
-          : {}),
-      }
-    : null;
+  if (!row) return null;
+  // Validate retained legacy rows before omitting their unbounded catalog from the wire.
+  const result = row.result === undefined ? undefined
+    : Array.isArray(row.result) ? row.result.map(projectProcessView) : projectProcessView(row.result);
+  return {
+    commandId: row.commandId,
+    operation: row.operation,
+    phase: row.phase,
+    state: { ...row.state },
+    ...(row.processRef ? { originalProcessRef: row.processRef } : {}),
+    ...(row.operation === 'unregister' && row.phase === 'completed' && row.state.phase === 'completed'
+      ? { resultOmitted: true }
+      : result === undefined ? {} : { result }),
+  };
 }
