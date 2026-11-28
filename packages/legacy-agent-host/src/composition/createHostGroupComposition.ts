@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { pageGroupCatalog } from '../group-chats/pageGroupCatalog.js';
 import { z } from 'zod';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
