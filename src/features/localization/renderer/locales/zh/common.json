@@ -967,6 +967,18 @@
     "chats": "未读聊天",
     "openTask": "打开任务：{{subject}}（{{team}}）",
     "timeUnknown": "时间未知",
-    "teamAttention": "待处理"
+    "teamAttention": "待处理",
+    "filters": {
+      "title": "筛选",
+      "description": "选择收件箱中显示的内容。",
+      "itemType": "项目类型",
+      "conversationType": "聊天类型",
+      "direct": "私信",
+      "group": "群聊",
+      "teamFeed": "团队动态",
+      "waiting": "任务等待时间",
+      "olderDay": "超过 24 小时",
+      "olderWeek": "超过 7 天"
+    }
   }
 }

@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "月間予算",
+      "teamCardUnknown": "使用量が不明です",
+      "teamCardBlocked": "上限に達したため起動を制限中",
+      "editor": {
+        "onExceeded": "予算上限に達したときの動作",
+        "notifyOnly": "通知のみ",
+        "blockLaunch": "チームの新規起動を禁止",
+        "stopTeam": "実行中のチームを停止し起動を禁止",
+        "enforcementHint": "使用量データが未取得・遅延の場合は新規起動を禁止します。料金は推定値であり、請求額が上限を超えることがあります。"
+      }
     }
   }
 }

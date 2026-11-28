@@ -14,6 +14,7 @@ import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
 import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
+import { proveNativeBudgetStop, seedNativeBudgetStopLedger } from './team-budget-stop-native.mjs';
 
 assert.equal(process.platform, 'win32', 'This proof requires a Windows GUI runner');
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -67,6 +68,8 @@ let addMemberIpcReceipt = null;
 let forceExitMember;
 let forceExitOwnedLauncher;
 let forceExitHeldTool;
+// Retain exact PID/birth evidence from budget-team processes for safe cleanup.
+const budgetOwnedProcesses = [];
 let forceExitPidEvidence = null;
 let hwndObserver;
 let hwndObserverSpawnError = null;
@@ -170,13 +173,19 @@ async function getProcess(pid) {
   const script = "$ErrorActionPreference='Stop';" +
     "$p=Get-CimInstance Win32_Process -Filter 'ProcessId = " + pid + "' -ErrorAction Stop;" +
     "if(-not $p){Write-Output 'null';exit 0};" +
+    "if($null -eq $p.CreationDate){throw 'Win32 original process birth unavailable'};" +
     "@{pid=[int]$p.ProcessId;creation=([datetime]$p.CreationDate).ToUniversalTime().ToString('o',[System.Globalization.CultureInfo]::InvariantCulture);" +
     "command=[string]$p.CommandLine;parent=[int]$p.ParentProcessId}|ConvertTo-Json -Compress";
   const found = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
     encoding: 'utf8', windowsHide: true, timeout: 15_000,
   });
   if (found.status !== 0 || found.error) throw new Error('Win32 original process lookup failed');
-  return JSON.parse(found.stdout.trim());
+  const observed = JSON.parse(found.stdout.trim());
+  if (observed !== null) {
+    assert(observed && observed.pid === pid && typeof observed.creation === 'string' &&
+      Number.isFinite(Date.parse(observed.creation)), 'Win32 original process identity unavailable');
+  }
+  return observed;
 }
 
 async function ownedStillAlive(before) {
@@ -291,6 +300,10 @@ async function run() {
     JSON.stringify({ general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark',
       defaultTab: 'teams', multimodelEnabled: true } }));
   await mkdir(path.join(env.AGENT_TEAMS_ELECTRON_CLAUDE_ROOT, 'projects'), { recursive: true });
+  const budgetSeed=await seedNativeBudgetStopLedger({
+    root,userDataRoot:env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    teamName:teamName+'-budget',
+  });
   phase = 'electron-startup';
   const port = await freePort();
   const inspectorPort = await freePort();
@@ -560,8 +573,13 @@ async function run() {
   await wait('both original teammate PIDs retired after product Stop', async () =>
     !(await ownedStillAlive(originalMember)) &&
       !(await ownedStillAlive(initialMember)), 30_000);
-  await wait('original active PowerShell tool PID retired after product Stop', async () =>
-    !(await ownedStillAlive(heldTool)), 30_000);
+  await wait('original active PowerShell tool retired and product IPC reports stopped', async () => {
+    const toolAlive = await ownedStillAlive(heldTool);
+    const teamAlive = await api(`window.electronAPI.teams.processAlive(${literal(teamName)})`);
+    const aliveTeams = await api('window.electronAPI.teams.aliveList()');
+    return !toolAlive && teamAlive === false && Array.isArray(aliveTeams) &&
+      !aliveTeams.includes(teamName);
+  }, 30_000);
   const focus = await mainInspector.evaluate('globalThis.__winProductFocus');
   assert(focus.pid > 0 && Number.isSafeInteger(focus.blur));
   assert.equal(focus.before, true, 'Electron window did not own focus before tools');
@@ -606,6 +624,20 @@ async function run() {
     'original live PowerShell descendant before Electron Main force-exit', 90_000);
   assert(await ownedStillAlive(forceExitHeldTool),
     'Forced-exit tool descendant had already retired before Electron Main was killed');
+  // A native held tool keeps the unrelated forced-exit teammate active while
+  // the separate owned budget team is automatically stopped by real product IPC.
+  phase = 'real-native-budget-auto-stop';
+  const nativeBudgetStop = await proveNativeBudgetStop({
+    client, api, wait, getProcess, ownedStillAlive, root,
+    userDataRoot: env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR,
+    request, foreignIdentity: forceExitMember,
+    expected, heldToolPidPath, waitForOwnedPowerShellDescendant,
+    seed:budgetSeed, budgetOwnedProcesses, findOriginalTeammateJobLauncher,
+    mainBirth,
+  });
+  assert(await ownedStillAlive(forceExitMember) && await ownedStillAlive(forceExitHeldTool),
+    'Budget auto-stop retired the unrelated held-tool team');
+  phase = 'forced-actual-electron-main-exit';
   const liveMain = await getProcess(mainBirth.pid);
   assert(liveMain?.creation === mainBirth.creation &&
     liveMain.command.toLowerCase().includes('electron.exe'),
@@ -677,7 +709,7 @@ async function run() {
     forceExitTeammatePid: forceExitMember.pid,
     forceExitOwnedLauncherPid: forceExitOwnedLauncher.pid,
     forceExitHeldToolPid: forceExitHeldTool.pid,
-    forceExitPidEvidence,
+    forceExitPidEvidence, nativeBudgetStop,
     screenshot: path.basename(screenshot), runtimeVersion: lock.version,
   };
   await writeFile(receiptPath, JSON.stringify(evidence, null, 2) + '\n');
@@ -768,6 +800,7 @@ try {
     { identity: forceExitMember, marker: teamName + '-force' },
     { identity: forceExitOwnedLauncher, marker: 'teammate.exe' },
     { identity: forceExitHeldTool, marker: 'powershell.exe' },
+    ...budgetOwnedProcesses,
   ]) {
     if (!identity) continue;
     try {

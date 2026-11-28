@@ -1,3 +1,8 @@
+/** Main-process budget decisions; pure domain rules, no second accounting ledger. */
+export {
+  assertTeamBudgetLaunchAllowed,
+  evaluateTeamBudgetEnforcement,
+} from '../core/domain/teamBudgetEnforcement';
 export { registerTokenUsageHttp } from './adapters/input/http/registerTokenUsageHttp';
 export {
   registerTokenUsageIpc,

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildBudgetStatus, buildTokenUsageSnapshot, normalizeCostBreakdown } from '..';
+import {
+  assertTeamBudgetLaunchAllowed,
+  buildBudgetStatus,
+  buildTokenUsageSnapshot,
+  evaluateTeamBudgetEnforcement,
+  normalizeCostBreakdown,
+} from '..';
 
 import { testEvent, testRun } from './budgetFixtures';
 
@@ -28,6 +34,138 @@ export function project(runs = [testRun()], events = [testEvent()]) {
 }
 
 describe('Budget monthly projection', () => {
+  it('counts verified project copy usage against the logical team budget', () => {
+    const projected = buildBudgetStatus({
+      now,
+      settings: {
+        teams: {
+          'team:alpha': {
+            monthlyTokenLimit: 100,
+            thresholds: [80, 100],
+            notificationsEnabled: true,
+            onExceeded: 'stop_team',
+          },
+          'team:ptc-copy-1': {
+            monthlyTokenLimit: 10,
+            thresholds: [100],
+            notificationsEnabled: true,
+            onExceeded: 'block_launch',
+          },
+        },
+      },
+      ledger: {
+        runs: [testRun({ teamName: 'ptc-copy-1' })],
+        events: [testEvent()],
+      },
+      teamNameAliases: new Map([['ptc-copy-1', 'alpha']]),
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: { degradedTeamIds: ['team:ptc-copy-1'] },
+    });
+    const team = projected.targets.find((target) => target.id === 'team:alpha');
+    expect(team?.metrics[0].value).toBe(100);
+    expect(team?.metrics[0].incomplete).toBe(true);
+    expect(projected.options.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
+    expect(projected.targets.some((item) => item.id === 'team:ptc-copy-1')).toBe(false);
+  });
+
+  it('does not expose an unresolved historical project alias as an enforceable team target', () => {
+    const physicalName = `ptc-${'c'.repeat(24)}`;
+    const status = buildBudgetStatus({
+      now,
+      settings: {
+        teams: {
+          [`team:${physicalName}`]: {
+            monthlyTokenLimit: 100,
+            thresholds: [100],
+            notificationsEnabled: true,
+            onExceeded: 'block_launch',
+          },
+        },
+      },
+      ledger: { runs: [testRun({ teamName: physicalName })], events: [] },
+      teamNameAliases: new Map(),
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+    });
+
+    expect(
+      status.options.some(
+        (option) => option.scope === 'team' && option.id === `team:${physicalName}`
+      )
+    ).toBe(false);
+    expect(
+      status.targets.some(
+        (target) => target.scope === 'team' && target.id === `team:${physicalName}`
+      )
+    ).toBe(false);
+    expect(status.options.some((option) => option.scope === 'project')).toBe(true);
+  });
+
+  it.each(['block_launch', 'stop_team'] as const)(
+    'enforces %s for ordinary teams whose names start with ptc-',
+    (onExceeded) => {
+      const teamName = 'ptc-marketing';
+      const id = `team:${teamName}`;
+      const input = {
+        now,
+        ledger: { runs: [testRun({ teamName })], events: [testEvent()] },
+        teamNameAliases: new Map<string, string>(),
+        degraded: false,
+        usageUpdatedAt: now.toISOString(),
+        policy: { enabled: true, nativeToasts: false },
+      };
+      const unconfigured = buildBudgetStatus({ ...input, settings: {} });
+      expect(unconfigured.options).toContainEqual(expect.objectContaining({ scope: 'team', id }));
+      const status = buildBudgetStatus({
+        ...input,
+        settings: {
+          teams: {
+            [id]: {
+              monthlyTokenLimit: 100,
+              thresholds: [100],
+              notificationsEnabled: true,
+              onExceeded,
+            },
+          },
+        },
+      });
+      expect(evaluateTeamBudgetEnforcement(status, teamName)).toEqual({
+        action: onExceeded,
+        state: 'exceeded',
+      });
+      expect(() => assertTeamBudgetLaunchAllowed(status, teamName)).toThrow('TEAM_BUDGET_BLOCKED');
+    }
+  );
+
+  it('resolves event attribution and gateway coverage through exactly one alias hop', () => {
+    const executionName = `ptc-${'a'.repeat(24)}`;
+    const logicalName = `ptc-${'b'.repeat(24)}`;
+    const limit = { monthlyTokenLimit: 100, thresholds: [100], notificationsEnabled: true };
+    const status = buildBudgetStatus({
+      now,
+      settings: { teams: { [`team:${logicalName}`]: limit, 'team:alpha': limit } },
+      ledger: { runs: [testRun({ teamName: executionName })], events: [testEvent()] },
+      teamNameAliases: new Map([
+        [executionName, logicalName],
+        [logicalName, 'alpha'],
+      ]),
+      degraded: false,
+      usageUpdatedAt: now.toISOString(),
+      policy: { enabled: true, nativeToasts: false },
+      gateway: { degradedTeamIds: [`team:${executionName}`] },
+    });
+    const logical = status.targets.find((target) => target.id === `team:${logicalName}`);
+    expect(logical?.metrics[0]).toMatchObject({ value: 100, incomplete: true });
+    expect(status.targets.find((target) => target.id === 'team:alpha')?.metrics[0]).toMatchObject({
+      value: 0,
+      incomplete: false,
+    });
+    expect(status.options.some((option) => option.id === `team:${executionName}`)).toBe(false);
+  });
+
   it('excludes old local charges once a run is recognized as gateway-owned', () => {
     const status = project(
       [testRun({ gatewayUsageRef: 'late-gateway' }), testRun({ appRunId: 'ordinary' })],

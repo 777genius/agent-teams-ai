@@ -359,6 +359,13 @@ export function normalizeTokenUsageBudgetLimit(
   if (monthlyApiEquivalentCostLimitUsd !== undefined) {
     limit.monthlyApiEquivalentCostLimitUsd = monthlyApiEquivalentCostLimitUsd;
   }
+  if (
+    record.onExceeded === 'notify' ||
+    record.onExceeded === 'block_launch' ||
+    record.onExceeded === 'stop_team'
+  ) {
+    limit.onExceeded = record.onExceeded;
+  }
   return monthlyTokenLimit !== undefined || monthlyApiEquivalentCostLimitUsd !== undefined
     ? limit
     : undefined;

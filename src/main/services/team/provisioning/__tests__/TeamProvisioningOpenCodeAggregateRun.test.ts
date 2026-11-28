@@ -676,6 +676,74 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(runById.get('run-open-code')?.provisioningComplete).toBe(true);
   });
 
+  it.each(['stop', 'successor'] as const)(
+    'preserves launch ownership when the final progress observer requests %s',
+    async (change) => {
+      const alice = member('alice');
+      const bob = member('bob');
+      const calls: string[] = [];
+      const provisioningRuns = new Map<string, string>();
+      const aliveRuns = new Map<string, string>();
+      const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+      let stopGeneration = 0;
+      let successorInstalled = false;
+
+      await runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: {} as TeamLaunchRuntimeAdapter,
+          request: request([alice, bob]),
+          members: [alice, bob],
+          lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+          prompt: '',
+          onProgress: (nextProgress) => {
+            if (nextProgress.state !== 'ready') return;
+            if (change === 'stop') {
+              // stopTeam increments this generation synchronously, before its lock await.
+              stopGeneration += 1;
+            } else {
+              successorInstalled = true;
+              provisioningRuns.set('open-code-team', 'successor-run');
+              aliveRuns.set('open-code-team', 'successor-run');
+            }
+          },
+        },
+        {
+          ...baseAggregatePorts(calls),
+          getStopTeamGeneration: () => stopGeneration,
+          getRuntimeAdapterRun: () =>
+            successorInstalled ? { runId: 'successor-run', providerId: 'opencode' } : undefined,
+          setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+          getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+          setRun: (runId, run) => runById.set(runId, run),
+          getRun: (runId) => runById.get(runId),
+          setRuntimeAdapterProgress: (nextProgress, observer) => {
+            observer?.(nextProgress);
+            return nextProgress;
+          },
+          setAliveRunId: (teamName, runId) => {
+            calls.push(`setAliveRun:${runId}`);
+            aliveRuns.set(teamName, runId);
+          },
+          deleteProvisioningRunIfCurrent: (teamName, runId) => {
+            if (provisioningRuns.get(teamName) === runId) provisioningRuns.delete(teamName);
+          },
+          cleanupRun: (run) => {
+            runById.delete(run.runId);
+          },
+        }
+      );
+
+      expect(calls).not.toContain('setAliveRun:run-open-code');
+      expect(calls).not.toContain('emitTeamProcessChange:ready');
+      expect(aliveRuns.get('open-code-team')).toBe(
+        change === 'successor' ? 'successor-run' : undefined
+      );
+      expect(provisioningRuns.get('open-code-team')).toBe(
+        change === 'successor' ? 'successor-run' : undefined
+      );
+    }
+  );
+
   it('validates the primary lane cwd before stopping or mutating team state', async () => {
     const alice = member('alice', { isolation: 'worktree' });
     const calls: string[] = [];

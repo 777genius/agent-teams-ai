@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Monatsbudget",
+      "teamCardUnknown": "Verbrauch unbekannt",
+      "teamCardBlocked": "Budgetlimit erreicht - Starts gesperrt",
+      "editor": {
+        "onExceeded": "Aktion bei Erreichen des Budgets",
+        "notifyOnly": "Nur benachrichtigen",
+        "blockLaunch": "Neue Teamstarts sperren",
+        "stopTeam": "Laufendes Team stoppen und Starts sperren",
+        "enforcementHint": "Bei fehlenden oder verzögerten Verbrauchsdaten werden neue Starts gesperrt. Kosten sind geschätzt; Rechnungen können das Limit überschreiten."
+      }
     }
   }
 }

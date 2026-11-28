@@ -106,6 +106,7 @@ function makeServiceAdapter(): ReceiverBoundServiceAdapter {
   return {
     events: [],
     stopAllGeneration: 11,
+    assertTeamBudgetAdmission: vi.fn(async () => undefined),
     getStopAllTeamsGeneration(this: ReceiverBoundServiceAdapter) {
       return this.stopAllGeneration;
     },
@@ -185,6 +186,8 @@ describe('TeamProvisioningAuthRetryRecoveryBoundaryFactory', () => {
       { preflightAuthRetryDelayMs: PREFLIGHT_AUTH_RETRY_DELAY_MS }
     );
     const ports = mockedRespawn.mock.calls[0][1];
+    await ports.assertTeamBudgetAdmission(run.teamName);
+    expect(service.assertTeamBudgetAdmission).toHaveBeenCalledWith(run.teamName);
     expect(ports.getStopAllTeamsGeneration()).toBe(11);
     expect(ports.isStopAllTeamsGenerationChanged(11)).toBe(false);
 

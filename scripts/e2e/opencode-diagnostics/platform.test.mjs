@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   parseWindowsProcesses,
+  processes,
   windowsCleanupEvidence,
   parseUnixProcesses,
   parseListeners,
@@ -33,6 +34,27 @@ test('OS process and listener output parsing fails closed', () => {
   assert.throws(() => parseWindowsProcesses('{"pid":42,"parent":1}'));
   assert.throws(() => parseUnixProcesses('garbage'));
   assert.throws(() => parseListeners('not a pid'));
+});
+test('captured PID census rejects unknown birth without rejecting unrelated system rows', () => {
+  const known = { pid: 42, parent: 1, birth: '2026-09-10T01:02:03.1234567Z' };
+  const system = { pid: 0, parent: 0, birth: null };
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system, known]), [42]), [known]);
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system]), [42]), []);
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system, known]), []), [known]);
+  const reused = { ...known, birth: '2026-09-10T01:02:04.1234567Z' };
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system, reused]), [42]), [reused]);
+  for (const birth of [null, undefined, '', 'unavailable', 123]) {
+    assert.throws(() => parseWindowsProcesses(
+      JSON.stringify([system, { ...known, birth }]), [42]), /Invalid OS process birth identity/);
+  }
+  assert.deepEqual(parseWindowsProcesses('[]', Array(500).fill(42)), []);
+});
+test('captured PID census validates bounded positive integers before an OS read', () => {
+  for (const requiredPids of [null, {}, '42', [0], [-1], [1.5], [Number.MAX_SAFE_INTEGER + 1],
+    ['42; exit 0'], Array(501).fill(42)]) {
+    assert.throws(() => processes(requiredPids), /Invalid required process PIDs/);
+    assert.throws(() => parseWindowsProcesses('[]', requiredPids), /Invalid required process PIDs/);
+  }
 });
 test('ownership rejects stale launchers, reused child PIDs and unrelated listeners', () => {
   const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z' };

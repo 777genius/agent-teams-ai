@@ -967,6 +967,18 @@
     "chats": "غیر پڑھی چیٹس",
     "openTask": "کام کھولیں: {{subject}} — {{team}}",
     "timeUnknown": "وقت نامعلوم",
-    "teamAttention": "توجہ"
+    "teamAttention": "توجہ",
+    "filters": {
+      "title": "فلٹرز",
+      "description": "منتخب کریں کہ ان باکس میں کیا دکھایا جائے۔",
+      "itemType": "آئٹم کی قسم",
+      "conversationType": "چیٹ کی قسم",
+      "direct": "براہ راست پیغامات",
+      "group": "گروپ چیٹس",
+      "teamFeed": "ٹیم فیڈ",
+      "waiting": "کام کے انتظار کا وقت",
+      "olderDay": "24 گھنٹے سے زیادہ",
+      "olderWeek": "7 دن سے زیادہ"
+    }
   }
 }

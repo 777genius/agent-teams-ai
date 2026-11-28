@@ -222,6 +222,12 @@ interface TaskCommentNotificationTeamContext {
   leadSessionId?: string;
 }
 
+interface TaskCommentNotificationOptions {
+  seedHistoricalIfJournalMissing?: boolean;
+  recoverPending?: boolean;
+  teamContext?: TaskCommentNotificationTeamContext;
+}
+
 interface TaskChangeLogSourceSnapshot {
   projectFingerprint: string | null;
   logSourceGeneration: string | null;
@@ -2544,7 +2550,7 @@ export class TeamDataService {
         );
       }
     }
-    const comment =
+    return (
       addResult.comment ??
       ({
         id: randomUUID(),
@@ -2554,9 +2560,8 @@ export class TeamDataService {
         type: 'regular',
         ...(taskRefs && taskRefs.length > 0 ? { taskRefs } : {}),
         ...(attachments && attachments.length > 0 ? { attachments } : {}),
-      } as TaskComment);
-
-    return comment;
+      } as TaskComment)
+    );
   }
 
   private async buildEnrichedSendMessageRequest(
@@ -2786,11 +2791,7 @@ export class TeamDataService {
   private runTaskCommentNotificationsCoalesced(
     teamName: string,
     taskId: string | undefined,
-    options: {
-      seedHistoricalIfJournalMissing?: boolean;
-      recoverPending?: boolean;
-      teamContext?: TaskCommentNotificationTeamContext;
-    }
+    options: TaskCommentNotificationOptions
   ): Promise<void> {
     const key = this.buildTaskCommentNotificationProcessKey(teamName);
     const existing = this.taskCommentNotificationProcessInFlight.get(key);
@@ -2813,11 +2814,7 @@ export class TeamDataService {
   private async drainTaskCommentNotifications(
     teamName: string,
     taskId: string | undefined,
-    options: {
-      seedHistoricalIfJournalMissing?: boolean;
-      recoverPending?: boolean;
-      teamContext?: TaskCommentNotificationTeamContext;
-    }
+    options: TaskCommentNotificationOptions
   ): Promise<void> {
     const key = this.buildTaskCommentNotificationProcessKey(teamName);
     let nextTaskId = taskId?.trim() || undefined;
@@ -2999,11 +2996,7 @@ export class TeamDataService {
   private async processTaskCommentNotifications(
     teamName: string,
     taskId?: string,
-    options?: {
-      seedHistoricalIfJournalMissing?: boolean;
-      recoverPending?: boolean;
-      teamContext?: TaskCommentNotificationTeamContext;
-    }
+    options?: TaskCommentNotificationOptions
   ): Promise<void> {
     const seedHistoricalIfJournalMissing = options?.seedHistoricalIfJournalMissing === true;
     const recoverPending = options?.recoverPending === true;
@@ -3029,37 +3022,42 @@ export class TeamDataService {
     if (!leadName.trim()) return;
 
     const journalExists = await this.taskCommentNotificationJournal.exists(teamName);
-    if (!journalExists) {
-      await this.taskCommentNotificationJournal.ensureFile(teamName);
-    }
-
-    const inboxMessageIdsByRecipient = new Map<string, Set<string>>();
+    const inboxMessageIdsByRecipient = new Map<string, Set<string> | null>();
     const shouldSeedHistorical = seedHistoricalIfJournalMissing && !journalExists;
     const tasks = await this.taskReader.getTasks(teamName);
     const scopedTasks =
       taskId && !shouldSeedHistorical ? tasks.filter((task) => task.id === taskId) : tasks;
-    if (scopedTasks.length === 0) return;
+    if (!journalExists && !shouldSeedHistorical) {
+      await this.taskCommentNotificationJournal.ensureFile(teamName);
+    }
 
     if (shouldSeedHistorical) {
       logger.info(`[TeamDataService] Seeding task comment notification baseline for ${teamName}`);
     }
 
-    for (const task of scopedTasks) {
-      const notifications = this.getEligibleTaskCommentNotifications(
-        teamName,
-        task,
-        leadName,
-        leadSessionId
+    // Commit the entire first baseline before any actionable answer can fail delivery.
+    const taskBatches = shouldSeedHistorical ? [scopedTasks] : scopedTasks.map((task) => [task]);
+    for (const taskBatch of taskBatches) {
+      const notifications = taskBatch.flatMap((task) =>
+        this.getEligibleTaskCommentNotifications(teamName, task, leadName, leadSessionId)
       );
-      if (notifications.length === 0) continue;
+      if (notifications.length === 0 && !shouldSeedHistorical) continue;
       // Resolve each recipient's persisted inbox once per pass. The file-backed
       // messageId is the authoritative proof of a successful delivery.
       for (const notification of notifications) {
         if (!inboxMessageIdsByRecipient.has(notification.recipientName)) {
-          inboxMessageIdsByRecipient.set(
-            notification.recipientName,
-            await this.getRecipientInboxMessageIds(teamName, notification.recipientName)
-          );
+          try {
+            inboxMessageIdsByRecipient.set(
+              notification.recipientName,
+              await this.getRecipientInboxMessageIds(teamName, notification.recipientName)
+            );
+          } catch (error) {
+            if (!shouldSeedHistorical) throw error;
+            logger.warn(
+              `[TeamDataService] Baseline inbox read failed for ${notification.recipientName}: ${String(error)}`
+            );
+            inboxMessageIdsByRecipient.set(notification.recipientName, null);
+          }
         }
       }
 
@@ -3071,7 +3069,7 @@ export class TeamDataService {
           teamName,
           (entries) => {
             const toSend: EligibleTaskCommentNotification[] = [];
-            let changed = false;
+            let changed = shouldSeedHistorical; // Publish even an empty baseline atomically.
             const now = new Date().toISOString();
 
             for (const notification of notifications) {
@@ -3161,6 +3159,7 @@ export class TeamDataService {
         );
 
         for (const notification of pending) {
+          if (inboxMessageIdsByRecipient.get(notification.recipientName) === null) continue;
           const delivery = await this.inboxWriter.sendMessage(teamName, {
             member: notification.recipientName,
             from: notification.comment.author,

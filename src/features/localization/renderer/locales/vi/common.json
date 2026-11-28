@@ -967,6 +967,18 @@
     "chats": "Cuộc trò chuyện chưa đọc",
     "openTask": "Mở tác vụ: {{subject}} trong {{team}}",
     "timeUnknown": "Không rõ thời gian",
-    "teamAttention": "Cần chú ý"
+    "teamAttention": "Cần chú ý",
+    "filters": {
+      "title": "Bộ lọc",
+      "description": "Chọn nội dung hiển thị trong hộp thư đến.",
+      "itemType": "Loại mục",
+      "conversationType": "Loại trò chuyện",
+      "direct": "Tin nhắn trực tiếp",
+      "group": "Trò chuyện nhóm",
+      "teamFeed": "Bảng tin nhóm",
+      "waiting": "Thời gian chờ của tác vụ",
+      "olderDay": "Hơn 24 giờ",
+      "olderWeek": "Hơn 7 ngày"
+    }
   }
 }

@@ -967,6 +967,18 @@
     "chats": "Ungelesene Chats",
     "openTask": "Aufgabe öffnen: {{subject}} in {{team}}",
     "timeUnknown": "Zeit unbekannt",
-    "teamAttention": "Aufmerksamkeit"
+    "teamAttention": "Aufmerksamkeit",
+    "filters": {
+      "title": "Filter",
+      "description": "Wähle, was im Posteingang angezeigt wird.",
+      "itemType": "Elementtyp",
+      "conversationType": "Chattyp",
+      "direct": "Direktnachrichten",
+      "group": "Gruppenchats",
+      "teamFeed": "Team-Feed",
+      "waiting": "Wartezeit der Aufgabe",
+      "olderDay": "Über 24 Stunden",
+      "olderWeek": "Über 7 Tage"
+    }
   }
 }
