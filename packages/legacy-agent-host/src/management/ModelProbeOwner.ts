@@ -4,7 +4,7 @@ import { modelSelectionSchema } from '../modelSelection.js';
 
 import { assertManagementTarget, ManagementCommandError, nativeLocalReadinessEvidenceSchema,
   modelReadinessProbeScopeSchema, modelReadinessReferenceSchema } from './commandRecords.js';
-import { managementDigest } from './identity.js';
+import { managementDigest, managementValuesEqual } from './identity.js';
 import { modelProbeLimitsSchema } from './modelLimits.js';
 import { AcceptedOpenCodeV2FileKey, openCodeV2NativeFileWitnessSchema } from '../adapters/providers/OpenCodeV2SelectedFileKey.js';
 
@@ -67,6 +67,7 @@ interface ActiveProbe {
   timer?: NodeJS.Timeout;
   closing?: Promise<void>;
   retired: boolean;
+  originalLost?: true;
   isCurrent(): boolean;
   readiness?: NativeLocalReadinessEvidence;
   running?: Promise<void>;
@@ -502,6 +503,20 @@ export class ModelProbeOwner {
     if (this.sealed) throw new ManagementCommandError('held');
   }
 
+  private assertOriginal(entry: ActiveProbe): void {
+    try {
+      if (entry.originalLost) throw new ManagementCommandError('held');
+      this.options.assertWriter();
+      const original = this.options.store.read(entry.saved.commandId);
+      if (this.active.get(entry.saved.commandId) !== entry || !original ||
+          !managementValuesEqual(original, entry.saved)) throw new ManagementCommandError('held');
+    } catch {
+      // A later identical row cannot undo uncertainty observed before physical cleanup.
+      entry.originalLost = true;
+      throw new ManagementCommandError('held');
+    }
+  }
+
   private async run(entry: ActiveProbe): Promise<void> {
     try {
       this.assertAdmission();
@@ -515,6 +530,7 @@ export class ModelProbeOwner {
       );
       const ok = await entry.native.run(entry.abort.signal,
         entry.saved.purpose || entry.saved.readinessScope ? entry.saved.expiresAt : undefined);
+      if (!entry.retired) this.assertOriginal(entry);
       if (!entry.retired && entry.saved.purpose === nativeLocalReadinessPurpose) {
         const evidence = nativeLocalReadinessEvidenceSchema.parse(entry.native.readiness?.());
         if (ok !== (evidence.decision === 'allow')) throw new ManagementCommandError('held');
@@ -538,44 +554,48 @@ export class ModelProbeOwner {
       } catch {
         /* Unknown custody remains held. */
       }
-      if (phase === 'completed' && (!entry.isCurrent() || !this.originCurrent(entry.saved) ||
-          (entry.saved.purpose || entry.saved.readinessScope) && Date.now() >= entry.saved.expiresAt)) {
-        phase = 'cancelled';
-        ok = false;
-      }
-      let nativeFileKeyWitness: string | undefined;
-      if (clean && phase === 'completed' && ok && entry.saved.context &&
-          (entry.saved.purpose === nativeLocalReadinessPurpose && entry.readiness?.ordinary === 'confirmed' &&
-            entry.readiness.decision === 'allow' ||
-            entry.saved.purpose === undefined && entry.saved.readinessScope?.kind === 'native')) {
-        try {
-          const proof = entry.native.nativeFileKeyWitness?.();
-          if (proof !== undefined) {
-            if (!AcceptedOpenCodeV2FileKey.selected(proof, entry.saved.providerId, entry.saved.modelId) ||
-                !proof.filesCurrent()) throw new ManagementCommandError('held');
-            nativeFileKeyWitness = openCodeV2NativeFileWitnessSchema.parse(proof.encoded);
-          }
-        } catch { phase = 'held'; ok = false; }
-      }
-      entry.saved = {
-        ...entry.saved,
-        phase: clean ? phase : 'held',
-        resourceHeld: !clean,
-        ok: clean && phase === 'completed' && ok,
-        ...(nativeFileKeyWitness === undefined ? {} : { nativeFileKeyWitness }),
-        ...(clean && phase === 'completed' && entry.readiness ? { readiness: {
-          context: entry.saved.context!, selectionDigest: entry.saved.selectionDigest,
-          evidence: entry.readiness,
-        } } : {}),
-      };
       try {
-        this.options.assertWriter();
+        // Native cleanup belongs to this entry even if its durable original was replaced.
+        // Only the exact original may receive that cleanup or readiness result.
+        this.assertOriginal(entry);
+        if (phase === 'completed' && (!entry.isCurrent() || !this.originCurrent(entry.saved) ||
+            (entry.saved.purpose || entry.saved.readinessScope) && Date.now() >= entry.saved.expiresAt)) {
+          phase = 'cancelled';
+          ok = false;
+        }
+        let nativeFileKeyWitness: string | undefined;
+        if (clean && phase === 'completed' && ok && entry.saved.context &&
+            (entry.saved.purpose === nativeLocalReadinessPurpose && entry.readiness?.ordinary === 'confirmed' &&
+              entry.readiness.decision === 'allow' ||
+              entry.saved.purpose === undefined && entry.saved.readinessScope?.kind === 'native')) {
+          try {
+            const proof = entry.native.nativeFileKeyWitness?.();
+            if (proof !== undefined) {
+              if (!AcceptedOpenCodeV2FileKey.selected(proof, entry.saved.providerId, entry.saved.modelId) ||
+                  !proof.filesCurrent()) throw new ManagementCommandError('held');
+              nativeFileKeyWitness = openCodeV2NativeFileWitnessSchema.parse(proof.encoded);
+            }
+          } catch { phase = 'held'; ok = false; }
+        }
+        const completed: StoredModelProbe = {
+          ...entry.saved,
+          phase: clean ? phase : 'held',
+          resourceHeld: !clean,
+          ok: clean && phase === 'completed' && ok,
+          ...(nativeFileKeyWitness === undefined ? {} : { nativeFileKeyWitness }),
+          ...(clean && phase === 'completed' && entry.readiness ? { readiness: {
+            context: entry.saved.context!, selectionDigest: entry.saved.selectionDigest,
+            evidence: entry.readiness,
+          } } : {}),
+        };
         if (phase === 'completed')
           assertManagementTarget(
-            entry.saved,
-            this.options.select(entry.saved.profileId, entry.saved.configRevision)
+            completed,
+            this.options.select(completed.profileId, completed.configRevision)
           );
-        this.options.store.write(entry.saved);
+        this.assertOriginal(entry);
+        this.options.store.write(completed);
+        entry.saved = completed;
       } catch {
         clean = false;
         entry.saved.phase = 'held';
