@@ -12,6 +12,7 @@ import { TeamOwnerStore } from '../../../../packages/legacy-agent-host/src/adapt
 import { captureNativeInputAuthority } from '../../../../packages/legacy-agent-host/src/composition/captureNativeInputAuthority.js';
 import { createHostWorkSyncComposition } from '../../../../packages/legacy-agent-host/src/composition/createHostWorkSyncComposition.js';
 import { createRuntimeWorkSyncWake } from '../../../../packages/legacy-agent-host/src/composition/createRuntimeWorkSyncWake.js';
+import { startTeamMcpEndpoint } from '../../../../packages/legacy-agent-host/src/mcp/index.js';
 import { createWorkSyncMcpTools } from '../../../../packages/legacy-agent-host/src/mcp/workSyncTools.js';
 import {
   deliveryFingerprint,
@@ -384,6 +385,154 @@ it('bound MCP status/report follow-up settles one original command and cannot re
     await feature.close();
   }
 });
+
+it.each([3, 6])(
+  'keeps %i large assigned tasks canonical through actual HTTP WorkSync status, report and replay',
+  async (count) => {
+    const f = await fixture();
+    const expected = new Map<string, string>();
+    for (let index = 0; index < count; index++) {
+      const subject = '界'.repeat(29_990) + ' TEST ' + index;
+      const receipt = f.human.execute({
+        commandId: 'TEST-large-agenda-task-' + index,
+        operation: 'task.create',
+        payload: { subject, owner: 'alice' },
+      });
+      expect(receipt.phase).toBe('completed');
+      expected.set(receipt.effects.taskId, subject);
+    }
+    const feature = createHostWorkSyncComposition({
+      teamsBasePath: join(f.root, 'teams'),
+      identity: async () => f.identity,
+      assertCurrent: f.authority.assertCurrent,
+    });
+    let endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>> | undefined;
+    try {
+      const port = feature.member({
+        teamId: f.binding.teamId,
+        teamName: f.binding.teamName,
+        owner: f.owner,
+        providerId: 'anthropic',
+        sourceRevision: runtimeDigest({ binding: f.source, configuration: f.record.config }),
+        captureSource: () => captureNativeInputAuthority(f.options),
+      });
+      const binding = { ...f.source, teamName: f.binding.teamName };
+      endpoint = await startTeamMcpEndpoint({
+        connection: { ...f.owner.connect('native-connection'), workSync: port },
+        binding,
+        expiresAtMs: 60_000,
+        now: () => 1000,
+        isCurrentBinding(captured) {
+          f.authority.assertCurrent();
+          return runtimeDigest(captured) === runtimeDigest(binding);
+        },
+      });
+      let sequence = 0;
+      async function call(name: string, args: Record<string, unknown>) {
+        const response = await fetch(endpoint!.url, {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer ' + endpoint!.bearerToken,
+            'content-type': 'application/json',
+            accept: 'application/json, text/event-stream',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: ++sequence, method: 'tools/call',
+            params: { name, arguments: args },
+          }),
+        });
+        expect(response.status).toBe(200);
+        const raw = await response.text();
+        expect(Buffer.byteLength(raw, 'utf8')).toBeLessThan(1024 * 1024);
+        const envelope = JSON.parse(raw);
+        expect(envelope.error).toBeUndefined();
+        expect(envelope.result.isError).not.toBe(true);
+        const item = envelope.result.content[0];
+        expect(item.type).toBe('text');
+        expect(Buffer.byteLength(item.text, 'utf8')).toBeLessThanOrEqual(256 * 1024);
+        const result = JSON.parse(item.text);
+        expect(envelope.result.structuredContent.result).toEqual(result);
+        return result;
+      }
+      const statusPath = f.paths.getMemberStatusPath(f.binding.teamName, 'alice');
+      const journalPath = f.paths.getMemberReportsPath(f.binding.teamName, 'alice');
+      const commands = f.owner.workSyncCommands('native-connection');
+      const statusId = 'TEST-large-agenda-status';
+      const assertCanonical = async () => {
+        const raw = await readFile(statusPath, 'utf8');
+        const saved = JSON.parse(raw).status as MemberWorkSyncStatus;
+        expect(new Map(saved.agenda.items.map((item) => [item.taskId, item.subject]))).toEqual(expected);
+        expect(saved.agenda.items).toHaveLength(count);
+        expect(Buffer.byteLength(JSON.stringify(saved), 'utf8')).toBeGreaterThan(
+          count === 6 ? 512 * 1024 : 256 * 1024
+        );
+        return { raw, saved };
+      };
+      const assertReceipt = (commandId: string, result: unknown) => {
+        const receipt = commands.lookup(commandId)!;
+        expect(receipt.phase).toBe('completed');
+        expect(receipt.nativeInput.original).toEqual(f.authority.original);
+        expect(receipt.inputAuthority).toBe(f.authority.fingerprint);
+        expect(receipt.result).toEqual(result);
+        expect(Buffer.byteLength(JSON.stringify(receipt), 'utf8')).toBeLessThanOrEqual(512 * 1024);
+        return JSON.stringify(receipt);
+      };
+
+      const status = await call('member_work_sync_status', { commandId: statusId });
+      const before = await assertCanonical();
+      expect(status).toMatchObject({
+        detailsOmitted: true,
+        agenda: { fingerprint: before.saved.agenda.fingerprint, itemsOmitted: true, totalItems: count },
+        statusOnlyIncomplete: true,
+        nextRequiredToolCall: { tool: 'member_work_sync_report' },
+      });
+      expect(status.agenda).not.toHaveProperty('items');
+      const args = status.nextRequiredToolCall.arguments as {
+        commandId: string; state: string; agendaFingerprint: string; reportToken: string;
+      };
+      expect(args).toMatchObject({
+        state: 'still_working',
+        agendaFingerprint: before.saved.agenda.fingerprint,
+        reportToken: before.saved.reportToken,
+      });
+      expect(args.reportToken).toBeTruthy();
+      expect(args).not.toHaveProperty('taskIds');
+      const statusReceipt = assertReceipt(statusId, status);
+      const report = await call('member_work_sync_report', args);
+      expect(report).toMatchObject({
+        accepted: true,
+        status: { detailsOmitted: true, agenda: { fingerprint: args.agendaFingerprint, totalItems: count } },
+      });
+      const reportReceipt = assertReceipt(args.commandId, report);
+      const after = await assertCanonical();
+      expect(after.saved.lastAcceptedReport ?? after.saved.report).toMatchObject({
+        accepted: true, state: 'still_working', agendaFingerprint: args.agendaFingerprint,
+      });
+      const journal = await readFile(journalPath, 'utf8');
+      expect(Object.values(JSON.parse(journal).intents)).toHaveLength(1);
+      expect(await call('member_work_sync_status', { commandId: statusId })).toEqual(status);
+      expect(await call('member_work_sync_report', args)).toEqual(report);
+      expect(assertReceipt(statusId, status)).toBe(statusReceipt);
+      expect(assertReceipt(args.commandId, report)).toBe(reportReceipt);
+      expect(await readFile(statusPath, 'utf8')).toBe(after.raw);
+      expect(await readFile(journalPath, 'utf8')).toBe(journal);
+
+      const fresh = await call('member_work_sync_status', { commandId: 'TEST-large-agenda-fresh' });
+      const freshArgs = fresh.nextRequiredToolCall.arguments;
+      for (const [id, patch, code] of [
+        ['TEST-stale-report', { agendaFingerprint: 'TEST-stale-fingerprint' }, 'stale_fingerprint'],
+        ['TEST-foreign-report', { taskIds: ['TEST-foreign-task'] }, 'foreign_task_id'],
+      ] as const) {
+        const rejected = await call('member_work_sync_report', { ...freshArgs, ...patch, commandId: id });
+        expect(rejected).toMatchObject({ accepted: false, code });
+        assertReceipt(id, rejected);
+        await assertCanonical();
+      }
+    } finally {
+      try { await endpoint?.close(); } finally { await feature.close(); }
+    }
+  }
+);
 
 it('settles the original accepted WorkSync outbox through the sole Team message writer only after the original input is terminal', async () => {
   const startedAt = Date.now();
