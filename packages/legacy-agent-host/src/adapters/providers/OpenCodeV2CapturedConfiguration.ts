@@ -13,8 +13,6 @@ import type { OpenCodeManagementProfile } from '../../management/profile.js';
 import type { CapturedOpenCodeV2Key } from './OpenCodeV2CredentialScope.js';
 
 type Configuration = NonNullable<OpenCodeV2EmbeddedProfile['providerConfiguration']>;
-const record = (value: unknown): value is Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value);
 const jsonRecord = (value: Configuration[string] | undefined): Configuration =>
   value !== null && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const invalid = (): never => {
