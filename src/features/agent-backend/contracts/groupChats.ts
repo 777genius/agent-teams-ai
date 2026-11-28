@@ -5,9 +5,9 @@ import type {
   GroupMessageReactionTarget,
   TeamGroupChatDTO,
 } from '@agent-teams/legacy-agent-host/group-chats/contracts';
-import type { GroupCommandView } from '@agent-teams/legacy-agent-host/group-chats/public-values';
+import type { GroupCommandView, GroupCatalogPage } from '@agent-teams/legacy-agent-host/group-chats/public-values';
 export interface BackendGroupPayloads {
-  'group.list': Record<string, never>;
+  'group.list': { cursor?: string };
   'group.create': Omit<GroupChatCreateRequest, 'teamName'>;
   'group.archive': { groupChatId: string; archived: boolean };
   'group.send': Omit<GroupChatSendRequest, 'teamName'>;
@@ -15,4 +15,4 @@ export interface BackendGroupPayloads {
   'group.reaction.set': Omit<GroupMessageReactionTarget, 'teamName'> & { active: boolean };
   'group.lookup': Record<string, never>;
 }
-export type BackendGroupValue = TeamGroupChatDTO[] | GroupMessageReactionDTO | GroupCommandView;
+export type BackendGroupValue = TeamGroupChatDTO[] | GroupCatalogPage | GroupMessageReactionDTO | GroupCommandView;

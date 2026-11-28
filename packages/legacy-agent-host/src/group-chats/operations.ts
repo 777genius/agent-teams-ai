@@ -58,8 +58,9 @@ export type GroupMutation = z.infer<typeof groupMutationSchema>;
 
 export const groupReactionTargetSchema = z.strictObject({ groupChatId: uuid, messageId: uuid });
 export function parseGroupPayload(operation: string, raw: unknown) {
-  if (operation === 'group.list' || operation === 'group.lookup')
-    return z.strictObject({}).parse(raw);
+  if (operation === 'group.list')
+    return z.strictObject({ cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional() }).parse(raw);
+  if (operation === 'group.lookup') return z.strictObject({}).parse(raw);
   if (operation === 'group.reaction.read') return groupReactionTargetSchema.parse(raw);
   const selected = operation.slice('group.'.length);
   const rawPayload = z.record(z.string(), z.unknown()).parse(raw);

@@ -82,6 +82,18 @@ export interface GroupCommandView {
 export function readGroupList(raw: unknown): TeamGroupChatDTO[] {
   return z.array(group).max(10000).parse(raw) as TeamGroupChatDTO[];
 }
+/** Read-only Host continuation, distinct from the legacy small catalog array. */
+const groupCatalogPage = z.strictObject({
+  kind: z.literal('group-catalog-page'),
+  groups: z.array(group).min(1).max(10000),
+  total: z.number().int().min(1).max(10000),
+  revision: z.string().regex(/^[a-f0-9]{64}$/),
+  nextCursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).nullable(),
+});
+export type GroupCatalogPage = z.infer<typeof groupCatalogPage>;
+export function readGroupCatalogValue(raw: unknown): TeamGroupChatDTO[] | GroupCatalogPage {
+  return Array.isArray(raw) ? readGroupList(raw) : groupCatalogPage.parse(raw);
+}
 export function readGroupReaction(raw: unknown): GroupMessageReactionDTO {
   return reaction.parse(raw);
 }

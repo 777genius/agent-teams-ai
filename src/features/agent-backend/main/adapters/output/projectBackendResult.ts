@@ -4,7 +4,7 @@ import { attachmentReferenceSchema } from '@agent-teams/legacy-agent-host/attach
 import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import {
   readGroupCommand,
-  readGroupList,
+  readGroupCatalogValue,
   readGroupReaction,
 } from '@agent-teams/legacy-agent-host/group-chats/public-values';
 
@@ -372,7 +372,7 @@ export function projectBackendResult(
       ok: true,
       value:
         request.operation === 'group.list'
-          ? readGroupList(source.value)
+          ? readGroupCatalogValue(source.value)
           : request.operation === 'group.reaction.read'
             ? readGroupReaction(source.value)
             : readGroupCommand(source.value, request.commandId),

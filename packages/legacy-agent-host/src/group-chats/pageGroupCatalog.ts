@@ -34,6 +34,7 @@ export function pageGroupCatalog(options: {
   const page = {
     kind: 'group-catalog-page' as const,
     groups: [] as JsonValue[],
+    total: original.length,
     revision,
     nextCursor: null as string | null,
   };

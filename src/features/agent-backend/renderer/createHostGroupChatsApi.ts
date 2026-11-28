@@ -1,5 +1,6 @@
 import {
   readGroupCommand,
+  readGroupCatalogValue,
   readGroupList,
   readGroupReaction,
 } from '@agent-teams/legacy-agent-host/group-chats/public-values';
@@ -129,9 +130,41 @@ export function createHostGroupChatsApi(
   return {
     async list(request) {
       if (!isHostTeamSelectionKey(request.teamName)) return legacy.list(request);
-      return readGroupList(
-        (await invoke(request.teamName, { operation: 'group.list', payload: {} })).value
-      );
+      const scope = captureScope();
+      const rows: ReturnType<typeof readGroupList> = [];
+      const seen = new Set<string>();
+      const cursors = new Set<string>();
+      let cursor: string | undefined, revision: string | undefined, total: number | undefined;
+      for (let index = 0; index < 128; index++) {
+        if (!scope()) throw new Error('Host group context changed');
+        const result = readGroupCatalogValue((await invoke(request.teamName, {
+          operation: 'group.list', payload: cursor === undefined ? {} : { cursor },
+        })).value);
+        if (!scope()) throw new Error('Host group context changed');
+        if (Array.isArray(result)) {
+          if (cursor !== undefined || revision !== undefined) throw new Error('Mixed Host group pages');
+          return result;
+        }
+        if (revision !== undefined && (revision !== result.revision || total !== result.total))
+          throw new Error('Changed Host group catalog');
+        revision ??= result.revision;
+        total ??= result.total;
+        if (rows.length + result.groups.length > result.total)
+          throw new Error('Invalid Host group page length');
+        for (const group of result.groups) {
+          if (seen.has(group.id)) throw new Error('Duplicate Host group');
+          seen.add(group.id);
+          rows.push(group);
+        }
+        if (result.nextCursor === null) {
+          if (rows.length !== total) throw new Error('Incomplete Host group catalog');
+          return readGroupList(rows);
+        }
+        if (cursors.has(result.nextCursor)) throw new Error('Repeated Host group cursor');
+        cursors.add(result.nextCursor);
+        cursor = result.nextCursor;
+      }
+      throw new Error('Host group catalog exceeded page limit');
     },
     async create(request) {
       if (!isHostTeamSelectionKey(request.teamName)) return legacy.create(request);

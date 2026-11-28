@@ -40,6 +40,7 @@ export function createHostGroupComposition(options: {
       getRun: (memberName) => options.getRun(team.definition.binding.teamId, memberName),
       afterDelivery: options.kick,
     });
+  const desktopCatalogKey = randomUUID();
   const methods: Record<string, HostMethod> = {};
   for (const operation of [
     'list',
@@ -77,7 +78,18 @@ export function createHostGroupComposition(options: {
               : operation === 'list' || operation === 'reaction.read'
                 ? await service.read(operation, payload, guard)
                 : await service.execute(input.commandId, { ...payload, operation }, guard);
-          return { ok: true, value: json(value) };
+          const result = operation === 'list'
+            ? pageGroupCatalog({
+                rows: json(value) as JsonValue[],
+                key: desktopCatalogKey,
+                principalId: options.profile.principalId,
+                binding: digest(input.binding),
+                ...('cursor' in payload && payload.cursor !== undefined
+                  ? { cursor: payload.cursor as string } : {}),
+              })
+            : value;
+          options.assertCurrent();
+          return { ok: true, value: json(result) };
         } catch (error) {
           const code =
             error instanceof TeamOwnerError
