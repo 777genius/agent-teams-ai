@@ -39,6 +39,27 @@ export function resolveTeamProvisioningRuntimeLiveness(
   });
 
   if (
+    resolved.livenessKind === 'registered_only' &&
+    (input.trackedSpawnStatus?.hardFailure === true ||
+      input.trackedSpawnStatus?.launchState === 'failed_to_start')
+  ) {
+    // Registration can stand in for an on-demand runtime only while no launch
+    // failure contradicts it. A verified process or bootstrap remains separate
+    // evidence and must keep its own liveness result.
+    const runtimeDiagnostic =
+      input.trackedSpawnStatus.hardFailureReason?.trim() ||
+      input.trackedSpawnStatus.error?.trim() ||
+      'runtime launch failed';
+    return {
+      ...resolved,
+      alive: false,
+      runtimeDiagnostic,
+      runtimeDiagnosticSeverity: 'warning',
+      diagnostics: [...new Set([...resolved.diagnostics, runtimeDiagnostic])],
+    };
+  }
+
+  if (
     !shouldSuppressRawConfirmation ||
     (resolved.livenessKind !== 'registered_only' && resolved.livenessKind !== 'not_found')
   ) {

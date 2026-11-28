@@ -7,6 +7,7 @@ on:
       - '.github/workflows/windows-teammate-console-native.yml'
       - 'scripts/e2e/windows-teammate-console-native.mjs'
       - 'scripts/e2e/windows-product-teammate-console.mjs'
+      - 'scripts/e2e/team-budget-stop-native.mjs'
       - 'scripts/e2e/windows-product-console-hwnd.ps1'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
       - 'src/main/utils/cliProcessDefaults.ts'
@@ -28,6 +29,7 @@ on:
       - '.github/workflows/windows-teammate-console-native.yml'
       - 'scripts/e2e/windows-teammate-console-native.mjs'
       - 'scripts/e2e/windows-product-teammate-console.mjs'
+      - 'scripts/e2e/team-budget-stop-native.mjs'
       - 'scripts/e2e/windows-product-console-hwnd.ps1'
       - 'scripts/e2e/teams-create-page-desktop.mjs'
       - 'src/main/utils/cliProcessDefaults.ts'
@@ -124,6 +126,7 @@ jobs:
           WINDOWS_PRODUCT_CONSOLE_EVIDENCE: ${{ runner.temp }}/windows-product-console
         run: |
           node --check scripts/e2e/windows-product-teammate-console.mjs
+          node --check scripts/e2e/team-budget-stop-native.mjs
           node scripts/e2e/windows-product-teammate-console.mjs
       - name: Preserve actual product teammate proof separately from fixture
         if: always()

@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Budget mensile",
+      "teamCardUnknown": "Utilizzo sconosciuto",
+      "teamCardBlocked": "Limite raggiunto - avvii bloccati",
+      "editor": {
+        "onExceeded": "Azione al raggiungimento del limite",
+        "notifyOnly": "Solo notifiche",
+        "blockLaunch": "Blocca nuovi avvii del team",
+        "stopTeam": "Ferma il team e blocca gli avvii",
+        "enforcementHint": "Se i dati di utilizzo mancano o arrivano in ritardo, i nuovi avvii sono bloccati. I costi sono stimati; la fattura può superare il limite."
+      }
     }
   }
 }

@@ -89,72 +89,78 @@ export async function createOpenCodeLiveHarness(input: {
   setClaudeBasePathOverride(claudeRoot);
   const extraServices = (await input.configureServices?.(svc)) ?? {};
   const controlApi = await startLiveTeamControlApi(svc, extraServices);
-  svc.setControlApiBaseUrlResolver(async () => controlApi.baseUrl);
+  try {
+    svc.setControlApiBaseUrlResolver(async () => controlApi.baseUrl);
 
-  const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
-  const stableBridgeEnv = createStableBridgeEnv();
-  const bridgeEnv: NodeJS.ProcessEnv = {
-    ...stableBridgeEnv,
-    PATH: withBunOnPath(process.env.PATH ?? '', sourceLauncherBunDir),
-    AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
-    CLAUDE_TEAM_CONTROL_URL: controlApi.baseUrl,
-    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
-    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
-    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcpLaunchSpec.args),
-    CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify(mcpLaunchSpec.env ?? {}),
-  };
-  const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
-    teamsBasePath: getTeamsBasePath(),
-    provider: 'opencode',
-  });
-  if (turnSettledEnv) {
-    Object.assign(bridgeEnv, turnSettledEnv);
+    const mcpLaunchSpec = await resolveAgentTeamsMcpLaunchSpec();
+    const stableBridgeEnv = createStableBridgeEnv();
+    const bridgeEnv: NodeJS.ProcessEnv = {
+      ...stableBridgeEnv,
+      PATH: withBunOnPath(process.env.PATH ?? '', sourceLauncherBunDir),
+      AGENT_TEAMS_MCP_CLAUDE_DIR: getClaudeBasePath(),
+      CLAUDE_TEAM_CONTROL_URL: controlApi.baseUrl,
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: mcpLaunchSpec.command,
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: mcpLaunchSpec.args[0] ?? '',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: JSON.stringify(mcpLaunchSpec.args),
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON: JSON.stringify(mcpLaunchSpec.env ?? {}),
+    };
+    const turnSettledEnv = await buildMemberWorkSyncRuntimeTurnSettledEnvironment({
+      teamsBasePath: getTeamsBasePath(),
+      provider: 'opencode',
+    });
+    if (turnSettledEnv) {
+      Object.assign(bridgeEnv, turnSettledEnv);
+    }
+    if (process.env.OPENCODE_E2E_USE_REAL_APP_CREDENTIALS !== '1') {
+      bridgeEnv.XDG_DATA_HOME = path.join(input.tempDir, 'xdg-data');
+    } else if (stableBridgeEnv.XDG_DATA_HOME) {
+      bridgeEnv.XDG_DATA_HOME = stableBridgeEnv.XDG_DATA_HOME;
+    } else {
+      delete bridgeEnv.XDG_DATA_HOME;
+    }
+    const bridgeClient = new OpenCodeBridgeCommandClient({
+      binaryPath: orchestratorCli,
+      tempDirectory: path.join(input.tempDir, 'bridge-input'),
+      env: bridgeEnv,
+    });
+    const stateChangingCommands = createStateChangingCommands({
+      bridge: bridgeClient,
+      controlDir: path.join(input.tempDir, 'control'),
+    });
+    const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
+      stateChangingCommands,
+      timeoutMs: input.timeoutMs ?? 180_000,
+      launchTimeoutMs: input.launchTimeoutMs ?? 180_000,
+      reconcileTimeoutMs: 90_000,
+      stopTimeoutMs: 90_000,
+    });
+    const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, input.runtimeAdapterOptions);
+    svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    return {
+      bridgeClient,
+      selectedModel: input.selectedModel,
+      svc,
+      dispose: async () => {
+        svc.setControlApiBaseUrlResolver(null);
+        if (input.projectPath?.trim()) {
+          await readinessBridge
+            .cleanupOpenCodeHosts({
+              reason: 'test-harness-dispose',
+              mode: 'force',
+              projectPath: input.projectPath,
+              staleAgeMs: null,
+              leaseStaleAgeMs: null,
+            })
+            .catch(() => undefined);
+        }
+        await controlApi.close();
+      },
+    };
+  } catch (error) {
+    svc.setControlApiBaseUrlResolver(null);
+    await controlApi.close().catch(() => undefined);
+    throw error;
   }
-  if (process.env.OPENCODE_E2E_USE_REAL_APP_CREDENTIALS !== '1') {
-    bridgeEnv.XDG_DATA_HOME = path.join(input.tempDir, 'xdg-data');
-  } else if (stableBridgeEnv.XDG_DATA_HOME) {
-    bridgeEnv.XDG_DATA_HOME = stableBridgeEnv.XDG_DATA_HOME;
-  } else {
-    delete bridgeEnv.XDG_DATA_HOME;
-  }
-  const bridgeClient = new OpenCodeBridgeCommandClient({
-    binaryPath: orchestratorCli,
-    tempDirectory: path.join(input.tempDir, 'bridge-input'),
-    env: bridgeEnv,
-  });
-  const stateChangingCommands = createStateChangingCommands({
-    bridge: bridgeClient,
-    controlDir: path.join(input.tempDir, 'control'),
-  });
-  const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
-    stateChangingCommands,
-    timeoutMs: input.timeoutMs ?? 180_000,
-    launchTimeoutMs: input.launchTimeoutMs ?? 180_000,
-    reconcileTimeoutMs: 90_000,
-    stopTimeoutMs: 90_000,
-  });
-  const adapter = new OpenCodeTeamRuntimeAdapter(readinessBridge, input.runtimeAdapterOptions);
-  svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
-  return {
-    bridgeClient,
-    selectedModel: input.selectedModel,
-    svc,
-    dispose: async () => {
-      svc.setControlApiBaseUrlResolver(null);
-      if (input.projectPath?.trim()) {
-        await readinessBridge
-          .cleanupOpenCodeHosts({
-            reason: 'test-harness-dispose',
-            mode: 'force',
-            projectPath: input.projectPath,
-            staleAgeMs: null,
-            leaseStaleAgeMs: null,
-          })
-          .catch(() => undefined);
-      }
-      await controlApi.close();
-    },
-  };
 }
 
 export async function waitForUserInboxReply(

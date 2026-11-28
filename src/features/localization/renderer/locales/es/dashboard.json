@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Presupuesto mensual",
+      "teamCardUnknown": "Uso desconocido",
+      "teamCardBlocked": "Límite alcanzado - inicios bloqueados",
+      "editor": {
+        "onExceeded": "Acción al alcanzar el límite",
+        "notifyOnly": "Solo notificar",
+        "blockLaunch": "Bloquear nuevos inicios de equipos",
+        "stopTeam": "Detener el equipo y bloquear nuevos inicios",
+        "enforcementHint": "Si faltan datos de uso o llegan tarde, se bloquean nuevos inicios. Los costes sind estimados y la factura puede superar el límite."
+      }
     }
   }
 }

@@ -967,6 +967,18 @@
     "chats": "محادثات غير مقروءة",
     "openTask": "فتح المهمة: {{subject}} في {{team}}",
     "timeUnknown": "الوقت غير معروف",
-    "teamAttention": "الاهتمام"
+    "teamAttention": "الاهتمام",
+    "filters": {
+      "title": "عوامل التصفية",
+      "description": "اختر ما يظهر في صندوق الوارد.",
+      "itemType": "نوع العنصر",
+      "conversationType": "نوع المحادثة",
+      "direct": "الرسائل المباشرة",
+      "group": "المحادثات الجماعية",
+      "teamFeed": "موجز الفريق",
+      "waiting": "مدة انتظار المهمة",
+      "olderDay": "أكثر من 24 ساعة",
+      "olderWeek": "أكثر من 7 أيام"
+    }
   }
 }

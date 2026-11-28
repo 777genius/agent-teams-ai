@@ -512,11 +512,16 @@ describe('the self-heal switch on the production wiring', () => {
           publishReady: vi.fn(),
           publishFailed: vi.fn(),
         },
+        stopAllTeamsGeneration: 0,
+        getStopTeamGeneration: () => 0,
+        runtimeSpawnAdmission: vi.fn(async () => undefined),
         runAfterInFlightTeamOperation: async (_team: string, action: () => Promise<boolean>) => {
           await operation;
           return action();
         },
       };
+      // Exercise the actual spawn boundary with an injected admission port and Stop fence.
+      Object.setPrototypeOf(facade, TeamProvisioningOpenCodeAggregatePrimaryFacade.prototype);
       const port = selfHealPortOf(
         createService({
           rebootstrapOpenCodeAggregatePrimaryLane: (...args) => {
@@ -553,6 +558,7 @@ describe('the self-heal switch on the production wiring', () => {
         await pending;
         releaseOperation();
         await expect(recovery).resolves.toBe(scenario === 'missing');
+        expect(facade.runtimeSpawnAdmission).toHaveBeenCalledWith(request.teamName);
         expect(facade.aggregatePrimaryProgress.publishPending).toHaveBeenCalledTimes(
           scenario === 'missing' ? 1 : 0
         );

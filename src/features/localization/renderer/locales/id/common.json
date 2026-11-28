@@ -967,6 +967,18 @@
     "chats": "Chat belum dibaca",
     "openTask": "Buka tugas: {{subject}} di {{team}}",
     "timeUnknown": "Waktu tidak diketahui",
-    "teamAttention": "Perhatian"
+    "teamAttention": "Perhatian",
+    "filters": {
+      "title": "Filter",
+      "description": "Pilih apa yang tampil di kotak masuk.",
+      "itemType": "Jenis item",
+      "conversationType": "Jenis obrolan",
+      "direct": "Pesan langsung",
+      "group": "Obrolan grup",
+      "teamFeed": "Umpan tim",
+      "waiting": "Lama tugas menunggu",
+      "olderDay": "Lebih dari 24 jam",
+      "olderWeek": "Lebih dari 7 hari"
+    }
   }
 }

@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "నెలవారీ బడ్జెట్",
+      "teamCardUnknown": "వినియోగం తెలియదు",
+      "teamCardBlocked": "పరిమితి చేరింది - ప్రారంభం నిలిపివేత",
+      "editor": {
+        "onExceeded": "బడ్జెట్ పరిమితికి చేరితే చర్య",
+        "notifyOnly": "సూచన మాత్రమే",
+        "blockLaunch": "కొత్త టీమ్ ప్రారంభాలను నిరోధించు",
+        "stopTeam": "నడుస్తున్న టీమ్‌ను ఆపి ప్రారంభాలను నిరోధించు",
+        "enforcementHint": "వినియోగ సమాచారం లేకపోతే లేదా ఆలస్యమైతే కొత్త ప్రారంభాలు నిలిపివేయబడతాయి. ఖర్చులు అంచనాలు మాత్రమే; బిల్లు పరిమితిని మించవచ్చు."
+      }
     }
   }
 }

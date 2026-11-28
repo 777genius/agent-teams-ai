@@ -152,3 +152,14 @@ export function buildCopiedTeamMembers(
 
   return copied;
 }
+
+export function generateUniqueName(sourceName: string, existingNames: string[]): string {
+  const base = sourceName.replace(/-\d+$/, '');
+  const existing = new Set(existingNames);
+  for (let i = 1; ; i++) {
+    const candidate = `${base}-${i}`;
+    if (!existing.has(candidate)) {
+      return candidate;
+    }
+  }
+}

@@ -75,7 +75,7 @@ async function ownedProcesses() {
   if (data.packaged) {
     // Retain previously proven descendants if they are later reparented. A PID
     // with a different birth never inherits cleanup authority.
-    const snapshot = processes();
+    const snapshot = processes((data.observedProcesses ?? []).map((entry) => entry.pid));
     for (const prior of data.observedProcesses ?? []) {
       if (
         !owned.some((entry) => entry.pid === prior.pid) &&

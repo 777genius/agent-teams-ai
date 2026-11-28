@@ -200,6 +200,12 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     );
   };
   const finishCancelledAggregateLaunch = async (): Promise<TeamLaunchResponse> => {
+    const activeStop = run.teamStopPromise;
+    if (activeStop) {
+      // Stop owns its lane snapshot until every cleanup settles, including failures.
+      // Retain cancellation rollback for failed stops and any late launch resources.
+      await activeStop.catch(() => undefined);
+    }
     run.cancelRequested = true;
     run.processKilled = true;
     const rollbackComplete = await stopAndRollbackOpenCodeAggregateRuntimeLanes(
@@ -414,6 +420,9 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       }),
       input.onProgress
     );
+    if (aggregateLaunchNoLongerCurrent()) {
+      return await finishCancelledAggregateLaunch();
+    }
     run.progress = finalProgress;
     let rollbackComplete = true;
     if (!terminalFailure) {

@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Budget mensuel",
+      "teamCardUnknown": "Utilisation inconnue",
+      "teamCardBlocked": "Limite atteinte - lancements bloqués",
+      "editor": {
+        "onExceeded": "Action lorsque la limite est atteinte",
+        "notifyOnly": "Notifier uniquement",
+        "blockLaunch": "Bloquer les nouveaux lancements",
+        "stopTeam": "Arrêter l'équipe et bloquer les lancements",
+        "enforcementHint": "Si les données d'utilisation manquent ou tardent, les lancements sont bloqués. Les coûts sont estimés et la facture peut dépasser la limite."
+      }
     }
   }
 }

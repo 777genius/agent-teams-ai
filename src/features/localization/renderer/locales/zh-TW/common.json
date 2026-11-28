@@ -1024,6 +1024,18 @@
     "chats": "未讀聊天",
     "openTask": "開啟任務：{{subject}}（{{team}}）",
     "timeUnknown": "時間不明",
-    "teamAttention": "待處理"
+    "teamAttention": "待處理",
+    "filters": {
+      "title": "篩選",
+      "description": "選擇收件匣中顯示的內容。",
+      "itemType": "項目類型",
+      "conversationType": "聊天類型",
+      "direct": "私訊",
+      "group": "群組聊天",
+      "teamFeed": "團隊動態",
+      "waiting": "任務等待時間",
+      "olderDay": "超過 24 小時",
+      "olderWeek": "超過 7 天"
+    }
   }
 }

@@ -6,6 +6,13 @@ on:
     paths:
       - '.github/workflows/user-attention-e2e.yml'
       - 'scripts/e2e/user-attention-desktop.mjs'
+      - 'scripts/e2e/team-budget-real-electron.mjs'
+      - 'src/features/token-usage/renderer/ui/BudgetEditorDialog.tsx'
+      - 'src/features/token-usage/renderer/ui/BudgetAlertsPanel.tsx'
+      - 'src/features/token-usage/renderer/ui/TeamBudgetProgress.tsx'
+      - 'src/features/token-usage/renderer/hooks/useTokenUsageBudgetSettings.ts'
+      - 'src/main/services/team/budget/**'
+      - 'src/features/token-usage/core/domain/teamBudgetEnforcement.ts'
       - 'src/features/user-attention/**'
       - 'src/features/team-direct-chats/core/domain/**'
       - 'src/renderer/utils/teamMessageReadStorage.ts'
@@ -15,6 +22,13 @@ on:
     paths:
       - '.github/workflows/user-attention-e2e.yml'
       - 'scripts/e2e/user-attention-desktop.mjs'
+      - 'scripts/e2e/team-budget-real-electron.mjs'
+      - 'src/features/token-usage/renderer/ui/BudgetEditorDialog.tsx'
+      - 'src/features/token-usage/renderer/ui/BudgetAlertsPanel.tsx'
+      - 'src/features/token-usage/renderer/ui/TeamBudgetProgress.tsx'
+      - 'src/features/token-usage/renderer/hooks/useTokenUsageBudgetSettings.ts'
+      - 'src/main/services/team/budget/**'
+      - 'src/features/token-usage/core/domain/teamBudgetEnforcement.ts'
       - 'src/features/user-attention/**'
   workflow_dispatch:
 

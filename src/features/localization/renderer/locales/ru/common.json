@@ -999,6 +999,18 @@
     "chats": "Непрочитанные чаты",
     "openTask": "Открыть задачу: {{subject}} — {{team}}",
     "timeUnknown": "Время неизвестно",
-    "teamAttention": "Внимание"
+    "teamAttention": "Внимание",
+    "filters": {
+      "title": "Фильтры",
+      "description": "Выберите, что показывать в инбоксе.",
+      "itemType": "Тип элементов",
+      "conversationType": "Тип чата",
+      "direct": "Личные сообщения",
+      "group": "Групповые чаты",
+      "teamFeed": "Лента команды",
+      "waiting": "Время ожидания задачи",
+      "olderDay": "Более 24 часов",
+      "olderWeek": "Более 7 дней"
+    }
   }
 }

@@ -30,6 +30,7 @@ import type {
   TokenUsageAnalyticsServicePort,
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetNotificationSinkPort,
+  TokenUsageBudgetTeamAliasResolution,
   TokenUsageGatewayUsagePort,
   TokenUsageImporterPort,
   TokenUsageLoggerPort,
@@ -70,6 +71,9 @@ export interface CreateTokenUsageFeatureDeps {
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
   gatewayUsage?: TokenUsageGatewayUsagePort;
+  budgetTeamNameAliases?: (
+    names: readonly string[]
+  ) => Promise<TokenUsageBudgetTeamAliasResolution>;
   runMetadata?: { reconcileRuns(runs: readonly TokenUsageRunDto[]): Promise<TokenUsageRunDto[]> };
   logger?: TokenUsageLoggerPort;
 }
@@ -135,6 +139,7 @@ export function createTokenUsageFeature(
     publisher: deps.publisher,
     taskAttributionSource: deps.taskAttributionSource,
     gatewayUsage: deps.gatewayUsage,
+    budgetTeamNameAliases: deps.budgetTeamNameAliases,
     logger: deps.logger,
   });
 

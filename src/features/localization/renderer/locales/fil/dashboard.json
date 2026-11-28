@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Buwanang badyet",
+      "teamCardUnknown": "Hindi alam ang paggamit",
+      "teamCardBlocked": "Naabot ang limitasyon - bawal magsimula",
+      "editor": {
+        "onExceeded": "Aksyon kapag naabot ang badyet",
+        "notifyOnly": "Abiso lang",
+        "blockLaunch": "Harangin ang bagong pagtakbo ng team",
+        "stopTeam": "Ihinto ang team at harangin ang pagtakbo",
+        "enforcementHint": "Kapag kulang o huli ang datos ng paggamit, harangin ang bagong pagtakbo. Tantya lang ang gastos at maaaring lumampas ang bill."
+      }
     }
   }
 }

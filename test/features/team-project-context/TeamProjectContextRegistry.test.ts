@@ -124,6 +124,31 @@ describe('TeamProjectContextRegistry', () => {
     expect(await f.registry.listRetained('logical-team')).toEqual([pending]);
   });
 
+  it('independently verifies stop candidates even if one retained copy is unreadable', async () => {
+    const f = await fixture();
+    const broken = await f.registry.reserve('logical-team', f.workspaceA);
+    const healthy = await f.registry.reserve('logical-team', f.workspaceB);
+    await simulateNativeProvisioning(f, broken.executionTeamName);
+    await simulateNativeProvisioning(f, healthy.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceA, broken.executionTeamName);
+    await f.registry.confirmReady('logical-team', f.workspaceB, healthy.executionTeamName);
+
+    await rm(path.join(f.teamsBasePath, broken.executionTeamName), {
+      recursive: true, force: true,
+    });
+    await expect(f.registry.listRetained('logical-team')).rejects.toThrow();
+    const result = await f.registry.listOwnedStopCandidates('logical-team');
+    expect(result.candidates).toEqual([healthy.executionTeamName]);
+    expect(result.refused).toHaveLength(1);
+    expect(result.refused[0]?.executionTeamName).toBe(broken.executionTeamName);
+    expect(result.refused[0]?.error).toBeInstanceOf(Error);
+    // No auto-repair or rewrite of the ownership manifest.
+    const entries = JSON.parse(await readFile(
+      path.join(f.teamsBasePath, 'logical-team', 'project-contexts.json'), 'utf8'
+    )) as { contexts: unknown[] };
+    expect(entries.contexts).toHaveLength(2);
+  });
+
   it('is read-only until a context is explicitly created', async () => {
     const f = await fixture();
     expect(await f.registry.find('logical-team', f.workspaceA)).toBeNull();

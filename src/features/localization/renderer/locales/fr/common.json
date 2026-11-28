@@ -967,6 +967,18 @@
     "chats": "Discussions non lues",
     "openTask": "Ouvrir la tâche : {{subject}} dans {{team}}",
     "timeUnknown": "Heure inconnue",
-    "teamAttention": "Attention"
+    "teamAttention": "Attention",
+    "filters": {
+      "title": "Filtres",
+      "description": "Choisissez ce qui apparaît dans la boîte de réception.",
+      "itemType": "Type d’élément",
+      "conversationType": "Type de discussion",
+      "direct": "Messages directs",
+      "group": "Discussions de groupe",
+      "teamFeed": "Fil d’équipe",
+      "waiting": "Attente de la tâche",
+      "olderDay": "Plus de 24 heures",
+      "olderWeek": "Plus de 7 jours"
+    }
   }
 }
