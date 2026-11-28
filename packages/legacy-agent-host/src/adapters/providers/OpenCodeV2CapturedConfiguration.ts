@@ -1,4 +1,4 @@
-import { selectOpenCodeV2ProviderConfiguration } from '../../composition/openCodeSelectedProviderConfiguration.js';
+import { selectOpenCodeV2CatalogConfiguration, selectOpenCodeV2ProviderConfiguration } from '../../composition/openCodeSelectedProviderConfiguration.js';
 import {
   captureOpenCodeConfigurationSource,
   OpenCodeConfigurationError,
@@ -43,27 +43,11 @@ export function captureOpenCodeV2Configuration(
     ? captureOpenCodeConfigurationSource(profile, embedded.configurationSource, ownerCurrent)
     : undefined);
   const config = existing ? structuredClone(existing.config) : source?.read();
-  let prepared: ReturnType<typeof selectOpenCodeV2ProviderConfiguration> = config
-    ? selectOpenCodeV2ProviderConfiguration(config, selection, profile.environment)
+  const prepared: ReturnType<typeof selectOpenCodeV2ProviderConfiguration> = config
+    ? (purpose === 'catalog' ? selectOpenCodeV2CatalogConfiguration : selectOpenCodeV2ProviderConfiguration)(
+        config, selection, profile.environment
+      )
     : {};
-  if (purpose === 'catalog' && config && record(config.provider)) {
-    const provider = config.provider[selection.providerId];
-    if (record(provider) && record(provider.models)) {
-      const ids = Object.keys(provider.models);
-      if (ids.length > 2048) invalid();
-      const models: Configuration = {};
-      for (const modelId of ids) {
-        const selected = selectOpenCodeV2ProviderConfiguration(
-          config,
-          { providerId: selection.providerId, modelId },
-          profile.environment
-        );
-        Object.assign(models, jsonRecord(selected.configuration?.models));
-      }
-      if (ids.length)
-        prepared = { ...prepared, configuration: { ...prepared.configuration, models } };
-    }
-  }
   const overlay = prepared.configuration;
   const configuration: Configuration | undefined =
     baseline || overlay

@@ -7,6 +7,7 @@ import type { DeferredOpenCodeV2FileKey } from '../adapters/providers/OpenCodeV2
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
 import { managementDigest, managementValuesEqual } from '../management/identity.js';
+import { resolveOpenCodeEnvironment } from '../adapters/providers/resolveOpenCodeEnvironment.js';
 import { assertOpenCodeV2NativeModel } from './openCodeV2ModelSelection.js';
 import type { ModelProbeInput } from '../management/ModelProbeOwner.js';
 import type { StoredModelProbe } from '../management/commandRecords.js';
@@ -91,16 +92,8 @@ export function captureOpenCodeProbeAccountInspection(
   const before = bracket && capturedOrigin
     ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
   if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
-  const resolve = (value: unknown): unknown => {
-    if (typeof value !== 'string') return value;
-    if (value.includes('{file:')) return held();
-    return value.replace(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/gu,
-      (_match: string, braced: string | undefined, shell: string | undefined) => {
-        const selected = profile.environment[braced ?? shell!];
-        if (selected === undefined || selected.includes('\0')) return held();
-        return selected;
-      });
-  };
+  const resolve = (value: unknown): unknown =>
+    resolveOpenCodeEnvironment(value, profile.environment, 256 * 1024, held);
   let capturedConfig: Record<string, unknown> | undefined, capturedConfiguredKey: unknown;
   const source = captureOpenCodeConfigurationSource(profile,
     profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,

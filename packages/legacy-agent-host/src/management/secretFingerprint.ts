@@ -46,6 +46,8 @@ export function deriveSecretFingerprint(
       : secretFingerprintKdfSchema.parse(original);
     if (active && pending.length >= 8) throw new SecretFingerprintError('busy');
     const canonical = canonicalManagementValue(value);
+    // Enumerable getters may have admitted more work during canonicalization.
+    if (active && pending.length >= 8) throw new SecretFingerprintError('busy');
     if (Buffer.byteLength(canonical) + retainedBytes > maximumRetainedBytes)
       throw new SecretFingerprintError('busy');
     input = Buffer.from(canonical);

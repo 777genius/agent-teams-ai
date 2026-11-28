@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { OpenCodeConfigurationError } from '../adapters/providers/OpenCodeConfigurationSource.js';
+import { resolveOpenCodeEnvironment } from '../adapters/providers/resolveOpenCodeEnvironment.js';
 import { openCodeConfiguredModelSchema } from './openCodeConfigurationReference.js';
 
 import type { OpenCodeConfiguredModel } from './openCodeConfigurationReference.js';
@@ -226,7 +227,7 @@ export function selectOpenCodeV2ConfigurationKey(
         [...raw.matchAll(/\{file:/gu)].length > 32) invalid();
     return { apiKeyFile: raw };
   }
-  const value = environmentValues(raw, environment);
+  const value = resolveOpenCodeEnvironment(raw, environment, 256 * 1024, invalid);
   if (typeof value !== 'string' || !value || value.includes('{file:') ||
       value.length > 64 * 1024 || [...value].some(character =>
         character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) invalid();
@@ -279,4 +280,38 @@ export function selectOpenCodeV2ProviderConfiguration(
     ...(Object.keys(configuration).length ? { configuration } : {}),
     ...selectedKey,
   };
+}
+
+/** Assemble only normalized models, refusing excess before retaining another entry. */
+export function selectOpenCodeV2CatalogConfiguration(
+  config: RecordValue,
+  selection: { providerId: string; modelId: string },
+  environment: Readonly<Record<string, string>>
+): ReturnType<typeof selectOpenCodeV2ProviderConfiguration> {
+  const prepared = selectOpenCodeV2ProviderConfiguration(config, selection, environment);
+  const provider = record(config.provider) ? config.provider[selection.providerId] : undefined;
+  if (!record(provider) || !record(provider.models)) return prepared;
+  const ids = Object.keys(provider.models);
+  if (ids.length > 2048) invalid();
+  const models: Record<string, Json> = {};
+  let modelBytes = 2, modelCount = 0;
+  for (const modelId of ids) {
+    const selected = selectOpenCodeV2ProviderConfiguration(
+      config, { providerId: selection.providerId, modelId }, environment
+    );
+    const entries = selected.configuration?.models;
+    for (const [id, declaration] of Object.entries(record(entries) ? entries : {})) {
+      if (Object.hasOwn(models, id)) invalid();
+      modelBytes += Buffer.byteLength(JSON.stringify(id)) + 1 +
+        Buffer.byteLength(JSON.stringify(declaration)) + (modelCount ? 1 : 0);
+      if (modelBytes > 256 * 1024) invalid();
+      Object.defineProperty(models, id, {
+        value: declaration, enumerable: true, configurable: true, writable: true,
+      });
+      modelCount++;
+    }
+  }
+  return ids.length
+    ? { ...prepared, configuration: { ...prepared.configuration, models } }
+    : prepared;
 }
