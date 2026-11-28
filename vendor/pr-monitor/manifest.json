@@ -1,0 +1,22 @@
+{
+  "sourceRepository": "https://github.com/777genius/pr-monitor",
+  "sourceRef": "816d9a7b813b50670092b1a3c42f5f3bee8c44b9",
+  "version": "0.1.0",
+  "packages": [
+    {
+      "name": "@pr-monitor/core",
+      "file": "pr-monitor-core-0.1.0.tgz",
+      "sha256": "8c39d08efee675c4231bb72222637f7ffd1fa66b7cb681f9984d1132b8248e42"
+    },
+    {
+      "name": "@pr-monitor/github",
+      "file": "pr-monitor-github-0.1.0.tgz",
+      "sha256": "ea2f604a0f3b21fd49bc282acf4436c726c24922b9d3f7b63058659660fb1651"
+    },
+    {
+      "name": "@pr-monitor/react",
+      "file": "pr-monitor-react-0.1.0.tgz",
+      "sha256": "025a51d04be8bdd918de2a8db451d0eae64d160c1686f374e4f8faeb4630f13a"
+    }
+  ]
+}

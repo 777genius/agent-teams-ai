@@ -2,6 +2,13 @@ import importPlugin from 'eslint-plugin-import';
 
 import type { Linter } from 'eslint';
 
+export const reviewFlowPublicImports = [
+  '**/review-flow/core/**',
+  // The import rule also resolves public barrels to their index.ts files.
+  '**/review-flow/{contracts,main,preload,renderer}/!(index|index.ts){,/**}',
+  '**/review-flow/{contracts,main,preload,renderer}/*/*/**',
+];
+
 const RUNTIME_LAYER_IMPORTS = [
   '@main',
   '@main/**',
@@ -38,12 +45,7 @@ export const reviewFlowBoundaries: Linter.Config[] = [
       'import/no-internal-modules': [
         'error',
         {
-          forbid: [
-            '**/review-flow/core/**',
-            // The import rule also resolves public barrels to their index.ts files.
-            '**/review-flow/{contracts,main,preload,renderer}/!(index|index.ts){,/**}',
-            '**/review-flow/{contracts,main,preload,renderer}/*/*/**',
-          ],
+          forbid: reviewFlowPublicImports,
         },
       ],
     },

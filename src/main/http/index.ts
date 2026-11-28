@@ -1,3 +1,4 @@
+import { registerPrMonitorHttp, type PrMonitorFeature } from '@features/pr-monitor/main';
 /**
  * HTTP Route Registration Orchestrator.
  *
@@ -76,6 +77,7 @@ export interface HttpServices {
   chunkBuilder: ChunkBuilder;
   dataCache: DataCache;
   recentProjectsFeature?: RecentProjectsFeatureFacade;
+  prMonitorFeature?: PrMonitorFeature;
   userAttentionFeature?: UserAttentionFeatureFacade;
   notificationChannelsFeature?: NotificationChannelsFeatureFacade;
   teamGroupChatsFeature?: TeamGroupChatsFeature;
@@ -110,6 +112,7 @@ export function registerHttpRoutes(
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);
   if (services.customTeamTemplatesFeature)
     registerCustomTeamTemplatesHttp(app, services.customTeamTemplatesFeature);
+  if (services.prMonitorFeature) registerPrMonitorHttp(app, services.prMonitorFeature);
   registerProjectRoutes(app, services);
   registerSessionRoutes(app, services);
   registerSearchRoutes(app, services);

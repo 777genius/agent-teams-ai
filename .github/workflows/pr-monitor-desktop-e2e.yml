@@ -1,0 +1,99 @@
+name: PR Monitor real Electron E2E
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/pr-monitor-desktop-e2e.yml'
+      - 'src/features/pr-monitor/**'
+      - 'test/features/pr-monitor/**'
+      - 'src/main/startPrMonitorFeature.ts'
+      - 'src/main/index.ts'
+      - 'src/main/http/**'
+      - 'src/main/services/extensions/apikeys/ApiKeyService.ts'
+      - 'src/preload/index.ts'
+      - 'src/shared/types/api.ts'
+      - 'src/renderer/api/**'
+      - 'src/renderer/components/layout/**'
+      - 'src/renderer/types/tabs.ts'
+      - 'scripts/e2e/pr-monitor*'
+      - 'scripts/e2e/pr-monitor/**'
+      - 'vendor/pr-monitor/**'
+      - 'tsconfig.pr-monitor.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  desktop:
+    name: GitHub CLI and device authorization through real Electron
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare native display and secure keyring
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb dbus-x11 gnome-keyring libsecret-1-0 libglib2.0-bin
+      - name: Install frozen dependencies
+        run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Ensure Electron binary and sandbox helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          node ./scripts/ensure-electron-install.cjs --strict
+          helper="$(node -p "require('node:path').join(require('node:path').dirname(require('electron')), 'chrome-sandbox')")"
+          test -f "$helper"
+          sudo chown root:root "$helper"
+          sudo chmod 4755 "$helper"
+          test "$(stat -c '%u:%g:%a' "$helper")" = '0:0:4755'
+      - name: Check feature types and security regressions
+        run: |
+          pnpm typecheck:pr-monitor
+          pnpm exec vitest run test/features/pr-monitor test/features/notification-channels/credentialIsolation.test.ts
+      - name: Exercise existing GitHub CLI account
+        id: cli
+        continue-on-error: true
+        env:
+          PR_MONITOR_E2E_OUTPUT_DIR: ${{ runner.temp }}/pr-monitor-evidence/cli
+        run: dbus-run-session -- node scripts/e2e/pr-monitor/linux-session.mjs
+      - name: Exercise backendless login and real keychain
+        id: device
+        continue-on-error: true
+        env:
+          PR_MONITOR_E2E_OUTPUT_DIR: ${{ runner.temp }}/pr-monitor-evidence/device
+        run: dbus-run-session -- node scripts/e2e/pr-monitor/linux-session.mjs --device-flow
+      - name: Upload sanitized native receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-monitor-native-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/pr-monitor-evidence/*/*.png
+            ${{ runner.temp }}/pr-monitor-evidence/*/receipt.json
+      - name: Require both native scenarios
+        if: always()
+        env:
+          CLI_OUTCOME: ${{ steps.cli.outcome }}
+          DEVICE_OUTCOME: ${{ steps.device.outcome }}
+        run: |
+          test "$CLI_OUTCOME" = success
+          test "$DEVICE_OUTCOME" = success

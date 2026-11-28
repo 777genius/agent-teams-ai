@@ -1,3 +1,4 @@
+import { createPrMonitorHttpClient } from '@features/pr-monitor';
 /**
  * HTTP-based implementation of ElectronAPI for browser mode.
  *
@@ -377,7 +378,7 @@ export class HttpAPIClient implements ElectronAPI {
     }
   }
 
-  private async post<T>(path: string, body?: unknown): Promise<T> {
+  private async post<T>(path: string, body?: unknown, reviveDates = true): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
@@ -387,7 +388,7 @@ export class HttpAPIClient implements ElectronAPI {
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
-      return this.parseJson<T>(res);
+      return this.parseJson<T>(res, reviveDates);
     } finally {
       clearTimeout(timeout);
     }
@@ -463,6 +464,8 @@ export class HttpAPIClient implements ElectronAPI {
     (_callback: (event: unknown, snapshot: CodexAccountSnapshotDto) => void): (() => void) =>
     () =>
       undefined;
+
+  prMonitor = createPrMonitorHttpClient((url, body) => this.post(url, body, false));
 
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');

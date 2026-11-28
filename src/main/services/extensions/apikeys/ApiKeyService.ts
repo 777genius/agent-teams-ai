@@ -58,7 +58,10 @@ export class ApiKeyService {
   private aesKey: Buffer | null = null;
   private readonly reportedDecryptFailures = new Set<string>();
 
-  constructor(claudeDir?: string) {
+  constructor(
+    claudeDir?: string,
+    private readonly policy: { requireSecureBackend?: boolean } = {}
+  ) {
     const baseDir = claudeDir ?? path.join(os.homedir(), '.claude');
     this.filePath = path.join(baseDir, 'api-keys.json');
   }
@@ -91,7 +94,7 @@ export class ApiKeyService {
       throw new Error('Project-scoped API keys require a project path');
     }
 
-    const keys = await this.readStore();
+    const keys = [...(await this.readStore())];
     const now = new Date().toISOString();
     const { method, value } = this.encrypt(request.value);
 
@@ -260,10 +263,18 @@ export class ApiKeyService {
         const buf = safeStorage.encryptString(value);
         return { method: 'safeStorage', value: buf.toString('base64') };
       } catch (err) {
+        if (this.policy.requireSecureBackend)
+          throw new Error(
+            'Secure system credential storage failed. Unlock your keychain and try again.'
+          );
         logger.warn('safeStorage encryption failed, falling back to AES-local:', err);
       }
     }
 
+    if (this.policy.requireSecureBackend)
+      throw new Error(
+        'Secure system credential storage is unavailable. Unlock your keychain and try again.'
+      );
     // Fallback: AES-256-GCM with machine-derived key
     return { method: 'aes-local', value: this.encryptAesLocal(value) };
   }
@@ -279,6 +290,10 @@ export class ApiKeyService {
 
   private decryptStored(stored: StoredApiKey): string {
     const method = this.resolveMethod(stored);
+    if (this.policy.requireSecureBackend && (method !== 'safeStorage' || !this.isSecureBackend()))
+      throw new Error(
+        'Secure system credential storage is unavailable. Unlock your keychain and sign in again.'
+      );
 
     switch (method) {
       case 'safeStorage': {

@@ -23,6 +23,7 @@ peerDependencyRules:
     '@nuxt/schema': '3.21.11'
 
 overrides:
+  '@pr-monitor/core': 'file:vendor/pr-monitor/pr-monitor-core-0.1.0.tgz'
   # Fixed Zod collections; retain the headless consumer's unchanged EventType wire API.
   '@openuidev/react-headless>@ag-ui/core': '1.0.3'
   'zod@4': '4.6.7'

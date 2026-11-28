@@ -1,3 +1,4 @@
+import type { PrMonitorApi } from '@features/pr-monitor/contracts';
 /**
  * IPC API type definitions for Electron preload bridge.
  *
@@ -179,9 +180,7 @@ export type {
   WindowsElevationStatus,
 } from './desktopShell';
 
-// =============================================================================
 // Cost Calculation Types
-// =============================================================================
 
 /**
  * Detailed cost breakdown by token type for a session or chunk
@@ -835,6 +834,7 @@ export interface ElectronAPI
     ProjectFolderElectronApi {
   teamGroupChats: TeamGroupChatsAPI;
   customTeamTemplates: CustomTeamTemplatesApi;
+  prMonitor: PrMonitorApi;
   reviewFlow: ReviewFlowElectronApi;
   announcements: AnnouncementsApi;
   gatewayProvider: GatewayProviderApi;

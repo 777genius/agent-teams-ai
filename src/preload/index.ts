@@ -1,3 +1,4 @@
+import { createPrMonitorBridge } from '@features/pr-monitor/preload';
 import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
@@ -469,9 +470,7 @@ try {
   // Sentry telemetry must never block the application preload bridge.
 }
 
-// =============================================================================
 // IPC Result Types and Helpers
-// =============================================================================
 
 interface IpcFileChangePayload {
   type: 'add' | 'change' | 'unlink';
@@ -518,7 +517,6 @@ ipcRenderer.on(
   }
 );
 
-// =============================================================================
 // Electron API Implementation
 // =============================================================================
 
@@ -529,6 +527,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  prMonitor: createPrMonitorBridge(),
   ...createUserAttentionBridge(),
   ...createNotificationChannelsBridge(ipcRenderer),
   reviewFlow: createReviewFlowBridge(),

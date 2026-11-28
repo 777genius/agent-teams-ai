@@ -124,7 +124,9 @@
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
     "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
     "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts",
-    "test:e2e:notification-channels": "node scripts/e2e/notification-channels-desktop.mjs"
+    "test:e2e:notification-channels": "node scripts/e2e/notification-channels-desktop.mjs",
+    "test:e2e:pr-monitor": "node scripts/e2e/pr-monitor-desktop.mjs",
+    "typecheck:pr-monitor": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.pr-monitor.json"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js,jsx}": [
@@ -241,8 +243,8 @@
     "pica": "9.0.1",
     "pidusage": "4.0.1",
     "posthog-js": "^1.396.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
     "react-grid-layout": "^2.2.2",
     "react-i18next": "17.0.8",
     "react-markdown": "^10.1.0",
@@ -269,7 +271,11 @@
     "@openuidev/react-headless": "0.17.0",
     "@openuidev/react-lang": "0.3.2",
     "@openuidev/react-ui": "0.17.0",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@pr-monitor/core": "file:vendor/pr-monitor/pr-monitor-core-0.1.0.tgz",
+    "@pr-monitor/github": "file:vendor/pr-monitor/pr-monitor-github-0.1.0.tgz",
+    "@pr-monitor/react": "file:vendor/pr-monitor/pr-monitor-react-0.1.0.tgz",
+    "@get-modular/assembly": "0.8.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

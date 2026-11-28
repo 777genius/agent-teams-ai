@@ -100,7 +100,8 @@ export interface Tab {
     | 'extensions'
     | 'schedules'
     | 'graph'
-    | 'token-usage';
+    | 'token-usage'
+    | 'pr-monitor';
 
   /** In-tab Teams screen; launch/relaunch remain independent modal surfaces. */
   teamsCreationPage?: boolean;

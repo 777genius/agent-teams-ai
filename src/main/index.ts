@@ -1,10 +1,8 @@
+import { pathToFileURL } from 'node:url';
 import type { createGatewayLaunchRuntime } from '@main/services/gateway/createGatewayLaunchRuntime';
-// Increase UV thread pool size BEFORE async I/O: startup binary resolution,
-// subprocess work, watchers, and IPC filesystem requests share this pool.
-// The default four threads can block Windows startup.
+// Increase the shared UV thread pool before async I/O to avoid Windows startup stalls.
 process.env.UV_THREADPOOL_SIZE ??= '16';
-// Keep userData stable before any integration can initialize Electron storage.
-// Sentry must stay near the top to capture early errors after storage migration.
+// Stabilize userData before Electron storage and early Sentry initialization.
 // eslint-disable-next-line simple-import-sort/imports -- userData migration must run before Sentry initializes Electron storage.
 import './bootstrapStandardOutput';
 import {
@@ -23,6 +21,7 @@ import {
 } from '@features/team-group-chats/main';
 import { composeOpenCodeDesktopBridge } from '@main/services/team/opencode/bridge/composeOpenCodeDesktopBridge';
 import { startCustomTeamTemplatesFeature } from './startCustomTeamTemplatesFeature';
+import { startPrMonitorFeature } from './startPrMonitorFeature';
 import {
   composeExternalAgentConnection,
   refreshDesktopBridgeEnvironment,
@@ -921,9 +920,7 @@ process.on('uncaughtException', (error) => {
   logger.error('Uncaught exception in main process:', error);
 });
 
-// =============================================================================
 // Application State
-// =============================================================================
 
 let mainWindow: BrowserWindow | null = null;
 const rendererCloseReadinessCoordinator = new RendererCloseReadinessCoordinator(ipcMain);
@@ -939,6 +936,8 @@ let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
 let codexAccountFeature: CodexAccountFeatureFacade | null = null;
 let codexModelCatalogFeature: CodexModelCatalogFeatureFacade | null = null;
+let prMonitorFeature: ReturnType<typeof startPrMonitorFeature>;
+let prMonitorRendererUrl: string | undefined;
 let recentProjectsFeature: RecentProjectsFeatureFacade;
 let userAttentionFeature: UserAttentionFeatureFacade;
 let notificationChannelsRuntime: NotificationChannelsRuntime | null = null;
@@ -1698,23 +1697,17 @@ async function handleModeSwitch(mode: 'local' | 'ssh'): Promise<void> {
   }
 }
 
-/**
- * Re-wires file watcher events only. No renderer notification.
- * Used for renderer-initiated switches where the renderer already handles state.
- */
+/** Rewires a renderer-initiated context switch without notifying it again. */
 export function rewireContextEvents(context: ServiceContext): void {
+  prMonitorFeature?.reset();
   void teamRuntimeRecoveryFeature?.cancelAll('context_changed');
   wireFileWatcherEvents(context);
 }
 
-/**
- * Full callback: re-wire + notify renderer.
- * Used for external/unexpected switches (e.g., HTTP server mode switch).
- */
+/** Rewires and notifies the renderer for external context switches such as HTTP. */
 function onContextSwitched(context: ServiceContext): void {
   rewireContextEvents(context);
 
-  // Notify renderer of context change
   safeSendToRenderer(mainWindow, SSH_STATUS, sshConnectionManager.getStatus());
   safeSendToRenderer(mainWindow, CONTEXT_CHANGED, {
     id: context.id,
@@ -1758,6 +1751,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
       replacementLocal.stopFileWatcher();
     }
 
+    prMonitorFeature?.reset();
     contextRegistry.replaceContext('local', replacementLocal);
 
     if (wasLocalActive) {
@@ -2910,6 +2904,12 @@ async function initializeServices(): Promise<void> {
     logger.warn('Could not recover gateway drafts; their saved ownership is preserved.');
   });
   registerCodexAccountIpc(ipcMain, codexAccountFeature);
+  prMonitorFeature = startPrMonitorFeature(
+    () => contextRegistry.getActive(),
+    () => mainWindow?.webContents.id,
+    () => prMonitorRendererUrl,
+    getAppDataPath()
+  );
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerUserAttentionIpc(ipcMain, userAttentionFeature);
   notificationChannelsRuntime?.start(ipcMain, notificationManager, httpServer);
@@ -2978,6 +2978,7 @@ async function startHttpServer(
         chunkBuilder: activeContext.chunkBuilder,
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
+        prMonitorFeature,
         userAttentionFeature,
         notificationChannelsFeature: notificationChannelsRuntime?.feature ?? undefined,
         teamGroupChatsFeature,
@@ -3184,6 +3185,7 @@ async function shutdownServices(): Promise<void> {
       removeIpcHandlers();
       removeCodexAccountIpc(ipcMain);
       removeRecentProjectsIpc(ipcMain);
+      prMonitorFeature?.dispose();
       removeUserAttentionIpc(ipcMain);
       notificationChannelsRuntime?.dispose();
       customTeamTemplatesFeature?.dispose();
@@ -3361,10 +3363,7 @@ function createWindow(): void {
   announcementsLifecycle.registerMainWindow(mainWindow);
   markRendererUnavailable(mainWindow);
 
-  // Load the renderer
   if (isDev) {
-    // electron-vite may move the dev server off 5173 if it's already taken.
-    // Always prefer the URL it provides via env; fallback to the default port.
     const envUrl =
       process.env.ELECTRON_RENDERER_URL ||
       process.env.VITE_DEV_SERVER_URL ||
@@ -3378,8 +3377,10 @@ function createWindow(): void {
     } else {
       logger.warn(`[dev] loading renderer from ${devUrl}`);
     }
+    prMonitorRendererUrl = devUrl;
     void mainWindow.loadURL(devUrl);
   } else if (rendererEntry) {
+    prMonitorRendererUrl = pathToFileURL(rendererEntry.filePath).href;
     void mainWindow.loadFile(rendererEntry.filePath).catch((error: unknown) => {
       const diagnostics = rendererEntry.diagnostics(app.isPackaged, error);
       logger.error('Failed to load renderer entry HTML:', error, diagnostics);
@@ -3387,7 +3388,6 @@ function createWindow(): void {
     });
   }
 
-  // Notify renderer when entering/leaving fullscreen (so traffic light padding can be removed)
   mainWindow.on('enter-full-screen', () => {
     safeSendToRenderer(mainWindow, WINDOW_FULLSCREEN_CHANGED, true);
   });
