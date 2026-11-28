@@ -11,6 +11,7 @@ import { test } from 'node:test';
 import { captureInitialRuntimeModelAdmission } from '../dist/composition/initialRuntimeModelAdmission.js';
 import type { TeamHostProfile } from '../dist/composition/TeamHost.js';
 import type { NativeCoordinationFixture } from './fixtures/native-opencode-team/coordination-probe.ts';
+import { createPassiveNativeDiagnosticCapture } from './fixtures/native-opencode-team/passive-diagnostics.ts';
 import { record } from './fixtures/native-claude-team/model.ts';
 import { fileHash, startHost, tick, treeHash } from './fixtures/native-host.ts';
 import { CONTEXT_MARKER, startOpenCodeModel } from './fixtures/native-opencode-team/model.ts';
@@ -109,7 +110,10 @@ test('selected stable V1 executes native tools through Host and retains cold rec
   let coordination: NativeCoordinationFixture | undefined;
   let installer: Awaited<ReturnType<typeof prepareNativeOpenCodeInstaller>> | undefined;
   let managedUpdate: Record<string, unknown> | undefined;
+  let initialRuntime: Record<string, unknown> | undefined;
   const hosts: ReturnType<ReturnType<typeof startHost>['facts']>[] = [];
+  const diagnostics = createPassiveNativeDiagnosticCapture();
+  let hostEpoch = 0;
   let passed = false;
   let cleanup = false;
   let nativeVersion: string | undefined;
@@ -261,14 +265,24 @@ test('selected stable V1 executes native tools through Host and retains cold rec
       assert.equal(coordination.evidence.status, 'PASS'); assert.equal(coordination.evidence.cleanup, true);
       steps.push('original_native_coordination_and_cleanup_before_business_host');
     }
-    const start = () => startHost({ node, entry, root, profile: profilePath, profileHash });
+    const start = () => {
+      const epoch = ++hostEpoch;
+      return startHost({ node, entry, root, profile: profilePath, profileHash,
+        onDiagnostic: chunk => diagnostics.accept(chunk, epoch) });
+    };
     const binding = { schemaVersion: 1, handleId: `TEST-handle-${namespace}`, owner, scope };
     const envelope = (commandId: string, payload: unknown) => ({ commandId, binding, payload });
     host = start();
     await host.rpc('host.handshake', { protocolVersion: 1 });
     const opened = await host.rpc('runtime.open', envelope(initialOpen.commandId, initialOpen.payload));
     assert.equal(opened.ok, true);
-    assert.equal(record(opened.value).nativeReady, true);
+    const initial = record(opened.value);
+    initialRuntime = {
+      phase: initial.phase, sealed: initial.sealed, custody: initial.custody,
+      nativeReady: initial.nativeReady, attached: initial.attached, diagnostic: initial.diagnostic,
+    };
+    assert.equal(initial.nativeReady, true,
+      `Selected CLI ${version}: ${JSON.stringify(initialRuntime)}`);
     steps.push('original_host_native_runtime_and_mcp_ready');
     let checkpoint: Record<string, unknown> | undefined;
     let native: Awaited<ReturnType<typeof originalNativeChild>> | undefined;
@@ -429,7 +443,10 @@ test('selected stable V1 executes native tools through Host and retains cold rec
   } catch (error) { failure = true; primaryError = error; }
   finally {
     try {
-      if (host) { await host.close(); hosts.push(host.facts()); host = undefined; }
+      if (host) {
+        try { await host.close(); }
+        finally { hosts.push(host.facts()); host = undefined; }
+      }
     } catch (error) { cleanupErrors.push(error); }
     try { await model?.close(); }
     catch (error) { cleanupErrors.push(error); }
@@ -438,6 +455,13 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     if (coordination?.evidence.status === 'INCOMPLETE' && coordination.evidence.cleanup !== true)
       cleanupErrors.push(new Error('Original coordination cleanup unconfirmed'));
     cleanup = cleanupErrors.length === 0;
+    const runtimeOpenFailure = diagnostics.entries.find(row =>
+      row.epoch === 1 && row.event === 'runtime-open-failed');
+    const initialRuntimeOpen = runtimeOpenFailure ? {
+      source: runtimeOpenFailure.source, phase: runtimeOpenFailure.phase, category: runtimeOpenFailure.category,
+    } : undefined;
+    if (failure && initialRuntimeOpen)
+      console.error('TEST native V1 runtime-open ' + JSON.stringify(initialRuntimeOpen));
     try {
       await writeFile(receiptPath, JSON.stringify({
         kind: 'TEST_NATIVE_V1_VERSION_HOST', sourceHead, platform: `${process.platform}-${process.arch}`,
@@ -445,7 +469,10 @@ test('selected stable V1 executes native tools through Host and retains cold rec
         selectedCliVersion: version, nativeVersion, nativeDigest, nativeIntegrity,
         wireProtocolRevision: '1.19.4', nodeVersion: process.version, nodeDigest,
         providerDigest, hostSourceDigest, hostDistDigest, steps,
-        hosts: hosts.map(({ exitCode, signalCode, stdoutValid }) => ({ exitCode, signalCode, stdoutValid })),
+        hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) =>
+          ({ exitCode, signalCode, stdoutValid, diagnosticBytes })),
+        ...(initialRuntime ? { initialRuntime } : {}),
+        ...(initialRuntimeOpen ? { initialRuntimeOpen } : {}),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         coordination: coordination?.evidence ?? { status: 'unqualified', cleanup: null },
         preferencesSelection: { defaultModelId: 'TEST-local/TEST-model-B', contextTokens: 64000, outputTokens: 1024 },

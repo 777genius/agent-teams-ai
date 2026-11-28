@@ -3,7 +3,7 @@ import { type ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_HOST_LIMITS } from '@agent-teams/legacy-agent-host/contracts';
@@ -794,6 +794,41 @@ describe('captured legacy host client over real subprocess stdio', () => {
     expect(error).toMatchObject({ code: 'remote-error', outcome: 'unknown' });
     expect(String(error)).not.toContain('private payload');
     expect(await readFile(join(profile.cwd, 'effects'), 'utf8')).toBe('effect\n');
+  });
+
+
+  it('rejects an oversized whole-board request before dispatch while retaining the original frame limit', async () => {
+    const profile = await fixture(`
+      'team.execute': { lane: 'work', handle: () => {
+        appendFileSync(process.cwd() + '/TEST-order-effects', 'effect\\n');
+        return 'TEST-order-accepted';
+      } },
+    `);
+    const transport = client(profile);
+    const { limits } = await transport.start();
+    const orderedTaskIds = Array.from(
+      { length: 40000 },
+      (_, index) => `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`
+    );
+    const payload = { columnId: 'todo', orderedTaskIds };
+    expect(Buffer.byteLength(JSON.stringify(payload))).toBeGreaterThan(limits.maxFrameBytes);
+    await expect(
+      transport.request('team.execute', {
+        commandId: 'TEST-oversized-board',
+        operation: 'task.board.order',
+        payload,
+      })
+    ).rejects.toMatchObject({ code: 'protocol-error', outcome: 'not-dispatched' });
+    const effects = join(dirname(profile.hostEntry), 'TEST-order-effects');
+    await expect(readFile(effects, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await transport.request('echo', 'TEST-still-ready')).toBe('TEST-still-ready');
+    expect(await transport.request('team.execute', {
+      commandId: 'TEST-valid-large-board',
+      operation: 'task.board.order',
+      payload: { columnId: 'todo', orderedTaskIds: orderedTaskIds.slice(0, 1001) },
+    })).toBe('TEST-order-accepted');
+    expect(await readFile(effects, 'utf8')).toBe('effect\n');
+    expect((await transport.shutdown()).childExit).toBe('confirmed');
   });
 
   it.each([

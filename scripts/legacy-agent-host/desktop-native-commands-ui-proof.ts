@@ -82,6 +82,49 @@ export async function sendDesktopNativeCommandFromComposer(
   return raw;
 }
 
+
+/** TEST-only display of the original Codex cost reply through existing UI controls. */
+export async function captureDesktopCodexCostReply<T>(
+  cdp: UiCdpPort,
+  ui: ReturnType<typeof createDesktopUiControls>,
+  reply: { messageId: string; text: string },
+  options: {
+    assertOwnedRenderer(): void;
+    step(value: Row): void;
+    screenshot(): Promise<T>;
+  }
+): Promise<T> {
+  assert.ok(reply.messageId.length > 0);
+  const costCard = `[data-timeline-row-key=${desktopJsLiteral(reply.messageId)}] article.activity-timeline-card`;
+  const expanded = await ui.waitRead(`(()=>{const rows=document.querySelectorAll(${desktopJsLiteral(costCard)});return rows.length===1?rows[0].getAttribute('data-expanded'):null})()`, 'one original Codex /cost report card');
+  assert.ok(expanded === 'true' || expanded === 'false');
+  if (expanded === 'false') {
+    const header = `${costCard} > div[role="button"]`;
+    await ui.scrollTo(header, 'original Codex /cost report header');
+    await ui.click(header, 'expand original Codex /cost report once');
+    await ui.waitRead(`document.querySelector(${desktopJsLiteral(costCard)})?.getAttribute('data-expanded')==='true'`, 'original Codex /cost report expanded');
+  }
+  const fullScreen = 'button[role="switch"][aria-label="Full Screen"]';
+  const wasFullScreen = await ui.waitRead(`(()=>{const rows=document.querySelectorAll(${desktopJsLiteral(fullScreen)});return rows.length===1&&!rows[0].disabled?rows[0].getAttribute('aria-checked'):null})()`, 'one original enabled chat fullscreen control');
+  assert.ok(wasFullScreen === 'true' || wasFullScreen === 'false');
+  if (wasFullScreen === 'false') {
+    await ui.scrollTo(fullScreen, 'original chat fullscreen control');
+    await ui.click(fullScreen, 'open original fullscreen chat for cost report');
+    await ui.waitRead(`document.querySelector(${desktopJsLiteral(fullScreen)})?.getAttribute('aria-checked')==='true'`, 'original fullscreen chat opened');
+  }
+  await revealDesktopReply(cdp, reply.text, {
+    messageId: reply.messageId,
+    assertOwnedRenderer: options.assertOwnedRenderer,
+    step: options.step,
+  });
+  const screenshot = await options.screenshot();
+  if (wasFullScreen === 'false') {
+    await ui.click(fullScreen, 'restore original chat after cost report');
+    await ui.waitRead(`document.querySelector(${desktopJsLiteral(fullScreen)})?.getAttribute('aria-checked')==='false'`, 'original chat layout restored');
+  }
+  return screenshot;
+}
+
 /** Called after the existing Launch turn and before its Stop; every send comes from actual Composer controls. */
 export async function runDesktopNativeCommandsUiProof(
   cdp: UiCdpPort,

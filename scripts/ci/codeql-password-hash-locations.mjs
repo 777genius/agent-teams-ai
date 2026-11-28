@@ -278,7 +278,11 @@ export function collectPasswordHashLocations(sarif, { trackedPaths, workspace, p
         )
           return undefined;
         const indexed = run.artifacts?.[reference.index]?.location;
-        if (!row(indexed) || indexed.index !== undefined) return undefined;
+        if (
+          !row(indexed) ||
+          (indexed.index !== undefined && indexed.index !== reference.index)
+        )
+          return undefined;
         const path = resolveLocation(indexed);
         const explicit = {
           uri: reference.uri === undefined ? indexed.uri : reference.uri,

@@ -67,7 +67,9 @@ export function createHostDefinitionEdits(options: Options) {
     string,
     {
       signature: string;
-      captured: Promise<{
+      current(): boolean;
+      handle?: BackendHandle;
+      captured?: Promise<{
         handle: BackendHandle;
         configuration: Configuration;
         current(): boolean;
@@ -76,10 +78,16 @@ export function createHostDefinitionEdits(options: Options) {
       committing?: Promise<UpdateMemberSettingsResult>;
     }
   >();
-  async function capture(key: string, current: () => boolean) {
+  async function capture(
+    key: string,
+    current: () => boolean,
+    retained?: { handle?: BackendHandle }
+  ) {
     if (!current()) refuse('context-changed');
-    const handle = { ...(await options.resolve(key, current)).handle };
-    const configuration = await readHostRosterConfiguration(options.backend, handle);
+    const handle = { ...(retained?.handle ?? (await options.resolve(key, current)).handle) };
+    if (retained) retained.handle = { ...handle };
+    if (!current()) refuse('context-changed');
+    const configuration = await readHostRosterConfiguration(options.backend, { ...handle });
     if (!current()) refuse('context-changed');
     return { handle, configuration, current };
   }
@@ -192,10 +200,9 @@ export function createHostDefinitionEdits(options: Options) {
         existing = saved.get(request.commandId);
       if (existing && existing.signature !== signature) refuse('intent-conflict');
       // Reserve before any await: overlapping calls can never replace the captured owner or baseline.
-      const current = options.captureScope();
       const intent: NonNullable<ReturnType<typeof saved.get>> = existing ?? {
         signature,
-        captured: Promise.resolve().then(() => capture(request.teamName, current)),
+        current: options.captureScope(),
       };
       if (!existing) {
         if (saved.size >= 1024) {
@@ -206,8 +213,18 @@ export function createHostDefinitionEdits(options: Options) {
       if (intent.result) return { ...intent.result, replayed: true };
       if (intent.committing) return intent.committing;
       intent.committing = (async () => {
-        const original = await intent.captured,
-          configuration = original.configuration;
+        const captured = (intent.captured ??= Promise.resolve().then(() =>
+          capture(request.teamName, intent.current, intent)
+        ));
+        let original: Awaited<ReturnType<typeof capture>>;
+        try {
+          original = await captured;
+        } catch (error) {
+          // Retry only a failed pre-dispatch capture, keeping its original scope and resolved owner.
+          if (intent.captured === captured) delete intent.captured;
+          throw error;
+        }
+        const configuration = original.configuration;
         const member = configuration.members.find((row) => row.name === request.memberName);
         const conflict = (actual: string | null): UpdateMemberSettingsResult => ({
           outcome: 'target_conflict',

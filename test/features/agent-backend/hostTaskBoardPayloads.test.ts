@@ -33,7 +33,17 @@ it('admits exact existing board order, relationship and clarification controls i
   }
 });
 
-it('refuses duplicate/oversized orders, unknown choices, authority extras and coercible objects', () => {
+it('preserves the complete valid order above 1000 items through the existing Main boundary', () => {
+  const orderedTaskIds = Array.from(
+    { length: 1001 },
+    (_, index) => `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`
+  ).reverse();
+  const value = request('task.board.order', { columnId: 'todo', orderedTaskIds });
+  expect(Buffer.byteLength(JSON.stringify(value))).toBeLessThan(40 * 1024);
+  expect(parseBackendOperation(value)).toEqual(value);
+});
+
+it('refuses duplicate orders, invalid IDs, unknown choices, authority extras and coercible objects', () => {
   const coercion = vi.fn(() => 'todo');
   for (const [operation, payload] of [
     ['task.board.order', { columnId: 'todo', orderedTaskIds: ['TEST-a', 'TEST-a'] }],
@@ -41,7 +51,7 @@ it('refuses duplicate/oversized orders, unknown choices, authority extras and co
       'task.board.order',
       {
         columnId: 'todo',
-        orderedTaskIds: Array.from({ length: 1001 }, (_, index) => `TEST-${index}`),
+        orderedTaskIds: ['x'.repeat(257)],
       },
     ],
     ['task.board.order', { columnId: { toString: coercion }, orderedTaskIds: [] }],

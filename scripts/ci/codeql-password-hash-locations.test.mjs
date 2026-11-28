@@ -243,6 +243,56 @@ test('resolves rule, artifact and shared thread-location indices against the exa
   assert.doesNotMatch(JSON.stringify(report), /PRIVATE|file:/);
 });
 
+for (const explicit of [false, true]) {
+  test('accepts matching artifact self-indices with explicit URI=' + explicit, () => {
+    const source = fixture(),
+      run = source.runs[0],
+      result = run.results[0],
+      paths = ['src/source.ts', 'src/sink.ts'];
+    run.originalUriBaseIds = { SRCROOT: { uri: pathToFileURL(options.workspace + '/').href } };
+    run.artifacts = paths.map((uri, index) => ({
+      location: { uri, index, uriBaseId: 'SRCROOT' },
+      contents: { text: privateText },
+    }));
+    for (const value of [
+      ...result.locations,
+      ...result.relatedLocations,
+      ...result.codeFlows[0].threadFlows[0].locations.map((entry) => entry.location),
+    ]) {
+      const physical = value.physicalLocation;
+      const index = paths.indexOf(physical.artifactLocation.uri);
+      assert.ok(index >= 0);
+      physical.artifactLocation = {
+        index,
+        ...(explicit ? { uri: paths[index], uriBaseId: 'SRCROOT' } : {}),
+      };
+    }
+    const report = collect(source);
+    assert.deepEqual(report, collect(fixture()));
+    assert.doesNotMatch(JSON.stringify(report), /PRIVATE|file:|snippet|contents/);
+  });
+}
+
+for (const selfIndex of [1, -1, 0.5, '0', null]) {
+  test('refuses a mismatching or malformed artifact self-index: ' + selfIndex, () => {
+    const source = fixture(),
+      run = source.runs[0];
+    run.artifacts = [
+      { location: { uri: 'src/sink.ts', index: selfIndex } },
+      { location: { uri: 'src/source.ts', index: 1 } },
+    ];
+    run.results[0].locations[0].physicalLocation.artifactLocation = { index: 0 };
+    const report = collect(source);
+    assert.equal(report.status, 'partial');
+    assert.ok(report.counts.omitted > 0);
+    assert.equal(
+      report.results[0].locations.some((value) => value.kind === 'locations'),
+      false
+    );
+    assert.doesNotMatch(JSON.stringify(report), /PRIVATE|file:|snippet|contents/);
+  });
+}
+
 for (const uri of [
   '/etc/secret',
   'C:/secret',

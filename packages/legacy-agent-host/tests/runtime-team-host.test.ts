@@ -3072,14 +3072,18 @@ test('production aggregate launch RPC preserves configured and missing roster me
 test('actual Host RPC preserves the displayed retry attempt precondition and original replay', async (t) => {
   const f = await fixture(t);
   type Summary = { launchId: string; rosterRevision: string;
-    members: { memberId: string; attempt: { attemptId: string; status: string } }[] };
+    members: { memberId: string; attempt: { attemptId: string; status: string; noAllocation?: boolean } }[] };
   const before = await f.rpc('team.launch.read', {}) as { ok: boolean; value: Summary };
   assert.equal(before.ok, true);
   const scope = { launchId: before.value.launchId, rosterRevision: before.value.rosterRevision };
-  assert.equal((await f.rpc('team.launch.start', scope,
-    { commandId: 'TEST-bound-retry-start' }) as { ok: boolean }).ok, true);
+  const started = await f.rpc('team.launch.start', scope,
+    { commandId: 'TEST-bound-retry-start' }) as { ok: boolean; value?: Summary };
+  assert.equal(started.ok, true);
+  let failed = started.value?.members.find(row => row.memberId === 'bob-id');
+  assert.ok(failed, 'the original start response includes the failed member');
+  const originalAttemptId = failed.attempt.attemptId;
+  assert.ok(originalAttemptId, 'the original start response captures the failed member attempt');
   await eventually(() => f.opens() === 1, 'configured control member opens once');
-  let failed = before.value.members.find(row => row.memberId === 'bob-id')!;
   for (let count = 0; count < 40 && failed.attempt.status !== 'failed'; count++) {
     await tick();
     const current = await f.rpc('team.launch.read', {}) as { ok: boolean; value: Summary };
@@ -3087,8 +3091,10 @@ test('actual Host RPC preserves the displayed retry attempt precondition and ori
     failed = current.value.members.find(row => row.memberId === 'bob-id')!;
   }
   assert.equal(failed.attempt.status, 'failed');
+  assert.equal(failed.attempt.noAllocation, true, 'this regression covers the displayed no-allocation retry');
+  assert.equal(failed.attempt.attemptId, originalAttemptId, 'the failed row belongs to the captured original start');
   const input = { ...scope, memberIds: ['bob-id'], attemptId: 'TEST-bound-retry',
-    expectedAttemptId: failed.attempt.attemptId };
+    expectedAttemptId: originalAttemptId };
   const command = { commandId: 'TEST-bound-retry-command' };
   const accepted = await f.rpc('team.launch.retry', input, command) as { ok: boolean; value?: Summary };
   assert.equal(accepted.ok, true, 'the renderer-bound retry must reach the existing launch owner');
