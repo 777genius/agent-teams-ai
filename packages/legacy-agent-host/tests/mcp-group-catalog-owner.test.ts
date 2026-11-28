@@ -12,8 +12,8 @@ test('canonical retained GroupCommands catalog reaches native MCP in complete si
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-native-group-catalog-')));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-groups' };
-  const members = ['alice', 'bob'].map(name => ({
-    memberId: name, name, role: 'member' as const,
+  const members = ['lead', 'alice', 'bob'].map(name => ({
+    memberId: name, name, role: name === 'lead' ? ('lead' as const) : ('member' as const),
     delivery: { ...binding, memberId: name, runId: 'TEST-run', generation: '1' },
   }));
   const owner = createFilesystemTeamOwner({ root, binding, members,
@@ -29,13 +29,15 @@ test('canonical retained GroupCommands catalog reaches native MCP in complete si
   writeFileSync(path, JSON.stringify({ version: 1, groups }), { mode: 0o600 });
   const originalBytes = readFileSync(path, 'utf8');
   const runtime = {
-    getRun: async (_teamName: string, name: string) => ({
+    async getRun(name: string) {
+      return {
       provider: 'host' as const, protocolVersion: 1 as const,
       groupReactionProtocolVersion: 1 as const,
       binding: members.find(row => row.name === name)!.delivery,
       runKey: 'TEST-' + name,
       isCurrent: async () => true,
-    }),
+      };
+    },
   };
   const service = owner.groupCommands('alice', runtime);
   const guard = { before() {}, inside() {} };
