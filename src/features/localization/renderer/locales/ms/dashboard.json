@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Bajet bulanan",
+      "teamCardUnknown": "Penggunaan tidak diketahui",
+      "teamCardBlocked": "Had dicapai - pelancaran disekat",
+      "editor": {
+        "onExceeded": "Tindakan apabila had dicapai",
+        "notifyOnly": "Maklumkan sahaja",
+        "blockLaunch": "Sekat pelancaran pasukan baharu",
+        "stopTeam": "Hentikan pasukan dan sekat pelancaran",
+        "enforcementHint": "Jika data penggunaan tiada atau lewat, pelancaran baharu disekat. Kos ialah anggaran dan bil boleh melebihi had."
+      }
     }
   }
 }

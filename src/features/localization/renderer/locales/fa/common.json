@@ -967,6 +967,18 @@
     "chats": "گفت‌وگوهای خوانده‌نشده",
     "openTask": "باز کردن کار: {{subject}} در {{team}}",
     "timeUnknown": "زمان نامشخص",
-    "teamAttention": "توجه"
+    "teamAttention": "توجه",
+    "filters": {
+      "title": "فیلترها",
+      "description": "انتخاب کنید چه مواردی در صندوق ورودی نمایش داده شوند.",
+      "itemType": "نوع مورد",
+      "conversationType": "نوع گفتگو",
+      "direct": "پیام‌های مستقیم",
+      "group": "گفتگوهای گروهی",
+      "teamFeed": "خوراک تیم",
+      "waiting": "مدت انتظار وظیفه",
+      "olderDay": "بیش از ۲۴ ساعت",
+      "olderWeek": "بیش از ۷ روز"
+    }
   }
 }

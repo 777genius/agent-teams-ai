@@ -1,42 +1,56 @@
-import { getTeamColorSet } from '@renderer/constants/teamColors';
-import { buildMemberColorMap } from '@renderer/utils/memberHelpers';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { getBaseName } from '@renderer/utils/pathUtils';
+import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { FolderOpen } from 'lucide-react';
 
 import { getRecentTeamProjects } from './teamProjectSelection';
 
+import type { useAppTranslation } from '@features/localization/renderer';
 import type { TeamStatus } from '@renderer/utils/teamListStatus';
-import type { TeamSummary, TeamSummaryMember } from '@shared/types';
+import type { TeamSummary } from '@shared/types';
 import type React from 'react';
 
 export function folderName(fullPath: string): string {
   return getBaseName(fullPath) || fullPath;
 }
 
-export function renderMemberNames(members: TeamSummaryMember[]): React.JSX.Element {
-  const teamColorMap = buildMemberColorMap(members);
-  return (
-    <>
-      {members.map((m) => {
-        const resolvedColor = teamColorMap.get(m.name);
-        const memberColor = resolvedColor ? getTeamColorSet(resolvedColor) : null;
-        return (
-          <span key={m.name} className="inline-flex items-center gap-1">
-            <span
-              className="text-[10px] font-medium tracking-wide"
-              style={memberColor ? { color: memberColor.text } : undefined}
-            >
-              {m.name}
-            </span>
-            {m.role ? (
-              <span className="text-[9px] text-[var(--color-text-muted)]">{m.role}</span>
-            ) : null}
-          </span>
-        );
-      })}
-    </>
-  );
+export { renderMemberNames } from './teamListMemberNames';
+
+export function renderTeamLaunchSummary(
+  team: TeamSummary,
+  t: ReturnType<typeof useAppTranslation>['t']
+): React.JSX.Element | null {
+  return team.teamLaunchState === 'partial_pending' ? (
+    <p className="mt-2 text-[11px] text-amber-300">
+      {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
+        ? buildPendingRuntimeSummaryCopy({
+            confirmedCount: team.confirmedCount,
+            expectedMemberCount: team.expectedMemberCount,
+            memberCount: team.memberCount,
+            runtimeProcessPendingCount: team.runtimeProcessPendingCount,
+            includePeriod: true,
+          })
+        : t('list.partial.pending')}
+    </p>
+  ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
+    <p className="mt-2 text-[11px] text-amber-400">
+      {team.missingMembers?.length
+        ? t('detail.offline.partialMissing', {
+            missing: team.missingMembers.length,
+            expected: team.expectedMemberCount ?? team.missingMembers.length,
+          })
+        : t('detail.offline.partialFailed')}
+    </p>
+  ) : team.teamLaunchState === 'partial_skipped' ? (
+    <p className="mt-2 text-[11px] text-sky-300">
+      {team.skippedMembers?.length
+        ? t('list.partial.skippedWithCount', {
+            count: team.skippedMembers.length,
+            expected: team.expectedMemberCount ?? team.skippedMembers.length,
+          })
+        : t('list.partial.skipped')}
+    </p>
+  ) : null;
 }
 
 export function renderTeamRecentPaths(

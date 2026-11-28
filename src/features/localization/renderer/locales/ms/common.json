@@ -967,6 +967,18 @@
     "chats": "Sembang belum dibaca",
     "openTask": "Buka tugasan: {{subject}} dalam {{team}}",
     "timeUnknown": "Masa tidak diketahui",
-    "teamAttention": "Perhatian"
+    "teamAttention": "Perhatian",
+    "filters": {
+      "title": "Penapis",
+      "description": "Pilih perkara yang dipaparkan dalam peti masuk.",
+      "itemType": "Jenis item",
+      "conversationType": "Jenis sembang",
+      "direct": "Mesej langsung",
+      "group": "Sembang kumpulan",
+      "teamFeed": "Suapan pasukan",
+      "waiting": "Tempoh menunggu tugasan",
+      "olderDay": "Lebih 24 jam",
+      "olderWeek": "Lebih 7 hari"
+    }
   }
 }

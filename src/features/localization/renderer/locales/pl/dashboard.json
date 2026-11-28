@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Budżet miesięczny",
+      "teamCardUnknown": "Zużycie nieznane",
+      "teamCardBlocked": "Limit osiągnięty - start zablokowany",
+      "editor": {
+        "onExceeded": "Działanie po osiągnięciu limitu",
+        "notifyOnly": "Tylko powiadom",
+        "blockLaunch": "Blokuj nowe uruchomienia zespołu",
+        "stopTeam": "Zatrzymaj zespół i blokuj uruchomienia",
+        "enforcementHint": "Gdy dane o zużyciu są niedostępne lub opóźnione, nowe uruchomienia są blokowane. Koszty są szacunkowe, a rachunek może przekroczyć limit."
+      }
     }
   }
 }

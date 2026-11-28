@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Buget lunar",
+      "teamCardUnknown": "Utilizare necunoscută",
+      "teamCardBlocked": "Limită atinsă - porniri blocate",
+      "editor": {
+        "onExceeded": "Acțiune la atingerea limitei",
+        "notifyOnly": "Doar notificare",
+        "blockLaunch": "Blochează noile porniri ale echipei",
+        "stopTeam": "Oprește echipa și blochează pornirile",
+        "enforcementHint": "Dacă datele de utilizare lipsesc sau întârzie, noile porniri sunt blocate. Costurile sunt estimative, iar factura poate depăși limita."
+      }
     }
   }
 }

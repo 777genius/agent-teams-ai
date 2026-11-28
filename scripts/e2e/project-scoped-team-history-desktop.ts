@@ -36,7 +36,7 @@ type DiagnosticStage =
   | 'definition-edit' | 'member-settings' | 'review-flow' | 'cross-team'
   | 'schedules' | 'launch-settings' | 'launch-settings:first-a' | 'launch-settings:second-b'
   | 'launch-settings:unset-b' | 'launch-settings:schedule-a' | 'launch-settings:provider-change-b'
-  | 'http-create-launch' | 'mcp-board';
+  | 'http-create-launch' | 'mcp-board' | 'budget-enforcement';
 
 const diagnosticOperations = [
   ['window.electronAPI.teams.launchTeam(', 'team-launch'],
@@ -267,6 +267,27 @@ async function fixture() {
     await mkdir(path.join(teamDir, 'inboxes'), { recursive: true });
     await mkdir(path.join(rootTasks, partner), { recursive: true });
   }
+  // Seed a single completed usage record in the disposable app ledger, under
+  // the physical project alias. The app must attribute it to the logical team.
+  const usageTime = new Date().toISOString();
+  await json(path.join(userData, 'data', 'token-usage', 'ledger.json'), {
+    schemaVersion: 1,
+    runs: {
+      'budget-fixture-run': {
+        appRunId: 'budget-fixture-run', runtimeKind: 'codex', teamName: nativeA,
+        startedAt: usageTime, endedAt: usageTime, status: 'completed',
+        source: 'manual_import', sources: [],
+      },
+    },
+    events: {
+      'budget-fixture-event': {
+        id: 'budget-fixture-event', appRunId: 'budget-fixture-run', runtimeKind: 'codex',
+        tokens: { totalTokens: 100, inputTokens: 100 },
+        cost: {}, usageSourceKind: 'log_parsed', occurredAt: usageTime, createdAt: usageTime,
+      },
+    },
+    sourceStates: {},
+  });
   return {
     root, env, claudeRoot, rootTeams, indexPath, logical,
     nativeA, nativeB, projectA, projectB, projectC, partnerA, partnerC,
@@ -1970,6 +1991,60 @@ async function waitForScheduledLaunch(f: Fixture, scheduleId: string, copyMeta: 
 }
 
 
+/** Real desktop budget settings, owned-alias accounting, card update and IPC
+ * launch admission. The existing denying runtime remains the only executable. */
+async function verifyBudgetEnforcement(f: Fixture) {
+  assert(cdp);
+  await selectProject(f, 'project-a');
+  await cdp.evaluate('window.__agentTeamsDevStore.getState().openTeamsTab()');
+  const card = 'Array.from(document.querySelectorAll("div[role=button]")).find(e => ' +
+    'e.querySelector("h3")?.textContent?.trim() === "History fixture" && e.getClientRects().length > 0)';
+  await waitFor('Boolean(' + card + ')', 'logical team card for budget enforcement');
+  const blockedLabel = 'Budget limit reached - launches blocked: 100 / 100';
+  const blockedCard = 'Boolean((' + card + ')?.querySelector(' +
+    JSON.stringify('[aria-label="' + blockedLabel + '"]') + '))';
+  assert.equal(await cdp.evaluate(blockedCard), false, 'No budget card before configuring a limit');
+
+  const teamId = 'team:' + f.logical;
+  const save = async (settings: Record<string, unknown>) => cdp!.evaluate(
+    '(async () => { const api = window.electronAPI.tokenUsage; const previous = await api.getBudgetSettings();' +
+    'return api.updateBudgetSettings({teamIdentityVersion:1,expectedUpdatedAt:previous.updatedAt ?? null,' +
+    'settings:' + JSON.stringify(settings) + '}); })()'
+  );
+  const budget = { monthlyTokenLimit: 100, thresholds: [80, 100], notificationsEnabled: false,
+    onExceeded: 'block_launch' };
+  const saved = await save({ teams: { [teamId]: budget } }) as { teams?: Record<string, unknown> };
+  assert.deepEqual(saved.teams?.[teamId], budget, 'Real preload budget settings round-trip');
+  const persisted = await readJsonFile<{ settings: { teams: Record<string, unknown> } }>(
+    path.join(f.env.AGENT_TEAMS_ELECTRON_USER_DATA_DIR, 'data', 'token-usage', 'budget-settings.json'));
+  assert.deepEqual(persisted.settings.teams[teamId], budget, 'Budget persisted in isolated profile');
+  const status = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetStatus()') as {
+    targets: { id: string; onExceeded?: string; metrics: { metric: string; value: number | null; limit: number }[] }[];
+  };
+  const target = status.targets.find(t => t.id === teamId);
+  assert.equal(target?.onExceeded, 'block_launch');
+  const tokens = target?.metrics.find(m => m.metric === 'tokens');
+  assert.equal(tokens?.value, 100, 'Owned execution alias usage attributed to logical team');
+  assert.equal(tokens?.limit, 100);
+  await waitFor(blockedCard, 'live blocked budget indicator on the logical team card');
+  await cdp.screenshot(path.join(f.screenshots, 'budget-blocked.png'));
+
+  const launch = await ipcOutcome('window.electronAPI.teams.launchTeam(' +
+    JSON.stringify({ teamName: f.logical, cwd: f.projectA, providerId: 'anthropic' }) + ')');
+  assert.equal(launch.ok, false, 'An exhausted budget must reject real IPC launch admission');
+  assert.match(launch.error ?? '', /TEAM_BUDGET_BLOCKED.*monthly budget reached/);
+
+  await save({});
+  await waitFor('Boolean(' + card + ') && !(' + blockedCard + ')',
+    'card budget indicator removed after clearing the limit');
+  const cleared = await cdp.evaluate('window.electronAPI.tokenUsage.getBudgetStatus()') as {
+    targets: { id: string }[];
+  };
+  assert(!cleared.targets.some(t => t.id === teamId), 'Cleared budget is no longer active');
+  // The existing strict pre-schedule audit below also verifies that neither
+  // the denied launch nor clearing the budget invoked a provider runtime.
+}
+
 async function run() {
   const f = await fixture();
   let success = false;
@@ -1995,6 +2070,8 @@ async function run() {
     await verifyNative(f);
     assert.equal(await readFile(f.indexPath, 'utf8'), beforeIndex,
       'Read-only project navigation mutated durable context mapping');
+    noteStage('budget-enforcement');
+    await verifyBudgetEnforcement(f);
     noteStage('attention-navigation');
     await verifyAttentionProjectNavigation(f);
     noteStage('ui-history');
@@ -2079,7 +2156,7 @@ async function run() {
       ok: true, scope: 'real Electron / typed preload / main / native task + inbox / Attention Inbox project B-A direct navigation / A-B-A / renderer reload / edit the per-project team definition / member settings of a per-project team / one review flow of a per-project team, its project boards and a new copy / cross-team messages (IPC, controller over HTTP, badge) / schedules of a per-project team / launch settings kept by the team / HTTP create and launch of a per-project team / MCP board tools of a per-project team',
       team: f.logical, sandbox: f.root, screenshotDir: f.screenshots,
       providerExecution: false, scheduledRun: { status: scheduledRun.status, summary: scheduledRun.summary },
-      httpLaunch, mcpBoard,
+      httpLaunch, mcpBoard, budgetEnforcement: 'real IPC and card; owned alias; rejected launch; cleared limit',
     }, null, 2));
   } catch (error) {
     const diagnostics = failureDiagnostics();

@@ -256,9 +256,33 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
         });
         if (publication?.drain) {
           finalize = await this.stopFlowBoundary.prepareNativeStop(teamName, publication);
+        } else if (publication) {
+          await this.stopFlowBoundary.stopTeam(teamName, publication);
         } else {
-          if (publication) await this.stopFlowBoundary.stopTeam(teamName, publication);
-          else await this.stopFlowBoundary.stopTeam(teamName);
+          const runId = service.runTracking.getTrackedRunId(teamName);
+          const run = runId ? service.runs.get(runId) : undefined;
+          if (!run) return this.stopFlowBoundary.stopTeam(teamName);
+          if (run.teamStopPromise) return run.teamStopPromise;
+
+          // Publish ownership before synchronous progress callbacks can reenter Stop.
+          // Only active lock owners are visible: joining a queued Stop would deadlock a launch.
+          let startStop!: () => void;
+          const stopPromise = new Promise<void>((resolve, reject) => {
+            startStop = () => {
+              try {
+                resolve(this.stopFlowBoundary.stopTeam(teamName));
+              } catch (error) {
+                reject(error);
+              }
+            };
+          });
+          run.teamStopPromise = stopPromise;
+          startStop();
+          try {
+            await stopPromise;
+          } finally {
+            if (run.teamStopPromise === stopPromise) delete run.teamStopPromise;
+          }
         }
       });
       const original = publication as LegacyNativeStopPublication | null;

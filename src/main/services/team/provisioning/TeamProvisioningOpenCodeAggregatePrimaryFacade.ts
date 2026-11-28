@@ -14,6 +14,7 @@ import {
   retainSecondaryAggregateOwnership,
 } from './OpenCodeAggregatePrimaryIncarnation';
 import {
+  assertUnstartedOpenCodePrimaryAdmission,
   stopFailedOpenCodeAggregatePrimaryRelaunchCandidate as stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper,
   stopUnretainableOpenCodePrimaryLane as stopUnretainableOpenCodePrimaryLaneHelper,
 } from './OpenCodeAggregatePrimaryLaneStopHelpers';
@@ -119,16 +120,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     this.aggregatePrimaryLaneHost
   );
 
-  private runAfterInFlightTeamOperation<T>(
-    teamName: string,
-    operation: () => Promise<T>
-  ): Promise<T> {
-    if (this.isLiveRosterMutationLockHeld(teamName)) {
-      return operation();
-    }
-    const pendingTeamOperation = this.teamOpLocks.get(teamName);
-    return pendingTeamOperation ? pendingTeamOperation.then(operation) : operation();
-  }
   protected async waitForMemberLifecycleOperations(teamName: string): Promise<void> {
     await waitForAggregateMemberLifecycleOperations({
       teamName,
@@ -183,7 +174,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     reason: string,
     expectedRunId: string | null
   ): Promise<boolean> {
-    return this.runAfterInFlightTeamOperation(teamName, async () => {
+    return this.runAfterInFlightSpawnOperation(teamName, async () => {
       const outcome = await rebootstrapOpenCodeAggregatePrimaryLaneHelper(
         { teamName, reason, expectedRunId },
         createOpenCodePrimaryLaneRebootstrapPorts(
@@ -252,8 +243,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string;
     run: ProvisioningRun;
     restartLease: OpenCodeAggregatePrimaryRestartLease;
+    admit: () => Promise<void>;
   }): Promise<void> {
-    const { teamName, memberName, run, restartLease } = params;
+    const { teamName, memberName, run, restartLease, admit } = params;
     const normalizedMemberName = memberName.trim().toLowerCase();
     const primaryMember = run.effectiveMembers.find(
       (member) => member.name.trim().toLowerCase() === normalizedMemberName
@@ -297,7 +289,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     const previousExpectedMembers = [...run.expectedMembers];
     const previousSecondaryLanes = [...run.mixedSecondaryLanes];
     const leadMemberName = this.getRunLeadName(run).trim().toLowerCase();
-
     const currentPrimaryRun = this.runtimeAdapterRunByTeam.get(teamName);
     const assertPrimaryRuntimeOwnerCurrent = (): void => {
       if (
@@ -325,7 +316,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       ],
     });
     assertRestartCurrent();
-    assertPrimaryRuntimeOwnerCurrent();
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -361,6 +351,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     };
     const advancePrimaryIncarnation = (): void =>
       advanceOpenCodePrimaryIncarnation(run, restartLease, incarnationPorts);
+    const assertSpawnAllowed = () =>
+      assertUnstartedOpenCodePrimaryAdmission(run, admit, assertRestartCurrent);
+    await admit();
+    assertRestartCurrent();
+    assertPrimaryRuntimeOwnerCurrent();
     await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
     assertRestartCurrent();
     advancePrimaryIncarnation();
@@ -397,6 +392,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
 
     let primaryRelaunchResult: TeamRuntimeLaunchResult | null;
     try {
+      await assertSpawnAllowed();
       primaryRelaunchResult = await this.launchOpenCodeAggregatePrimaryLane({
         run,
         adapter,
@@ -463,6 +459,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       try {
         assertRestartCurrent();
         advancePrimaryIncarnation();
+        await assertSpawnAllowed();
         const rollbackResult = await this.launchOpenCodeAggregatePrimaryLane({
           run,
           adapter,
@@ -590,7 +587,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     options?: { reason?: LiveRosterAttachReason }
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(teamName, () =>
+    return this.runAfterInFlightSpawnOperation(teamName, () =>
       this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
     );
   }
@@ -606,7 +603,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     expectedSecondary?: boolean
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(teamName, async () => {
+    return this.runAfterInFlightSpawnOperation(teamName, async (admit) => {
       const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
         teamName.trim().toLowerCase()
       );
@@ -627,7 +624,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
           expectedSecondary
         );
       }
-
       const restart = this.beginOpenCodeAggregatePrimaryRestart(
         teamName,
         memberName,
@@ -635,6 +631,9 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       );
       try {
         await Promise.all(restart.lease.precedingLifecycleOperations);
+        await admit();
+        if (restart.lease.cancelRequested)
+          throw getCancelledAggregateRestartError(teamName, memberName);
         if (candidate.run) {
           await this.memberLifecycleOperationUseCases.runMemberLifecycleOperation(
             teamName,
@@ -646,6 +645,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
                 memberName,
                 run: candidate.run!,
                 restartLease: restart.lease,
+                admit,
               })
           );
         } else {
@@ -679,7 +679,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   override async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {
-    return this.runAfterInFlightTeamOperation(teamName, () =>
+    return this.runAfterInFlightSpawnOperation(teamName, () =>
       this.memberLifecycleController.retryFailedOpenCodeSecondaryLanes(teamName)
     );
   }
@@ -689,7 +689,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string,
     options?: { reason?: 'member_added' | 'member_updated' | 'manual_restart' }
   ): Promise<void> {
-    return this.runAfterInFlightTeamOperation(teamName, () =>
+    return this.runAfterInFlightSpawnOperation(teamName, () =>
       this.memberLifecycleController.reattachOpenCodeOwnedMemberLane(teamName, memberName, options)
     );
   }

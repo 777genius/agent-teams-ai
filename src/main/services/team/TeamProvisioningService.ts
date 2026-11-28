@@ -76,9 +76,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     groupChats?: ProvisioningGroupChatCallbacks,
     resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
     memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+    private readonly budgetAdmission: (teamName: string) => Promise<void> = async () => undefined,
     private readonly captureNativeStopSourceFence?: CaptureLegacyNativeStopSourceFence
   ) {
-    super(resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
+    super(budgetAdmission, resolveOpenCodeInputDeclaration, memberGatewayRuntimeSeams);
     this.initializeTeamProvisioningService(groupChats);
   }
 
@@ -87,6 +88,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 
   setLaunchAdmissionGuard(guard: () => void): void {
     this.launchAdmissionGuard = guard;
+  }
+
+  assertTeamBudgetAdmission(teamName: string): Promise<void> {
+    return this.budgetAdmission(teamName);
   }
 
   private async withLaunchAdmission<T>(launch: () => Promise<T>): Promise<T> {
@@ -271,8 +276,10 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
       effort: EffortLevel | null;
     };
   }): Promise<void> {
+    await this.assertTeamBudgetAdmission(input.teamName);
     await restartLeadRuntime(input, {
       spawn: spawnCli,
+      beforeSpawn: () => this.assertTeamBudgetAdmission(input.teamName),
       killAndWait: killTeamProcessAndWait,
       attachStdout: (run) => this.outputRecoveryFacade.attachStdoutHandler(run),
       attachStderr: (run) => this.outputRecoveryFacade.attachStderrHandler(run),
@@ -331,8 +338,9 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
 /** Keep group callbacks lazy while using the desktop service's normal dependency defaults. */
 export function createDefaultTeamProvisioningService(
   getGroupChats: () => ProvisioningGroupChatCallbacks,
-  resolveOpenCodeInputDeclaration?: ResolveOpenCodeInputDeclaration,
-  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null = null,
+  resolveOpenCodeInputDeclaration: ResolveOpenCodeInputDeclaration | undefined,
+  memberGatewayRuntimeSeams: MemberGatewayRuntimeSeams | null,
+  budgetAdmission: (teamName: string) => Promise<void>,
   captureNativeStopSourceFence?: CaptureLegacyNativeStopSourceFence
 ) {
   return new TeamProvisioningService(
@@ -353,6 +361,7 @@ export function createDefaultTeamProvisioningService(
     },
     resolveOpenCodeInputDeclaration,
     memberGatewayRuntimeSeams,
+    budgetAdmission,
     captureNativeStopSourceFence
   );
 }

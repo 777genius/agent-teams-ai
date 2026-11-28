@@ -1896,7 +1896,13 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     const launchStatus =
       isLaunchMemberStatusRelevantToRuntimeRun(launchMember, activeRuntimeRunId) && launchMember
         ? buildLaunchMemberSpawnStatus(launchMember, metadata.model)
-        : undefined;
+        : activeRuntimeRunId.length === 0 &&
+            (launchMember?.hardFailure === true || launchMember?.launchState === 'failed_to_start')
+          ? suppressRuntimeBootstrapConfirmation(
+              // Retain a terminal failure after cleanup, without reviving old bootstrap evidence.
+              buildLaunchMemberSpawnStatus(launchMember, metadata.model)
+            )
+          : undefined;
     const status = shouldPreferCurrentLaunchMemberStatus(trackedStatus, launchStatus)
       ? launchStatus
       : shouldPreferCurrentLaunchMemberStatus(trackedStatus, adapterStatus)

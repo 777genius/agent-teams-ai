@@ -62,6 +62,7 @@ export interface TeamProvisioningOutputRecoveryFacadeServiceHost<
   handleStreamJsonMessage: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['handleStreamJsonMessage'];
   shiftProvisioningOutputIndexesAfterRemoval: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['shiftProvisioningOutputIndexesAfterRemoval'];
   stopAllTeamsGeneration: number;
+  assertTeamBudgetAdmission(teamName: string): Promise<void>;
   stopFilesystemMonitor: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['stopFilesystemMonitor'];
   startFilesystemMonitor: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['startFilesystemMonitor'];
   tryCompleteAfterTimeout: TeamProvisioningOutputRecoveryFacadeServiceAdapter<TRun>['tryCompleteAfterTimeout'];
@@ -113,6 +114,7 @@ export class TeamProvisioningOutputRecoveryFacade<
 
     this.authRetryRecoveryBoundary = createTeamProvisioningAuthRetryRecoveryBoundary<TRun>({
       service: {
+        assertTeamBudgetAdmission: (teamName) => deps.service.assertTeamBudgetAdmission(teamName),
         getStopAllTeamsGeneration: () => deps.service.getStopAllTeamsGeneration(),
         stopFilesystemMonitor: (run) => deps.service.stopFilesystemMonitor(run),
         stopStallWatchdog: (run) => this.stopStallWatchdog(run),
@@ -212,6 +214,7 @@ export function createTeamProvisioningOutputRecoveryFacadeDepsFromService<
       handleStreamJsonMessage: (run, msg) => service.handleStreamJsonMessage(run, msg),
       shiftProvisioningOutputIndexesAfterRemoval: (run, removedIndex) =>
         service.shiftProvisioningOutputIndexesAfterRemoval(run, removedIndex),
+      assertTeamBudgetAdmission: (teamName) => service.assertTeamBudgetAdmission(teamName),
       getStopAllTeamsGeneration: () => service.stopAllTeamsGeneration,
       stopFilesystemMonitor: (run) => service.stopFilesystemMonitor(run),
       startFilesystemMonitor: (run, request) => service.startFilesystemMonitor(run, request),

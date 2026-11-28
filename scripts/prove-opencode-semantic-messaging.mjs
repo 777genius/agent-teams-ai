@@ -57,6 +57,20 @@ try {
         'run',
         '--maxWorkers=1',
         'test/main/services/team/OpenCodeSemanticMessaging.live.test.ts',
+        ...(env.OPENCODE_E2E_SINGLE_MESSAGE === '1'
+          ? [
+              '--bail=1',
+              '--testNamePattern',
+              '^OpenCode semantic messaging live e2e delivers a desktop message to an OpenCode member and records the reply through agent-teams_message_send$',
+            ]
+          : []),
+        ...(env.OPENCODE_E2E_REPORT_FILE?.trim()
+          ? [
+              '--reporter=default',
+              '--reporter=json',
+              `--outputFile=${env.OPENCODE_E2E_REPORT_FILE.trim()}`,
+            ]
+          : []),
       ],
       {
         cwd: repoRoot,

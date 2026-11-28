@@ -967,6 +967,18 @@
     "chats": "Nieprzeczytane czaty",
     "openTask": "Otwórz zadanie: {{subject}} w {{team}}",
     "timeUnknown": "Nieznany czas",
-    "teamAttention": "Uwagi"
+    "teamAttention": "Uwagi",
+    "filters": {
+      "title": "Filtry",
+      "description": "Wybierz, co ma się pojawiać w skrzynce odbiorczej.",
+      "itemType": "Typ elementu",
+      "conversationType": "Typ czatu",
+      "direct": "Wiadomości prywatne",
+      "group": "Czaty grupowe",
+      "teamFeed": "Kanał zespołu",
+      "waiting": "Czas oczekiwania zadania",
+      "olderDay": "Ponad 24 godziny",
+      "olderWeek": "Ponad 7 dni"
+    }
   }
 }

@@ -3,6 +3,7 @@ import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { recordRecentProjectOpenPaths } from '@features/recent-projects/renderer';
+import { TeamBudgetProgress, useTeamBudgetStatus } from '@features/token-usage/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
@@ -46,7 +47,6 @@ import {
   type TaskStatusCounts,
 } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
 import { isTeamReadUnavailable } from '@shared/utils/normalizeTeamAggregateRead';
 import { Copy, GitBranch, Play, RotateCcw, Square, Trash2, UsersRound } from 'lucide-react';
@@ -63,7 +63,12 @@ import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
-import { folderName, renderMemberNames, renderTeamRecentPaths } from './TeamListCardDetails';
+import {
+  folderName,
+  renderMemberNames,
+  renderTeamLaunchSummary,
+  renderTeamRecentPaths,
+} from './TeamListCardDetails';
 import { EMPTY_TEAM_FILTER } from './TeamListFilterPopover';
 import { TeamListHeader } from './TeamListHeader';
 import { TeamListSkeleton } from './TeamListSkeleton';
@@ -105,6 +110,7 @@ type TeamT = ReturnType<typeof useAppTranslation>['t'];
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
   team: TeamSummary;
+  budgetStatus: ReturnType<typeof useTeamBudgetStatus>;
   status: TeamStatus;
   teamColorSet: TeamColorSet;
   isLight: boolean;
@@ -131,6 +137,7 @@ interface ActiveTeamCardProps {
 const ActiveTeamCard = ({
   managementChange,
   team,
+  budgetStatus,
   status,
   teamColorSet,
   isLight,
@@ -270,37 +277,7 @@ const ActiveTeamCard = ({
             {team.description || t('list.noDescription')}
           </p>
         </div>
-        {team.teamLaunchState === 'partial_pending' ? (
-          <p className="mt-2 text-[11px] text-amber-300">
-            {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
-              ? buildPendingRuntimeSummaryCopy({
-                  confirmedCount: team.confirmedCount,
-                  expectedMemberCount: team.expectedMemberCount,
-                  memberCount: team.memberCount,
-                  runtimeProcessPendingCount: team.runtimeProcessPendingCount,
-                  includePeriod: true,
-                })
-              : t('list.partial.pending')}
-          </p>
-        ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
-          <p className="mt-2 text-[11px] text-amber-400">
-            {team.missingMembers?.length
-              ? t('detail.offline.partialMissing', {
-                  missing: team.missingMembers.length,
-                  expected: team.expectedMemberCount ?? team.missingMembers.length,
-                })
-              : t('detail.offline.partialFailed')}
-          </p>
-        ) : team.teamLaunchState === 'partial_skipped' ? (
-          <p className="mt-2 text-[11px] text-sky-300">
-            {team.skippedMembers?.length
-              ? t('list.partial.skippedWithCount', {
-                  count: team.skippedMembers.length,
-                  expected: team.expectedMemberCount ?? team.skippedMembers.length,
-                })
-              : t('list.partial.skipped')}
-          </p>
-        ) : null}
+        {renderTeamLaunchSummary(team, t)}
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           {team.members && team.members.length > 0 ? (
             renderMemberNames(team.members)
@@ -314,6 +291,7 @@ const ActiveTeamCard = ({
             </Badge>
           )}
         </div>
+        <TeamBudgetProgress teamName={team.teamName} status={budgetStatus} />
         <div className="mt-auto">
           <TeamTaskStatusSummary counts={taskCounts} unknown={taskCountsUnknown} />
           {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
@@ -333,6 +311,7 @@ export const TeamListView = memo(function TeamListView({
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
+  const budgetStatus = useTeamBudgetStatus();
   const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
   const creationTab = useStore((s) =>
@@ -1279,6 +1258,7 @@ export const TeamListView = memo(function TeamListView({
                         <ActiveTeamCard
                           key={team.teamName}
                           team={team}
+                          budgetStatus={budgetStatus}
                           managementChange={teamManagementNoticeByTeam[team.teamName]}
                           status={status}
                           teamColorSet={teamColorSet}

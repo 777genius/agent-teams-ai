@@ -311,7 +311,7 @@ for (const run of runs) {
       const deadline = Date.now() + 15000;
       let drain;
       do {
-        drain = packagedDrainSnapshot(identities, processes(), listeners());
+        drain = packagedDrainSnapshot(identities, processes(identities.map((entry) => entry.pid)), listeners());
         if (drain.drained) break;
         await new Promise((resolve) => setTimeout(resolve, 250));
       } while (Date.now() < deadline);

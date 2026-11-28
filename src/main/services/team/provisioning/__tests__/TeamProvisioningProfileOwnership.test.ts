@@ -565,6 +565,7 @@ function createAdmissionHost(
   launch: TeamProvisioningRequestAdmissionServiceHost['launchOpenCodeTeamThroughRuntimeAdapter']
 ): TeamProvisioningRequestAdmissionServiceHost {
   return {
+    assertTeamBudgetAdmission: async () => undefined,
     withTeamLock: (_teamName, fn) => fn(),
     anthropicApiKeyHelperCleanupRetryOwner: createAnthropicApiKeyHelperCleanupRetryOwner(),
     cleanedStoppedTeamOpenCodeRuntimeLanes: new Set(),

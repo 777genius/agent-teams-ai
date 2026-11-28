@@ -1397,16 +1397,25 @@ test('settings failure observation preserves the existing successful quiet inter
 });
 
 test('packaged cleanup stops main before recovering helpers and drains sockets jointly', () => {
-  const launcher = { pid: 1, birth: 'one' };
-  const main = { pid: 2, parent: 1, birth: 'two', executable: exe };
-  const helper = { pid: 3, parent: 2, birth: 'three', executable: exe };
+  const launcher = { pid: 1, birth: '2026-09-10T01:00:00.0000000Z' };
+  const main = { pid: 2, parent: 1, birth: '2026-09-10T01:00:01.0000000Z', executable: exe };
+  const helper = { pid: 3, parent: 2, birth: '2026-09-10T01:00:02.0000000Z', executable: exe };
   const owned = [launcher, main, helper];
   assert.deepEqual(packagedStopOrder(owned, exe), [main, helper, launcher]);
   assert.deepEqual(owned, [launcher, main, helper]);
   assert.equal(packagedDrainSnapshot(owned, [], [2]).drained, false);
   assert.equal(packagedDrainSnapshot(owned, [main], []).drained, false);
   assert.equal(packagedDrainSnapshot(owned, [], []).drained, true);
-  assert.equal(packagedDrainSnapshot(owned, [{ ...main, birth: 'reused' }], [2]).drained, false);
+  const reused = { ...main, birth: '2026-09-10T01:00:03.0000000Z' };
+  assert.equal(packagedDrainSnapshot(owned, [reused], [2]).drained, false);
+  assert.equal(packagedDrainSnapshot(owned, [reused], []).drained, true);
+  for (const birth of [null, undefined, '', 'unavailable', 123]) {
+    assert.throws(() => packagedDrainSnapshot(owned, [{ ...main, birth }], []),
+      /Captured process birth unavailable/);
+  }
+  assert.equal(packagedDrainSnapshot(owned, [{ pid: 99, birth: null }], []).drained, true);
+  assert.throws(() => packagedDrainSnapshot([{ ...main, birth: null }], [], []),
+    /Invalid captured process identity/);
 });
 
 function browserCloseFixture({

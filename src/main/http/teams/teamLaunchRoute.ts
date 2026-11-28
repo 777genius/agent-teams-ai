@@ -10,6 +10,7 @@
  * code as an ordinary team. A project copy (`ptc-…`) is never launched by its
  * own name.
  */
+import { isProjectCopyName } from '@features/team-project-context/core';
 import {
   readTeamProjectContextMode,
   TeamMetadataUnreadableError,
@@ -61,9 +62,6 @@ export interface TeamLaunchRouteDeps extends TeamLifecycleRouteDeps {
   getTeamDataApi(): TeamHttpDataApi;
   management?: Pick<TeamPromptManagement, 'runLaunch'>;
 }
-
-/** Copies are internal names; refused even when their owner cannot be proven. */
-const PROJECT_COPY_NAME = /^ptc-[a-f0-9]{24}$/;
 
 class ProjectCopyLaunchRefusedError extends Error {
   readonly code = 'PROJECT_COPY_NOT_LAUNCHABLE';
@@ -280,7 +278,7 @@ export function registerTeamLaunchRoute(
           return reply.status(400).send({ error: validatedTeamName.error });
         }
         const teamName = validatedTeamName.value!;
-        if (PROJECT_COPY_NAME.test(teamName)) throw new ProjectCopyLaunchRefusedError();
+        if (isProjectCopyName(teamName)) throw new ProjectCopyLaunchRefusedError();
         // The management feature holds the same configuration lock as the desktop launch.
         const response = deps.management
           ? await deps.management.runLaunch(teamName, () => launch(teamName, request.body, true))
