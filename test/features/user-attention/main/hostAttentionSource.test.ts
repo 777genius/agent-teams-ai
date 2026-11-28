@@ -174,7 +174,7 @@ it('preserves full original group names and unread identity beyond the first Hos
   const { chosen, registry, bytes } = seedRetainedGroups(f, team);
   const result = await feature.getUserAttentionSnapshot(team.key);
   expect(result.complete).toBe(true);
-  expect(result.teams[0]?.groupNames[chosen.id]).toBe(chosen.name);
+  expect(result.teams[0]?.groupNames?.[chosen.id]).toBe(chosen.name);
   expect(result.teams[0]?.messages.some(message =>
     message.messageId === 'TEST-attention-group-physical' &&
     message.groupChatId === chosen.id
