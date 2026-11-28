@@ -1,3 +1,4 @@
+import { parseGroupRegistry } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import { atomicWriteAsync } from '@main/services/team/atomicWrite';
 import { withFileLock } from '@main/services/team/fileLock';
 import { withInboxLock } from '@main/services/team/inboxLock';
@@ -8,7 +9,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 
 import { assertValidGroupInboxRows, hasGroupChatEnvelopeMarker } from '../../contracts';
-import { GroupChatError, isGroupPhysicalId } from '../../core/domain/groupChat';
+import { GroupChatError } from '../../core/domain/groupChat';
 import { parseGroupReactions } from '../../core/domain/groupReactions';
 
 import type { GroupChat } from '../../core/domain/groupChat';
@@ -69,38 +70,13 @@ export async function writeGroupStorage(file: string, value: unknown): Promise<v
   await atomicWriteAsync(file, raw);
 }
 
-function isNames(value: unknown): value is string[] {
-  return (
-    Array.isArray(value) &&
-    value.every((name) => typeof name === 'string' && name.trim() === name && !!name) &&
-    new Set(value).size === value.length
-  );
-}
-
-function validCreationMetadata(value: unknown): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  const metadata = value as Record<string, unknown>;
-  const payload = metadata.payload as Record<string, unknown> | undefined;
-  return (
-    isGroupPhysicalId(metadata.sourceMessageId) &&
-    isNames(metadata.recipientNames) &&
-    metadata.recipientNames.length > 0 &&
-    metadata.recipientNames.length <= 200 &&
-    !metadata.recipientNames.some((name) => name.toLowerCase() === 'user') &&
-    !!payload &&
-    typeof payload.name === 'string' &&
-    !!payload.name.trim() &&
-    payload.name.length <= 100 &&
-    payload.name === payload.name.trim() &&
-    typeof payload.autoIncludeNewMembers === 'boolean' &&
-    isNames(payload.selectedMemberNames) &&
-    payload.selectedMemberNames.length >= 2 &&
-    payload.selectedMemberNames.length <= 200 &&
-    !payload.selectedMemberNames.includes('user')
-  );
-}
-
 export class GroupChatStorage {
+  teamRoot(teamName: string): Promise<string> {
+    return safeGroupTeamPath(teamName);
+  }
+  logicalPost<T>(key: string, action: () => Promise<T>): Promise<T> {
+    return withInboxLock(key, action);
+  }
   /** Exact raw originals only; unreadable/ambiguous stores must never become authorization. */
   async readCreationOriginal(
     teamName: string,
@@ -167,6 +143,11 @@ export class GroupChatStorage {
     });
   }
 
+  async readRegistry(teamName: string): Promise<GroupChat[]> {
+    const file = await safeGroupTeamPath(teamName, 'group-chats.json');
+    return parseGroupRegistry(await readBounded(file));
+  }
+
   async withRegistry<T>(
     teamName: string,
     action: (groups: GroupChat[], save: () => Promise<void>) => Promise<T>
@@ -174,34 +155,7 @@ export class GroupChatStorage {
     const file = await safeGroupTeamPath(teamName, 'group-chats.json');
     return withFileLock(file, async () => {
       const raw = await readBounded(file);
-      let groups: GroupChat[] = [];
-      if (raw !== undefined) {
-        const document = raw as { version?: unknown; groups?: unknown };
-        if (document?.version !== 1 || !Array.isArray(document.groups))
-          throw new GroupChatError('storage-unavailable', 'Unsupported group registry');
-        const ids = new Set<string>();
-        for (const row of document.groups as GroupChat[]) {
-          if (
-            !row ||
-            typeof row.id !== 'string' ||
-            !row.id ||
-            ids.has(row.id) ||
-            typeof row.name !== 'string' ||
-            !row.name.trim() ||
-            typeof row.createdAt !== 'string' ||
-            (row.archivedAt !== null && typeof row.archivedAt !== 'string') ||
-            (row.agentCreation !== undefined && !validCreationMetadata(row.agentCreation)) ||
-            !row.membership ||
-            (row.membership.kind === 'fixed'
-              ? !isNames(row.membership.memberNames)
-              : row.membership.kind !== 'auto' || !isNames(row.membership.excludedMemberNames))
-          ) {
-            throw new GroupChatError('storage-unavailable', 'Malformed group registry');
-          }
-          ids.add(row.id);
-        }
-        groups = document.groups as GroupChat[];
-      }
+      const groups = parseGroupRegistry(raw);
       return action(groups, () => writeGroupStorage(file, { version: 1, groups }));
     });
   }

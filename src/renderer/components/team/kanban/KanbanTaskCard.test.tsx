@@ -99,12 +99,19 @@ vi.mock('@renderer/components/ui/tooltip', () => ({
   TooltipContent: ({
     children,
     side,
+    align,
     'data-testid': testId,
   }: {
     children: React.ReactNode;
     side?: string;
+    align?: string;
     'data-testid'?: string;
-  }) => React.createElement('div', { 'data-side': side, 'data-testid': testId }, children),
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-side': side, 'data-align': align, 'data-testid': testId },
+      children
+    ),
 }));
 
 vi.mock('@renderer/hooks/useTheme', () => ({
@@ -721,6 +728,9 @@ describe('KanbanTaskCard flat board appearance', () => {
     expect(title?.className).toContain('line-clamp-2');
     expect(title?.className).toContain('h-10');
     expect(title?.className).toContain('text-sm');
+    const titleTooltip = host.querySelector('[data-testid="kanban-task-title-tooltip"]');
+    expect(titleTooltip?.getAttribute('data-side')).toBe('top');
+    expect(titleTooltip?.getAttribute('data-align')).toBe('start');
     const toolbar = host.querySelector('[data-kanban-task-toolbar="true"]');
     expect(toolbar).not.toBeNull();
     expect(card?.contains(toolbar ?? null)).toBe(false);
@@ -796,6 +806,9 @@ describe('KanbanTaskCard flat board appearance', () => {
     expect(card?.className).toContain('bg-[var(--color-surface-raised)]');
     expect(card?.className).toContain('border-[var(--color-border)]');
     expect(host.querySelector('h5')?.className).not.toContain('h-8');
+    expect(
+      host.querySelector('[data-testid="kanban-task-title-tooltip"]')?.getAttribute('data-align')
+    ).toBe('center');
     expect(host.querySelector('[data-member-badge-variant="badge"]')?.textContent).toBe('alice');
     expect(host.querySelector('[data-kanban-task-toolbar="true"]')).toBeNull();
     const completeAction = host.querySelector('[aria-label="Complete"]');

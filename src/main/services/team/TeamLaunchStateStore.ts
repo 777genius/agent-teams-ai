@@ -6,6 +6,8 @@ import { createLogger } from '@shared/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { nativeReleaseDigest } from './provisioning/LegacyNativeStopCensus';
+import { selectLegacyNativeStopReleaseProof } from './provisioning/LegacyNativeStopRelease';
 import { getAdmittedTeamPublicationAuthority } from './provisioning/TeamProvisioningRequestAdmissionContext';
 import { atomicWriteAsync } from './atomicWrite';
 import {
@@ -22,6 +24,7 @@ import {
   TEAM_LAUNCH_SUMMARY_FILE,
 } from './TeamLaunchSummaryProjection';
 
+import type { LegacyNativeStopRelease } from './provisioning/LegacyNativeStopRelease';
 import type { OpenCodeTranscriptBindingIdentity, TeamLaunchFreshness } from './TeamLaunchFreshness';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
@@ -109,6 +112,8 @@ export function readPersistedLaunchRuntimePidsSync(teamName: string): number[] {
 }
 
 export interface TeamLaunchStatePublicationOptions {
+  /** Opt-in from the live solo owner; completion retains its real finished phase. */
+  ownedSoloLaunch?: boolean;
   /**
    * True when the write republishes launch truth that already existed instead
    * of starting a launch: the rollback of a stale write restoring what it
@@ -305,7 +310,10 @@ export class TeamLaunchStateStore {
       this.writeNow(teamName, snapshot, {
         ...options,
         runId: options?.runId ?? snapshot.publicationRunId,
-        isAuthorized: () => options?.isAuthorized?.() !== false && publicationIsCurrent(),
+        isAuthorized: () =>
+          (options?.ownedSoloLaunch === true
+            ? options.isAuthorized?.() === true
+            : options?.isAuthorized?.() !== false) && publicationIsCurrent(),
       })
     );
   }
@@ -317,12 +325,39 @@ export class TeamLaunchStateStore {
     beginsLaunch = false
   ): Promise<boolean> {
     if (options.isAuthorized?.() === false) return false;
+    const ownedSoloLaunch = options.ownedSoloLaunch === true;
+    if (
+      ownedSoloLaunch &&
+      (snapshot.version !== 2 ||
+        snapshot.teamName !== teamName ||
+        snapshot.launchPhase !== 'finished' ||
+        !Array.isArray(snapshot.expectedMembers) ||
+        snapshot.expectedMembers.length !== 0 ||
+        !snapshot.members ||
+        typeof snapshot.members !== 'object' ||
+        Array.isArray(snapshot.members) ||
+        Object.keys(snapshot.members).length !== 0 ||
+        typeof snapshot.leadSessionId !== 'string' ||
+        snapshot.leadSessionId.length === 0 ||
+        snapshot.leadSessionId.length > 256 ||
+        snapshot.leadSessionId.trim() !== snapshot.leadSessionId ||
+        snapshot.leadSessionId.includes('\0') ||
+        typeof options.runId !== 'string' ||
+        options.runId.length === 0 ||
+        options.runId.length > 256 ||
+        options.runId.trim() !== options.runId ||
+        options.runId.includes('\0') ||
+        snapshot.publicationRunId !== options.runId ||
+        options.isAuthorized?.() !== true ||
+        options.authorizesNewRun?.() !== true)
+    )
+      return false;
     const freshness = await readTeamLaunchFreshness(teamName);
     if (options.isAuthorized?.() === false) return false;
     // Existing native launch flows publish their first active snapshot through the
     // boundary. Only their current, explicitly checked new run can begin here.
     beginsLaunch ||=
-      snapshot.launchPhase === 'active' &&
+      (snapshot.launchPhase === 'active' || ownedSoloLaunch) &&
       options.republishesExistingLaunch !== true &&
       !!options.runId &&
       options.authorizesNewRun?.() === true &&
@@ -439,7 +474,11 @@ export class TeamLaunchStateStore {
   }
 
   /** A cleanup tail retains its admission; it cannot stop a successor publication. */
-  async markStopped(teamName: string, authority?: TeamLaunchStopAuthority): Promise<void> {
+  async markStopped(
+    teamName: string,
+    authority?: TeamLaunchStopAuthority,
+    nativeRelease?: LegacyNativeStopRelease
+  ): Promise<void> {
     const stopIntent = authority?.stopIntent ?? (stopIntentByTeam.get(teamName) ?? 0) + 1;
     if (!authority) stopIntentByTeam.set(teamName, stopIntent);
     await enqueuePublication(teamName, async () => {
@@ -455,11 +494,23 @@ export class TeamLaunchStateStore {
         JSON.stringify(previous) !== JSON.stringify(admitted.freshness)
       )
         return;
+      const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
+      const selected = selectLegacyNativeStopReleaseProof({
+        teamDir: path.dirname(markerPath),
+        teamName,
+        freshness: previous,
+        provided: nativeRelease,
+      });
+      const assertCurrent = () => {
+        if (admitted.stopIntent !== stopIntentByTeam.get(teamName))
+          throw new Error('Stop publication authority changed');
+        selected?.assertCurrent();
+      };
+      assertCurrent();
       const revocations = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
       ]);
-      const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
       const stopId = randomUUID();
       try {
         await atomicWriteAsync(
@@ -470,14 +521,21 @@ export class TeamLaunchStateStore {
             kind: 'stop',
             stopId,
             stoppedRunId: previous?.kind === 'launch' ? previous.runId : previous?.stoppedRunId,
+            ...(selected
+              ? {
+                  nativeReleaseOwnerIncarnation: selected.proof.process.ownerIncarnation,
+                  nativeReleaseDigest: nativeReleaseDigest(selected.proof),
+                }
+              : {}),
             transcriptBindings:
               previous?.kind === 'stop' ? previous.transcriptBindings : admitted.transcriptBindings,
           }),
-          { durability: 'strict', syncDirectory: true }
+          { durability: 'strict', syncDirectory: true, assertCurrent }
         );
         await atomicWriteAsync(
           markerPath,
-          `${JSON.stringify({ version: 1, teamName, stopId, stoppedAt: new Date().toISOString() }, null, 2)}\n`
+          `${JSON.stringify({ version: 1, teamName, stopId, stoppedAt: new Date().toISOString(), ...(selected ? { nativeRelease: selected.proof } : {}) }, null, 2)}\n`,
+          { durability: 'strict', syncDirectory: true, assertCurrent }
         );
       } catch (error) {
         if (await isMissingTeamDirectoryWriteRace(markerPath, error)) {

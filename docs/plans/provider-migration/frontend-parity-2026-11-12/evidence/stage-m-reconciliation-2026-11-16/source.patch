@@ -1,0 +1,1139 @@
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -149,7 +149,62 @@
+             test/features/agent-backend/runtimeActivityFacade.test.ts \
+             test/renderer/store/teamRuntimeRunAdoption.test.ts \
+             test/renderer/store/teamSlice.test.ts \
+-            tools/owned-process-broker/nativeWindowsAppGate.mjs
++            tools/owned-process-broker/nativeWindowsAppGate.mjs \
++            packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts \
++            packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts \
++            packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts \
++            packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts \
++            packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts \
++            packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts \
++            packages/legacy-agent-host/src/composition/HostScheduledRuns.ts \
++            packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts \
++            packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts \
++            packages/legacy-agent-host/src/composition/readTeamActivity.ts \
++            packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts \
++            packages/legacy-agent-host/src/composition/scheduledRunProjection.ts \
++            packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts \
++            packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts \
++            packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts \
++            packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts \
++            packages/legacy-agent-host/src/runtime/RuntimeOwner.ts \
++            packages/legacy-agent-host/src/runtime/activityContracts.ts \
++            packages/legacy-agent-host/src/runtime/normalizeActivity.ts \
++            packages/legacy-agent-host/src/runtime/providerActivityContracts.ts \
++            packages/legacy-agent-host/tests/captured-claude-process.test.ts \
++            packages/legacy-agent-host/tests/codex-member-provider.test.ts \
++            packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts \
++            packages/legacy-agent-host/tests/management-model-probe.test.ts \
++            packages/legacy-agent-host/tests/member-process-stderr.test.ts \
++            packages/legacy-agent-host/tests/member-provider-authority.test.ts \
++            packages/legacy-agent-host/tests/native-claude-host.native.ts \
++            packages/legacy-agent-host/tests/native-codex-team.native.ts \
++            packages/legacy-agent-host/tests/owned-process-facade.test.ts \
++            packages/legacy-agent-host/tests/runtime-activity.test.ts \
++            packages/legacy-agent-host/tests/runtime-team-host.test.ts \
++            packages/legacy-agent-host/tests/scheduled-run-host.test.ts \
++            packages/legacy-agent-host/tests/team-activity-read.test.ts \
++            scripts/legacy-agent-host/desktop-activity-ui-smoke.ts \
++            src/features/agent-backend/contracts/operations.ts \
++            src/features/agent-backend/main/adapters/output/projectBackendResult.ts \
++            src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts \
++            src/features/agent-backend/renderer/createHostTaskActivityApi.ts \
++            src/renderer/components/team/ClaudeLogsPanel.tsx \
++            src/renderer/components/team/ClaudeLogsSection.tsx \
++            src/renderer/components/team/members/HostMemberActivityLog.tsx \
++            src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx \
++            src/renderer/components/team/members/MemberLogsTab.tsx \
++            src/shared/types/teamActivity.ts \
++            src/shared/utils/diagnosticsRedaction.ts \
++            src/shared/utils/redactDiagnosticAssignments.ts \
++            src/shared/utils/runtimeDiagnosticText.ts \
++            test/features/agent-backend/hostTaskActivity.test.ts \
++            test/renderer/components/team/ClaudeLogsSection.test.ts \
++            test/renderer/components/team/members/MemberLogsPolling.test.ts \
++            test/renderer/components/team/members/hostLogStatsTabs.test.tsx \
++            test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx \
++            tools/owned-process-broker/fixtures/claudeProviderPeer.mjs \
++            tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \
++            tools/owned-process-broker/nativeDebugServiceScenario.ts
+           pnpm typecheck:workspace
+           node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
+           pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
+--- a/packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts
+@@ -217,7 +217,7 @@
+         return challenge ? { status: 'unavailable', reason: 'native-rejected' }
+           : { status: 'incompatible', reason: 'challenge-failed' };
+       return undefined; // Unknown/cancelled/foreign/expired is not a warning.
+-    } else if (event.kind !== 'usage') return undefined;
++    } else if (event.kind !== 'usage' && event.kind !== 'thinking') return undefined;
+   }
+   return undefined;
+ }
+--- a/packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts
+@@ -6,6 +6,7 @@
+ import { ClaudeSubagentLogProjection } from './ClaudeSubagentLogProjection.js';
+ import { codexByteTransport } from './codexByteTransport.js';
+ import { codexExternalMcpPolicy } from './codexMcpPolicy.js';
++import { observeMemberProcessStderr } from './observeMemberProcessStderr.js';
+ import { readCodexMcpCatalog } from './readCodexMcpCatalog.js';
+ import type { ClaudeConfig, ClaudeSubagentPort } from '@agent-teams/provider-implementations/claude';
+ import type { DriverFactory, OpenConfig, Session } from '@agent-teams/provider-session-contracts';
+@@ -14,6 +15,7 @@
+ import type { RuntimeBinding } from '../../runtime/contracts.js';
+ import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
+ import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
++import type { RuntimeProcessOutput } from '../../runtime/providerActivityContracts.js';
+ 
+ export interface ScheduledRunProviderContext {
+   profile: RuntimeMemberProfile;
+@@ -24,6 +26,7 @@
+   processCustody?: ProcessCustody;
+   retainedWindowsLaunch?: HostWindowsLaunch;
+   processOrigin?: RuntimeSourceProcessOrigin;
++  observeProcessOutput?: (observation: RuntimeProcessOutput) => void;
+   isCurrent(): boolean;
+   onProgress(): void;
+ }
+@@ -79,7 +82,11 @@
+       mcpServers: externalMcp,
+       requiredTools: {}, limits: { ...profile.limits }, probe: async () => current(),
+       sessionExists: async () => false,
+-      custody: { launch: custody.launch, confirmStopped: () => custody.confirmStopped() },
++      custody: { launch: value => {
++        const child = custody.launch(value);
++        observeMemberProcessStderr(child, context, value.args);
++        return child;
++      }, confirmStopped: () => custody.confirmStopped() },
+     };
+     factory = createClaudeDriverFactory({ capabilities: ['session.conversation', ...(context.subagents ? ['session.subagents'] : [])],
+       resolveConfiguration: async value => {
+@@ -102,9 +109,10 @@
+         if (allocated || !selected(value) || !(await verifyMcpCatalog())) return undefined;
+         if (!selected(value)) return undefined;
+         allocated = true;
+-        const child = custody.launch({ command: profile.executable.path, cwd: profile.cwd,
+-          args: [...(policy ? codexMcpPolicyArgs(policy) : []), 'app-server', '--listen', 'stdio://',
+-            ...captureCodexExtraArgs(profile.extraArgs)] });
++        const args = [...(policy ? codexMcpPolicyArgs(policy) : []), 'app-server', '--listen', 'stdio://',
++          ...captureCodexExtraArgs(profile.extraArgs)];
++        const child = custody.launch({ command: profile.executable.path, cwd: profile.cwd, args });
++        observeMemberProcessStderr(child, context, args);
+         return {
+           binding: { tenantId: value.tenantId, projectId: value.projectId,
+             sessionId: value.sessionId, generation: value.generation },
+--- a/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
++++ b/packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts
+@@ -12,7 +12,7 @@
+ const privateName = (name: string) => /api[_-]?key|auth|token|secret|password|credential|cookie|private[_-]?key/i.test(name);
+ const normalize = (value: string) => stripRuntimeDiagnosticAnsi(value).replace(/\0/g, '\uFFFD');
+ type StderrContext = Pick<MemberProviderContext, 'observeProcessOutput'> & {
+-  endpoint: Pick<MemberProviderContext['endpoint'], 'bearerToken'> & Partial<Pick<MemberProviderContext['endpoint'], 'url'>>;
++  endpoint?: Pick<MemberProviderContext['endpoint'], 'bearerToken'> & Partial<Pick<MemberProviderContext['endpoint'], 'url'>>;
+   profile: Pick<MemberProviderContext['profile'], 'environment' | 'capturedMcpServers'>;
+ };
+ 
+@@ -23,7 +23,8 @@
+ }
+ 
+ function privateValues(context: StderrContext, args: readonly string[]): string[] {
+-  const values = [context.endpoint.bearerToken, ...(context.endpoint.url ? [context.endpoint.url] : [])];
++  const values = context.endpoint
++    ? [context.endpoint.bearerToken, ...(context.endpoint.url ? [context.endpoint.url] : [])] : [];
+   const assignments = (source: Readonly<Record<string, string>> | undefined): void => {
+     for (const [key, value] of Object.entries(source ?? {})) {
+       if (privateName(key)) values.push(value);
+--- a/packages/legacy-agent-host/src/composition/HostScheduledRuns.ts
++++ b/packages/legacy-agent-host/src/composition/HostScheduledRuns.ts
+@@ -76,6 +76,27 @@
+         const profile = loadCapturedRuntimeMcpRecipe(entry.store, entry.capture.input.runId, base, reference);
+         if (Buffer.byteLength(entry.capture.input.config.prompt) > profile.limits.inputBytes)
+           throw new RuntimeOwnerError('invalid');
++        const binding = structuredClone(entry.binding), config = structuredClone(request),
++          capture = structuredClone(entry.capture), team = entry.team, owner = team.owner,
++          principalId = options.profile.principalId,
++          original = { selection: runtimeDigest({ binding: entry.binding, config: entry.config, capture: entry.capture }),
++            openConfig: runtimeDigest(config), profile: runtimeDigest(profile),
++            base: runtimeDigest(base), owner: runtimeDigest(options.profile.owner) };
++        const assertProcessSource = () => {
++          options.assertWriter();
++          // Ordinary cancellation keeps the original closing source; Host seal revokes its observation grant.
++          if (this.sealed || this.active.get(runtimeDigest(binding)) !== entry || entry.team !== team ||
++              team.owner !== owner || options.profile.principalId !== principalId ||
++              runtimeDigest(options.profile.owner) !== original.owner ||
++              runtimeDigest({ binding: entry.binding, config: entry.config, capture: entry.capture }) !== original.selection ||
++              runtimeDigest(request) !== original.openConfig || runtimeDigest(profile) !== original.profile)
++            throw new RuntimeOwnerError('forbidden');
++          owner.withLaunchAuthority(principalId, 'control', revision => {
++            if (revision !== capture.authorityRevision ||
++                runtimeDigest(scheduledRunProfile(options.profile, team, capture, options.sources)) !== original.base ||
++                !capturedMcpSourceCurrent(profile)) throw new RuntimeOwnerError('forbidden');
++          });
++        };
+         const subagents = createCapturedClaudeSubagents({ profile, binding: entry.binding, isCurrent: current,
+           allowsInput: intent => current() && intent.inputId === entry.capture.input.runId,
+           readRuntime: binding => this.runtime.readCapturedSession(binding),
+@@ -87,6 +108,12 @@
+             { disallowedTools: [...entry.capture.input.config.disallowedTools] } : {}),
+           ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+           ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
++          observeProcessOutput: observation => {
++            try {
++              assertProcessSource();
++              this.runtime.observeProcessOutput(binding, config, observation, assertProcessSource);
++            } catch { /* Diagnostics never replace the original scheduled process outcome. */ }
++          },
+           isCurrent: () => current() && capturedMcpSourceCurrent(profile),
+           onProgress: () => { setImmediate(() => entry.wake?.()); } });
+         entry.provider = provider; // Retain physical custody before awaiting native open/readiness.
+--- a/packages/legacy-agent-host/src/composition/scheduledRunProjection.ts
++++ b/packages/legacy-agent-host/src/composition/scheduledRunProjection.ts
+@@ -15,13 +15,16 @@
+   if (!released) return { runId: capture.input.runId, phase, cleanup: 'unresolved' };
+   const children = new Map<string, RuntimeActivityEvent & { agentId: string }>();
+   for (const event of activity.latest.subagents) {
+-    const { fact, childId, phase } = event.data;
++    const { fact, childId, parentToolRef, phase } = event.data;
+     if (phase !== 'fact' || typeof childId !== 'string' || !fact || typeof fact !== 'object' ||
+-      Array.isArray(fact) || !['text', 'tool', 'tool-result'].includes(String(fact.kind))) continue;
+-    const key = JSON.stringify([childId, fact.kind, fact.messageRef, fact.block, fact.toolRef]);
++      Array.isArray(fact) || !['text', 'thinking', 'tool', 'tool-result'].includes(String(fact.kind))) continue;
++    const key = JSON.stringify([event.inputId, event.operationRef, childId, parentToolRef,
++      fact.kind, fact.messageRef, fact.block, fact.toolRef]);
++    if (fact.kind === 'thinking' && fact.phase !== 'complete' && children.get(key)?.data.phase === 'complete') continue;
+     children.set(key, { ...event, data: { ...fact, kind: String(fact.kind) }, agentId: childId });
+   }
+   const events: (RuntimeActivityEvent & { agentId?: string })[] = [...activity.latest.text,
++    ...(activity.logProjection?.thinking ?? []),
+     ...activity.latest.tools,
+     ...children.values()];
+   events.sort((a, b) => a.sequence - b.sequence);
+@@ -31,6 +34,7 @@
+   for (const event of events) {
+     const value = event.data;
+     const block = value.kind === 'text' ? { type: 'text', text: value.text }
++      : value.kind === 'thinking' ? { type: 'thinking', thinking: value.text }
+       : value.kind === 'tool' ? { type: 'tool_use', id: value.toolRef, name: value.name, input: value.input }
+       : { type: 'tool_result', tool_use_id: value.toolRef, content: value.content, is_error: value.isError };
+     const line = JSON.stringify({ type: value.kind === 'tool-result' ? 'user' : 'assistant',
+@@ -51,10 +55,18 @@
+       ...(usage.inputTokens === undefined ? {} : { input_tokens: usage.inputTokens }),
+       ...(usage.outputTokens === undefined ? {} : { output_tokens: usage.outputTokens }),
+     } } : {}) }));
++  const diagnostics = (activity.logProjection?.stderr ?? [])
++    .flatMap(event => typeof event.data.text === 'string' ? [event.data.text] : []).join('\n');
++  const incomplete = activity.gap || truncated || !durationKnown || activity.logProjection?.truncated ||
++    Buffer.byteLength(diagnostics) > 16 * 1024;
++  const warning = incomplete
++    ? (diagnostics ? '\n' : '') + 'Some retained runtime log entries are unavailable.' : '';
++  const stderr = new TextDecoder().decode(Buffer.from(diagnostics).subarray(0, 16 * 1024 - Buffer.byteLength(warning)),
++    { stream: true }) + warning;
+   return { runId: capture.input.runId, phase, cleanup: 'confirmed', result: {
+     exitCode: terminal?.phase === 'terminal' ? terminal.terminal === 'succeeded' ? 0 : 1 : null,
+     stdout: lines.join('\n'),
+-    stderr: activity.gap || truncated || !durationKnown ? 'Some retained runtime log entries are unavailable.' : '',
++    stderr,
+     summary: (text || (terminal?.phase === 'terminal' ? `Scheduled run ${terminal.terminal}` :
+       'Scheduled run stopped without a confirmed model result')).slice(0, 500),
+     durationMs,
+--- a/packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts
++++ b/packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts
+@@ -200,14 +200,25 @@
+         interactions: [],
+       };
+       const text = new Map<string, RuntimeActivityEvent>(),
++        thinking = new Map<string, RuntimeActivityEvent>(),
+         tools = new Map<string, RuntimeActivityEvent>(),
+         usage = new Map<string, RuntimeActivityEvent>(),
+         interactions = new Map<string, RuntimeActivityEvent>();
++      const logProjection: NonNullable<RuntimeActivitySnapshot['logProjection']> = {
++        thinking: [], stderr: [], truncated: false,
++      };
+       for (const event of feed.events) {
+         const data = event.data;
+         if (data.kind === 'subagent') latest.subagents.push(event);
+         else if (data.kind === 'text')
+           text.set(`${event.operationRef}:${String(data.messageRef)}:${String(data.block)}`, event);
++        else if (data.kind === 'thinking') {
++          const key = JSON.stringify([event.inputId, event.operationRef, data.messageRef, data.block]);
++          if (thinking.get(key)?.data.phase !== 'complete' || data.phase === 'complete')
++            thinking.set(key, event);
++        } else if (data.kind === 'process-output' && data.stream === 'stderr' &&
++            event.inputId === undefined && event.operationRef === undefined)
++          logProjection.stderr.push(event);
+         else if (data.kind === 'tool' || data.kind === 'tool-result')
+           tools.set(`${event.operationRef}:${String(data.toolRef)}:${data.kind}`, event);
+         else if (data.kind === 'usage') usage.set(event.operationRef ?? 'session', event);
+@@ -218,6 +229,7 @@
+       latest.tools = [...tools.values()];
+       latest.usage = [...usage.values()];
+       latest.interactions = [...interactions.values()];
++      logProjection.thinking = [...thinking.values()].sort((a, b) => a.sequence - b.sequence);
+       const state = record ? this.state(record) : null;
+       let bytes = 0,
+         partial = false;
+@@ -234,12 +246,21 @@
+           })
+           .reverse();
+       }
++      // Auxiliary run logs use only remaining space; trimming them cannot invalidate Stats.
++      for (const group of ['thinking', 'stderr'] as const) {
++        logProjection[group] = logProjection[group].filter(event => {
++          bytes += Buffer.byteLength(JSON.stringify(event));
++          if (bytes > 256 * 1024) { logProjection.truncated = true; return false; }
++          return true;
++        });
++      }
+       return {
+         ...feed,
+         ...(lastObservedAt === undefined ? {} : { lastObservedAt }),
+         events: [],
+         state,
+         latest,
++        logProjection,
+         ...((state?.partial || partial) && !feed.gap
+           ? { gap: { reason: 'retention' as const } }
+           : {}),
+--- a/packages/legacy-agent-host/src/runtime/activityContracts.ts
++++ b/packages/legacy-agent-host/src/runtime/activityContracts.ts
+@@ -121,4 +121,10 @@
+     subagents: RuntimeActivityEvent[];
+     interactions: RuntimeActivityEvent[];
+   };
++  /** Derived during the same bounded read; omitted by the outward snapshot mapper. */
++  logProjection?: {
++    thinking: RuntimeActivityEvent[];
++    stderr: RuntimeActivityEvent[];
++    truncated: boolean;
++  };
+ }
+--- a/packages/legacy-agent-host/tests/captured-claude-process.test.ts
++++ b/packages/legacy-agent-host/tests/captured-claude-process.test.ts
+@@ -21,6 +21,7 @@
+ 
+ import { CapturedProcess } from '../dist/adapters/providers/CapturedProcess.js';
+ import { createClaudeMemberProvider } from '../dist/adapters/providers/ClaudeMemberProvider.js';
++import { createScheduledRunProvider } from '../dist/adapters/providers/ScheduledRunProvider.js';
+ import { createFilesystemTeamOwner } from '../dist/adapters/team/createFilesystemTeamOwner.js';
+ import { startTeamMcpEndpoint } from '../dist/mcp/endpoint.js';
+ import { observeMemberProcessStderr } from '../dist/adapters/providers/observeMemberProcessStderr.js';
+@@ -147,6 +148,57 @@
+     } finally { await rm(root, { recursive: true, force: true }); }
+   });
+ 
++for (const providerName of ['claude', 'codex'] as const) test(
++  `original standalone ${providerName} child retains startup stderr and its closing tail without an endpoint`,
++  { skip: process.platform === 'win32' }, async () => {
++    const { root, profile } = await setup(`#!${process.execPath}
++const { writeSync } = require('node:fs');
++writeSync(2, 'TEST standalone startup diagnostic\\n');
++writeSync(1, 'TEST_STANDALONE_PROTOCOL_ONLY\\n');
++writeSync(2, process.env.TEST_SECRET_KEY + '\\n');
++writeSync(2, 'TEST standalone closing tail');
++process.exit(7);
++`);
++    profile.environment.TEST_SECRET_KEY = 'TEST_STANDALONE_PRIVATE_CANARY';
++    const selected: RuntimeMemberProfile = providerName === 'claude' ? profile : {
++      provider: 'codex', protocolRevision: '0.162.0',
++      teamId: profile.teamId, memberId: profile.memberId, principalId: profile.principalId,
++      sessionId: profile.sessionId, generation: profile.generation, configRevision: profile.configRevision,
++      cwd: profile.cwd, model: profile.model, accountBinding: profile.accountBinding,
++      executable: profile.executable, limits: profile.limits,
++      environment: { ...profile.environment, CODEX_HOME: root },
++      nativeOptions: { approvalPolicy: 'never', sandbox: 'read-only' },
++    };
++    const request = { tenantId: 'TEST-tenant', projectId: 'TEST-project',
++      sessionId: selected.sessionId, generation: selected.generation, configRevision: selected.configRevision,
++      requiredCapabilities: providerName === 'claude' ? ['session.conversation'] : ['text', 'tools'] };
++    const observations: RuntimeProcessOutput[] = [];
++    let progress = 0;
++    const context = { profile: selected, request,
++      binding: { backendId: 'TEST-backend', teamId: selected.teamId, runId: 'scheduled-standalone',
++        memberId: 'TEST-scheduled-member', generation: 'TEST-occurrence' },
++      isCurrent: () => true, onProgress: () => { progress++; },
++      observeProcessOutput: (value: RuntimeProcessOutput) => { observations.push(value); },
++    };
++    assert.equal('endpoint' in context, false);
++    const provider = createScheduledRunProvider(context);
++    try {
++      await assert.rejects(provider.factory.open(request), /Scheduled native session unavailable/);
++      assert.equal(await provider.cleanup(), true, 'the original finite child is physically stopped');
++      assert.deepEqual(observations, [
++        { kind: 'process-output', stream: 'stderr', text: 'TEST standalone startup diagnostic' },
++        { kind: 'process-output', stream: 'stderr', text: '[redacted]' },
++        { kind: 'process-output', stream: 'stderr', text: 'TEST standalone closing tail' },
++      ]);
++      assert.equal(progress, 0, 'startup diagnostics do not synthesize Session observations');
++    } finally {
++      provider.seal();
++      assert.equal(await provider.cleanup(), true);
++      await rm(root, { recursive: true, force: true });
++    }
++  }
++);
++
+ test('captured native executable is pinned again at launch and sealing forbids late allocation', async () => {
+   const { root, profile, request } = await setup('#!/bin/sh\nexit 0\n');
+   try {
+--- a/packages/legacy-agent-host/tests/management-model-probe.test.ts
++++ b/packages/legacy-agent-host/tests/management-model-probe.test.ts
+@@ -306,6 +306,12 @@
+     await syntheticLocalReadiness(mode);
+ });
+ 
++test('typed Thinking cannot replace the original coordination answer or bypass provenance and budgets', async () => {
++  for (const mode of ['valid-thinking', 'thinking-only', 'thinking-foreign-session',
++    'thinking-foreign-input', 'thinking-foreign-operation', 'thinking-oversized', 'thinking-count'] as const)
++    await syntheticCoordination(mode);
++});
++
+ test('cancel retains auth namespace until physical close and a late model response cannot publish success', async (t) => {
+   const f = fixture({ blockClose: true });
+   t.after(f.cleanup);
+@@ -512,7 +518,9 @@
+ 
+ type SyntheticCoordinationMode = 'valid' | 'text-json' | 'second-first' | 'wrong-nonce' |
+   'duplicate' | 'duplicate-message' | 'wrong-message' | 'result-before-tool' |
+-  'foreign-session' | 'foreign-input' | 'revoked' | 'cancelled' | 'foreign-token';
++  'foreign-session' | 'foreign-input' | 'revoked' | 'cancelled' | 'foreign-token' |
++  'valid-thinking' | 'thinking-only' | 'thinking-foreign-session' | 'thinking-foreign-input' |
++  'thinking-foreign-operation' | 'thinking-oversized' | 'thinking-count';
+ 
+ /** Explicit synthetic Session events exercise the proof gate; this is not native qualification. */
+ async function syntheticCoordination(mode: SyntheticCoordinationMode) {
+@@ -557,6 +565,23 @@
+         assert.ok(submitted);
+         const bound = { sessionRef: mode === 'foreign-session' ? 'foreign' : driver.sessionRef,
+           inputId: mode === 'foreign-input' ? 'foreign' : submitted.inputId, operationRef: submitted.operationRef };
++        if (mode === 'valid-thinking' || mode.startsWith('thinking-')) {
++          const count = mode === 'thinking-count' ? 129 : 1;
++          const thinking: Event = {
++            ...bound,
++            sessionRef: mode === 'thinking-foreign-session' ? 'foreign' : bound.sessionRef,
++            inputId: mode === 'thinking-foreign-input' ? 'foreign' : bound.inputId,
++            operationRef: mode === 'thinking-foreign-operation' ? 'foreign' : bound.operationRef,
++            kind: 'thinking', messageRef: 't', block: 0, phase: 'snapshot',
++            text: mode === 'thinking-oversized' ? 'x'.repeat(32768)
++              : mode === 'thinking-count' ? '' : 'TEST reasoning',
++          };
++          const bytes = Buffer.byteLength(JSON.stringify(thinking));
++          if (mode === 'thinking-count') assert.ok(bytes * count < 32768, 'event-count refusal must not be a byte-budget refusal');
++          if (mode === 'thinking-oversized') assert.ok(bytes > 32768);
++          for (let index = 0; index < count; index++) yield thinking;
++          if (mode === 'valid-thinking') yield { ...thinking, phase: 'complete' };
++        }
+         if (mode === 'text-json') {
+           yield { ...bound, kind: 'text', messageRef: 'message-text', block: 0, phase: 'complete',
+             text: '{"tool":"coordination_task_briefing","then":"coordination_message_send"}' };
+@@ -590,7 +615,8 @@
+         const second = await client.callTool({ name: 'message_send', arguments: input });
+         yield { ...bound, kind: 'tool-result', toolRef: secondRef,
+           isError: second.isError === true, content: second.content };
+-        yield { ...bound, kind: 'text', messageRef: 'message-3', block: 0, phase: 'complete', text: 'OK' };
++        if (mode !== 'thinking-only')
++          yield { ...bound, kind: 'text', messageRef: 'message-3', block: 0, phase: 'complete', text: 'OK' };
+         yield { ...bound, kind: 'result', outcome: 'succeeded' };
+       },
+       respondToInteraction() { throw new Error('TEST no permission authority in inert coordination'); },
+@@ -602,9 +628,11 @@
+     const work = runNativeCoordination(driver, 'TEST-native-session', endpoint, 'e'.repeat(64),
+       abort.signal, deadline, () => current);
+     if (mode === 'revoked' || mode === 'cancelled') await assert.rejects(work);
+-    else assert.equal(await work, mode === 'valid');
++    else assert.equal(await work, mode === 'valid' || mode === 'valid-thinking');
+     assert.equal(submissions, 1);
+-    assert.equal(endpoint.completed('TEST-native-session'), mode === 'valid');
++    assert.equal(endpoint.completed('TEST-native-session'),
++      mode === 'valid' || mode === 'valid-thinking' || mode === 'thinking-only',
++      'completed MCP effects do not replace the required actual answer');
+     assert.equal(endpoint.completed('TEST-foreign-session'), false);
+   } finally {
+     await client.close();
+--- a/packages/legacy-agent-host/tests/member-process-stderr.test.ts
++++ b/packages/legacy-agent-host/tests/member-process-stderr.test.ts
+@@ -51,6 +51,27 @@
+   assert.equal(f.child.listenerCount('close'), 0);
+ });
+ 
++test('standalone stderr uses selected private values without a Team endpoint', async () => {
++  const f = fixture(), context = {
++    profile: f.context.profile, observeProcessOutput: f.context.observeProcessOutput,
++  };
++  assert.equal('endpoint' in context, false);
++  observeMemberProcessStderr(f.child, context, ['--token', 'TEST_STANDALONE_ARG_CANARY']);
++  const canaries = ['TEST_ENV_FIRST_CANARY', 'TEST_ENV_SECOND_CANARY', 'TEST_HEADER_PRIVATE_CANARY',
++    'TEST_CUSTOM_HEADER_CANARY', 'TEST_MCP_ENV_CANARY', 'TEST_MCP_ARG_CANARY', 'TEST_STANDALONE_ARG_CANARY'];
++  f.child.stderr.write(`TEST standalone startup\n${canaries.join('\n')}\nTEST standalone final tail`);
++  f.child.stdout.write('TEST_STANDALONE_PROTOCOL_CANARY');
++  const ended = once(f.child.stderr, 'end'); f.child.stderr.end(); await ended;
++  f.child.emit('close', 0, null); f.child.stderr.emit('close');
++  const retained = JSON.stringify(f.observations);
++  for (const canary of [...canaries, 'TEST_STANDALONE_PROTOCOL_CANARY'])
++    assert.equal(retained.includes(canary), false, canary);
++  assert.deepEqual(f.observations[0], { kind: 'process-output', stream: 'stderr', text: 'TEST standalone startup' });
++  assert.deepEqual(f.observations.at(-1), { kind: 'process-output', stream: 'stderr', text: 'TEST standalone final tail' });
++  assert.equal(f.observations.filter(value => value.kind === 'process-output' && value.text === 'TEST standalone final tail').length, 1);
++  assert.equal(f.child.stderr.listenerCount('data'), 0);
++});
++
+ test('invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence', async () => {
+   const f = fixture(); f.attach();
+   f.child.stderr.write(Buffer.from([0x61, 0x00, 0xff, 0x0a, 0xf0, 0x9f]));
+--- a/packages/legacy-agent-host/tests/runtime-activity.test.ts
++++ b/packages/legacy-agent-host/tests/runtime-activity.test.ts
+@@ -1098,3 +1098,89 @@
+   const retained = cold.readActivityFeed(binding(), { ...restored.cursor, sequence: cursor.sequence });
+   assert.deepEqual(retained.events.filter(event => event.data.kind === 'thinking'), thinking);
+ });
++
++test('scheduled log projection is one read of original Thinking identities and unattributed stderr, including cold recovery', async t => {
++  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
++  const cursor = owner.readActivitySnapshot(binding()).cursor;
++  const thought: WithoutSession<Extract<Event, { kind: 'thinking' }>> = {
++    ...attribution, kind: 'thinking', messageRef: 'TEST-same-message', block: 0,
++    text: 'TEST partial', phase: 'snapshot',
++  };
++  session.emit(thought);
++  session.emit({ ...thought, text: 'TEST same thought', phase: 'complete' });
++  session.emit({ ...thought, text: 'TEST stale snapshot' });
++  session.emit({ ...thought, messageRef: 'TEST-other-message', text: 'TEST same thought', phase: 'complete' });
++  session.emit({ ...thought, block: 1, text: 'TEST same thought', phase: 'complete' });
++  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-same-message', block: 0,
++    text: 'TEST original answer', phase: 'complete' });
++  session.emit({ ...attribution, kind: 'result', outcome: 'succeeded' });
++  await tick();
++  await owner.admitDelivery({ binding: binding(), deliveryId: 'TEST-second', inputId: 'TEST-second',
++    messageId: 'TEST-second', content: 'TEST second input' });
++  await owner.dispatchNext(binding());
++  const second = session.submits[1]!;
++  session.emit({ ...thought, inputId: second.inputId, operationRef: second.operationRef,
++    text: 'TEST same thought', phase: 'complete' });
++  await tick();
++  const config = owner.readSession(binding()).record!.config!;
++  for (let index = 0; index < 2; index++) owner.observeProcessOutput(binding(), config,
++    { kind: 'process-output', stream: 'stderr', text: 'TEST same stderr' }, () => {});
++  owner.observeProviderActivity(binding(), session.sessionRef, { inputId: second.inputId,
++    operationRef: second.operationRef, data: { kind: 'subagent', childId: 'TEST-child',
++      parentToolRef: 'TEST-parent', phase: 'fact', fact: { kind: 'thinking',
++        messageRef: 'TEST-child-message', block: 0, text: 'TEST child thought', phase: 'complete' } } });
++  const retained = await readFile(f.path(), 'utf8');
++  let reads = 0;
++  const read = f.store.readActivity.bind(f.store);
++  const spy = t.mock.method(f.store, 'readActivity', (target: RuntimeBinding) => { reads++; return read(target); });
++  const snapshot = owner.readActivitySnapshot(binding());
++  assert.equal(reads, 1, 'the auxiliary groups reuse the original snapshot journal read');
++  spy.mock.restore();
++  const projected = snapshot.logProjection!;
++  assert.equal(projected.truncated, false);
++  assert.equal(projected.thinking.length, 4, 'equal bodies from distinct messages, blocks and inputs stay distinct');
++  assert.ok(projected.thinking.every(event => event.data.phase === 'complete' && event.data.text === 'TEST same thought'));
++  assert.equal(new Set(projected.thinking.map(event => event.inputId)).size, 2);
++  assert.equal(projected.stderr.length, 2, 'separate original stderr facts are not deduplicated by body');
++  assert.ok(projected.stderr.every(event => event.inputId === undefined && event.operationRef === undefined));
++  const feed = owner.readActivityFeed(binding(), cursor);
++  assert.deepEqual(projected.thinking, feed.events.filter(event =>
++    event.data.kind === 'thinking' && event.data.phase === 'complete'));
++  assert.deepEqual(projected.stderr, feed.events.filter(event => event.data.kind === 'process-output'));
++  assert.equal(snapshot.latest.subagents.length, 1, 'child Thinking stays in its original child projection');
++  assert.deepEqual(snapshot.latest.text.map(event => event.data.text), ['TEST original answer']);
++  assert.equal(JSON.stringify(owner.readConversation(binding(), 'messages')).includes('thought'), false);
++  const cold = f.make('TEST-cold').readActivitySnapshot(binding());
++  assert.deepEqual(cold.logProjection, projected);
++  assert.equal(cold.gap?.reason, 'incarnation');
++  assert.equal(await readFile(f.path(), 'utf8'), retained, 'hot/cold derived reads never rewrite the journal');
++  assert.equal(f.sessions.length, 1); assert.equal(session.submits.length, 2);
++});
++
++test('auxiliary log trimming shares the existing byte budget without changing original groups or their completeness', async t => {
++  const f = await setup(t), owner = f.make(), { session, attribution } = await f.open(owner);
++  session.emit({ ...attribution, kind: 'text', messageRef: 'TEST-answer', block: 0,
++    text: 'TEST answer', phase: 'complete' });
++  session.emit({ ...attribution, kind: 'usage', inputTokens: 5, outputTokens: 2, cumulativeCostUsd: 0.25 });
++  await tick();
++  const original = owner.readActivitySnapshot(binding());
++  assert.equal(original.gap, undefined);
++  for (let index = 0; index < 20; index++) session.emit({ ...attribution, kind: 'thinking',
++    messageRef: 'TEST-thought-' + index, block: 0, phase: 'complete', text: 'x'.repeat(16 * 1024) });
++  await tick();
++  owner.observeProcessOutput(binding(), owner.readSession(binding()).record!.config!,
++    { kind: 'process-output', stream: 'stderr', text: 'TEST bounded stderr' }, () => {});
++  const snapshot = owner.readActivitySnapshot(binding());
++  assert.equal(snapshot.retainedFrom, original.retainedFrom, 'the journal itself has not lost any events');
++  assert.equal(snapshot.logProjection?.truncated, true);
++  assert.ok(snapshot.logProjection!.thinking.length > 0 && snapshot.logProjection!.thinking.length < 20);
++  assert.deepEqual(snapshot.latest, original.latest, 'old groups retain their original priority and exact observations');
++  assert.equal(snapshot.gap, undefined, 'auxiliary display loss must not become a global Stats gap');
++  assert.deepEqual(snapshot.state, original.state);
++  const events = [...snapshot.latest.usage, ...snapshot.latest.interactions, ...snapshot.latest.tools,
++    ...snapshot.latest.text, ...snapshot.latest.subagents, ...snapshot.logProjection!.thinking,
++    ...snapshot.logProjection!.stderr];
++  assert.ok(events.reduce((bytes, event) => bytes + Buffer.byteLength(JSON.stringify(event)), 0) <= 256 * 1024);
++  assert.ok((await stat(f.path())).size < f.store.activityLimits.maxBytes);
++  assert.equal(session.submits.length, 1);
++});
+--- a/packages/legacy-agent-host/tests/scheduled-run-host.test.ts
++++ b/packages/legacy-agent-host/tests/scheduled-run-host.test.ts
+@@ -1,6 +1,6 @@
+ import assert from 'node:assert/strict';
+ import { createHash, randomUUID } from 'node:crypto';
+-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
++import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+ import { tmpdir } from 'node:os';
+ import { dirname, join } from 'node:path';
+ import { fileURLToPath, pathToFileURL } from 'node:url';
+@@ -18,6 +18,7 @@
+ import type { TestContext } from 'node:test';
+ 
+ const tick = () => new Promise<void>(resolve => setImmediate(resolve));
++const logWarning = 'Some retained runtime log entries are unavailable.';
+ async function until(predicate: () => boolean | Promise<boolean>) {
+   const deadline = Date.now() + 5000;
+   while (!(await predicate())) { assert.ok(Date.now() < deadline, 'original operation must settle'); await tick(); }
+@@ -55,10 +56,13 @@
+     this.closes++; this.ended = true; this.wake?.();
+     return { logicallyClosed: true, cleanup: this.unknown ? 'unknown' : 'confirmed' };
+   };
++  emit(...events: Event[]) {
++    this.events.push(...events); this.wake?.(); delete this.wake;
++  }
+   finish() {
+     const input = this.inputs[0]; assert.ok(input);
+     const identity = { sessionRef: this.sessionRef, inputId: input.inputId, operationRef: input.operationRef };
+-    this.events.push(
++    this.emit(
+       { ...identity, kind: 'tool', messageRef: 'TEST-tool-message', toolRef: 'TEST-scheduled-tool',
+         name: 'Bash', input: { command: 'TEST command' } },
+       { ...identity, kind: 'tool-result', toolRef: 'TEST-scheduled-tool', content: 'TEST tool result', isError: false },
+@@ -66,12 +70,16 @@
+         phase: 'complete', text: 'TEST finite model result' },
+       { ...identity, kind: 'usage', inputTokens: 7, outputTokens: 3, cumulativeCostUsd: 0.01 },
+       { ...identity, kind: 'result', outcome: 'succeeded' });
+-    this.wake?.(); delete this.wake;
+   }
+ }
+ 
+-async function fixture(t: TestContext, options: { blockOpen?: boolean; unknown?: boolean; physicalUnknown?: boolean } = {}) {
++async function fixture(t: TestContext, options: {
++  blockOpen?: boolean; unknown?: boolean; physicalUnknown?: boolean; failOpen?: boolean; separateWorkspace?: boolean;
++  onOpen?(context: ScheduledRunProviderContext, root: string): void;
++} = {}) {
+   const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-scheduled-host-')));
++  const cwd = options.separateWorkspace ? join(root, 'workspace') : root;
++  if (cwd !== root) mkdirSync(cwd);
+   const teamBinding = { backendId: 'TEST-backend', teamId: 'TEST-team', teamName: 'test-scheduled' };
+   const profile: TeamHostProfile = { schemaVersion: 1, principalId: 'human',
+     owner: { ownerId: teamBinding.backendId, revision: '1', storageRoot: root, profileId: 'TEST-profile',
+@@ -79,13 +87,13 @@
+     teams: [{ binding: teamBinding,
+       scope: { projectId: 'TEST-project', workspaceId: 'TEST-project', teamId: teamBinding.teamId,
+         runId: 'TEST-team-run', memberId: 'human', generation: '1' },
+-      savedSettings: { cwd: root, providerId: 'anthropic', prompt: 'TEST saved team prompt' },
++      savedSettings: { cwd, providerId: 'anthropic', prompt: 'TEST saved team prompt' },
+       members: [{ memberId: 'lead', name: 'team-lead', role: 'lead',
+         delivery: { ...teamBinding, runId: 'TEST-team-run', memberId: 'lead', generation: '1' } }],
+       grants: [{ principalId: 'human', memberName: 'user', permissions: ['read', 'admin', 'task.write', 'message.write'] },
+         { principalId: 'lead-principal', memberName: 'team-lead', permissions: ['read', 'task.write', 'message.write'] }] }],
+     runtime: { members: [{ provider: 'claude', teamId: teamBinding.teamId, memberId: 'lead', principalId: 'lead-principal',
+-      sessionId: 'PRIVATE-team-session', generation: 1, configRevision: 'PRIVATE-recipe', cwd: root,
++      sessionId: 'PRIVATE-team-session', generation: 1, configRevision: 'PRIVATE-recipe', cwd,
+       model: 'PRIVATE-default-model', accountBinding: 'PRIVATE-account',
+       executable: { path: join(root, 'TEST-no-native-execution'), sha256: 'c'.repeat(64) },
+       environment: { HOME: root, CLAUDE_CONFIG_DIR: root, PATH: '/TEST/no-native-execution', TEST_TOKEN: 'PRIVATE-token' },
+@@ -105,7 +113,9 @@
+       sessions.push(session);
+       return { factory: { async open() {
+         opens++; order.push('open-entered');
++        options.onOpen?.(context, root);
+         if (options.blockOpen) await new Promise<void>(resolve => { release = resolve; });
++        if (options.failOpen) throw new Error('TEST original startup failed');
+         order.push('open-returned');
+         return { driver: session, capabilities: [...context.request.requiredCapabilities] };
+       } }, seal() { order.push('provider-sealed'); }, async cleanup() {
+@@ -140,7 +150,7 @@
+     raw(method, { commandId, binding: target, payload });
+   const roster = await rpc('team.roster.read', {}) as unknown as { value: { revision: string } };
+   const request = (runId: string, scheduleId = 'TEST-schedule'): ScheduledRunInput => ({ runId, scheduleId, expectedRosterRevision: roster.value.revision,
+-    config: { cwd: root, prompt: 'TEST standalone prompt', providerId: 'anthropic', model: 'TEST-selected-model',
++    config: { cwd, prompt: 'TEST standalone prompt', providerId: 'anthropic', model: 'TEST-selected-model',
+       effort: 'low', resolvedFastMode: false, skipPermissions: false, allowedTools: ['Read'], disallowedTools: ['Bash'] },
+     maxTurns: 2, maxBudgetUsd: 0.5 });
+   const read = async (runId: string, scheduleId = 'TEST-schedule') => {
+@@ -149,7 +159,9 @@
+   };
+   return { root, profile, binding, contexts, sessions, order, opens: () => opens, rpc, read, request,
+     confirmOriginalCleanup() { cleanupUnknown = false; },
+-    async restart() { assert.equal((await host.dispose()).cleanup, 'completed'); host = open(); await raw('host.handshake', { protocolVersion: 1 }); },
++    async restart(cleanup: 'completed' | 'failed' = 'completed') {
++      assert.equal((await host.dispose()).cleanup, cleanup); host = open(); await raw('host.handshake', { protocolVersion: 1 });
++    },
+     dispose: () => host.dispose() };
+ }
+ 
+@@ -170,12 +182,19 @@
+   assert.equal('endpoint' in context, false); assert.equal('connection' in context, false);
+   assert.equal(f.sessions[0]!.inputs[0]!.content, request.config.prompt);
+   const nativeInput = f.sessions[0]!.inputs[0]!;
+-  const authorization = { sessionRef: f.sessions[0]!.sessionRef, inputId: nativeInput.inputId,
+-    operationRef: nativeInput.operationRef, parentToolRef: 'TEST-parent-tool', signal: new AbortController().signal };
++  const identity = { sessionRef: f.sessions[0]!.sessionRef, inputId: nativeInput.inputId, operationRef: nativeInput.operationRef };
++  const authorization = { ...identity, parentToolRef: 'TEST-parent-tool', signal: new AbortController().signal };
+   assert.equal(await context.subagents?.authorize(authorization), true);
+   assert.equal(await context.subagents?.authorize({ ...authorization, inputId: 'TEST-foreign' }), false);
+   assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
+   assert.equal(f.opens(), 1);
++  f.sessions[0]!.emit(
++    { ...identity, kind: 'thinking', messageRef: 'TEST-message', block: 1, phase: 'complete', text: 'TEST root **Thinking**' },
++    { ...identity, kind: 'thinking', messageRef: 'TEST-message', block: 1, phase: 'snapshot', text: 'TEST late root snapshot' });
++  assert.ok(context.subagents);
++  for (const [phase, text] of [['complete', 'TEST child **Thinking**'], ['snapshot', 'TEST late child snapshot']] as const)
++    await context.subagents.observe({ ...authorization, childRef: 'TEST-original-child', phase: 'fact',
++      fact: { kind: 'thinking', messageRef: 'TEST-child-message', block: 0, phase, text } });
+   f.sessions[0]!.finish();
+   await until(async () => (await f.read(request.runId))?.phase === 'completed');
+   const terminal = await f.read(request.runId);
+@@ -192,13 +211,26 @@
+   const durationMs = Math.max(0, Date.parse(lastTime) - Date.parse(capture.capturedAt));
+   assert.equal(terminal!.result!.durationMs, durationMs);
+   const logRows = terminal!.result!.stdout.split('\n').map(line =>
+-    JSON.parse(line) as { type?: string; duration_ms?: number; message?: { content?: Record<string, unknown>[] } });
++    JSON.parse(line) as { type?: string; uuid?: string; agentId?: string; duration_ms?: number;
++      message?: { content?: Record<string, unknown>[] } });
+   assert.deepEqual(logRows.filter(row => row.type === 'result').map(row => row.duration_ms), [durationMs]);
+   const blocks = logRows.flatMap(row => row.message?.content ?? []);
+   assert.deepEqual(blocks.filter(block => ['tool_use', 'tool_result'].includes(String(block.type))), [
+     { type: 'tool_use', id: 'TEST-scheduled-tool', name: 'Bash', input: { command: 'TEST command' } },
+     { type: 'tool_result', tool_use_id: 'TEST-scheduled-tool', content: 'TEST tool result', is_error: false },
+   ]);
++  const thoughts = logRows.filter(row => row.message?.content?.[0]?.type === 'thinking');
++  assert.deepEqual(thoughts.map(row => row.message!.content![0]!.thinking).sort(),
++    ['TEST child **Thinking**', 'TEST root **Thinking**']);
++  const retained = runtimeStore.readActivity(context.binding)!.events;
++  const rootThought = retained.find(row => row.data.kind === 'thinking' && row.data.phase === 'complete')!;
++  const childThought = retained.find(row => row.data.kind === 'subagent' && row.data.phase === 'fact' &&
++    row.data.fact && typeof row.data.fact === 'object' && !Array.isArray(row.data.fact) && row.data.fact.phase === 'complete')!;
++  assert.ok(rootThought && childThought);
++  assert.deepEqual(thoughts.map(row => row.uuid), [rootThought, childThought].sort((a, b) => a.sequence - b.sequence).map(row => row.eventId));
++  assert.equal(thoughts.find(row => row.uuid === rootThought.eventId)!.agentId, undefined);
++  assert.equal(thoughts.find(row => row.uuid === childThought.eventId)!.agentId, childThought.data.childId);
++  assert.doesNotMatch(terminal!.result!.stdout, /TEST late (?:root|child) snapshot/u);
+   assert.equal(await context.subagents?.authorize(authorization), false);
+   assert.equal(JSON.stringify(terminal).includes('PRIVATE-'), false);
+   const tasks = await f.rpc('team.tasks.list', {}) as unknown as { value: unknown[] };
+@@ -206,7 +238,7 @@
+   await f.restart();
+   // The retained outcome/latest text survives; cold Runtime truthfully reports its volatile log gap.
+   assert.deepEqual(await f.read(request.runId), { ...terminal,
+-    result: { ...terminal!.result!, stderr: 'Some retained runtime log entries are unavailable.' } });
++    result: { ...terminal!.result!, stderr: logWarning } });
+   assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
+   assert.equal(f.opens(), 1);
+   assert.equal((await f.rpc('schedule.run.start', { ...request, config: { ...request.config, prompt: 'TEST changed' } }, request.runId)).code, 'conflict');
+@@ -233,6 +265,122 @@
+   assert.equal(f.sessions[0]!.closes, 1);
+   assert.equal((await f.rpc('schedule.run.start', request, request.runId)).value?.phase, 'interrupted');
+   assert.equal(f.opens(), 1);
++});
++
++test('original scheduled stderr is retained before SessionRef even when opening fails, without an input or replay', async t => {
++  let observations = 0;
++  const f = await fixture(t, { failOpen: true, onOpen(context, root) {
++    const store = new FileRuntimeStore(root), before = store.fenced(context.binding, tx => tx.get())!;
++    assert.equal(before.phase, 'opening'); assert.equal(before.sessionRef, undefined);
++    assert.deepEqual(before.inputs, []); assert.ok(context.observeProcessOutput);
++    context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST original scheduled startup' });
++    const after = store.fenced(context.binding, tx => tx.get())!;
++    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
++    assert.equal(after.nativeReady, false); assert.equal(after.sessionRef, undefined);
++    assert.deepEqual(after.inputs, []); assert.deepEqual(after.interactions, before.interactions);
++    assert.equal(store.readConversation(context.binding), undefined);
++    observations++;
++  } });
++  const request = f.request('TEST-failed-opening');
++  assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
++  await until(async () => (await f.read(request.runId))?.phase === 'held');
++  assert.equal(observations, 1); assert.equal(f.sessions[0]!.inputs.length, 0);
++  const context = f.contexts[0]!, store = new FileRuntimeStore(f.root);
++  const record = store.fenced(context.binding, tx => tx.get())!;
++  assert.equal(record.diagnostic, 'open-unknown'); assert.equal(record.custody, 'unknown');
++  assert.equal(record.sessionRef, undefined); assert.deepEqual(record.inputs, []);
++  const retained = store.readActivity(context.binding)!;
++  const diagnostics = retained.events.filter(row => row.data.kind === 'process-output');
++  assert.equal(diagnostics.length, 1);
++  assert.deepEqual(diagnostics[0]!.data, { kind: 'process-output', stream: 'stderr', text: 'TEST original scheduled startup' });
++  assert.equal(diagnostics[0]!.inputId, undefined); assert.equal(diagnostics[0]!.operationRef, undefined);
++  assert.equal((await f.read(request.runId))?.result, undefined, 'startup diagnostics cannot manufacture a model outcome');
++  await f.restart('failed'); // Failed native open retains unknown custody; no replacement can settle it.
++  assert.equal((await f.read(request.runId))?.phase, 'held');
++  assert.deepEqual(store.readActivity(context.binding), retained);
++  assert.equal((await f.rpc('schedule.run.start', request, request.runId)).value?.phase, 'held');
++  assert.equal(f.opens(), 1); assert.equal(f.sessions[0]!.inputs.length, 0);
++  assert.equal(store.readConversation(context.binding), undefined);
++});
++
++test('scheduled diagnostics refuse replaced selection, Team authority, workspace, writer and Host seal', async t => {
++  const f = await fixture(t, { separateWorkspace: true }), request = f.request('TEST-source-grant');
++  assert.equal((await f.rpc('schedule.run.start', request, request.runId)).ok, true);
++  await until(() => f.sessions[0]?.inputs.length === 1);
++  const context = f.contexts[0]!, binding = structuredClone(context.binding), store = new FileRuntimeStore(f.root);
++  const observe = context.observeProcessOutput; assert.ok(observe);
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST original source' });
++  const refuse = (label: string, change: () => void, restore: () => void) => {
++    const activity = store.readActivity(binding), state = store.fenced(binding, tx => tx.get());
++    const conversation = store.readConversation(binding);
++    try {
++      change();
++      assert.doesNotThrow(() => observe({ kind: 'process-output', stream: 'stderr', text: `TEST refused ${label}` }));
++    } finally { restore(); }
++    assert.deepEqual(store.readActivity(binding), activity, label);
++    assert.deepEqual(store.fenced(binding, tx => tx.get()), state, label);
++    assert.deepEqual(store.readConversation(binding), conversation, label);
++  };
++  const executable = context.profile.executable, originalRequest = structuredClone(context.request);
++  refuse('selected executable', () => { context.profile.executable = { ...executable, sha256: 'd'.repeat(64) }; },
++    () => { context.profile.executable = executable; });
++  refuse('open request', () => { Object.assign(context.request, { configRevision: 'TEST-replaced-request' }); },
++    () => { Object.assign(context.request, originalRequest); });
++  refuse('original binding', () => { context.binding.generation = 'TEST-neighbor'; },
++    () => { Object.assign(context.binding, binding); });
++  const statePath = join(f.root, 'teams/test-scheduled/.host-owner/state.json'), originalState = readFileSync(statePath, 'utf8');
++  for (const kind of ['revision', 'revocation'] as const) {
++    const state = JSON.parse(originalState) as { grants: { principalId: string; revision?: number; revoked?: boolean }[] };
++    const grant = state.grants.find(row => row.principalId === 'human')!;
++    if (kind === 'revision') grant.revision = (grant.revision ?? 1) + 1;
++    else grant.revoked = true;
++    refuse(`Team ${kind}`, () => { writeFileSync(statePath, JSON.stringify(state)); },
++      () => { writeFileSync(statePath, originalState); });
++  }
++  // These are private fixture directories; replace and restore without yielding to other work.
++  for (const [label, path] of [['retained workspace', request.config.cwd], ['writer root', f.root]] as const) {
++    const original = `${path}-original`;
++    refuse(label, () => { renameSync(path, original); mkdirSync(path); },
++      () => { rmSync(path, { recursive: true, force: true }); renameSync(original, path); });
++  }
++  observe({ kind: 'process-output', stream: 'stderr', text: 'TEST restored original source' });
++  assert.deepEqual(store.readActivity(binding)!.events.filter(row => row.data.kind === 'process-output').map(row => row.data.text),
++    ['TEST original source', 'TEST restored original source']);
++  const close = f.sessions[0]!.close; let closing = 0;
++  f.sessions[0]!.close = async () => {
++    const state = store.fenced(binding, tx => tx.get())!;
++    assert.equal(state.phase, 'closing'); assert.equal(state.custody, 'owned');
++    const activity = store.readActivity(binding);
++    observe({ kind: 'process-output', stream: 'stderr', text: 'TEST sealed Host closing' });
++    assert.deepEqual(store.readActivity(binding), activity, 'Host seal revokes diagnostics before original custody releases');
++    closing++; return close();
++  };
++  assert.equal((await f.dispose()).cleanup, 'completed'); assert.equal(closing, 1);
++  assert.equal(f.opens(), 1); assert.equal(f.sessions[0]!.inputs.length, 1);
++});
++
++test('scheduled stderr keeps the first 16 KiB on UTF-8 boundaries and one warning across cold reads', async t => {
++  const f = await fixture(t), request = f.request('TEST-bounded-stderr');
++  await f.rpc('schedule.run.start', request, request.runId);
++  await until(() => f.sessions[0]?.inputs.length === 1);
++  const context = f.contexts[0]!, first = 'TEST first ' + 'é'.repeat(6000), second = '🙂'.repeat(3000) + 'TEST dropped tail';
++  assert.ok(context.observeProcessOutput);
++  for (const text of [first, second]) context.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text });
++  f.sessions[0]!.finish();
++  await until(async () => (await f.read(request.runId))?.phase === 'completed');
++  const terminal = (await f.read(request.runId))!, stderr = terminal.result!.stderr;
++  assert.ok(Buffer.byteLength(stderr) <= 16 * 1024);
++  assert.ok(Buffer.byteLength(stderr) > 16 * 1024 - 4, 'only the incomplete final code point may be omitted');
++  assert.ok(stderr.startsWith(first + '\n🙂')); assert.ok(stderr.endsWith('\n' + logWarning));
++  assert.equal(stderr.split(logWarning).length, 2); assert.doesNotMatch(stderr, /\ufffd|TEST dropped tail/u);
++  const prefix = stderr.slice(0, -(logWarning.length + 1));
++  assert.ok((first + '\n' + second).startsWith(prefix)); assert.ok(prefix.endsWith('🙂'));
++  const activity = new FileRuntimeStore(f.root).readActivity(context.binding)!;
++  assert.deepEqual(activity.events.filter(row => row.data.kind === 'process-output').map(row => row.data.text), [first, second]);
++  await f.restart();
++  assert.deepEqual(await f.read(request.runId), terminal);
++  await f.rpc('schedule.run.start', request, request.runId);
++  assert.equal(f.opens(), 1); assert.equal(f.sessions[0]!.inputs.length, 1);
+ });
+ 
+ test('unknown cleanup is retained and cannot authorize replay or another native occurrence', async t => {
+@@ -270,13 +418,39 @@
+     second = f.request('TEST-parallel-B', 'TEST-schedule-B');
+   for (const input of [first, second]) assert.equal((await f.rpc('schedule.run.start', input, input.runId)).ok, true);
+   await until(() => f.sessions.length === 2 && f.sessions.every(session => session.inputs.length === 1));
++  const [contextA, contextB] = f.contexts, store = new FileRuntimeStore(f.root);
++  assert.ok(contextA?.observeProcessOutput && contextB?.observeProcessOutput);
++  contextA.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST stderr A' });
++  contextB.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST stderr B' });
++  const close = f.sessions[0]!.close; let closing = 0;
++  f.sessions[0]!.close = async () => {
++    const before = store.fenced(contextA.binding, tx => tx.get())!, conversation = store.readConversation(contextA.binding);
++    assert.equal(before.phase, 'closing'); assert.equal(before.custody, 'owned'); assert.equal(before.sealed, true);
++    assert.equal(contextA.isCurrent(), false, 'ordinary cancellation closes allocation authority');
++    contextA.observeProcessOutput!({ kind: 'process-output', stream: 'stderr', text: 'TEST original closing A' });
++    const after = store.fenced(contextA.binding, tx => tx.get())!;
++    assert.equal(after.phase, before.phase); assert.equal(after.custody, before.custody);
++    assert.equal(after.sealed, before.sealed); assert.equal(after.nativeReady, false);
++    assert.deepEqual(after.inputs, before.inputs); assert.deepEqual(after.interactions, before.interactions);
++    assert.deepEqual(store.readConversation(contextA.binding), conversation);
++    closing++; return close();
++  };
+   const wrong = await f.rpc('schedule.run.cancel', { runId: first.runId, scheduleId: second.scheduleId });
+   assert.equal(wrong.code, 'conflict'); assert.equal(f.sessions[0]!.closes, 0);
+   const cancelled = await f.rpc('schedule.run.cancel', { runId: first.runId, scheduleId: first.scheduleId });
+   assert.equal(cancelled.value?.cleanup, 'confirmed'); assert.equal(f.sessions[1]!.closes, 0);
++  assert.equal(closing, 1); assert.equal(cancelled.value?.result?.stderr, 'TEST stderr A\nTEST original closing A');
++  const retainedA = store.readActivity(contextA.binding), retainedB = store.readActivity(contextB.binding);
++  contextA.observeProcessOutput({ kind: 'process-output', stream: 'stderr', text: 'TEST after A released' });
++  assert.deepEqual(store.readActivity(contextA.binding), retainedA);
++  assert.deepEqual(store.readActivity(contextB.binding), retainedB);
++  for (const event of retainedA!.events.filter(row => row.data.kind === 'process-output')) {
++    assert.equal(event.inputId, undefined); assert.equal(event.operationRef, undefined);
++  }
+   assert.equal((await f.read(second.runId, second.scheduleId))?.phase, 'running');
+   f.sessions[1]!.finish();
+   await until(async () => (await f.read(second.runId, second.scheduleId))?.phase === 'completed');
++  assert.equal((await f.read(second.runId, second.scheduleId))?.result?.stderr, 'TEST stderr B');
+   assert.equal(f.opens(), 2);
+ });
+ 
+@@ -374,6 +548,8 @@
+   assert.equal(completed.cleanup, 'confirmed'); assert.equal(completed.result?.exitCode, 0);
+   assert.equal(completed.result?.summary, 'TEST standalone complete');
+   assert.match(completed.result!.stdout, /TEST standalone complete/u);
++  assert.match(completed.result!.stdout, /"type":"thinking","thinking":"TEST standalone thought complete"/u);
++  assert.equal(completed.result!.stderr, 'TEST standalone stderr');
+   const captured = readScheduledRunCapture(new TeamOwnerStore(root, teamBinding.teamName), done.runId)!;
+   assert.deepEqual(captured.input, done);
+   assert.equal(journal().filter(row => row.event === 'input').length, 1);
+@@ -415,6 +591,7 @@
+   host = open(); await host.rpc('host.handshake', { protocolVersion: 1 });
+   for (const [input, phase] of [[done, 'completed'], [held, 'interrupted']] as const) {
+     const retained = await read(input.runId); assert.equal(retained.phase, phase); assert.equal(retained.cleanup, 'confirmed');
++    if (input === done) assert.deepEqual(retained.result, { ...completed.result!, stderr: 'TEST standalone stderr\n' + logWarning });
+     await rpc('schedule.run.start', input, input.runId);
+   }
+   assert.deepEqual(counts(), beforeCold);
+--- a/packages/legacy-agent-host/tests/team-activity-read.test.ts
++++ b/packages/legacy-agent-host/tests/team-activity-read.test.ts
+@@ -188,6 +188,14 @@
+   assert.equal(stats.outputTokens, 7);
+   assert.equal(stats.costUsd, 0.02, 'duplicate cumulative reports are not double-counted');
+   assert.equal(stats.compactions, 1);
++  const snapshot = f.options.runtime.readActivitySnapshot.bind(f.options.runtime);
++  f.options.runtime.readActivitySnapshot = binding => ({ ...snapshot(binding),
++    logProjection: { thinking: [], stderr: [], truncated: true } });
++  const unchanged = readTeamActivity(f.options, { taskId: f.taskId });
++  assert.deepEqual(unchanged, logs, 'internal schedule-log trimming does not enter Team Logs');
++  const { computedAt: _originalClock, ...originalStats } = stats;
++  const { computedAt: _unchangedClock, ...unchangedStats } = summarizeTeamActivity('alice', unchanged);
++  assert.deepEqual(unchangedStats, originalStats, 'retained Stats cost stays known');
+   f.connection.revoke('human');
+   assert.throws(() => readTeamActivity(f.options, { taskId: f.taskId }), { code: 'forbidden' });
+   assert.throws(() => f.owner.readTaskInputCause('human', f.intent), { code: 'forbidden' });
+--- a/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
++++ b/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
+@@ -193,6 +193,8 @@
+   const partialThought = provider === 'codex' ? null : await streamEvent('TEST stream thought partial', 'thinking');
+   if (partialThought) {
+     assert.equal(record(partialThought.data).phase, 'snapshot');
++    assert.equal(record(partialThought.data).block, 1);
++    assert.equal(record(partialThought.data).messageRef, record(partialEvent.data).messageRef);
+     await visibleLogFact(leadLogs, partialThought);
+   }
+   assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
+@@ -230,8 +232,11 @@
+   await ui.waitRead(`!document.querySelector(${literal(leadLogs + ' [data-host-log-kind="text"]')})`, 'Logs search excludes nonmatching output');
+   if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,
+     'Logs search also excludes nonmatching captured stderr');
++  if (completeThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, completeThought))})`,
++    'Logs search excludes nonmatching Thinking');
+   await ui.click(leadLogs + ' button[aria-label="Clear search"]', 'clear original Logs search');
+   await visibleLogFact(leadLogs, completeEvent);
++  if (completeThought) await visibleLogFact(leadLogs, completeThought);
+   if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);
+   const filterLogs = async () => {
+     await ui.scrollTo(leadLogs + ' button[aria-label="Filter logs"]', 'original Logs filters');
+@@ -243,11 +248,13 @@
+   await ui.click('#filter-stream-stdout', 'select stderr while native protocol facts remain unmarked');
+   await ui.click('[data-radix-popper-content-wrapper] button', 'save original stream filter', 'Save');
+   await visibleLogFact(leadLogs, completeEvent);
++  if (completeThought) await visibleLogFact(leadLogs, completeThought);
+   if (stderrEvent) await visibleLogFact(leadLogs, stderrEvent);
+   await filterLogs(); await ui.click('#filter-stream-stdout', 'restore stdout');
+   await ui.click('#filter-stream-stderr', 'select stdout while native protocol facts remain unmarked');
+   await ui.click('[data-radix-popper-content-wrapper] button', 'save original stdout filter', 'Save');
+   await visibleLogFact(leadLogs, completeEvent);
++  if (completeThought) await visibleLogFact(leadLogs, completeThought);
+   if (stderrEvent) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, stderrEvent))})`,
+     'actual stderr provenance is excluded by stdout-only filter');
+   await filterLogs(); await ui.click('#filter-kind-output', 'exclude Output');
+@@ -278,6 +285,18 @@
+   await ui.click(disclosure, 'collapse original output');
+   await ui.waitRead(`!document.querySelector(${literal(logFactSelector(logsDialog, fullscreenEvent) + ' [data-host-log-content]')})`, 'rich content collapses');
+   await ui.click(disclosure, 'restore original expanded output');
++  if (completeThought) {
++    const thoughtText = String(record(completeThought.data).text), thoughtRow = logFactSelector(logsDialog, completeThought);
++    await fill(logsDialog + ' input', thoughtText); await visibleLogFact(logsDialog, completeThought);
++    const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
++    await ui.scrollTo(thoughtCopy, 'original Thinking copy'); await ui.click(thoughtCopy, 'copy actual retained Thinking');
++    await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'Thinking clipboard write acknowledged');
++    assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), thoughtText);
++    await ui.click(thoughtRow + ' [role="button"]', 'collapse original Thinking');
++    await ui.waitRead(`!document.querySelector(${literal(thoughtRow + ' [data-host-log-content]')})`, 'Thinking rich content collapses');
++    await ui.click(thoughtRow + ' [role="button"]', 'restore original expanded Thinking');
++    await fill(logsDialog + ' input', fullscreenText); await visibleLogFact(logsDialog, fullscreenEvent);
++  }
+   proof.leadLogsScreenshot = await screenshot('lead-logs');
+   await escape(); await visibleLogFact(leadLogs, fullscreenEvent);
+   await ui.click(leadLogs + ' button[aria-label="Clear search"]', 'restore unfiltered Lead Logs');
+@@ -451,6 +470,8 @@
+   proof.leadLogsAfterReload = await visibleLogFact(leadLogs, completeEvent);
+   if (stderrEvent) proof.stderrLogsAfterReload = await visibleLogFact(leadLogs, stderrEvent);
+   if (completeThought) proof.thinkingLogsAfterReload = await visibleLogFact(leadLogs, completeThought);
++  if (partialThought) await ui.waitRead(`!document.querySelector(${literal(logFactSelector(leadLogs, partialThought))})`,
++    'cold Thinking read retains complete precedence');
+   assert.deepEqual((await session()).inputs, reloadInputs); assert.equal((await effects()).filter(row => row.event === 'input').length, reloadEffects);
+   proof.reloadedScreenshot = await screenshot('reloaded'); proof.reloadWithoutReplay = true;
+ 
+@@ -506,11 +527,45 @@
+     assert.equal(input.scheduleId, LEGACY_SCHEDULE_ID); assert.equal(input.maxTurns, 6); assert.equal(input.maxBudgetUsd, 0.25);
+     assert.equal(record(input.config).prompt, 'TEST_UI_STANDALONE_DONE');
+     assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks, 'standalone creates no hidden Team task');
++    const completedSession = (await readDesktopNativeStopSessions(fixture.root)).find(row =>
++      record(row.binding).runId === 'scheduled-standalone' && record(row.binding).generation === completedRunId);
++    assert.ok(completedSession);
++    const standaloneBinding = record(completedSession.binding);
++    const retained = await json(join(fixture.root, 'hoststore/runtime-events', runtimeDigest(standaloneBinding) + '.json'));
++    const { digest, ...body } = retained;
++    assert.equal(runtimeDigest(body), digest); assert.deepEqual(retained.binding, standaloneBinding);
++    const thought = array(retained.events).find(row => record(row.data).kind === 'thinking');
++    const output = array(retained.events).find(row => record(row.data).kind === 'text' && record(row.data).text === 'TEST standalone complete');
++    const diagnostic = array(retained.events).find(row => record(row.data).kind === 'process-output');
++    assert.ok(thought && output && diagnostic);
++    assert.deepEqual(record(thought.data), { kind: 'thinking', messageRef: record(output.data).messageRef,
++      block: 1, text: 'TEST standalone thought complete', phase: 'complete' });
++    assert.equal(thought.inputId, completedRunId);
++    assert.equal(array(completedSession.inputs).length, 1);
++    assert.equal(thought.operationRef, array(completedSession.inputs)[0]!.operationRef);
++    assert.deepEqual(diagnostic.data, { kind: 'process-output', stream: 'stderr', text: 'TEST standalone stderr' });
++    assert.equal(diagnostic.inputId, undefined); assert.equal(diagnostic.operationRef, undefined);
++    const savedLogs = record(await cdp.evaluate(`window.electronAPI.schedules.getRunLogs(${literal(LEGACY_SCHEDULE_ID)},${literal(completedRunId)})`));
++    const savedThought = String(savedLogs.stdout).split('\n').map(line => record(JSON.parse(line))).filter(row => row.uuid === thought.eventId);
++    assert.equal(savedThought.length, 1);
++    assert.deepEqual(record(savedThought[0]!.message).content, [{ type: 'thinking', thinking: record(thought.data).text }]);
++    assert.ok(String(savedLogs.stderr).split('\n').includes(String(record(diagnostic.data).text)));
++    assert.equal(completedRuns[0]!.summary, 'TEST standalone complete');
+     await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'original standalone history');
+     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} button[aria-label=${literal(EDITED_SCHEDULE_LABEL)}]`, 'expand original standalone history');
+     await ui.scrollTo(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'reveal original completed standalone log');
+     await ui.click(`${scheduleRow(EDITED_SCHEDULE_LABEL)} div[role="button"]`, 'open original completed standalone log');
+     await ui.waitRead(`document.querySelector('[role="dialog"]')?.textContent.includes('TEST standalone complete')`, 'original completed standalone stdout');
++    const thoughtRow = '[role="dialog"] div.rounded:has(> [role="button"] svg.lucide-brain)';
++    await ui.scrollTo(thoughtRow + ' [role="button"]', 'original scheduled Thinking');
++    await ui.click(thoughtRow + ' [role="button"]', 'expand original scheduled Thinking');
++    await ui.scrollTo(thoughtRow + ' p', 'actual scheduled Thinking Markdown', String(record(thought.data).text), 12, { requireCenterHit: true });
++    const thoughtCopy = thoughtRow + ' button[title="Copy to clipboard"]';
++    await ui.scrollTo(thoughtCopy, 'original scheduled Thinking copy'); await ui.click(thoughtCopy, 'copy scheduled Thinking');
++    await ui.waitRead(`Boolean(document.querySelector(${literal(thoughtCopy + ' svg.lucide-check')}))`, 'scheduled Thinking clipboard acknowledged');
++    assert.equal(await cdp.evaluate('navigator.clipboard.readText()'), record(thought.data).text);
++    await ui.scrollTo('[role="dialog"] pre', 'original scheduled stderr', String(savedLogs.stderr).trim(), 12, { requireCenterHit: true });
++    await ui.waitRead(`document.querySelector('[role="dialog"] pre')?.textContent===${literal(savedLogs.stderr)}`, 'saved stderr renders unchanged');
+     proof.standaloneCompletedScreenshot = await screenshot('standalone-completed');
+     await escape(); await ui.waitRead(`!document.querySelector('[role="dialog"]')`, 'original standalone log closed');
+     await menu(EDITED_SCHEDULE_LABEL, 'Edit'); await fill('[role="dialog"] #dialog-prompt', 'TEST_UI_STANDALONE_HOLD'); await save();
+@@ -536,6 +591,7 @@
+     assert.deepEqual(await rows(taskDirectory), beforeStandaloneTasks);
+     proof.standaloneDeletedScreenshot = await screenshot('standalone-deleted');
+     proof.standalone = { scheduleId: LEGACY_SCHEDULE_ID, completedRunId, heldRunId, logVisible: true,
++      thinkingEventId: thought.eventId, stderrEventId: diagnostic.eventId, activityDigest: digest, actualThinkingClipboard: true,
+       limits: { maxTurns: 6, maxBudgetUsd: 0.25 }, originalPids, deletedWhileActive: true, cleanup: 'confirmed',
+       releasedRecord: heldRecord, capture: selected[0], taskWrites: 0 };
+   }
+--- a/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
++++ b/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts
+@@ -267,6 +267,9 @@
+   'packages/legacy-agent-host/tests/runtime-team-host.test.ts',
+   'packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts',
+   'src/renderer/components/team/sidebar/teamSidebarUiState.ts',
++  'packages/legacy-agent-host/src/composition/scheduledRunProjection.ts',
++  'packages/legacy-agent-host/src/composition/scheduledRunCapture.ts',
++  'packages/legacy-agent-host/src/composition/scheduledRunContracts.ts',
+ ];
+ 
+ /** Exact finite Windows same-Main recovery and original Processes UI construction inputs. */
+--- a/test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx
++++ b/test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx
+@@ -7,7 +7,7 @@
+ import { TaskLogStreamSection } from '@renderer/components/team/taskLogs/TaskLogStreamSection';
+ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+ 
+-import { TaskResourceTestHost, resetTaskResourceTestState } from './taskResourceTestHost';
++import { resetTaskResourceTestState, TaskResourceTestHost } from './taskResourceTestHost';
+ const mocks = vi.hoisted(() => ({
+   activity: vi.fn(),
+   detail: vi.fn(),
+@@ -143,7 +143,18 @@
+     });
+     expect(mocks.detail).toHaveBeenCalledWith('host-team:original', 'task', summary.id);
+     expect(node.textContent).toContain('actual exit seven');
+-    expect(node.textContent).toContain('"isError": true');
++    const failedResult = node.querySelector<HTMLElement>(
++      '[data-host-log-event-id="actual-source:3"]'
++    )!;
++    expect(failedResult.dataset.hostLogIsError).toBe('true');
++    expect(
++      failedResult.querySelector<HTMLElement>('.base-item-status-dot')?.style.backgroundColor
++    ).toBe('#ef4444');
++    expect(failedResult.querySelector('[data-host-log-content]')).toBeNull();
++    await act(async () => failedResult.querySelector<HTMLElement>('[role="button"]')!.click());
++    expect(failedResult.querySelector('[data-host-log-content]')?.textContent).toContain(
++      'actual exit seven'
++    );
+     expect(node.textContent).toContain('timestamps unavailable');
+     await act(async () => {
+       root.render(
+--- a/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs
++++ b/tools/owned-process-broker/fixtures/claudeProviderPeer.mjs
+@@ -211,6 +211,7 @@
+   frame({ type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } });
+   frame({ type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } });
+   if (input.marker === 'TEST_UI_STREAM') {
++    frame({ type: 'content_block_stop', index: 0 });
+     frame({ type: 'content_block_start', index: 1, content_block: { type: 'thinking', thinking: '' } });
+     frame({ type: 'content_block_delta', index: 1,
+       delta: { type: 'thinking_delta', thinking: 'TEST stream thought partial' } });
+@@ -220,9 +221,12 @@
+ function finish(input, text, { interrupted = false, localCommand } = {}) {
+   assert.equal(active, input, 'authority');
+   clearTimeout(streamTimer); streamTimer = undefined;
++  if (!interrupted && !localCommand && input.marker === 'TEST_UI_STREAM')
++    send({ type: 'stream_event', ...envelope(input), event: { type: 'content_block_stop', index: 1 } });
+   if (!interrupted && !localCommand) assistant(input, [{ type: 'text', text },
+     ...(input.marker === 'TEST_UI_STREAM' ? [{ type: 'thinking', thinking: 'TEST stream thought complete',
+-      signature: 'TEST_SIGNATURE_NOT_LOGGED' }] : [])]);
++      signature: 'TEST_SIGNATURE_NOT_LOGGED' }] : []),
++    ...(input.marker === 'TEST_UI_STANDALONE_DONE' ? [{ type: 'thinking', thinking: 'TEST standalone thought complete' }] : [])]);
+   const counted = localCommand !== 'usage';
+   if (counted) resultCount++;
+   const cost = Number((resultCount * 0.0123).toFixed(4));
+@@ -406,15 +410,16 @@
+   } else if (text === 'TEST_UI_HOLD' || text === 'TEST_UI_SCHEDULE_HOLD' || text === 'TEST_UI_STANDALONE_HOLD') partial(selected, 'TEST held partial');
+   else if (text.startsWith('TEST_UI_APPROVAL_') || text === 'TEST_UI_QUESTION' || text === 'TEST_UI_QUESTION_DECLINE') void interaction(selected).catch(fail);
+   else if (text === 'TEST_UI_SCHEDULE_DONE') void scheduled(selected).catch(fail);
+-  else if (text === '/compact') {
++  else if (text === 'TEST_UI_STANDALONE_DONE') {
++    process.stderr.write('TEST standalone stderr\n'); finish(selected, 'TEST standalone complete');
++  } else if (text === '/compact') {
+     send({ type: 'system', subtype: 'compact_boundary', ...envelope(selected), compact_metadata: { trigger: 'manual', pre_tokens: 42, post_tokens: 12 } });
+     effect({ event: 'compact', inputId: selected.id }); finish(selected, 'TEST context compacted', { localCommand: 'compact' });
+   } else if (text === '/cost' || text === '/usage')
+     finish(selected, 'TEST cost input=' + resultCount * 42 + ' output=' + resultCount * 18 + ' total=$' + (resultCount * 0.0123).toFixed(4), { localCommand: 'usage' });
+   else finish(selected, text === probe ? 'OK' : text === '/test-desktop-skill' ? 'TEST skill complete'
+     : text === '/review TEST_UI_REVIEW' ? 'TEST review complete'
+-      : text === 'TEST_UI_STANDALONE_DONE' ? 'TEST standalone complete'
+-        : text === 'TEST_UI_RESUME' ? 'TEST resumed history retained' : 'TEST boot ready');
++      : text === 'TEST_UI_RESUME' ? 'TEST resumed history retained' : 'TEST boot ready');
+ }
+ async function accept(frame) {
+   record(frame);

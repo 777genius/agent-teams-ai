@@ -1,5 +1,28 @@
 import type { TaskHistoryEvent, TeamReviewState, TeamTask, TeamTaskStatus } from '@shared/types';
 
+/** Shared event vocabulary; raw worker records are classified without trusting other fields. */
+export function isTaskReviewDecisionEventType(type: unknown): boolean {
+  return (
+    type === 'review_changes_requested' ||
+    type === 'review_approved' ||
+    type === 'review_completed' ||
+    type === 'human_approved' ||
+    type === 'review_disapproved'
+  );
+}
+
+export function isTaskReviewLifecycleEventType(type: unknown): boolean {
+  return (
+    type === 'review_requested' || type === 'review_started' || isTaskReviewDecisionEventType(type)
+  );
+}
+
+function isReviewLifecycleEvent(
+  event: TaskHistoryEvent
+): event is Extract<TaskHistoryEvent, { to: TeamReviewState }> {
+  return isTaskReviewLifecycleEventType(event.type);
+}
+
 /** Extract historyEvents from a task, defaulting to empty array. */
 export function getTaskHistoryEvents(task: Pick<TeamTask, 'historyEvents'>): TaskHistoryEvent[] {
   return Array.isArray(task.historyEvents) ? task.historyEvents : [];
@@ -25,14 +48,7 @@ export function getDerivedReviewStateFromHistory(
   const events = getTaskHistoryEvents(task);
   for (let i = events.length - 1; i >= 0; i--) {
     const event = events[i];
-    if (
-      event.type === 'review_requested' ||
-      event.type === 'review_changes_requested' ||
-      event.type === 'review_approved' ||
-      event.type === 'review_completed' ||
-      event.type === 'human_approved' ||
-      event.type === 'review_started'
-    ) {
+    if (isReviewLifecycleEvent(event)) {
       return event.to;
     }
     if (event.type === 'status_changed' && (event.to === 'in_progress' || event.to === 'deleted')) {
@@ -41,14 +57,7 @@ export function getDerivedReviewStateFromHistory(
     if (event.type === 'status_changed' && event.to === 'pending') {
       for (let previousIndex = i - 1; previousIndex >= 0; previousIndex--) {
         const previous = events[previousIndex];
-        if (
-          previous.type === 'review_requested' ||
-          previous.type === 'review_changes_requested' ||
-          previous.type === 'review_approved' ||
-          previous.type === 'review_completed' ||
-          previous.type === 'human_approved' ||
-          previous.type === 'review_started'
-        ) {
+        if (isReviewLifecycleEvent(previous)) {
           return previous.to === 'needsFix' ? 'needsFix' : 'none';
         }
         if (
@@ -84,6 +93,7 @@ export function getCurrentReviewStage(
     if (
       event.type === 'review_changes_requested' ||
       event.type === 'review_approved' ||
+      event.type === 'review_disapproved' ||
       event.type === 'review_completed' ||
       event.type === 'human_approved' ||
       event.type === 'task_created' ||

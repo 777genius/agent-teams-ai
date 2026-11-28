@@ -20,6 +20,22 @@ const reference = {
 };
 
 describe('message reference transport contract', () => {
+  it('selects captured image-only Codex text references while preserving qualified legacy native text', () => {
+    const target = { providerId: 'codex', isLeadRecipient: false };
+    expect(getMessageAttachmentRoute(target, 'text/plain')).toBe('native');
+    expect(
+      getMessageAttachmentRoute(
+        { ...target, nativeInboxTextAttachmentsSupported: false },
+        'text/plain'
+      )
+    ).toBe('reference');
+    expect(
+      getMessageAttachmentRoute(
+        { ...target, nativeInboxTextAttachmentsSupported: false },
+        'image/png'
+      )
+    ).toBe('native');
+  });
   it.each(['anthropic', 'codex', 'opencode'])(
     'keeps arbitrary and malformed text bytes ordinary for %s',
     (providerId) => {

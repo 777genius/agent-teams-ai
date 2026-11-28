@@ -1,0 +1,19 @@
+{
+  "id": 14195690062,
+  "name": "host-emulated-darwin-arm64-608efb78823d7c74b35f8a674fcfb6faea8ecfc5-installer",
+  "size_in_bytes": 1149462,
+  "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195690062",
+  "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14195690062/zip",
+  "expired": false,
+  "created_at": "2026-11-16T03:25:41Z",
+  "expires_at": "2026-11-30T03:25:40Z",
+  "updated_at": "2026-11-16T03:25:41Z",
+  "digest": "sha256:1458223457d9339293a14a237cf0d36b717de801c4da67b9227276ee8a7f17f6",
+  "workflow_run": {
+    "id": 43795234483,
+    "repository_id": 1163183284,
+    "head_repository_id": 1163183284,
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+  }
+}

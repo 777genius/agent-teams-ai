@@ -1,0 +1,589 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { realpathSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { PassThrough, Writable } from 'node:stream';
+import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
+
+import { createHostServer, HostRpcError } from '../dist/index.js';
+import { DEFAULT_HOST_LIMITS, HOST_PROTOCOL_VERSION } from '../dist/contracts.js';
+import {
+  HOST_CUSTODY_BIND_METHOD,
+  HOST_CUSTODY_READY_METHOD,
+} from '../dist/owned-process/index.js';
+
+import type { HostServerOptions, JsonValue } from '../dist/index.js';
+
+const nodeExecutable = realpathSync(process.env.AGENT_BACKEND_TEST_NODE ?? process.execPath);
+
+const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+const request = (id: number, method: string, params?: JsonValue): string =>
+  `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`;
+
+function fixture(overrides: Partial<HostServerOptions> = {}) {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  const frames: Record<string, unknown>[] = [];
+  let tail = '';
+  output.on('data', (chunk: Buffer) => {
+    tail += chunk.toString('utf8');
+    let newline: number;
+    while ((newline = tail.indexOf('\n')) >= 0) {
+      frames.push(JSON.parse(tail.slice(0, newline)) as Record<string, unknown>);
+      tail = tail.slice(newline + 1);
+    }
+  });
+  const server = createHostServer({ input, output, buildId: 'TEST-transport', ...overrides });
+  return { input, output, server, frames };
+}
+
+async function handshake(input: PassThrough): Promise<void> {
+  input.write(request(1, 'host.handshake', { protocolVersion: HOST_PROTOCOL_VERSION }));
+  await tick();
+}
+
+test('frame bound applies before parse, including fragmented UTF-8 bytes at the exact boundary', async () => {
+  let calls = 0;
+  const f = fixture({
+    limits: { maxFrameBytes: 1024 },
+    methods: {
+      echo: {
+        lane: 'work',
+        handle: () => {
+          calls++;
+          return 'ok';
+        },
+      },
+    },
+  });
+  await handshake(f.input);
+  const base = JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'echo', params: '😀' });
+  const exact = Buffer.from(`${base}${' '.repeat(1024 - Buffer.byteLength(base))}\n`);
+  const emojiAt = exact.indexOf(Buffer.from('😀'));
+  f.input.write(exact.subarray(0, emojiAt + 1));
+  f.input.write(exact.subarray(emojiAt + 1));
+  await tick();
+  assert.equal(calls, 1);
+  assert.equal(f.frames.find((frame) => frame.id === 2)?.result, 'ok');
+  const oversized = Buffer.from(`${base}${' '.repeat(1025 - Buffer.byteLength(base))}\n`);
+  f.input.write(oversized.subarray(0, 1024));
+  assert.equal(calls, 1);
+  f.input.write(oversized.subarray(1024));
+  assert.equal((await f.server.closed).reason, 'frame_too_large');
+  assert.equal(calls, 1, 'oversized request must not execute its handler');
+});
+
+test('malformed UTF-8 and incomplete frames close without executing a request', async () => {
+  const invalid = fixture();
+  invalid.input.write(Buffer.from([0xc3, 0x28, 10]));
+  assert.equal((await invalid.server.closed).reason, 'invalid_utf8');
+  const truncated = fixture();
+  truncated.input.end('{"jsonrpc":"2.0"');
+  assert.equal((await truncated.server.closed).reason, 'truncated_frame');
+});
+
+test('handshake gates handlers and method failures do not disclose private errors', async () => {
+  let calls = 0;
+  const f = fixture({
+    methods: {
+      fail: {
+        lane: 'work',
+        handle: () => {
+          calls++;
+          throw new Error('TEST-private-payload');
+        },
+      },
+      reserved: {
+        lane: 'work',
+        handle: () => {
+          throw new HostRpcError(-32002, 'spoofed busy');
+        },
+      },
+      custom: {
+        lane: 'work',
+        handle: () => {
+          throw new HostRpcError(-32010, 'TEST-sensitive-provider-token-and-payload');
+        },
+      },
+    },
+  });
+  f.input.write(request(10, 'fail'));
+  f.input.write(request(11, 'host.handshake', { protocolVersion: 999 }));
+  await tick();
+  assert.equal(calls, 0);
+  assert.equal(f.frames.length, 2);
+  assert.deepEqual(f.frames[0]?.error, { code: -32001, message: 'Handshake required' });
+  assert.deepEqual(f.frames[1]?.error, { code: -32001, message: 'Protocol mismatch' });
+  await handshake(f.input);
+  f.input.write(request(12, 'missing'));
+  f.input.write(request(13, 'fail'));
+  await tick();
+  assert.equal(calls, 1);
+  assert.deepEqual(f.frames.find((frame) => frame.id === 12)?.error, {
+    code: -32601,
+    message: 'Method not found',
+  });
+  assert.deepEqual(f.frames.find((frame) => frame.id === 13)?.error, {
+    code: -32603,
+    message: 'Handler failed',
+  });
+  assert.equal(JSON.stringify(f.frames).includes('TEST-private-payload'), false);
+  f.input.write(request(14, 'reserved') + request(15, 'custom'));
+  await tick();
+  assert.deepEqual(f.frames.find((frame) => frame.id === 14)?.error, {
+    code: -32603,
+    message: 'Handler failed',
+  });
+  assert.deepEqual(f.frames.find((frame) => frame.id === 15)?.error, {
+    code: -32010,
+    message: 'Operation failed',
+  });
+  assert.equal(
+    JSON.stringify(f.frames).includes('TEST-sensitive-provider-token-and-payload'),
+    false
+  );
+  await f.server.dispose();
+});
+
+test('reserved control capacity resolves a pending permission while prompt slots are full', async () => {
+  const releases: ((value: JsonValue) => void)[] = [];
+  const f = fixture({
+    limits: { maxPendingRequests: 4, reservedControlRequests: 1 },
+    methods: {
+      prompt: {
+        lane: 'work',
+        handle: () =>
+          new Promise((resolve) => {
+            releases.push(resolve);
+          }),
+      },
+      permission: {
+        lane: 'control',
+        handle: () => {
+          for (const release of releases) release('terminal');
+          return 'permission-resolved';
+        },
+      },
+    },
+  });
+  await handshake(f.input);
+  f.input.write(request(2, 'prompt') + request(3, 'prompt') + request(4, 'prompt'));
+  f.input.write(request(5, 'prompt') + request(6, 'permission'));
+  await tick();
+  assert.equal(releases.length, 3);
+  assert.deepEqual(f.frames.find((frame) => frame.id === 5)?.error, {
+    code: -32002,
+    message: 'Host busy',
+  });
+  assert.equal(f.frames.find((frame) => frame.id === 6)?.result, 'permission-resolved');
+  for (const id of [2, 3, 4])
+    assert.equal(f.frames.find((frame) => frame.id === id)?.result, 'terminal');
+  await f.server.dispose();
+});
+
+class GateOutput extends Writable {
+  readonly frames: Record<string, unknown>[] = [];
+  readonly callbacks: ((error?: Error | null) => void)[] = [];
+  override _write(
+    chunk: Buffer,
+    _encoding: BufferEncoding,
+    callback: (error?: Error | null) => void
+  ) {
+    this.frames.push(JSON.parse(chunk.toString('utf8')) as Record<string, unknown>);
+    this.callbacks.push(callback);
+  }
+  async release(): Promise<void> {
+    assert.ok(this.callbacks.length > 0, 'expected an in-flight bounded write');
+    this.callbacks.shift()?.();
+    await tick();
+  }
+}
+
+test('private custody requires priority capacity beyond its control reserve', async () => {
+  const reserve = DEFAULT_HOST_LIMITS.reservedControlRequests;
+  for (const maxPriorityMessages of [reserve, reserve - 1]) {
+    let invalid: ReturnType<typeof fixture> | undefined;
+    try {
+      assert.throws(() => {
+        invalid = fixture({ nativeCustody: { timeoutMs: 1000 }, limits: { maxPriorityMessages } });
+      }, /Control reserve must be below priority message limit/);
+    } finally { await invalid?.server.dispose(); }
+  }
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 },
+    limits: { maxPriorityMessages: reserve + 1 } });
+  try {
+    await handshake(f.input);
+    const binding = { mainEpoch: 'TEST-main', hostIncarnation: f.server.handshake.hostIncarnation,
+      profileDigest: 'a'.repeat(64) };
+    f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+    await tick();
+    const work = f.server.nativeCustody!.request({
+      operation: 'write', capability: 'TEST-work-capacity', bytes: 'VEVTVA==',
+    });
+    await tick();
+    const sent = f.frames.find(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:'));
+    assert.ok(sent, 'The remaining work slot dispatches the original private request');
+    const reply = { status: 'completed', value: { operation: 'write', state: 'completed' } };
+    f.input.write(JSON.stringify({ jsonrpc: '2.0', id: sent.id, result: { binding, reply } }) + '\n');
+    assert.deepEqual(await work, reply);
+  } finally { await f.server.dispose(); }
+});
+
+test('private custody hints are reliable/sticky and an old epoch reply cannot finish a current read', async () => {
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
+  await handshake(f.input);
+  const binding = {
+    mainEpoch: 'TEST-main',
+    hostIncarnation: f.server.handshake.hostIncarnation,
+    profileDigest: 'a'.repeat(64),
+  };
+  f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+  await tick();
+  const hint = { capability: 'TEST-original', stream: 'stdout' };
+  const ready =
+    JSON.stringify({
+      jsonrpc: '2.0',
+      method: HOST_CUSTODY_READY_METHOD,
+      params: { binding, hint },
+    }) + '\n';
+  f.input.write(ready + ready);
+  await tick();
+  let hints = 0;
+  f.server.nativeCustody!.onReadable(() => {
+    hints++;
+  });
+  assert.equal(hints, 1, 'An early readiness hint survives until its confirmed read');
+  let completed = false;
+  const read = f.server
+    .nativeCustody!.request({ operation: 'read', capability: 'TEST-original', stream: 'stdout' })
+    .then((reply) => {
+      completed = true;
+      return reply;
+    });
+  await tick();
+  const id = f.frames.find(
+    (frame) => typeof frame.id === 'string' && frame.id.startsWith('custody:')
+  )!.id;
+  const result = {
+    binding,
+    reply: {
+      status: 'completed',
+      value: {
+        operation: 'read',
+        state: 'data',
+        bytes: Buffer.from('TEST-private-stream').toString('base64'),
+        more: false,
+      },
+    },
+  };
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id: 'custody:TEST-old-host:1', result }) + '\n');
+  await tick();
+  assert.equal(completed, false);
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id, result }) + '\n');
+  assert.deepEqual(await read, result.reply);
+  f.input.write(ready);
+  await tick();
+  assert.equal(hints, 2, 'Confirmed read permits the next reliable hint');
+  const expiredRead = f.server.nativeCustody!.request(
+    { operation: 'read', capability: 'TEST-original', stream: 'stdout' }, performance.now() + 20);
+  await tick();
+  const expiredId = f.frames.filter(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:')).at(-1)!.id;
+  assert.deepEqual(await expiredRead, { status: 'unknown' });
+  f.input.write(JSON.stringify({ jsonrpc: '2.0', id: expiredId, result }) + '\n');
+  await tick();
+  assert.deepEqual(await expiredRead, { status: 'unknown' }, 'Late ACK never rewrites the original caller outcome');
+  f.input.write(ready);
+  await tick();
+  assert.equal(hints, 3, 'Exact late ACK retires its original hint marker before new readiness');
+  const pending = f.server.nativeCustody!.request({
+    operation: 'write',
+    capability: 'TEST-original',
+    bytes: 'VEVTVA==',
+  });
+  await f.server.dispose();
+  assert.deepEqual(await pending, { status: 'unknown' });
+});
+
+test('private stream frames leave byte capacity for control and yield the next frame to Stop', async () => {
+  const input = new PassThrough(),
+    output = new GateOutput();
+  const server = createHostServer({
+    input,
+    output,
+    buildId: 'TEST-native-pressure',
+    nativeCustody: { timeoutMs: 1000 },
+    limits: { maxFrameBytes: 65536, maxPriorityBytes: 196608 },
+  });
+  await handshake(input);
+  await output.release();
+  input.write(
+    request(2, HOST_CUSTODY_BIND_METHOD, {
+      mainEpoch: 'TEST-main',
+      hostIncarnation: server.handshake.hostIncarnation,
+      profileDigest: 'b'.repeat(64),
+    })
+  );
+  await tick();
+  await output.release();
+  const before = output.frames.length;
+  const work = Array.from({ length: 24 }, () =>
+    server.nativeCustody!.request({
+      operation: 'write',
+      capability: 'TEST-original',
+      bytes: Buffer.alloc(16 * 1024, 0x61).toString('base64'),
+    })
+  );
+  const stop = server.nativeCustody!.request({
+    operation: 'stop',
+    capability: 'TEST-original',
+    attemptRef: 'TEST-stop',
+    budgetMs: 1000,
+  });
+  assert.equal(output.frames.length, before + 1, 'Only one write is in flight');
+  await output.release();
+  const control = output.frames[before + 1] as { params: { call: { operation: string } } };
+  assert.equal(
+    control.params.call.operation,
+    'stop',
+    'Control precedes queued private stream work'
+  );
+  const binding = { mainEpoch: 'TEST-main', hostIncarnation: server.handshake.hostIncarnation,
+    profileDigest: 'b'.repeat(64) };
+  const answered = new Set<string>();
+  const answerWork = (frame: Record<string, unknown>) => {
+    const original = frame as { id: string; params: { call: { operation: string } } };
+    assert.equal(original.params.call.operation, 'write');
+    assert.equal(answered.has(original.id), false);
+    answered.add(original.id);
+    input.write(JSON.stringify({ jsonrpc: '2.0', id: original.id,
+      result: { binding, reply: { status: 'completed', value: { operation: 'write', state: 'completed' } } } }) + '\n');
+  };
+  answerWork(output.frames[before]!);
+  for (let index = 1; index < 24; index++) {
+    await output.release();
+    answerWork(output.frames.at(-1)!);
+  }
+  assert.equal(answered.size, 24, 'Every original queued payload eventually crosses once');
+  assert.ok((await Promise.all(work)).every(reply => reply.status === 'completed'));
+  await server.dispose();
+  assert.deepEqual(await stop, { status: 'unknown' },
+    'A dispatched Stop with no native reply remains unknown despite stream progress');
+});
+
+test('private admission waits for original slots in both lanes and never dispatches expired or sealed work', async () => {
+  const f = fixture({ nativeCustody: { timeoutMs: 1000 } });
+  await handshake(f.input);
+  const binding = { mainEpoch: 'TEST-queued-main',
+    hostIncarnation: f.server.handshake.hostIncarnation, profileDigest: 'c'.repeat(64) };
+  f.input.write(request(2, HOST_CUSTODY_BIND_METHOD, binding));
+  await tick();
+  const wire = () => f.frames.filter(frame => typeof frame.id === 'string' && frame.id.startsWith('custody:')) as
+    { id: string; params: { call: { operation: string; capability: string } } }[];
+  let builtWork = 0, builtControl = 0;
+  const work = Array.from({ length: 40 }, (_, index) =>
+    f.server.nativeCustody!.requestWhenReady('write', () => {
+      builtWork++; return { operation: 'write', capability: `TEST-work-${index}`, bytes: 'YQ==' };
+    }));
+  assert.equal(builtWork, 24, 'Only admitted frames materialize their original bytes');
+  const controls = Array.from({ length: 40 }, (_, index) =>
+    f.server.nativeCustody!.requestWhenReady('stop', () => {
+      builtControl++; return { operation: 'stop', capability: `TEST-control-${index}`,
+        attemptRef: `TEST-stop-${index}`, budgetMs: 1000 };
+    }));
+  assert.equal(builtControl, 8, 'The original eight reserved slots remain available');
+  await tick();
+  const replied = new Set<string>();
+  const answer = (frame: ReturnType<typeof wire>[number]) => {
+    assert.equal(replied.has(frame.id), false);
+    replied.add(frame.id);
+    const value = frame.params.call.operation === 'write'
+      ? { operation: 'write', state: 'completed' }
+      : { operation: 'stop', state: 'unknown' };
+    f.input.write(JSON.stringify({ jsonrpc: '2.0', id: frame.id,
+      result: { binding, reply: { status: 'completed', value } } }) + '\n');
+  };
+  answer(wire()[0]!);
+  await tick();
+  assert.equal(builtControl, 9, 'A freed work slot admits original queued control first');
+  assert.equal(builtWork, 24);
+  for (let rounds = 0; replied.size < 80 && rounds < 80; rounds++) {
+    const available = wire().filter(frame => !replied.has(frame.id));
+    assert.ok(available.length, 'Each barrier releases previously dispatched original requests');
+    for (const frame of available) answer(frame);
+    await tick();
+  }
+  assert.equal(replied.size, 80);
+  assert.equal(new Set(wire().map(frame => frame.params.call.capability)).size, 80);
+  assert.equal(builtWork, 40); assert.equal(builtControl, 40);
+  assert.ok((await Promise.all([...work, ...controls])).every(reply => reply.status === 'completed'));
+
+  const heldDeadline = performance.now() + 20;
+  const held = Array.from({ length: 24 }, (_, index) =>
+    f.server.nativeCustody!.request({ operation: 'write', capability: `TEST-held-${index}`, bytes: 'Yg==' }, heldDeadline));
+  let expiredBuilt = 0, sealedBuilt = 0, afterLateBuilt = 0;
+  const expired = f.server.nativeCustody!.requestWhenReady('write', () => {
+    expiredBuilt++; return { operation: 'write', capability: 'TEST-expired', bytes: 'Yw==' };
+  }, heldDeadline + 20);
+  assert.deepEqual(await expired, { status: 'refused' });
+  assert.equal(expiredBuilt, 0, 'The original queue deadline precedes any payload or wire ID');
+  assert.ok((await Promise.all(held)).every(reply => reply.status === 'unknown'));
+  const afterLate = f.server.nativeCustody!.requestWhenReady('write', () => {
+    afterLateBuilt++; return { operation: 'write', capability: 'TEST-after-late', bytes: 'ZQ==' };
+  });
+  assert.equal(afterLateBuilt, 0, 'Caller timeouts do not free original wire slots');
+  answer(wire().find(frame => frame.params.call.capability === 'TEST-held-0')!);
+  await tick();
+  assert.equal(afterLateBuilt, 1, 'Only the original ACK releases a slot for a new request');
+  assert.deepEqual(await held[0], { status: 'unknown' });
+
+  const queued = f.server.nativeCustody!.requestWhenReady('write', () => {
+    sealedBuilt++; return { operation: 'write', capability: 'TEST-sealed', bytes: 'ZA==' };
+  });
+  await f.server.dispose();
+  assert.deepEqual(await queued, { status: 'refused' });
+  assert.equal(sealedBuilt, 0);
+  assert.deepEqual(await afterLate, { status: 'unknown' });
+  assert.ok((await Promise.all(held)).every(reply => reply.status === 'unknown'),
+    'Already dispatched requests retain unknown outcomes on EOF, with no replay');
+});
+
+test('slow data consumer receives an explicit gap and control overtakes queued data', async () => {
+  const output = new GateOutput();
+  const f = fixture({
+    output,
+    limits: { maxDataNotifications: 2, maxDataBytes: 1024, writeTimeoutMs: 1000 },
+  });
+  assert.equal(f.server.notifyData('delta', { sequence: 1 }), true); // in-flight
+  assert.equal(f.server.notifyData('delta', { sequence: 2 }), true);
+  assert.equal(f.server.notifyData('delta', { sequence: 3 }), true);
+  assert.equal(f.server.notifyData('delta', { sequence: 4 }), false); // discard 2,3,4
+  assert.equal(f.server.notifyData('delta', { sequence: 5 }), true);
+  assert.equal(f.server.notifyControl('permission', { id: 'request-A' }), true);
+  assert.equal(output.frames.length, 1, 'only one write can be in flight');
+  await output.release();
+  assert.equal(output.frames[1]?.method, 'permission');
+  await output.release();
+  assert.deepEqual(output.frames[2], {
+    jsonrpc: '2.0',
+    method: 'host.gap',
+    params: { dropped: 3 },
+  });
+  await output.release();
+  assert.deepEqual(output.frames[3]?.params, { sequence: 5 });
+  await output.release();
+  await f.server.dispose();
+});
+
+test('blocked stdout times out, seals handlers and finishes disposal even if cleanup hangs', async () => {
+  const output = new GateOutput();
+  let calls = 0;
+  let signal: AbortSignal | undefined;
+  let disposals = 0;
+  const f = fixture({
+    output,
+    limits: { writeTimeoutMs: 20, disposeTimeoutMs: 20 },
+    onDispose: () => {
+      disposals++;
+      return new Promise(() => {});
+    },
+    methods: {
+      wait: {
+        lane: 'work',
+        handle: (_params, context) => {
+          calls++;
+          signal = context.signal;
+          return new Promise(() => {});
+        },
+      },
+    },
+  });
+  // Handshake itself is blocked at stdout; parsing/control remains live until timeout.
+  f.input.write(request(1, 'host.handshake', { protocolVersion: 1 }) + request(2, 'wait'));
+  const started = performance.now();
+  const outcome = await f.server.closed;
+  assert.deepEqual(outcome, { reason: 'write_timeout', cleanup: 'timeout' });
+  assert.ok(performance.now() - started < 1000);
+  assert.equal(calls, 1);
+  assert.equal(signal?.aborted, true);
+  assert.equal(disposals, 1);
+  assert.equal(output.destroyed, true);
+  assert.equal(f.input.destroyed, true);
+  assert.deepEqual(await f.server.dispose(), outcome, 'disposal is idempotent');
+});
+
+test('priority queue exhaustion fails closed rather than dropping control or retaining unlimited responses', async () => {
+  const output = new GateOutput();
+  const f = fixture({ output, limits: { maxPriorityMessages: 1 } });
+  assert.equal(f.server.notifyControl('control', 1), true);
+  assert.equal(f.server.notifyControl('control', 2), true);
+  assert.equal(f.server.notifyControl('control', 3), false);
+  assert.equal((await f.server.closed).reason, 'priority_overflow');
+  assert.equal(output.frames.length, 1);
+});
+
+test('actual CLI speaks NDJSON from an unrelated TEST cwd with no native/provider operations', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'TEST-legacy-host-'));
+  const child = spawn(nodeExecutable, [fileURLToPath(new URL('../dist/cli.js', import.meta.url))], {
+    cwd: directory,
+    env: { PATH: '' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const exit = once(child, 'exit');
+  let stderr = '';
+  child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+    stderr += chunk;
+  });
+  child.stdout.setEncoding('utf8');
+  try {
+    child.stdin.write(request(1, 'host.handshake', { protocolVersion: 1 }));
+    const nextFrame = () =>
+      Promise.race([
+        once(child.stdout, 'data') as Promise<[string]>,
+        exit.then(([code, signal]) => {
+          throw new Error(
+            `CLI exited before its expected frame: code=${String(code)} signal=${String(signal)}`
+          );
+        }),
+      ]);
+    const [chunk] = await nextFrame();
+    const response = JSON.parse(chunk.trim()) as {
+      id: number;
+      result: { protocolVersion: number; limits: unknown };
+    };
+    assert.equal(response.id, 1);
+    assert.equal(response.result.protocolVersion, 1);
+    assert.deepEqual(response.result.limits, DEFAULT_HOST_LIMITS);
+    child.stdin.write(request(2, 'task.create'));
+    const [unknown] = await nextFrame();
+    assert.deepEqual((JSON.parse(unknown.trim()) as { error: unknown }).error, {
+      code: -32601,
+      message: 'Method not found',
+    });
+    child.stdin.end();
+    assert.deepEqual(await exit, [0, null]);
+    assert.equal(stderr, '');
+  } finally {
+    if (child.exitCode === null) child.kill('SIGKILL');
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('actual CLI exits on frame limit+1 without parsing or sending a fake outcome', async () => {
+  const child = spawn(nodeExecutable, [fileURLToPath(new URL('../dist/cli.js', import.meta.url))], {
+    env: { PATH: '' },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const exit = once(child, 'exit');
+  let outputBytes = 0;
+  child.stdout.on('data', (chunk: Buffer) => {
+    outputBytes += chunk.length;
+  });
+  child.stdin.on('error', () => {}); // remote closure is expected for a rejected frame
+  child.stdin.end(Buffer.alloc(DEFAULT_HOST_LIMITS.maxFrameBytes + 1, 32));
+  assert.deepEqual(await exit, [1, null]);
+  assert.equal(outputBytes, 0);
+});

@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 1,
+  "kind": "current030-original-Main-final-qualification-verdict",
+  "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826466,
+  "workflowConclusion": "failure",
+  "job": {
+    "id": 135225356254,
+    "run_id": 44407826466,
+    "workflow_name": "CI proof: PR=1192 | head=030b21f0765d1a6e6572f46d262c672d63e69eb7 | base=8d46f13fe87b4a25156b6be8331119eb8d0f790e | merge=e1cd736dc055035c6cbb39ca1476fa6f36b50ee8 | action=synchronize | draft=true",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826466",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAffA8v3g",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135225356254",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826466/job/135225356254",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-18T23:52:30Z",
+    "started_at": "2026-11-19T00:34:37Z",
+    "completed_at": "2026-11-19T00:35:02Z",
+    "name": "Full qualification",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-19T00:34:38Z",
+        "completed_at": "2026-11-19T00:34:40Z"
+      },
+      {
+        "name": "Checkout",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-19T00:34:40Z",
+        "completed_at": "2026-11-19T00:34:54Z"
+      },
+      {
+        "name": "Setup Node.js",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-19T00:34:54Z",
+        "completed_at": "2026-11-19T00:34:59Z"
+      },
+      {
+        "name": "Require selected Codex login and protocol-peer schedule qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 4,
+        "started_at": "2026-11-19T00:34:59Z",
+        "completed_at": "2026-11-19T00:34:59Z"
+      },
+      {
+        "name": "Require selected retained V1 and Host V2 native Desktop qualification",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 5,
+        "started_at": "2026-11-19T00:34:59Z",
+        "completed_at": "2026-11-19T00:35:00Z"
+      },
+      {
+        "name": "Verify completed current-code qualification after metadata edits",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 6,
+        "started_at": "2026-11-19T00:35:00Z",
+        "completed_at": "2026-11-19T00:35:00Z"
+      },
+      {
+        "name": "Require complete current-code qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 7,
+        "started_at": "2026-11-19T00:35:00Z",
+        "completed_at": "2026-11-19T00:35:00Z"
+      },
+      {
+        "name": "Post Setup Node.js",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-19T00:35:00Z",
+        "completed_at": "2026-11-19T00:35:00Z"
+      },
+      {
+        "name": "Post Checkout",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14,
+        "started_at": "2026-11-19T00:35:00Z",
+        "completed_at": "2026-11-19T00:35:00Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 15,
+        "started_at": "2026-11-19T00:35:00Z",
+        "completed_at": "2026-11-19T00:35:00Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135225356254",
+    "labels": [
+      "ubuntu-24.04"
+    ],
+    "runner_id": 1000395686,
+    "runner_name": "GitHub Actions 1000395686",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "rawLog": {
+    "jobId": 135225356254,
+    "runId": 44407826466,
+    "requestedAt": "2026-11-19T00:37:01.988880+00:00",
+    "status": "captured-permanently-retired",
+    "canonicalJobsPage": "poll-51-jobs.json",
+    "capturedAt": "2026-11-19T00:37:54.151235+00:00",
+    "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135225356254-terminal.log",
+    "bytes": 16939,
+    "sha256": "3a19e83fbf12c3c2f5d55f789a0d75c381edc962f1dd4868c7646f1386c190ec",
+    "gitBlob": "ba51d8c0b3ff5610ecd62c04c049fe27e95e97fe",
+    "exactImmutableReadback": true
+  },
+  "actualCheckout": {
+    "ref": "refs/remotes/pull/1192/merge",
+    "commit": "e1cd736dc055035c6cbb39ca1476fa6f36b50ee8",
+    "mergeParents": {
+      "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "base": "8d46f13fe87b4a25156b6be8331119eb8d0f790e"
+    }
+  },
+  "nodeVersion": "v26.12.1",
+  "directFailure": {
+    "step": "Require selected retained V1 and Host V2 native Desktop qualification",
+    "command": "test \"$RETAINED_COEXISTENCE_RESULT\" = success",
+    "observedDependency": "failure",
+    "exitCode": 1,
+    "originalRetainedScope": "Retained V1 relaunch after selecting Host; before new V2 business Runtime",
+    "originalRetainedEvidenceBlob": "2605117c83a33b4b386cffcb50522e460a5d0085"
+  },
+  "jobs": [
+    {
+      "id": 135167679583,
+      "name": "plan",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135167681498,
+      "name": "Stage 1 process tuple diagnostic (unqualified)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135167682203,
+      "name": "Stage 1 source Desktop (${{ matrix.label }})",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135167682335,
+      "name": "Stage 1 current-tuple process and packed qualification",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195248869,
+      "name": "Fast feedback",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 135195248979,
+      "name": "Retained OpenCode V1 and Host V2 original Desktop",
+      "status": "completed",
+      "conclusion": "failure"
+    },
+    {
+      "id": 135195250993,
+      "name": "Renderer source validation",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195251086,
+      "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195251395,
+      "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195251782,
+      "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195252013,
+      "name": "Focused documentation and asset validation",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195252385,
+      "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195252550,
+      "name": "macOS DMG artwork end-to-end",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135195252661,
+      "name": "Codex login Desktop (Linux x64)",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "id": 135225356254,
+      "name": "Full qualification",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "failureExcerpt": {
+    "startLine": 139,
+    "endLine": 171,
+    "lines": [
+      "2026-11-19T00:34:54.9011486Z HEAD is now at e1cd736 Merge 030b21f0765d1a6e6572f46d262c672d63e69eb7 into 8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+      "2026-11-19T00:34:54.9049740Z ##[endgroup]",
+      "2026-11-19T00:34:54.9090544Z [command]/usr/bin/git log -1 --format=%H",
+      "2026-11-19T00:34:54.9109240Z e1cd736dc055035c6cbb39ca1476fa6f36b50ee8",
+      "2026-11-19T00:34:54.9307890Z ##[group]Run actions/setup-node@v6",
+      "2026-11-19T00:34:54.9308141Z with:",
+      "2026-11-19T00:34:54.9308361Z   node-version-file: .node-version",
+      "2026-11-19T00:34:54.9308607Z   check-latest: false",
+      "2026-11-19T00:34:54.9310691Z   token: ***",
+      "2026-11-19T00:34:54.9310951Z   package-manager-cache: true",
+      "2026-11-19T00:34:54.9311177Z env:",
+      "2026-11-19T00:34:54.9311374Z   CI_ROOT_TEST_SHARDS: 4",
+      "2026-11-19T00:34:54.9311590Z ##[endgroup]",
+      "2026-11-19T00:34:55.0347097Z Node version file is not JSON file",
+      "2026-11-19T00:34:55.0348633Z Resolved .node-version as 26.12.1",
+      "2026-11-19T00:34:55.1019864Z Attempting to download 26.12.1...",
+      "2026-11-19T00:34:55.7806775Z Acquiring 26.12.1 - x64 from https://github.com/actions/node-versions/releases/download/26.12.1-39618969937/node-26.12.1-linux-x64.tar.gz",
+      "2026-11-19T00:34:56.9486799Z Extracting ...",
+      "2026-11-19T00:34:56.9566308Z [command]/usr/bin/tar xz --strip 1 --warning=no-unknown-keyword --overwrite -C /home/runner/work/_temp/0fc90cab-d3ff-4999-8fb9-57f3a4ddcf99 -f /home/runner/work/_temp/9eeacf3f-277c-45d1-a12e-9475dd6d21ac",
+      "2026-11-19T00:34:58.0894600Z Adding to the cache ...",
+      "2026-11-19T00:34:59.0104928Z ##[group]Environment details",
+      "2026-11-19T00:34:59.5633629Z node: v26.12.1",
+      "2026-11-19T00:34:59.5634041Z npm: 11.20.0",
+      "2026-11-19T00:34:59.5634249Z yarn: 1.22.22",
+      "2026-11-19T00:34:59.5634768Z ##[endgroup]",
+      "2026-11-19T00:34:59.5811554Z ##[group]Run test \"$RETAINED_COEXISTENCE_RESULT\" = success",
+      "2026-11-19T00:34:59.5811980Z \u001b[36;1mtest \"$RETAINED_COEXISTENCE_RESULT\" = success\u001b[0m",
+      "2026-11-19T00:35:00.0112981Z shell: /usr/bin/bash -e {0}",
+      "2026-11-19T00:35:00.0113342Z env:",
+      "2026-11-19T00:35:00.0113614Z   CI_ROOT_TEST_SHARDS: 4",
+      "2026-11-19T00:35:00.0113890Z   RETAINED_COEXISTENCE_RESULT: failure",
+      "2026-11-19T00:35:00.0114147Z ##[endgroup]",
+      "2026-11-19T00:35:00.0182266Z ##[error]Process completed with exit code 1."
+    ]
+  },
+  "qualification": [
+    "All Main jobs terminal at original attempt1; workflow and completed job page permanently retired.",
+    "Full qualification is an aggregate verdict; its dependency assertion failed because the selected retained coexistence job failed. It does not execute a new desktop/Host test.",
+    "Main selected fast feedback/retained coexistence only; skipped root gates provide no canonical root test, typed lint,12-config typecheck or build qualification.",
+    "Actual final-verdict checkout is the pull-request merge commit e1cd736, while workflow head metadata remains030.",
+    "Original final log captured once, immutable readback exact. No rerun, dispatch, cancellation or native/app execution."
+  ]
+}

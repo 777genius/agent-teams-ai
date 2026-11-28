@@ -1,0 +1,66 @@
+{
+  "status": "PASS scoped saved launch settings/read fences and existing Composer/Task/Stop regression; full existing Launch/Create/Resume workflow and P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-existing-launch-data-native-v1.tar.gz",
+  "archiveSha256": "6578dbf0ed4b455ca724a71dbe9d1b5e856a17376f7f2e65116e21281713bb88",
+  "archiveBytes": 16997272,
+  "archiveIntegrity": "All2248 regular entries read completely;14 actual compiled Desktop JS files matched successful receipt hashes",
+  "hostSource": "a49f6fa236c50081bc1ae998a8caf7215bbb11fed16ee2da5ffc547e9304d301",
+  "hostDist": "3f86b7293b337bd92b0822d48a77e5530c8711a9af9f34132a42ce62e875ff85",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "implementation": {
+    "read": "Authorized team.launch.configuration.read returns finite selected user choices and contextual workspace/provider/model. Main bounds/validates projection and strips credential/process fields; current grants apply. Host reconstruction retains admitted choices in the existing launch record.",
+    "existingUi": "No new forms/dialogs remain. Existing LaunchTeamDialog and CreateTeamDialog are reused. getSavedRequest translates captured settings into existing TeamCreateRequest/prefill semantics; getData supplies workspace and member provider/model metadata. Explicit false/off survives. Configuration-roster drift refuses mapping; unavailable configuration leaves product records readable with a warning, without legacy/global reconstruction.",
+    "ordering": "Direct app backend controls and ordinary Team reads share only read-order metadata. Reads crossing a mutation or stale context cannot apply, including late runtime/settings responses and uncertain effects. Captured launch control retains one original intent after an uncertain response; no automatic effect retry.",
+    "remainingLaunch": "Existing prepareProvisioning -> replaceMembers -> launchTeam -> provisioning-progress chain still needs positive backend integration for all used fields and full roster/create/resume behavior. Read/default hydration alone is not dialog acceptance."
+  },
+  "checks": {
+    "hostSuite": {
+      "jobId": "22d1500391189a801b542b891c80af67",
+      "result": "231/231; root/Host/test/script typechecks and affected lint/guards passed on retained Host tuple"
+    },
+    "frontendFinal": {
+      "jobId": "eed84fc1bf6eb33aa12cc30915ad93e7",
+      "result": "118/118; root/Host build, strict harness types, affected lint, source-size/provisioning guards PASS"
+    },
+    "focusedTypes": "Strict test/features/agent-backend/tsconfig.json PASS; existing prefill and two-member metadata/provenance tested without a parallel form",
+    "retainedLintFailure": "08011539d0f050dac925d63952301c1c:116 frontend/12 runtime tests passed, aggregate failed import sorting; original result retained before repair"
+  },
+  "desktopRegression": {
+    "jobId": "204f8126a1624000736d8b0f1e65c1a7",
+    "receiptSha256": "378db44a28225899530bee01d7dca84062b0f209de615fbb081bf4528671a4e4",
+    "facts": "Actual Electron dev:mcp, original sidebar/Team/Composer/Task board/Stop controls. Two human inputs, real Claude SDK/CLI/MCP/Bash, canonical Task and visible replies; all11 localhost requests selected Opus/medium. Exact Native child absent before Quit; Runtime closed/released. Selected source hashes match before/after flow. Zero refused sentinels; legacy version discovery remains allowed. Initial launch is explicit TEST API setup; ordinary Launch dialog not qualified.",
+    "humanCommands": [
+      "205baef2-b4a7-486a-a80b-7e600932e75c",
+      "fb69c407-7973-4d00-84b1-581eed77972c"
+    ],
+    "taskId": "5b759874-214c-5243-ae87-50b36f40c366",
+    "cleanup": "Captured Host34094 retired before external cleanup; Native34879 absent before Quit and released. Remaining verified TEST group21822 was terminated by identity-guarded cleanup; wrapper signal SIGTERM, not app exit0. Group empty and9222 free. Full app Quit/Relaunch/P8 is not qualified."
+  },
+  "abandonedAlternateUi": {
+    "decision": "Owner required existing UI only. All alternate Host form/options/route files and their harness were removed; both TeamDetailView and TeamListView import the original LaunchTeamDialog. Nothing is claimed as Launch UI PASS.",
+    "attempts": [
+      {
+        "jobId": "21440ce0d24abf74ccd766a4219929bf",
+        "receiptSha256": "b5a38aeea537e809e3111adb0735a9608d78747f02226358bc56447b28c44580",
+        "failure": "API module import timed out before renderer initialization; zero model requests; app0/group53437 empty"
+      },
+      {
+        "jobId": "5e9337a30cf35f4fcc1b62b333ff5812",
+        "receiptSha256": "e302246fb71e1a4d709cf850caa2e8dab8b6d9b1b149d63ada4aaf11869a0dcf",
+        "failure": "Same pre-UI module wait timed out; zero model requests; app0/group65874 empty. Intermediate nested UI public import also failed lint and was removed."
+      },
+      {
+        "jobId": "b6872e385cce46b6477596a717725afa",
+        "receiptSha256": "2f8f78af5e2ee947fc3e104dfdda21521502c10cc12e99258e63c04340082e84",
+        "failure": "After explicit renderer-readiness observation, routing passed; test input selection did not retain Opus. No Launch click/provider allocation or model request occurred; app0/group80768 empty. Alternate UI discarded."
+      }
+    ],
+    "readinessRepair": "The maintained negative routing probe now waits for actual renderer initialization/focus before its one module/API probe. Main/preload readiness alone does not prove renderer graph is ready. No mutation/probe auto-repeat or generic CDP timeout inflation."
+  },
+  "scopeAndDelivery": {
+    "current": "Only stage1 P0-P8/M01-M19; stage2 integration with future Orchestrator/agent-runtime is explicitly deferred and not performed",
+    "ui": "Only existing UI, no alternative forms or dialogs; E2E must use existing controls for launch/create/resume signoff",
+    "prs": "Draft only; no merge into main/release. Reviewed parts may be stacked/integrated in a separate isolated integration branch. Every draft PR description links plan/contracts/matrix at exact head SHA and states P/M scope/evidence/gaps. No commits/push/PR/merge/release performed in this slice."
+  },
+  "remaining": "Full preflight/roster/create/launch/progress/Resume integration through existing UI; complete settings/extensions/hooks/worktrees/prompts, dynamic/second/group/cross-Team,10 MCP groups,M13 review/evidence, remaining auth/attachments/activity/subagents/process feeds, partial-owner lists, P7/P8. Host CMS, provider owning aggregate gates and canonical Node26.11.1 remain open. Vendor auth/model is unqualified; localhost scripted inference is authorized synthetic evidence."
+}

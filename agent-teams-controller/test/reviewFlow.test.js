@@ -222,6 +222,98 @@ describe('configurable review flow', () => {
     expect(events(task.id, 'human_approved')).toHaveLength(1);
   });
 
+  it('routes trusted user manual approval outside review without granting authority through flags', () => {
+    controller = createController({
+      teamName: 'fixture', claudeDir: dir, allowUserMessageSender: true,
+    });
+    board = controller.taskBoard;
+    const task = board.createTask({ subject: 'Trusted manual approval', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    const before = fs.readFileSync(taskFile(task.id), 'utf8');
+    const untrusted = createController({
+      teamName: 'fixture', claudeDir: dir, allowUserMessageSender: false,
+    }).taskBoard;
+
+    expect(() => untrusted.approveReviewFromUser(task.id, { from: 'user' }))
+      .toThrow('Trusted user action required');
+    expect(fs.readFileSync(taskFile(task.id), 'utf8')).toBe(before);
+    expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
+
+    const approved = board.approveReviewFromUser(task.id, {
+      from: 'alice', leadSessionId: 'lead-session-1', suppressTaskComment: true,
+      'notify-owner': true,
+    });
+    expect(approved).toMatchObject({ status: 'completed', reviewState: 'approved' });
+    expect(board.getKanbanState().tasks[task.id].column).toBe('approved');
+    expect(events(task.id, 'review_requested')).toHaveLength(0);
+    expect(events(task.id, 'review_approved')).toHaveLength(0);
+    expect(events(task.id, 'human_approved')).toHaveLength(0);
+  });
+
+  it('routes trusted user rejection retry after policy disable without duplicating retained effects', () => {
+    controller = createController({
+      teamName: 'fixture', claudeDir: dir, allowUserMessageSender: true,
+    });
+    board = controller.taskBoard;
+    const task = board.createTask({ subject: 'Trusted interrupted human rejection', owner: 'bob' });
+    board.completeTask(task.id, 'bob');
+    board.setReviewFlowSettings({ reviewFlow: 'human_approval' });
+    board.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+    const cycle = events(task.id, 'review_requested')[0].id;
+    board.completeReview(task.id, { from: 'alice', expectedReviewRequestId: cycle });
+
+    const fail = vi.spyOn(kanban, 'clearKanban').mockImplementationOnce(() => {
+      throw new Error('synthetic trusted human rejection overlay failure');
+    });
+    expect(() => board.requestChangesFromUser(task.id, {
+      from: 'alice', comment: 'Original user feedback',
+    })).toThrow(/synthetic trusted human rejection/);
+    fail.mockRestore();
+    expect(board.getTask(task.id)).toMatchObject({
+      status: 'completed', reviewState: 'needsFix',
+    });
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
+    expect(events(task.id, 'review_changes_requested')[0]).toMatchObject({
+      actor: 'user', note: 'Original user feedback',
+    });
+
+    board.setReviewFlowSettings({ reviewFlow: 'agent_approval' });
+    expect(board.getKanbanState().reviewFlow).toBe('agent_approval');
+    const beforeRetry = fs.readFileSync(taskFile(task.id), 'utf8');
+    const untrusted = createController({
+      teamName: 'fixture', claudeDir: dir, allowUserMessageSender: false,
+    }).taskBoard;
+    expect(() => untrusted.requestChangesFromUser(task.id, {
+      from: 'user', comment: 'Untrusted retry',
+    })).toThrow('Trusted user action required');
+    expect(fs.readFileSync(taskFile(task.id), 'utf8')).toBe(beforeRetry);
+
+    const result = board.requestChangesFromUser(task.id, {
+      from: 'alice', comment: 'Changed on retry',
+    });
+    expect(result).toMatchObject({ status: 'pending', reviewState: 'needsFix' });
+    expect(board.getKanbanState().tasks[task.id]).toBeUndefined();
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
+    expect(board.getTask(task.id).comments.some((comment) =>
+      comment.text === 'Original user feedback'
+    )).toBe(true);
+    expect(board.getTask(task.id).comments.some((comment) =>
+      comment.text === 'Changed on retry' || comment.text === 'Untrusted retry'
+    )).toBe(false);
+    const inboxFile = path.join(dir, 'teams', 'fixture', 'inboxes', 'bob.json');
+    const ownerInbox = JSON.parse(fs.readFileSync(inboxFile, 'utf8'));
+    expect(ownerInbox.filter((message) => message.text.includes('Original user feedback')))
+      .toHaveLength(1);
+    const commentCount = board.getTask(task.id).comments.length;
+    const inboxCount = ownerInbox.length;
+    board.requestChangesFromUser(task.id, {
+      from: 'alice', comment: 'Original user feedback',
+    });
+    expect(board.getTask(task.id).comments).toHaveLength(commentCount);
+    expect(JSON.parse(fs.readFileSync(inboxFile, 'utf8'))).toHaveLength(inboxCount);
+    expect(events(task.id, 'review_changes_requested')).toHaveLength(1);
+  });
+
   it('resumes an interrupted human rejection without duplicate events or owner messages', () => {
     const task = board.createTask({ subject: 'Interrupted human rejection', owner: 'bob' });
     board.completeTask(task.id, 'bob');

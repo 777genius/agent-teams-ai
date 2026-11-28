@@ -1,12 +1,11 @@
 import { NodeApplicationCommandHasher } from '@features/application-command-ledger/main';
-import { isHumanApprovalFlow, type ReviewFlowSettings } from '@features/review-flow';
 import { TaskBoardCommandFacade } from '@features/task-board-commands';
 import { fingerprintSavedLaunchSettings } from '@features/team-provisioning/contracts';
 import { fromProvisioningMembers, isMixedOpenCodeSideLanePlan } from '@features/team-runtime-lanes';
 import { yieldToEventLoop } from '@main/utils/asyncYield';
 import { getClaudeBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
-import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
+import { stripAgentBlocks } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import {
@@ -111,7 +110,13 @@ import type { TeamFileWritePolicy } from './teamFileWritePolicy';
 import type { TeamLogSourceTracker } from './TeamLogSourceTracker';
 import type { TeamMetaFile } from './TeamMetaStore';
 import type {
+  AdmittedLegacySourceWrite,
+  LegacySourceWriteAdmissionPolicy,
+} from '@agent-teams/legacy-agent-host/lifecycle';
+import type { ReviewFlowSettings } from '@features/review-flow';
+import type {
   AddMemberRequest,
+  AgentActionMode,
   AttachmentMeta,
   CreateTaskRequest,
   GlobalTask,
@@ -145,7 +150,6 @@ import type {
   ToolCallMeta,
   UpdateKanbanPatch,
 } from '@shared/types';
-import type { AgentActionMode } from '@shared/types';
 import type { AgentTeamsController } from 'agent-teams-controller';
 
 const { createController } = agentTeamsControllerModule;
@@ -297,7 +301,10 @@ export class TeamDataService {
   /** Tracks notified task-start transitions to avoid duplicate lead notifications. */
   private notifiedTaskStarts = new Set<string>();
   private taskCommentNotificationInitialization: Promise<void> | null = null;
-  private taskCommentNotificationProcessInFlight = new Map<string, Promise<void>>();
+  private taskCommentNotificationProcessInFlight = new Map<
+    string,
+    { promise: Promise<void>; sourceAdmission?: AdmittedLegacySourceWrite }
+  >();
   private taskCommentNotificationActiveProcess = new Map<string, string | undefined>();
   private taskCommentNotificationQueuedProcess = new Map<
     string,
@@ -365,6 +372,28 @@ export class TeamDataService {
       getSentMessages: (teamName) => this.sentMessagesStore.readMessages(teamName),
     });
     this.memberActivityMetaService = new MemberActivityMetaService(this.messageFeedService);
+  }
+
+  readStoppedTeamImportNotificationFacts(teamName: string) {
+    return this.taskCommentNotificationJournal.inspectStoppedImport(teamName);
+  }
+
+  readStoppedTeamImportCommandFacts(teamName: string) {
+    return this.taskBoardCommandFacade.readStoppedTeamImportCommandFacts(teamName);
+  }
+
+  /** Pending callbacks are product-owner debt, independent of Runtime liveness. */
+  readStoppedTeamImportBackgroundFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      initialization: Number(this.taskCommentNotificationInitialization !== null),
+      process: Number(this.taskCommentNotificationProcessInFlight.has(teamName)),
+      active: Number(this.taskCommentNotificationActiveProcess.has(teamName)),
+      queued: Number(this.taskCommentNotificationQueuedProcess.has(teamName)),
+      notification: [...this.taskCommentNotificationInFlight].filter((key) =>
+        key.startsWith(`${teamName}:`)
+      ).length,
+      context: Number(this.notificationContextInFlight.has(teamName)),
+    };
   }
 
   private readSnapshotConfig(teamName: string): Promise<TeamConfig | null> {
@@ -1172,6 +1201,12 @@ export class TeamDataService {
     teamName: string,
     operation: () => Promise<void>
   ) => Promise<void> = (_name, operation) => operation();
+
+  private legacySourceWriteAdmission?: LegacySourceWriteAdmissionPolicy;
+  setLegacySourceWriteAdmission(policy: LegacySourceWriteAdmissionPolicy | undefined): void {
+    this.legacySourceWriteAdmission = policy;
+    this.taskCommentNotificationJournal.setLegacySourceWriteAdmission(policy);
+  }
 
   setConfigurationIdentityFence(
     fence: (teamName: string, operation: () => Promise<void>) => Promise<void>
@@ -2206,30 +2241,16 @@ export class TeamDataService {
 
         // Skip inbox notification when lead starts their own task (solo teams)
         if (!this.isLeadOwner(task.owner, leadName)) {
-          const parts = [
-            `**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`,
-          ];
-          if (task.description?.trim()) {
-            parts.push(`\nDetails:\n${task.description.trim()}`);
-          }
-          parts.push(
-            '',
-            wrapAgentBlock(
-              [
-                `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-                `Update task status using the board MCP tools:`,
-                `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
-              ].join('\n')
+          await this.sendMessage(
+            teamName,
+            agentTeamsControllerModule.protocols.buildTaskStartNotification(
+              teamName,
+              task,
+              this.getTaskLabel(task),
+              'legacy',
+              leadName
             )
           );
-          await this.sendMessage(teamName, {
-            member: task.owner,
-            from: leadName,
-            text: parts.join('\n'),
-            taskRefs: task.descriptionTaskRefs,
-            summary: `Start working on ${this.getTaskLabel(task)}`,
-            source: 'system_notification',
-          });
         }
       } catch {
         // Best-effort notification
@@ -2250,7 +2271,12 @@ export class TeamDataService {
   async startTaskByUser(
     teamName: string,
     taskId: string,
-    admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    admission?: {
+      expectedOwner: string;
+      expectedRunId: string;
+      isCurrent: () => boolean;
+      canStart: () => Promise<boolean>;
+    }
   ): Promise<{ notifiedOwner: boolean }> {
     const tasks = await this.taskReader.getTasks(teamName);
     let task = tasks.find((t) => t.id === taskId);
@@ -2283,6 +2309,7 @@ export class TeamDataService {
       }
       task = latestTask; // Notify using the actual post-admission task contents.
     }
+    if (admission && !admission.isCurrent()) throw new Error('Scheduled task start superseded');
     this.getTaskBoard(teamName).startTask(taskId, 'user');
     this.invalidateGlobalTaskProjectionCache();
     const notifiedOwner = task.owner
@@ -2319,34 +2346,12 @@ export class TeamDataService {
   }
 
   private buildUserTaskStartNotification(teamName: string, task: TeamTask): SendMessageRequest {
-    const parts = [`**start working on task now** ${this.getTaskLabel(task)} "${task.subject}"`];
-    if (task.description?.trim()) {
-      parts.push(`\nDetails:\n${task.description.trim()}`);
-    }
-    if (task.prompt?.trim()) {
-      parts.push(`\nInstructions:\n${task.prompt.trim()}`);
-    }
-    parts.push(
-      '',
-      wrapAgentBlock(
-        [
-          `This start notification can become stale after reassignment or completion. Before modifying anything, fetch the current task and verify that task.owner is your configured teammate name and task.status is pending or in_progress. If the owner changed or the task is completed/deleted, do not start or reopen it, modify files, add a completion comment, or complete it; stop unless the current owner explicitly asks you to collaborate on fresh follow-up work.`,
-          `Begin work on this task immediately. Keep it moving until it is completed or clearly blocked. Do not leave it idle.`,
-          `To fetch the full task context (description, comments, attachments) use:`,
-          `task_get { teamName: "${teamName}", taskId: "${task.id}" }`,
-          `When done, update task status:`,
-          `task_complete { teamName: "${teamName}", taskId: "${task.id}", actor: "${task.owner}" }`,
-        ].join('\n')
-      )
+    return agentTeamsControllerModule.protocols.buildTaskStartNotification(
+      teamName,
+      task,
+      this.getTaskLabel(task),
+      'user'
     );
-    return {
-      member: task.owner!,
-      from: 'user',
-      text: parts.join('\n'),
-      taskRefs: task.descriptionTaskRefs,
-      summary: `Start working on ${this.getTaskLabel(task)}`,
-      source: 'system_notification',
-    };
   }
 
   async updateTaskStatus(
@@ -2405,11 +2410,17 @@ export class TeamDataService {
 
   async notifyLeadOnTeammateTaskComment(teamName: string, taskId: string): Promise<void> {
     try {
-      await this.waitForTaskCommentNotificationInitialization();
-      await this.runTaskCommentNotificationsCoalesced(teamName, taskId, {
-        seedHistoricalIfJournalMissing: true,
-        recoverPending: true,
-      });
+      const admission = this.legacySourceWriteAdmission?.capture(teamName);
+      if (admission?.kind === 'read-only') return;
+      const notify = async () => {
+        await this.waitForTaskCommentNotificationInitialization();
+        await this.runTaskCommentNotificationsCoalesced(teamName, taskId, {
+          seedHistoricalIfJournalMissing: true,
+          recoverPending: true,
+        });
+      };
+      if (admission) await admission.run(notify);
+      else await notify();
     } catch (error) {
       logger.warn(`[TeamDataService] notifyLeadOnTeammateTaskComment failed: ${String(error)}`);
     }
@@ -2793,21 +2804,25 @@ export class TeamDataService {
     taskId: string | undefined,
     options: TaskCommentNotificationOptions
   ): Promise<void> {
+    const admission = this.legacySourceWriteAdmission?.capture(teamName);
+    if (admission?.kind === 'read-only') return Promise.resolve();
     const key = this.buildTaskCommentNotificationProcessKey(teamName);
     const existing = this.taskCommentNotificationProcessInFlight.get(key);
     if (existing) {
-      const normalizedTaskId = taskId?.trim() || undefined;
-      this.queueTaskCommentNotificationProcess(teamName, normalizedTaskId);
-      return existing;
+      existing.sourceAdmission?.assertCurrent();
+      this.queueTaskCommentNotificationProcess(teamName, taskId?.trim() || undefined);
+      return existing.promise;
     }
-
-    const promise = this.drainTaskCommentNotifications(teamName, taskId, options).finally(() => {
-      if (this.taskCommentNotificationProcessInFlight.get(key) === promise) {
+    const drain = () => this.drainTaskCommentNotifications(teamName, taskId, options);
+    const work = admission ? admission.run(drain) : drain();
+    const promise = work.finally(() => {
+      if (this.taskCommentNotificationProcessInFlight.get(key)?.promise === promise) {
         this.taskCommentNotificationProcessInFlight.delete(key);
+        this.taskCommentNotificationQueuedProcess.delete(key);
+        this.taskCommentNotificationActiveProcess.delete(key);
       }
-      this.taskCommentNotificationActiveProcess.delete(key);
     });
-    this.taskCommentNotificationProcessInFlight.set(key, promise);
+    this.taskCommentNotificationProcessInFlight.set(key, { promise, sourceAdmission: admission });
     return promise;
   }
 
@@ -2998,6 +3013,7 @@ export class TeamDataService {
     taskId?: string,
     options?: TaskCommentNotificationOptions
   ): Promise<void> {
+    const sourceAdmission = this.legacySourceWriteAdmission?.current(teamName);
     const seedHistoricalIfJournalMissing = options?.seedHistoricalIfJournalMissing === true;
     const recoverPending = options?.recoverPending === true;
     const teamContext = options?.teamContext;
@@ -3160,31 +3176,43 @@ export class TeamDataService {
 
         for (const notification of pending) {
           if (inboxMessageIdsByRecipient.get(notification.recipientName) === null) continue;
-          const delivery = await this.inboxWriter.sendMessage(teamName, {
-            member: notification.recipientName,
-            from: notification.comment.author,
-            text: notification.text,
-            summary: notification.summary,
-            commentId: notification.comment.id,
-            source: TASK_COMMENT_NOTIFICATION_SOURCE,
-            messageKind: 'task_comment_notification',
-            ...(notification.recipientName === notification.leadName && notification.leadSessionId
-              ? { leadSessionId: notification.leadSessionId }
-              : {}),
-            // Keep the primary task link and all exact cross-team mentions
-            // from the accepted user answer. The previous immediate notifier
-            // forwarded comment.taskRefs; replacing it must not drop them.
-            taskRefs: notification.isUserAnswer
-              ? [notification.taskRef, ...(notification.comment.taskRefs ?? [])].filter(
-                  (ref, index, refs) =>
-                    refs.findIndex(
-                      (candidate) =>
-                        candidate.teamName === ref.teamName && candidate.taskId === ref.taskId
-                    ) === index
-                )
-              : [notification.taskRef],
-            messageId: notification.messageId,
-          });
+          const send = () =>
+            this.inboxWriter.sendMessage(
+              teamName,
+              {
+                member: notification.recipientName,
+                from: notification.comment.author,
+                text: notification.text,
+                summary: notification.summary,
+                commentId: notification.comment.id,
+                source: TASK_COMMENT_NOTIFICATION_SOURCE,
+                messageKind: 'task_comment_notification',
+                ...(notification.recipientName === notification.leadName &&
+                notification.leadSessionId
+                  ? { leadSessionId: notification.leadSessionId }
+                  : {}),
+                // Keep the primary task link and all exact cross-team mentions
+                // from the accepted user answer. The previous immediate notifier
+                // forwarded comment.taskRefs; replacing it must not drop them.
+                taskRefs: notification.isUserAnswer
+                  ? [notification.taskRef, ...(notification.comment.taskRefs ?? [])].filter(
+                      (ref, index, refs) =>
+                        refs.findIndex(
+                          (candidate) =>
+                            candidate.teamName === ref.teamName && candidate.taskId === ref.taskId
+                        ) === index
+                    )
+                  : [notification.taskRef],
+                messageId: notification.messageId,
+              },
+              {
+                shouldStillWrite: () => {
+                  sourceAdmission?.assertCurrent();
+                  return true;
+                },
+              }
+            );
+          const delivery = sourceAdmission ? await sourceAdmission.publish(send) : await send();
           if (!delivery.deliveredToInbox) {
             // A failed/declined write is not evidence of delivery. Keep the
             // existing pending_send journal entry for startup/event recovery.
@@ -3889,6 +3917,11 @@ export class TeamDataService {
   async updateKanban(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
     const taskBoard = this.getTaskBoard(teamName);
 
+    if (patch.op === 'disapprove') {
+      taskBoard.disapproveReview(taskId, { from: 'user' });
+      return;
+    }
+
     if (patch.op === 'remove') {
       taskBoard.clearKanban(taskId);
       return;
@@ -3902,72 +3935,22 @@ export class TeamDataService {
           ...(leadSessionId ? { leadSessionId } : {}),
         });
       } else {
-        // Only the desktop renderer's user action reaches this path. Agent tools
-        // have no updateKanban/setReviewFlowSettings endpoint; controller locks
-        // and re-checks the policy before every approval mutation.
-        const task = taskBoard.getTask(taskId) as TeamTask;
-        if (
-          isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
-          getReviewStateFromTask(task) === 'reviewed'
-        ) {
-          taskBoard.approveAsHuman(taskId);
-          return;
-        }
         const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-        const workflowColumn = this.getControllerTaskWorkflowColumn(taskBoard, taskId);
-        if (workflowColumn === undefined) {
-          taskBoard.setKanbanColumn(taskId, 'approved', {
-            transition: 'manual_approve',
-          });
-        } else {
-          taskBoard.approveReview(taskId, {
-            from: leadName,
-            suppressTaskComment: true,
-            'notify-owner': true,
-            ...(leadSessionId ? { leadSessionId } : {}),
-          });
-        }
+        taskBoard.approveReviewFromUser(taskId, {
+          from: leadName,
+          suppressTaskComment: true,
+          'notify-owner': true,
+          ...(leadSessionId ? { leadSessionId } : {}),
+        });
       }
       return;
     }
 
-    if (patch.op === 'request_changes') {
-      const task = taskBoard.getTask(taskId) as TeamTask;
-      const reviewState = getReviewStateFromTask(task);
-      const latestDecision = [...(task.historyEvents ?? [])]
-        .reverse()
-        .find(
-          (event) =>
-            event.type === 'review_requested' ||
-            event.type === 'review_changes_requested' ||
-            event.type === 'review_completed' ||
-            event.type === 'review_approved' ||
-            event.type === 'human_approved'
-        );
-      const retryHumanRejection =
-        (task.status === 'completed' || task.status === 'pending') &&
-        reviewState === 'needsFix' &&
-        latestDecision?.type === 'review_changes_requested' &&
-        latestDecision.actor === 'user';
-      if (
-        reviewState === 'reviewed' ||
-        isHumanApprovalFlow(taskBoard.getKanbanState?.() as KanbanState | null) ||
-        retryHumanRejection
-      ) {
-        taskBoard.requestChangesAsHuman(taskId, {
-          comment: patch.comment?.trim() || 'User requested changes.',
-          ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
-        });
-        return;
-      }
-    }
     const { leadName, leadSessionId } = await this.resolveLeadRuntimeContext(teamName);
-    taskBoard.requestChanges(taskId, {
+    taskBoard.requestChangesFromUser(taskId, {
       from: leadName,
-      comment: patch.comment?.trim() || 'Reviewer requested changes.',
-      ...(patch.op === 'request_changes' && patch.taskRefs?.length
-        ? { taskRefs: patch.taskRefs }
-        : {}),
+      comment: patch.comment?.trim() || 'User requested changes.',
+      ...(patch.taskRefs?.length ? { taskRefs: patch.taskRefs } : {}),
       ...(leadSessionId ? { leadSessionId } : {}),
     });
   }

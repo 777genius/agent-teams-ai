@@ -114,7 +114,7 @@ export const CodexRuntimeUpdateDialog = ({
           {status?.state === 'failed' || error ? (
             <div className="flex items-start gap-2 rounded-md border border-red-300/25 bg-red-400/10 px-3 py-2 text-xs text-red-200">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-              <span>{detail}</span>
+              <span>{error ?? status?.error ?? detail}</span>
             </div>
           ) : null}
 

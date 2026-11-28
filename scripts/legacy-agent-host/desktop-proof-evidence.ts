@@ -1,0 +1,763 @@
+import { projectDesktopCodexInstallerFailure, projectDesktopMixedSettingsFailure, projectDesktopSelectionTargetFailure, projectDesktopTaskBoardFailure } from './desktop-backend-failures.ts';
+import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
+import { readDesktopNativeProviderArtifact } from './desktop-native-stop-fixture.ts';
+import { fileDigest } from './desktop-backend-fixture.ts';
+import { verifyDesktopNativeFreeze } from './desktop-source-freeze.ts';
+import { verifyLinuxChildExecInput } from '../../src/main/utils/linuxChildLaunchSelection.ts';
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import type { prepareDesktopProofFixture } from './desktop-proof-fixture.ts';
+import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startCodexModel } from '../../packages/legacy-agent-host/tests/fixtures/native-codex-team/model.ts';
+import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import type { startOpenCodeV2ReviewModel } from './desktop-opencode-v2-review-model.ts';
+import type { startDesktopCapturedMcpModel } from './desktop-opencode-v2-mcp-fixture.ts';
+
+/** Preserve both original input checks after app cleanup and before writing its receipt. */
+export async function verifyDesktopProofInputsAfterCleanup(
+  before: Parameters<typeof verifyDesktopNativeFreeze>[0],
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>,
+  evidence: Record<string, unknown>
+): Promise<void> {
+  await verifyDesktopNativeFreeze(before, evidence);
+  if (fixture.linuxChildExec) {
+    try {
+      assert.deepEqual(verifyLinuxChildExecInput(fixture.linuxChildExec), fixture.linuxChildExec);
+      evidence.linuxChildExecInputVerifiedAfterCleanup = true;
+    } catch {
+      evidence.linuxChildExecInputVerifiedAfterCleanup = false;
+      evidence.status = 'INCOMPLETE';
+    }
+  }
+}
+
+/** Preserve exact source and scope facts in the existing evidence owner. */
+export function captureDesktopProofScope(evidence: Record<string, unknown>, options: {
+  repo: string; mode: string; emulatedOnly: boolean; emulatedManagementMode: boolean; emulatedRuntimeMode: boolean;
+}): void {
+  const { repo, mode, emulatedOnly, emulatedManagementMode, emulatedRuntimeMode } = options;
+  if (mode === 'codex-login-ui' || emulatedOnly) evidence.source = {
+    head: execFileSync('/usr/bin/git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim(),
+    dirty: execFileSync('/usr/bin/git', ['status', '--porcelain', '--untracked-files=no'], { cwd: repo, encoding: 'utf8' }).trim().length > 0,
+  };
+  if (emulatedOnly) {
+    evidence.emulation = { only: true, runtimeConfigured: emulatedRuntimeMode, managementConfigured: emulatedManagementMode || emulatedRuntimeMode };
+    evidence.scope = 'Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted';
+    evidence.excluded = [...(emulatedRuntimeMode ? [] : ['provider sessions']), 'vendor authentication', 'native model execution', 'full Stage1/release/default activation'];
+  }
+  if (mode === 'codex-login-ui') {
+    evidence.scope = 'Existing Electron Codex Settings controls through preload/Main/Host/D and pinned native app-server: fresh browser/device login start, private link/code, copy and cancel. No authenticated account completion.';
+    evidence.excluded = ['authenticated vendor login completion', 'vendor inference', 'personal browser navigation', 'other OS tuples', 'Desktop team launch', 'full Stage1/release/default activation'];
+  }
+}
+
+/** Final assertions run only after the original receipt has been written and reported. */
+export function assertDesktopProofCompleted(evidence: Record<string, unknown>, options: {
+  packed: boolean;
+  emulatedOnly: boolean;
+  controlledProcessMode: boolean;
+  mode: string;
+  scheduleUiMode: boolean;
+  capturedMcpUiMode: boolean;
+  cleanupFailure: unknown;
+  remaining: readonly unknown[] | null;
+}): void {
+  const { packed, emulatedOnly, controlledProcessMode, mode, scheduleUiMode, capturedMcpUiMode,
+    cleanupFailure, remaining } = options;
+  if (packed) assert.equal(evidence.status, 'PASS', 'packed candidate proof incomplete; inspect the retained receipt before any retry');
+  if (emulatedOnly) assert.equal(evidence.status, 'PASS', 'provider-emulation UI proof incomplete; original receipt retained');
+  if (controlledProcessMode) assert.equal(evidence.status, 'PASS', 'controlled process cold UI proof incomplete; original evidence retained');
+  if (mode === 'codex-login-ui') assert.equal(evidence.status, 'PASS', 'Codex login UI proof incomplete; inspect its retained finite receipt');
+  if (scheduleUiMode) assert.equal(evidence.status, 'PASS', 'original schedule UI proof incomplete; inspect its retained receipt');
+  if (capturedMcpUiMode) assert.equal(evidence.status, 'PASS', 'original MCP UI proof incomplete; inspect its retained receipt');
+  assert.ok(
+    !cleanupFailure && remaining !== null && remaining.length === 0,
+    'captured group cleanup unconfirmed; receipt retains debt and no further signal is authorized'
+  );
+}
+
+export async function desktopProofEvidence(options: {
+  mode: string;
+  fixture: Awaited<ReturnType<typeof prepareDesktopProofFixture>>;
+  pnpm: string;
+  pnpmSha256: string;
+  electron: string;
+  smokePath: string;
+  conversationMode: boolean;
+  nativeStopMode: boolean;
+  uiMode: boolean;
+  conversationModel?: Awaited<ReturnType<typeof startNativeTeamModel>> | undefined;
+  codexResumeModel?: Awaited<ReturnType<typeof startCodexModel>> | undefined;
+  openCodeLifecycleModel?: Awaited<ReturnType<typeof startOpenCodeModel>> | undefined;
+  openCodeReviewModel?: Awaited<ReturnType<typeof startOpenCodeV2ReviewModel>> | undefined;
+  capturedMcpModel?: Awaited<ReturnType<typeof startDesktopCapturedMcpModel>> | undefined;
+}): Promise<Record<string, unknown>> {
+  const {
+    mode,
+    fixture,
+    pnpm,
+    pnpmSha256,
+    electron,
+    conversationMode,
+    nativeStopMode,
+    uiMode,
+    conversationModel,
+    codexResumeModel,
+    openCodeLifecycleModel,
+    openCodeReviewModel,
+    capturedMcpModel,
+  } = options;
+  const resumeEvidence: Record<string, unknown> = {};
+  if (mode === 'native-resume-ui') {
+    const provider = openCodeLifecycleModel ? 'opencode' : codexResumeModel ? 'codex' : 'claude';
+    const profile = JSON.parse(await readFile(fixture.profilePath, 'utf8'));
+    const members = profile.runtime?.members;
+    assert.ok(Array.isArray(members) && members.length === 1);
+    const member = members[0];
+    assert.equal(member.memberId, 'alice-id'); assert.equal(member.provider, provider);
+    if (openCodeLifecycleModel) {
+      assert.equal(member.nativeGeneration, 'v2'); assert.equal(member.protocolRevision, '2.1.4');
+      assert.equal(member.model, fixture.openCodeV2?.modelId);
+    }
+    if (codexResumeModel) {
+      assert.ok(fixture.codexResume);
+      assert.deepEqual(member.capturedMcpServers, {});
+      assert.match(String(member.capturedMcpCatalog?.digest), /^[a-f0-9]{64}$/);
+      assert.equal(member.model, fixture.codexResume.model);
+      resumeEvidence.codexResumeCatalog = fixture.codexResume;
+    }
+    resumeEvidence.resumeProvider = provider;
+    resumeEvidence.resumeNativeProfile = { provider, memberId: member.memberId, model: member.model,
+      executableSha256: member.executable?.sha256,
+      ...(openCodeLifecycleModel ? { nativeGeneration: 'v2', version: '2.1.4',
+        engineManifestSha256: member.embedded?.manifestSha256 } : {}),
+      ...(codexResumeModel ? { managedMcp: true, catalogDigest: member.capturedMcpCatalog.digest } : {}) };
+  }
+  return {
+    status: 'INCOMPLETE',
+    mode,
+    ...(openCodeReviewModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      observations: openCodeReviewModel.observations, probes: openCodeReviewModel.probes,
+      failures: openCodeReviewModel.failures,
+      inference: 'Local scripted model; original V2 tools and Host own every file and Task effect',
+    } } : {}),
+    ...(capturedMcpModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      requests: capturedMcpModel.requests, probes: capturedMcpModel.probes, failures: capturedMcpModel.failures,
+      inference: 'Local finite oracle only; actual native V2 owns captured MCP discovery and effects',
+    } } : {}),
+    ...resumeEvidence,
+    ...(openCodeLifecycleModel ? { nativeProvider: 'opencode', nativeGeneration: 'v2', model: {
+      observations: openCodeLifecycleModel.observations, probes: openCodeLifecycleModel.probes,
+      failures: openCodeLifecycleModel.failures,
+      inference: 'Local scripted model only; actual embedded OpenCode V2 executes all tools',
+    } } : {}),
+    ...(codexResumeModel ? { model: {
+      observations: codexResumeModel.observations, probes: codexResumeModel.probes,
+      failures: codexResumeModel.failures,
+      requests: codexResumeModel.requests ?? [],
+      inference: 'Local scripted model only; actual native Codex app-server executes all tools',
+    } } : {}),
+    ...(conversationModel
+      ? {
+          model: {
+            observations: conversationModel.observations,
+            ...(conversationModel.nativeMemberObservations ? { nativeMemberObservations: conversationModel.nativeMemberObservations } : {}),
+            probes: conversationModel.probes,
+            unexpectedNoToolsRequests: conversationModel.unexpectedNoToolsRequests,
+            failures: conversationModel.failures,
+            inference: 'Local scripted model only; actual native Claude executes all tools',
+          },
+        }
+      : {}),
+    scope:
+      mode === 'process-cold-ui'
+        ? 'Controlled genuine native-kernel/canonical Team registration, normal first Host exit, cold Electron Host and one existing ProcessesSection Stop; zero provider session/model allocation'
+        : mode === 'native-process-ui'
+        ? 'Actual native Bash/private MCP registration and original Host crash/cold reconnect; visible original row with no Stop if absent, or one original-ref Stop if same-live; Runtime custody stays HOLD, no native cleanup or natural-expiry claim'
+        : mode === 'native-activity-readback-ui'
+          ? 'Original Member Logs/Stats and reload from exact retained native child proof; original profile/store unchanged through Host close, zero native replay'
+          : mode === 'native-mixed-create-launch-ui'
+            ? 'Original Create save-only three-provider roster, saved Launch model checks and native capture, original Composer messages/MCP/Bash/replies for three providers, Stop and reload; localhost inference only'
+            : mode === 'native-quit-ui'
+              ? 'Original Composer twice, one real native inference held and one durably queued input, original guarded Quit via semantic public UI API; no human menu click or Stop'
+              : mode === 'native-quit-readback-ui'
+                ? 'Exact retained profile next startup after original app/Host/native exit and lock release; original sealed inputs and product data unchanged, no new native allocation'
+                : mode === 'cross-team-ui'
+                  ? 'Existing same-Host cross-Team selector/Send/Reply/reload only; independent canonical product effects, no Task board/review replay, native execution or full M05 claim'
+                  : mode === 'task-board-cross-team-ui'
+                    ? 'Existing offline Task board/dependency/assignment/drag/review-change-fix-approve controls followed by same-Host cross-Team selector/Send/Reply/reload in the same app; canonical product effects only, no native execution or full M05 claim'
+                    : mode === 'approval-ui'
+                      ? 'Existing technical permission/question Sheet through actual SDK/CLI, captured private preview, per-request Allow/Deny/answers and one original approval preference synchronization; explicit TEST setup launch and localhost scripted inference'
+                      : mode === 'native-review-continuation-ui'
+                        ? 'Two source epochs: original native Task capture/initial review Undo failure preserved, then existing original review Undo/Redo/history/reload; no native replay or allocation'
+                        : mode === 'native-review-ui' || mode === 'native-review-readback-ui'
+                          ? 'Actual foreground Read/Edit after original Task Start, canonical native capture proof, original Changes hunk decisions, Stop, renderer reload and separate Host restart; narrow qualified file effects, no global M13 claim'
+                          : mode === 'stopped-import-ui'
+                            ? process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1'
+                              ? 'Synthetic stopped legacy solo records with real captured source-owned TEST child Stop publication; original Main/Host import and fresh actual SDK/CLI Launch/task/Bash/reply/Stop/reload, no old provider inference'
+                              : 'Original never-launched configured legacy Team Launch action → Main/Host detached import → canonical saved Launch dialog, close without Submit and renderer reload; optional local SDK model probe only, no native Team input'
+                            : mode === 'review-ui' || mode === 'review-readback-ui'
+                              ? 'Original Task Changes UI through captured Main/Host review transport with synthetic canonical ledger, real dirty filesystem, history and saved-state readback; no native M13 capture qualification'
+                              : mode === 'native-create-ui'
+                                ? 'Original CreateTeamDialog controls through scoped private template/model preflight, durable Host registry/capture, actual Claude SDK localhost MCP/Bash/reply, Stop and renderer reload'
+                                : mode === 'create-config-ui'
+                                  ? 'Original CreateTeamDialog save-only controls through Main/Host registry, canonical Team navigation, product readback and real renderer reload; no native agent launch'
+                                  : mode === 'native-resume-ui'
+                                    ? 'Original Launch/Stop/reload/explicit Resume checkpoint/Composer Send/Stop controls, same product launch with a new technical generation, exact retained native history and actual SDK localhost inference'
+                                    : mode === 'native-relaunch-ui'
+                                      ? 'Two fresh runs of the same captured Host Team via original Launch/Stop/reload/Launch controls, distinct native conversations and retained product Task/replies; actual SDK localhost inference'
+                                      : mode === 'native-launch-ui'
+                                        ? 'Original LaunchTeamDialog controls through saved Team capture/standalone Host/actual Claude SDK and local inference, native MCP/Bash, Stop and settings readback after reload'
+                                        : mode === 'native-readback-ui'
+                                          ? 'Ordinary UI readback from exact retained TEST profile/store after app restart; zero new Native launch/restore/message/tool commands'
+                                          : conversationMode
+                                            ? process.env.LEGACY_DESKTOP_GROUP_CHATS === '1'
+                                              ? 'Existing Group chat Create/directed Send/native group MCP source/ACK/reply, human reaction/archive/renderer reload/restore and ordinary Stop of both captured SDK actors; TEST localhost inference only'
+                                              : 'Ordinary Desktop Composer/Send and visible native MCP replies, actual Claude SDK/CLI/Bash/tasks, second input continuity and ordinary Stop before Quit'
+                                            : nativeStopMode
+                                              ? 'Ordinary Desktop Task and Stop controls against actual Claude SDK/CLI via standalone Host; explicit TEST API setup launch, no model inputs'
+                                              : uiMode
+                                                ? 'Ordinary Desktop Task UI controls through renderer adapter/main/Host/Team filesystem'
+                                                : [
+                                                      'codex-account-read',
+                                                      'codex-account-auth',
+                                                    ].includes(mode)
+                                                  ? 'Codex account/quota Desktop API through preload/Main/Host/D/native TEST profile'
+                                                  : 'Desktop preload agentBackend API bridge diagnostics; actual main/Host/Team filesystem path',
+    excluded:
+      mode === 'process-cold-ui'
+        ? ['actual SDK/MCP registration (separate normal SDK proof)', 'SDK cold survival', 'historical root911 custody release', 'provider sessions', 'whole process tree stop', 'PID/group signal fallback', 'automatic uncertain Stop retry', 'vendor authentication', 'other OS tuples', 'full Stage1/release/default activation']
+        : mode === 'native-process-ui'
+        ? [
+            'vendor model qualification',
+            'whole process tree stop',
+            'provider Runtime/native-root cleanup qualification',
+            'PID/group signal fallback',
+            'automatic uncertain stop retry',
+            'full P4/P8',
+            'full fork-free/P5 sentinel qualification',
+            'legacy maintenance cutover',
+          ]
+        : [
+            ...(uiMode ? [] : ['user control signoff']),
+            ...(conversationMode ||
+            (mode === 'stopped-import-ui' &&
+              process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') ||
+            [
+              'native-launch-ui',
+              'native-relaunch-ui',
+              'native-resume-ui',
+              'native-create-ui',
+              'native-review-ui',
+              'approval-ui',
+              'native-quit-ui',
+              'native-process-ui',
+              'native-mixed-create-launch-ui',
+            ].includes(mode)
+              ? ['vendor model qualification']
+              : nativeStopMode
+                ? ['native inference']
+                : ['provider sessions', 'native agents']),
+            ...(['native-quit-ui', 'native-quit-readback-ui'].includes(mode)
+              ? [
+                  'automatic app.relaunch',
+                  'pending provider-open',
+                  'human macOS menu/window click',
+                  'Stage2',
+                ]
+              : []),
+            ...((mode === 'stopped-import-ui' &&
+              process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') ||
+            [
+              'native-launch-ui',
+              'native-relaunch-ui',
+              'native-resume-ui',
+              'native-create-ui',
+              'native-mixed-create-launch-ui',
+              'native-review-ui',
+            ].includes(mode)
+              ? []
+              : ['Desktop team launch']),
+            'full P4/P8',
+            'full fork-free/P5 sentinel qualification',
+            'legacy maintenance cutover',
+          ],
+    root: fixture.root,
+    pins: {
+      ...fixture.pins,
+      providerArchiveSha256: await fileDigest(
+        join(import.meta.dirname, '../../' +
+          (await readDesktopNativeProviderArtifact(join(import.meta.dirname, '../..'))).path)
+      ),
+      pnpmSha256,
+      electronSha256: await fileDigest(electron),
+      smokeSourceSha256: await fileDigest(options.smokePath),
+      fixtureSourceSha256: await fileDigest(
+        join(import.meta.dirname, 'desktop-backend-fixture.ts')
+      ),
+      uiSourceSha256: await fileDigest(join(import.meta.dirname, 'desktop-team-ui-smoke.ts')),
+    },
+    paths: {
+      node: fixture.node,
+      hostEntry: fixture.hostEntry,
+      pnpm,
+      descriptor: fixture.descriptorPath,
+      profile: fixture.profilePath,
+    },
+    packageManager: fixture.packageManager,
+    operations: [] as unknown[],
+  };
+}
+
+export { projectDesktopMixedSettingsFailure, projectDesktopTaskBoardFailure };
+
+export function projectDesktopEmulatedReadinessFailure(value: unknown) {
+  try {
+    const missing = Symbol('missing');
+    const own = (row: unknown, key: string): unknown => {
+      if (row === null || typeof row !== 'object') return missing;
+      const field = Object.getOwnPropertyDescriptor(row, key);
+      return field && 'value' in field ? field.value : missing;
+    };
+    const record = (row: unknown) => row !== null && typeof row === 'object' && !Array.isArray(row);
+    const boolean = (field: unknown) => typeof field === 'boolean' ? field : null;
+    const choice = (field: unknown, allowed: readonly string[]) =>
+      typeof field === 'string' && allowed.includes(field) ? field : null;
+    const textFacts = (field: unknown) => {
+      if (typeof field !== 'string') return { present: false, bounded: null, terms: [] as string[] };
+      if (field.length > 8000) return { present: true, bounded: false, terms: [] as string[] };
+      const lower = field.toLowerCase();
+      const vocabulary = ['authentication', 'credential', 'permission', 'model', 'probe', 'runtime', 'source',
+        'profile', 'owner', 'grant', 'context', 'capture', 'preparation', 'provider', 'ready', 'loading',
+        'unavailable', 'unsupported', 'missing', 'mismatch', 'changed', 'expired', 'stale', 'busy',
+        'blocked', 'rejected', 'refused', 'failed', 'invalid', 'timeout', 'timed out', 'cancelled'];
+      return { present: true, bounded: true, empty: field.length === 0,
+        terms: vocabulary.filter(term => lower.includes(term)),
+        selectedProvidersReady: field.includes('All selected providers are ready'),
+        runtimeUnavailable: field.includes('Runtime environment unavailable') || field.includes('Runtime environment not available'),
+        providerStatusLoading: field.includes('provider status is still loading'),
+        modelUnverified: field.includes('could not be verified') || field.includes('check failed') };
+    };
+    const snapshot = own(value, 'rendererFailureSnapshot'), store = own(snapshot, 'store');
+    // This is a partial saved sample, taken after the original readiness wait failed.
+    const dialogs = own(snapshot, 'dialogs');
+    const dialogLength = Array.isArray(dialogs) ? own(dialogs, 'length') : missing;
+    const dialogCount = typeof dialogLength === 'number' && Number.isSafeInteger(dialogLength) && dialogLength >= 0
+      ? dialogLength : null;
+    const dialogItems = [];
+    if (dialogCount !== null) for (let index = 0; index < Math.min(dialogCount, 3); index++) {
+      const dialog = own(dialogs, String(index)), buttons = own(dialog, 'buttons');
+      const buttonLength = Array.isArray(buttons) ? own(buttons, 'length') : missing;
+      const buttonCount = typeof buttonLength === 'number' && Number.isSafeInteger(buttonLength) && buttonLength >= 0
+        ? buttonLength : null;
+      let matches = 0, enabled = 0, disabled = 0, unknown = 0, unknownEntries = 0;
+      if (buttonCount !== null) for (let buttonIndex = 0; buttonIndex < Math.min(buttonCount, 24); buttonIndex++) {
+        const button = own(buttons, String(buttonIndex)), text = own(button, 'text');
+        if (typeof text !== 'string') unknownEntries++;
+        if (text !== 'Launch team') continue;
+        matches++;
+        const state = own(button, 'disabled');
+        if (state === false) enabled++;
+        else if (state === true) disabled++;
+        else unknown++;
+      }
+      dialogItems.push({ recorded: record(dialog), text: textFacts(own(dialog, 'text')),
+        buttons: { recorded: Array.isArray(buttons), count: buttonCount === null ? null : Math.min(buttonCount, 25),
+          atCaptureLimit: buttonCount === null ? null : buttonCount === 24,
+          overflow: buttonCount === null ? null : buttonCount > 24,
+          unknownEntries: buttonCount === null ? null : unknownEntries,
+          launchTeam: { matches: buttonCount === null ? null : matches,
+            enabled: buttonCount === null ? null : enabled, disabled: buttonCount === null ? null : disabled,
+            unknown: buttonCount === null ? null : unknown } } });
+    }
+    const imported = own(value, 'stoppedImportUiProof'), hydration = own(imported, 'hydrationFailureDiagnostics');
+    const entries = own(store, 'provisioning');
+    const length = Array.isArray(entries) ? own(entries, 'length') : missing;
+    const count = typeof length === 'number' && Number.isSafeInteger(length) && length >= 0 ? length : null;
+    const provisioning = [];
+    if (count !== null) for (let index = 0; index < Math.min(count, 8); index++) {
+      const row = own(entries, String(index)), progress = own(row, 'progress');
+      provisioning.push({ recorded: record(row), progressRecorded: record(progress),
+        currentProvisioningRunRecorded: typeof own(row, 'currentProvisioningRunId') === 'string',
+        currentRuntimeRunRecorded: typeof own(row, 'currentRuntimeRunId') === 'string',
+        state: choice(own(progress, 'state'), ['idle', 'preparing', 'launching', 'running', 'ready', 'failed', 'error', 'cancelled', 'completed', 'stopped']),
+        configReady: boolean(own(progress, 'configReady')),
+        error: textFacts(own(row, 'error')), progressError: textFacts(own(progress, 'error')),
+        message: textFacts(own(progress, 'message')) });
+    }
+    const cleanup = own(value, 'emulatedRuntimeCleanup');
+    const result = { schemaVersion: 1, status: 'available',
+      snapshotRecorded: record(snapshot), snapshotUnavailable: boolean(own(snapshot, 'unavailable')),
+      storeRecorded: record(store), selectedTeamError: textFacts(own(store, 'selectedTeamError')),
+      retainedDialogs: { source: 'retained-post-failure-partial-dialog-sample',
+        atomicWithFailedWait: false, completeDom: false, actualTruncationKnown: false,
+        count: dialogCount === null ? null : Math.min(dialogCount, 4),
+        atCaptureLimit: dialogCount === null ? null : dialogCount === 3,
+        overflow: dialogCount === null ? null : dialogCount > 3, items: dialogItems },
+      importRecorded: record(imported), hydrationRecorded: record(hydration),
+      hydration: { text: textFacts(own(hydration, 'text')),
+        permissions: choice(own(hydration, 'permissions'), ['checked', 'unchecked', 'indeterminate']) },
+      provisioning: { count: count === null ? null : Math.min(count, 9), overflow: count === null ? null : count > 8, items: provisioning },
+      peerCleanup: { recorded: record(cleanup), absent: boolean(own(cleanup, 'absent')),
+        observationFailed: boolean(own(cleanup, 'observationFailed')) } };
+    return JSON.stringify(result).length <= 8192 ? result : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' }; }
+}
+
+/** Retained markers only: this snapshot cannot identify the failing CDP call or qualify a UI stage. */
+function projectDesktopNativeReviewFailure(value: unknown): Record<string, unknown> {
+  try {
+    const row = (item: unknown): Record<string, unknown> => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error();
+      return item as Record<string, unknown>;
+    };
+    const own = (item: unknown, key: string): unknown => {
+      if (!item || typeof item !== 'object') throw new Error();
+      const descriptor = Object.getOwnPropertyDescriptor(item, key);
+      if (!descriptor) return undefined;
+      if (!('value' in descriptor)) throw new Error();
+      return descriptor.value;
+    };
+    const optional = (item: unknown) => item === undefined ? undefined : row(item);
+    const marker = (item: unknown): boolean => item === undefined ? false : Boolean(row(item));
+    const closed = (item: unknown, allowed: readonly string[]): string => {
+      if (typeof item !== 'string' || !allowed.includes(item)) throw new Error();
+      return item;
+    };
+    const count = (items: unknown, cap: number): number => {
+      if (!Array.isArray(items)) throw new Error();
+      const length = own(items, 'length');
+      if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > cap)
+        throw new Error();
+      return length;
+    };
+    const finiteTime = (item: unknown): number => {
+      if (typeof item !== 'number' || !Number.isSafeInteger(item) || item < 0) throw new Error();
+      return item;
+    };
+    const evidence = row(value);
+    closed(own(evidence, 'status'), ['INCOMPLETE', 'FAIL']);
+    const diagnostics = optional(own(evidence, 'rendererDiagnostics'));
+    const startup = diagnostics ? row(own(diagnostics, 'startup')) : undefined;
+    let commandCount: number | null = null;
+    let lastRetainedCommand: { method: string; outcome: string } | null = null;
+    if (startup) {
+      const commands = own(startup, 'commands');
+      commandCount = count(commands, 96);
+      for (let index = 0; index < commandCount; index++) {
+        const command = row(own(commands, String(index)));
+        const method = closed(own(command, 'method'),
+          ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+        const sent = finiteTime(own(command, 'sentMs'));
+        const ack = own(command, 'ackMs'), failed = own(command, 'failed');
+        if (ack !== undefined && (failed !== undefined || finiteTime(ack) < sent)) throw new Error();
+        const outcome = failed !== undefined ? closed(failed, ['timeout', 'refused'])
+          : ack !== undefined ? 'acknowledged' : 'pending';
+        lastRetainedCommand = { method, outcome };
+      }
+    }
+    const app = startup ? optional(own(startup, 'appReadiness')) : undefined;
+    const appObservations = app ? count(own(app, 'observations'), 24) : null;
+    const review = optional(own(evidence, 'nativeReviewUiProof'));
+    if (review) closed(own(review, 'provider'), ['opencode-v2']);
+    const result = {
+      schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+      atomicWithFailure: false, identifiesTimedOutCall: false,
+      startup: {
+        rendererTargetRecorded: marker(own(evidence, 'rendererTarget')),
+        diagnosticsRecorded: diagnostics !== undefined,
+        documentStatus: startup ? closed(own(startup, 'status'), ['WAITING', 'DOCUMENT_READY']) : null,
+        commands: { count: commandCount, atCaptureLimit: commandCount === null ? null : commandCount === 96,
+          lastRetainedCommand },
+        appReadiness: { status: app ? closed(own(app, 'status'), ['WAITING', 'READY']) : null,
+          observations: appObservations, atCaptureLimit: appObservations === null ? null : appObservations === 24 },
+        discoveryReadinessRecorded: marker(own(evidence, 'discoveryReadiness')),
+      },
+      review: {
+        recorded: review !== undefined,
+        status: review ? closed(own(review, 'status'), ['INCOMPLETE', 'PASS']) : null,
+        globalMetadataRecorded: review ? marker(own(review, 'originalGlobalMetadata')) : false,
+        projectMetadataRecorded: review ? marker(own(review, 'originalMetadataBeforeLaunch')) : false,
+        stopRecorded: review ? marker(own(review, 'stop')) : false,
+        stepCount: review ? count(own(review, 'steps'), 256) : null,
+      },
+    };
+    if (JSON.stringify(result).length > 2048) throw new Error();
+    return result;
+  } catch {
+    return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' };
+  }
+}
+
+/** Gate only on an own data status; never add a read of an existing summary accessor. */
+function nativeReviewFailureSummary(evidence: Record<string, unknown>, mode: string): Record<string, unknown> {
+  if (mode !== 'native-review-ui') return {};
+  try {
+    const status = Object.getOwnPropertyDescriptor(evidence, 'status');
+    if (!status || !('value' in status) || status.value === 'PASS') return {};
+    // Reuse only the retained partial snapshot; it is not an atomic Launch observation.
+    return { nativeReviewFailure: projectDesktopNativeReviewFailure(evidence),
+      nativeReviewReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) };
+  } catch {
+    return {};
+  }
+}
+
+/** Closed projections of already retained markers; no read or action is performed here. */
+function retainedFailureReader(value: unknown) {
+  const row = (item: unknown): Record<string, unknown> => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error();
+    return item as Record<string, unknown>;
+  };
+  const own = (item: unknown, key: string): unknown => {
+    if (!item || typeof item !== 'object') throw new Error();
+    const descriptor = Object.getOwnPropertyDescriptor(item, key);
+    if (!descriptor) return undefined;
+    if (!('value' in descriptor)) throw new Error();
+    return descriptor.value;
+  };
+  const optional = (item: unknown) => item === undefined ? undefined : row(item);
+  const marker = (item: unknown) => item === undefined ? false : Boolean(row(item));
+  const closed = (item: unknown, allowed: readonly string[]): string => {
+    if (typeof item !== 'string' || !allowed.includes(item)) throw new Error();
+    return item;
+  };
+  const count = (items: unknown, cap: number): number => {
+    if (!Array.isArray(items)) throw new Error();
+    const length = own(items, 'length');
+    if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0 || length > cap)
+      throw new Error();
+    return length;
+  };
+  const text = (item: unknown, cap: number): string => {
+    if (typeof item !== 'string' || item.length > cap) throw new Error();
+    return item;
+  };
+  const boolean = (item: unknown): boolean | null => {
+    if (item === undefined) return null;
+    if (typeof item !== 'boolean') throw new Error();
+    return item;
+  };
+  const status = (part: Record<string, unknown> | undefined) =>
+    part ? closed(own(part, 'status'), ['INCOMPLETE', 'PASS']) : null;
+  const steps = (part: Record<string, unknown> | undefined) => {
+    const items = part ? own(part, 'steps') : undefined;
+    return items === undefined ? null : count(items, 256);
+  };
+  const finiteTime = (item: unknown): number => {
+    if (typeof item !== 'number' || !Number.isSafeInteger(item) || item < 0) throw new Error();
+    return item;
+  };
+  const startup = (part: Record<string, unknown> | undefined) => {
+    if (!part) return null;
+    const diagnostics = optional(own(part, 'rendererDiagnostics'));
+    const retained = diagnostics ? row(own(diagnostics, 'startup')) : undefined;
+    let commandCount: number | null = null;
+    let lastRetainedCommand: { method: string; outcome: string } | null = null;
+    if (retained) {
+      const commands = own(retained, 'commands'); commandCount = count(commands, 96);
+      for (let index = 0; index < commandCount; index++) {
+        const command = row(own(commands, String(index)));
+        const method = closed(own(command, 'method'),
+          ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+        const sent = finiteTime(own(command, 'sentMs'));
+        const ack = own(command, 'ackMs'), failed = own(command, 'failed');
+        if (ack !== undefined && (failed !== undefined || finiteTime(ack) < sent)) throw new Error();
+        const outcome = failed !== undefined ? closed(failed, ['timeout', 'refused'])
+          : ack !== undefined ? 'acknowledged' : 'pending';
+        lastRetainedCommand = { method, outcome };
+      }
+    }
+    const app = retained ? optional(own(retained, 'appReadiness')) : undefined;
+    const observations = app ? count(own(app, 'observations'), 24) : null;
+    return { rendererTargetRecorded: marker(own(part, 'rendererTarget')),
+      diagnosticsRecorded: diagnostics !== undefined,
+      documentStatus: retained ? closed(own(retained, 'status'), ['WAITING', 'DOCUMENT_READY']) : null,
+      commands: { count: commandCount, atCaptureLimit: commandCount === null ? null : commandCount === 96,
+        lastRetainedCommand },
+      appReadiness: { status: app ? closed(own(app, 'status'), ['WAITING', 'READY']) : null,
+        observations, atCaptureLimit: observations === null ? null : observations === 24 },
+      discoveryReadinessRecorded: marker(own(part, 'discoveryReadiness')) };
+  };
+  const evidence = row(value); closed(own(evidence, 'status'), ['INCOMPLETE', 'FAIL']);
+  return { evidence, row, own, optional, marker, closed, count, text, boolean, status, steps, startup };
+}
+
+/** Occurrences in the saved partial dialog sample are not the original modal state. */
+function projectDesktopRetainedOriginalFailure(value: unknown): Record<string, unknown> {
+  try {
+    const r = retainedFailureReader(value), { own, optional, marker } = r;
+    const proof = optional(own(r.evidence, 'retainedOriginalUiProof'));
+    const snapshot = optional(own(r.evidence, 'rendererFailureSnapshot'));
+    const dialogs = snapshot ? own(snapshot, 'dialogs') : undefined;
+    const dialogCount = dialogs === undefined ? null : r.count(dialogs, 3);
+    const items = [];
+    if (dialogCount !== null) for (let index = 0; index < dialogCount; index++) {
+      const dialog = r.row(own(dialogs, String(index))), text = r.text(own(dialog, 'text'), 8000);
+      const buttons = own(dialog, 'buttons'), buttonCount = r.count(buttons, 24);
+      const matches = {
+        useOriginal: { count: 0, enabled: 0, disabled: 0 },
+        stopOriginal: { count: 0, enabled: 0, disabled: 0 },
+        retryImport: { count: 0, enabled: 0, disabled: 0 },
+        close: { count: 0, enabled: 0, disabled: 0 },
+      };
+      let buttonTextAtCaptureLimit = false;
+      const labels = [
+        ['useOriginal', 'Use original runtime for this team'],
+        ['stopOriginal', 'Stop and configure original runtime'],
+        ['retryImport', 'Retry original import'], ['close', 'Close'],
+      ] as const;
+      for (let buttonIndex = 0; buttonIndex < buttonCount; buttonIndex++) {
+        const button = r.row(own(buttons, String(buttonIndex)));
+        const label = r.text(own(button, 'text'), 160), disabled = r.boolean(own(button, 'disabled'));
+        if (disabled === null) throw new Error();
+        buttonTextAtCaptureLimit ||= label.length === 160;
+        for (const [key, expected] of labels) if (label === expected) {
+          matches[key].count++; matches[key][disabled ? 'disabled' : 'enabled']++;
+        }
+      }
+      items.push({ textAtCaptureLimit: text.length === 8000,
+        textOccurrences: { useOriginalQuestion: text.includes('Use the original runtime?'),
+          stopOriginalQuestion: text.includes('Stop and use the original runtime?'),
+          importHeld: text.includes('Stopped Team import held'), launchUnavailable: text.includes('Team Launch unavailable') },
+        buttons: { count: buttonCount, atCaptureLimit: buttonCount === 24, buttonTextAtCaptureLimit, matches } });
+    }
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+      atomicWithFailure: false, identifiesTimedOutCall: false, establishesCauseOrEffects: false,
+      original: { recorded: proof !== undefined, status: r.status(proof), stepCount: r.steps(proof),
+        choiceScreenshotRecorded: proof ? marker(own(proof, 'choiceScreenshot')) : false,
+        readyScreenshotRecorded: proof ? marker(own(proof, 'readyScreenshot')) : false,
+        replyScreenshotRecorded: proof ? marker(own(proof, 'replyScreenshot')) : false,
+        launchRecorded: proof ? marker(own(proof, 'originalLaunch')) : false,
+        stopRecorded: proof ? marker(own(proof, 'stop')) : false },
+      postFailureDialogs: { source: 'retained-post-failure-partial-dialog-sample',
+        snapshotRecorded: snapshot !== undefined, unavailable: snapshot ? r.boolean(own(snapshot, 'unavailable')) : null,
+        completeDom: false, actualTruncationKnown: false, count: dialogCount,
+        atCaptureLimit: dialogCount === null ? null : dialogCount === 3, items } };
+    if (JSON.stringify(result).length > 4096) throw new Error();
+    return result;
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
+}
+
+/** First and cold-successor startup markers stay in their original identity domains. */
+function projectDesktopNativeResumeFailure(value: unknown): Record<string, unknown> {
+  try {
+    const r = retainedFailureReader(value), { own, optional, marker } = r;
+    const launch = optional(own(r.evidence, 'launchDialogProof'));
+    const cold = optional(own(r.evidence, 'coldResumeBoundary'));
+    const second = cold ? optional(own(cold, 'secondEpoch')) : undefined;
+    const resume = optional(own(r.evidence, 'resumeDialogProof'));
+    const snapshot = optional(own(r.evidence, 'rendererFailureSnapshot'));
+    for (const proof of [launch, cold, resume]) if (proof)
+      r.closed(own(proof, 'provider'), ['claude', 'codex', 'opencode']);
+    const recoveryFailure = resume ? own(resume, 'recoverySnapshotFailure') : undefined;
+    if (recoveryFailure !== undefined) r.text(recoveryFailure, 4000);
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-original-proof-markers',
+      atomicWithFailure: false, identifiesTimedOutCall: false, establishesCauseOrEffects: false,
+      firstEpoch: { source: 'top-level-first-startup', startup: r.startup(r.evidence) },
+      coldBoundary: { recorded: cold !== undefined, status: r.status(cold),
+        firstQuitRecorded: cold ? marker(own(cold, 'firstQuit')) : false,
+        firstCleanupRecorded: cold ? marker(own(cold, 'firstCleanup')) : false,
+        secondEpochRecorded: second !== undefined, secondEpochStatus: r.status(second),
+        secondEpochStartup: r.startup(second) },
+      launch: { recorded: launch !== undefined, status: r.status(launch), stepCount: r.steps(launch),
+        captureRecorded: launch ? marker(own(launch, 'capture')) : false,
+        stopRecorded: launch ? marker(own(launch, 'stop')) : false },
+      resume: { recorded: resume !== undefined, status: r.status(resume), stepCount: r.steps(resume),
+        lastRetainedPhase: resume ? r.closed(own(resume, 'phase'),
+          ['source-released', 'resume-submit-attempted', 'restored-ready', 'second-send-attempted',
+            'second-stop-attempted', 'second-checkpoint-released']) : null,
+        sourceRecorded: resume ? marker(own(resume, 'source')) : false,
+        readyLaunchRecorded: resume ? marker(own(resume, 'readyLaunch')) : false,
+        recoveryReferencesRecorded: resume ? marker(own(resume, 'recoveryReferences')) : false,
+        recoverySnapshotRecorded: resume ? marker(own(resume, 'recoverySnapshot')) : false,
+        recoverySnapshotFailureRecorded: recoveryFailure !== undefined },
+      postFailureSnapshot: { recorded: snapshot !== undefined,
+        unavailable: snapshot ? r.boolean(own(snapshot, 'unavailable')) : null } };
+    if (JSON.stringify(result).length > 4096) throw new Error();
+    return result;
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
+}
+
+
+/** Closed facts from the original cold-readback capture, never another read or a replay. */
+function projectDesktopNativeReadbackFailure(value: unknown): Record<string, unknown> {
+  try {
+    const r = retainedFailureReader(value), { own, optional } = r;
+    const proof = optional(own(r.evidence, 'savedNativeReadback'));
+    const snapshot = optional(own(r.evidence, 'rendererFailureSnapshot'));
+    const storeValue = snapshot ? own(snapshot, 'store') : undefined;
+    const store = storeValue == null ? undefined : r.row(storeValue);
+    const composer = snapshot ? optional(own(snapshot, 'commandComposer')) : undefined;
+    const items = proof ? own(proof, 'steps') : undefined;
+    const stepCount = items === undefined ? null : r.count(items, 256);
+    const clicks = { sidebarTask: 0, openTeam: 0, openDirectChat: 0 };
+    if (stepCount !== null) for (let index = 0; index < stepCount; index++) {
+      const step = r.row(own(items, String(index)));
+      if (own(step, 'action') !== 'mouseClick' || own(step, 'state') !== 'attempted') continue;
+      const label = own(step, 'label');
+      if (label === 'sidebar task') clicks.sidebarTask++;
+      else if (label === 'Open team') clicks.openTeam++;
+      else if (label === 'open saved ordinary direct chat') clicks.openDirectChat++;
+    }
+    const selected = store ? own(store, 'selectedTeamName') : undefined;
+    const textareas = composer ? own(composer, 'textareaCount') : undefined;
+    if (textareas !== undefined && (typeof textareas !== 'number' ||
+      !Number.isSafeInteger(textareas) || textareas < 0 || textareas > 5)) throw new Error();
+    const cards = snapshot ? own(snapshot, 'visibleTaskCardIds') : undefined;
+    const result = { schemaVersion: 1, status: 'available', source: 'retained-cold-readback-markers',
+      atomicWithFailedWait: false, completeDom: false, establishesCauseOrEffects: false,
+      readback: { recorded: proof !== undefined, status: r.status(proof), stepCount,
+        clickAttempts: stepCount === null ? null : clicks,
+        runtimeRecordUnchanged: proof ? r.boolean(own(proof, 'runtimeRecordUnchanged')) : null },
+      renderer: { recorded: snapshot !== undefined,
+        unavailable: snapshot ? r.boolean(own(snapshot, 'unavailable')) : null,
+        selectedHostTeam: selected == null ? null : r.text(selected, 4096).startsWith('host-team:'),
+        composerRecorded: composer !== undefined, textareaCount: textareas ?? null,
+        textareaOverflow: composer ? r.boolean(own(composer, 'textareaOverflow')) : null,
+        visibleTaskCardCount: cards === undefined ? null : r.count(cards, 24) },
+      readiness: projectDesktopEmulatedReadinessFailure(value) };
+    return JSON.stringify(result).length <= 10240 ? result
+      : { schemaVersion: 1, status: 'unavailable', reason: 'overflow' };
+  } catch { return { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' }; }
+}
+
+function retainedFlowFailureSummary(evidence: Record<string, unknown>, mode: string): Record<string, unknown> {
+  if (mode !== 'emulated-retained-original-ui' && mode !== 'native-resume-ui' && mode !== 'native-readback-ui') return {};
+  try {
+    const status = Object.getOwnPropertyDescriptor(evidence, 'status');
+    if (!status || !('value' in status) || status.value === 'PASS') return {};
+    if (mode === 'native-readback-ui') return { nativeReadbackFailure: projectDesktopNativeReadbackFailure(evidence) };
+    return mode === 'emulated-retained-original-ui'
+      ? { retainedOriginalFailure: projectDesktopRetainedOriginalFailure(evidence) }
+      : { nativeResumeFailure: projectDesktopNativeResumeFailure(evidence) };
+  } catch { return {}; }
+}
+
+/** Only the original receipt summary; no observation, retry or cleanup is performed here. */
+export function projectDesktopProofReceiptSummary(evidence: Record<string, unknown>, options: {
+  receiptPath: string; mode: string; mixedMode: boolean;
+}): Record<string, unknown> {
+  const { receiptPath, mode, mixedMode } = options;
+  return { status: evidence.status, receipt: receiptPath,
+    ...(evidence.status !== 'PASS' && evidence.failureSource
+      ? { failureSource: evidence.failureSource } : {}),
+    ...(['codex-login-ui', 'emulated-codex-login-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { loginFailure: projectDesktopCodexLoginFailure(evidence) } : {}),
+    ...(mode === 'emulated-installer-ui' && evidence.status !== 'PASS'
+      ? { installerFailure: projectDesktopCodexInstallerFailure(evidence) } : {}),
+    ...(['emulated-selection-ui', 'emulated-installer-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { selectionTargetFailure: projectDesktopSelectionTargetFailure(evidence) } : {}),
+    ...(mixedMode && evidence.status !== 'PASS'
+      ? { mixedSettingsFailure: projectDesktopMixedSettingsFailure(evidence) } : {}),
+    ...(['emulated-import-ui', 'emulated-import-lifecycle-ui', 'emulated-opencode-runtime-ui', 'emulated-claude-runtime-ui',
+      'emulated-claude-lifecycle-ui', 'emulated-collaboration-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { emulatedReadinessFailure: projectDesktopEmulatedReadinessFailure(evidence) } : {}),
+    ...(['task-board-ui', 'task-board-cross-team-ui'].includes(mode) && evidence.status !== 'PASS'
+      ? { taskBoardFailure: projectDesktopTaskBoardFailure(evidence) } : {}),
+    ...nativeReviewFailureSummary(evidence, mode),
+    ...retainedFlowFailureSummary(evidence, mode),
+  };
+}

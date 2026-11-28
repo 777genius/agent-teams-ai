@@ -12,6 +12,7 @@ import { asEnhancedChunkArray } from '@renderer/types/data';
 import { AlertCircle, FileText, Loader2 } from 'lucide-react';
 
 import { ExactTaskLogCard, type ExactTaskLogDetailState } from './ExactTaskLogCard';
+import { HostTaskActivityIndex } from './HostTaskActivityViews';
 
 import type { TaskDetailIdentity } from '@features/team-task-detail/core';
 import type {
@@ -19,6 +20,7 @@ import type {
   BoardTaskExactLogSummariesResponse,
   BoardTaskExactLogSummary,
 } from '@shared/types';
+import type { HostTaskExactLogs, HostTaskLogDetailResult } from '@shared/types/teamActivity';
 
 interface ExactTaskLogsSectionProps {
   identity: TaskDetailIdentity;
@@ -45,11 +47,11 @@ function sortExactSummaries(
 }
 
 function toDetailState(
-  result: BoardTaskExactLogDetailResult | null | undefined,
+  result: BoardTaskExactLogDetailResult | HostTaskLogDetailResult | null | undefined,
   generation: string
 ): ExactTaskLogDetailState | undefined {
   if (!result) return undefined;
-  return result.status === 'ok'
+  return result.status === 'ok' && !('kind' in result.detail)
     ? { status: 'ok', generation, chunks: asEnhancedChunkArray(result.detail.chunks) }
     : { status: 'missing', generation };
 }
@@ -79,10 +81,16 @@ export const ExactTaskLogsSection = ({
   const setTaskDetailVisibleResourceDemand = useStore(
     (state) => state.setTaskDetailVisibleResourceDemand
   );
-  const summaries = useMemo(() => {
-    const response = summariesEntry?.data as BoardTaskExactLogSummariesResponse | null | undefined;
-    return sortExactSummaries(response?.items ?? []);
-  }, [summariesEntry?.data]);
+  const response = summariesEntry?.data as
+    | BoardTaskExactLogSummariesResponse
+    | HostTaskExactLogs
+    | null
+    | undefined;
+  const hostExact = response && 'kind' in response ? response : null;
+  const summaries = useMemo(
+    () => sortExactSummaries(response && !('kind' in response) ? response.items : []),
+    [response]
+  );
 
   useEffect(() => {
     setTaskDetailVisibleResourceDemand(surfaceId, identity, 'exact-summaries', enabled);
@@ -111,7 +119,7 @@ export const ExactTaskLogsSection = ({
         };
       }
       return toDetailState(
-        entry.data as BoardTaskExactLogDetailResult | null,
+        entry.data as BoardTaskExactLogDetailResult | HostTaskLogDetailResult | null,
         summary.sourceGeneration
       );
     },
@@ -189,6 +197,16 @@ export const ExactTaskLogsSection = ({
     },
     [expandedId, fetchDetail, getDetailState]
   );
+
+  if (hostExact?.taskId === identity.taskId && !summariesEntry?.error)
+    return (
+      <HostTaskActivityIndex
+        key={JSON.stringify(identity)}
+        teamName={identity.teamName}
+        value={hostExact}
+        mode="exact"
+      />
+    );
 
   if (summariesEntry?.loading && !summariesEntry.loaded && summaries.length === 0) {
     return (

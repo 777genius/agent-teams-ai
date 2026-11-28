@@ -1,0 +1,62 @@
+{
+  "status": "Scoped PASS; full P0-P8/M01-M19 objective INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-codex-auth-namespace-reuse-v2.tar.gz",
+  "archiveSha256": "6e3d31cabe416f1f88ab3dd18ad1b84464302f37c2ed50d0f6dc85582b6978b6",
+  "parentArchive": "docs/plans/provider-migration/evidence/p5-codex-auth-native-and-desktop-v1.tar.gz",
+  "parentArchiveSha256": "2589686b99e64a8acad732468c4bff24273873c455204fe581ba65775f299f4b",
+  "hostSourceSha256": "2c99b2b3c10ee49d876d9bcef0f894b31f99fd795965a400892297535b256989",
+  "hostDistSha256": "b973701f0c8488ee62bf51c93394abd851a408341edbaa1cbb63fb12b52cd8bb",
+  "providerSha256": "2984c7bf851af9b7d4d0af9630af28c9e7febe795f45706d4ac4944b853fc9fe",
+  "nativeReceiptSha256": "44d39a03ff1ac72e2334aa36f248cf241a215acb172f82e0f76594538a3559d5",
+  "desktopReceiptSha256": "353ccb88c887c287d6f392588ab56ea79ff642a88e80f20f96151c8aeba7439f",
+  "nativeJobId": "28a4ab99e91ef1ec933d30cb5b3f5212",
+  "desktopJobId": "393d97a8b410856f6371b9b627f9bed9",
+  "scope": "Public D finite account refresh/logout; Host durable original credential command and namespace-scoped reuse across profiles/restart; Main original target/id recovery and existing Electron account API. TEST dummy API key only, no vendor token rotation or login.",
+  "facts": {
+    "hostTests": 224,
+    "hostTestJobId": "3999d12d36b02b0b34caf9c860f8a8dc",
+    "hostFocusedTests": 11,
+    "frontendFocusedTests": 8,
+    "currentTypecheckLintJobId": "49ce9af4257d52b1d8baa0be846c3914",
+    "providerTests": 181,
+    "providerJobId": "bf09127bcb3649a36079fc591c7290b8",
+    "nativeAliasAndRestartCommands": 5,
+    "electronRefreshReceipts": 2,
+    "electronRotationReuse": true,
+    "electronLogoutReceipts": 1,
+    "electronMainPendingIntents": 0,
+    "electronNonversionSentinelCalls": 0,
+    "versionPreflightStillForkDependent": true,
+    "inferenceRequests": 0,
+    "conversationStoreEntries": 0
+  },
+  "policy": "Desktop passes its canonical 30s reuse policy. Host uses actual CODEX_HOME path/device/inode resource identity; durable completion and original rotation timestamps survive aliases/restarts. Reuse does not extend the rotation window; logout invalidates it. No Main profile-scoped rotation cache remains.",
+  "refusalRecovery": "Only exact invalid/conflict/busy pre-admission responses retire a fresh unsent intent. Transport loss, missing receipt and held outcome retain the original id for lookup-only recovery. No automatic mutation resubmit.",
+  "configuration": "Desktop preferred-auth setting is projected through Main composition; effective account remains native observation. Pinned app-server does not accept --profile; unused configProfile option removed from private Host schema to avoid false account/config alignment. Use separate explicitly captured CODEX_HOME namespaces; named native profile support remains unqualified.",
+  "qualificationLimits": [
+    "TEST dummy key proves native file logout/read, not real ChatGPT refresh-token rotation.",
+    "Electron API proof does not qualify ordinary account controls, browser/device login or notifications.",
+    "Wrapper cleanup SIGTERM after guarded Host close is not packaged Quit/Relaunch or session-stop qualification.",
+    "Full D check:fast remains unqualified: retained test:ci fixture aggregation failure on local Bash3.2; no gate weakened.",
+    "Node24.21 compatibility is tested; canonical26.11.1 full CI remains unqualified.",
+    "CMS adoption/migration for Host remains pending."
+  ],
+  "retainedPreflightFailure": {
+    "jobId": "ed21731669650f66a305c29633e11d12",
+    "phase": "before TEST root/native allocation",
+    "reason": "Collector sorted Path components instead of canonical slash-separated relative strings. Corrected source digest matches harness. No successful native mutation repeated to repair this preflight."
+  },
+  "next": [
+    "Codex browser/device-code login/cancel and original operation ownership.",
+    "Claude account/status cutover.",
+    "Ordinary Desktop launch, settings/defaults/limits and human interaction UI, full mixed Team/MCP/history/review lifecycle.",
+    "P7 fork-free startup and P8 OS/package Quit/Relaunch."
+  ],
+  "checksAfterEvidenceArchive": {
+    "hostTestStrict": "PASS",
+    "sourceFileSizeGuard": "PASS,3256 production files, caps unchanged",
+    "teamProvisioningGuard": "PASS",
+    "jobId": "669d60f5baec35cf4fadc0d58f636a18"
+  },
+  "postNativeDelta": "docs/plans/provider-migration/evidence/p5-codex-clock-rollback-handoff.json"
+}

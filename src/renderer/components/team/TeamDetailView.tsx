@@ -12,6 +12,8 @@ import {
   useState,
 } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+import { HostBackendRetryAction, isHostReadUnavailable } from '@features/agent-backend/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   type TaskDetailFileLinkIntent,
@@ -24,8 +26,7 @@ import {
 } from '@features/team-task-detail/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/productAnalytics';
-import { api } from '@renderer/api';
-import { SessionPanel } from '@renderer/components/chat/session-panel';
+import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
 import { Button } from '@renderer/components/ui/button';
@@ -81,7 +82,6 @@ import {
   buildTaskChangeRequestOptions,
   type TaskChangeRequestOptions,
 } from '@renderer/utils/taskChangeRequest';
-import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId, formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
@@ -93,9 +93,7 @@ import {
   History,
   Network,
   Pencil,
-  Play,
   Plus,
-  Power,
   Square,
   Terminal,
   UserPlus,
@@ -103,10 +101,7 @@ import {
 } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-  buildChangeRuntimeLaunchState,
-  type ChangeRuntimeLaunchState,
-} from './definitionEdit/changeRuntimeLaunch';
+import { buildChangeRuntimeLaunchState } from './definitionEdit/changeRuntimeLaunch';
 import { getDefinitionEditAccess } from './definitionEdit/definitionEditAccess';
 import {
   refreshAfterDefinitionEdit,
@@ -119,18 +114,14 @@ import {
 import { TeamDefinitionEditDialog } from './definitionEdit/TeamDefinitionEditDialog';
 import { TeamMemberSettingsDialogRoute } from './definitionEdit/TeamMemberSettingsDialogRoute';
 import { TeamScheduleSection } from './definitionEdit/TeamScheduleSection';
-import { AddMemberDialog } from './dialogs/AddMemberDialog';
-import { EditTeamDialog } from './dialogs/EditTeamDialog';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { RemoveMemberConfirmDialog } from './dialogs/RemoveMemberConfirmDialog';
-import { ReviewDialog } from './dialogs/ReviewDialog';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { useStoppedTeamLaunchDialog } from './dialogs/useStoppedTeamLaunchDialog';
 import { useTeamCreateTaskDialog } from './dialogs/useTeamCreateTaskDialog';
 import { KanbanSearchInput } from './kanban/KanbanSearchInput';
 import { TeamKanbanBoardBridge } from './kanban/TeamKanbanBoardBridge';
-import { TrashDialog } from './kanban/TrashDialog';
 import { useTeamTaskFilters } from './kanban/useTeamTaskFilters';
-import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
 import { toLogicalProjectLaunchRequest } from './projectTeamLaunchRequest';
@@ -143,19 +134,33 @@ import {
   getSummaryKnownTeammateCount,
 } from './teamDetailData';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import {
+  AddMemberDialog,
+  EditTeamDialog,
+  ReviewDialog,
+  TrashDialog,
+} from './TeamDetailLazyDialogs';
+import { TeamOfflineStatusBanner } from './TeamOfflineStatusBanner';
 import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
-import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
 import type { MemberSettingsRelaunchDraft } from '@features/team-provisioning/renderer';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
 import type { InboxMessage } from '@shared/types';
 import type { ComponentProps, CSSProperties } from 'react';
 
+const hostUi = { useStore, api, isElectronMode };
+
 const sumInjectionTokens = tokenMath[
   ['sum', 'Con' + 'text', 'InjectionTokens'].join('') as keyof typeof tokenMath
 ] as (injections: readonly unknown[]) => number;
+const SessionPanel = lazy(() =>
+  import('@renderer/components/chat/session-panel').then((m) => ({ default: m.SessionPanel }))
+);
+const MemberDetailDialog = lazy(() =>
+  import('./members/MemberDetailDialog').then((m) => ({ default: m.MemberDetailDialog }))
+);
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
@@ -215,18 +220,18 @@ import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provis
 import { TeamChangesSection } from './TeamChangesSection';
 import { TeamLoadingSkeleton } from './TeamLoadingSkeleton';
 import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';
+import { isTeamProcessAlive } from './teamProcessLiveness';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
-import { loadTeamSessionMetadata } from './teamSessionFetchGuards';
 import { TeamSessionsSection } from './TeamSessionsSection';
 import { useStableActiveMembers } from './useStableActiveMembers';
 import { useTeamAgentRuntimeWatcher } from './useTeamAgentRuntimeWatcher';
+import { useTeamSessionHistory } from './useTeamSessionHistory';
 
 import type { UsageLike } from './context-metric-alias';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { KanbanSortState } from './kanban/KanbanSortPopover';
 import type { SessionInjection } from './session-injection-types';
 import type { PendingRepliesUpdater } from './teamPendingRepliesStore';
-import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
   CreateTaskRequest,
@@ -411,77 +416,8 @@ interface TeamReviewDialogState {
   taskChangeRequestOptions?: TaskChangeRequestOptions;
 }
 const TEAM_PENDING_REPLY_REFRESH_DELAY_MS = 10_000;
-const EMPTY_SESSION_HISTORY: readonly string[] = [];
 const MEMBER_ROSTER_HYDRATION_RETRY_DELAY_MS = 1_200;
 const FLOATING_COMPOSER_SCROLL_RESERVE_BASE_PX = 200;
-
-const TeamOfflineStatusBanner = memo(function TeamOfflineStatusBanner({
-  teamName,
-  onLaunch,
-}: {
-  teamName: string;
-  onLaunch: () => void;
-}): React.JSX.Element {
-  const { t } = useAppTranslation('team');
-  const summary = useStore(
-    useShallow((s) => {
-      const team = s.teamByName[teamName];
-      if (!team) {
-        return null;
-      }
-
-      return {
-        memberCount: team.memberCount,
-        expectedMemberCount: team.expectedMemberCount,
-        confirmedCount: team.confirmedCount,
-        runtimeProcessPendingCount: team.runtimeProcessPendingCount,
-        teamLaunchState: team.teamLaunchState,
-        partialLaunchFailure: team.partialLaunchFailure,
-        missingMemberCount: team.missingMembers?.length ?? 0,
-      };
-    })
-  );
-  const message =
-    summary?.teamLaunchState === 'partial_pending'
-      ? summary.runtimeProcessPendingCount != null && summary.runtimeProcessPendingCount > 0
-        ? buildPendingRuntimeSummaryCopy({
-            confirmedCount: summary.confirmedCount,
-            expectedMemberCount: summary.expectedMemberCount,
-            memberCount: summary.memberCount,
-            runtimeProcessPendingCount: summary.runtimeProcessPendingCount,
-          })
-        : t('detail.offline.reconciling')
-      : summary?.partialLaunchFailure
-        ? summary.missingMemberCount > 0
-          ? t('detail.offline.partialMissing', {
-              missing: summary.missingMemberCount,
-              expected: summary.expectedMemberCount ?? summary.missingMemberCount,
-            })
-          : t('detail.offline.partialFailed')
-        : t('detail.offline.offline');
-  return (
-    <div
-      role="status"
-      className="relative mb-2.5 flex min-h-11 items-center gap-2.5 overflow-hidden rounded-md border border-amber-500/20 bg-amber-500/[0.055] py-2 pl-3 pr-2.5"
-    >
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300">
-        <Power size={14} />
-      </span>
-      <span className="min-w-0 flex-1 text-xs font-medium text-[var(--color-text-secondary)]">
-        {message}
-      </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 shrink-0 gap-1.5 rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-700 hover:border-emerald-500/40 hover:bg-emerald-500/15 hover:text-emerald-700 dark:text-emerald-300 dark:hover:text-emerald-200"
-        onClick={onLaunch}
-      >
-        <Play size={12} />
-        {t('detail.actions.launch')}
-      </Button>
-    </div>
-  );
-});
 
 type LeadUpdatedKey = `lead${'Con'}${'text'}UpdatedAt`;
 type TeamMessagesPanelBridgeProps = Omit<
@@ -821,18 +757,20 @@ const LeadLoadBridge = memo(function LeadLoadBridge({
       {isContextPanelVisible && (
         <div className="w-80 shrink-0">
           {leadSessionLoaded ? (
-            <SessionPanel
-              injections={allContextInjections}
-              onClose={() => setContextPanelVisible(false)}
-              projectRoot={leadSessionDetail?.session?.projectPath ?? fallbackProjectRoot}
-              contextMetrics={contextMetrics}
-              sessionMetrics={leadSessionDetail?.metrics}
-              subagentCostUsd={leadSubagentCostUsd}
-              phaseInfo={leadSessionPhaseInfo ?? undefined}
-              selectedPhase={selectedContextPhase}
-              onPhaseChange={setSelectedContextPhase}
-              side="left"
-            />
+            <Suspense fallback={null}>
+              <SessionPanel
+                injections={allContextInjections}
+                onClose={() => setContextPanelVisible(false)}
+                projectRoot={leadSessionDetail?.session?.projectPath ?? fallbackProjectRoot}
+                contextMetrics={contextMetrics}
+                sessionMetrics={leadSessionDetail?.metrics}
+                subagentCostUsd={leadSubagentCostUsd}
+                phaseInfo={leadSessionPhaseInfo ?? undefined}
+                selectedPhase={selectedContextPhase}
+                onPhaseChange={setSelectedContextPhase}
+                side="left"
+              />
+            </Suspense>
           ) : (
             <div
               className="flex h-full flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]"
@@ -1206,18 +1144,20 @@ const TeamMemberDetailDialogBridge = memo(function TeamMemberDetailDialogBridge(
     ).hasMembersStillJoining;
   }, [launchMembers, memberSpawnSnapshot, memberSpawnStatuses, progress?.state, runtimeEntries]);
 
-  return (
-    <MemberDetailDialog
-      {...props}
-      teamName={teamName}
-      member={liveMember ?? member}
-      isLaunchSettling={isLaunchSettling}
-      leadActivity={leadActivity}
-      spawnEntry={spawnEntry}
-      runtimeEntry={runtimeEntry}
-      runtimeRunId={runtimeRunId}
-    />
-  );
+  return props.open ? (
+    <Suspense fallback={null}>
+      <MemberDetailDialog
+        {...props}
+        teamName={teamName}
+        member={liveMember ?? member}
+        isLaunchSettling={isLaunchSettling}
+        leadActivity={leadActivity}
+        spawnEntry={spawnEntry}
+        runtimeEntry={runtimeEntry}
+        runtimeRunId={runtimeRunId}
+      />
+    </Suspense>
+  ) : null;
 });
 
 export const TeamDetailView = memo(function TeamDetailView({
@@ -1229,6 +1169,10 @@ export const TeamDetailView = memo(function TeamDetailView({
   isPaneFocused = false,
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
+  const provisioningRuntimeTeamName =
+    logicalTeamName && isHostTeamSelectionKey(logicalTeamName) && isHostTeamSelectionKey(teamName)
+      ? teamName
+      : undefined;
   const { isLight } = useTheme();
   const teamStopControl = useTeamStopControl();
   const reviewLifecycleHostId = useId();
@@ -1253,15 +1197,14 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [addingMemberLoading, setAddingMemberLoading] = useState(false);
   const [removeMemberConfirm, setRemoveMemberConfirm] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget>(null);
-  const [launchDialogState, setLaunchDialogState] = useState<
-    Omit<Partial<ChangeRuntimeLaunchState>, 'open' | 'mode'> & {
-      open: boolean;
-      mode: TeamLaunchDialogMode;
-    }
-  >({
-    open: false,
-    mode: 'launch',
-  });
+  const {
+    launchDialogState,
+    setLaunchDialogState,
+    launchTarget,
+    openLaunchDialog,
+    closeLaunchDialog,
+    handleRestartTeam,
+  } = useStoppedTeamLaunchDialog(teamName, { logicalTeamName, retainedHistory });
   const [editorOpen, setEditorOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -1355,9 +1298,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     { teamName: string; displayName: string; projectPath: string }[]
   >([]);
   const launchDialogOpen = launchDialogState.open;
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [sessionsError, setSessionsError] = useState<string | null>(null);
   const [kanbanFilter, setKanbanFilter] = useState<KanbanFilterState>({
     sessionId: null,
     selectedOwners: new Set(),
@@ -1743,59 +1683,14 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const leadSessionId = data?.config.leadSessionId ?? null;
-  const sessionHistorySource = data?.config.sessionHistory;
-  const sessionHistoryKey = useMemo(
-    () => (sessionHistorySource ?? EMPTY_SESSION_HISTORY).join('|'),
-    [sessionHistorySource]
-  );
-  const sessionHistoryCacheRef = useRef<{ key: string; value: readonly string[] }>({
-    key: '',
-    value: EMPTY_SESSION_HISTORY,
+  const { sessions, sessionsLoading, sessionsError, refreshSessions } = useTeamSessionHistory({
+    teamName,
+    projectId,
+    leadSessionId,
+    sessionHistory: data?.config.sessionHistory,
+    isActive: isThisTabActive,
+    runtimeAlive: data?.isAlive,
   });
-  const sessionHistory = useMemo(() => {
-    if (!sessionHistorySource || sessionHistorySource.length === 0) {
-      return EMPTY_SESSION_HISTORY;
-    }
-    const cached = sessionHistoryCacheRef.current;
-    if (cached.key === sessionHistoryKey) {
-      return cached.value;
-    }
-    const value = [...sessionHistorySource];
-    sessionHistoryCacheRef.current = { key: sessionHistoryKey, value };
-    return value;
-  }, [sessionHistoryKey, sessionHistorySource]);
-
-  useEffect(() => {
-    if (!isThisTabActive || !projectId) return;
-
-    let cancelled = false;
-    setSessionsLoading(true);
-    setSessionsError(null);
-
-    void (async () => {
-      try {
-        const result = await loadTeamSessionMetadata(api, projectId, {
-          leadSessionId,
-          sessionHistory,
-        });
-        if (!cancelled) {
-          setSessions(result);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setSessionsError(e instanceof Error ? e.message : 'Failed to load sessions');
-        }
-      } finally {
-        if (!cancelled) {
-          setSessionsLoading(false);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isThisTabActive, leadSessionId, projectId, sessionHistory]);
 
   // Live git branch tracking for the lead project and member worktrees
   const teamProjectPath = data?.config.projectPath?.trim() ?? null;
@@ -2007,25 +1902,6 @@ export const TeamDetailView = memo(function TeamDetailView({
     setSendDialogOpen(true);
   }, []);
 
-  const openLaunchDialog = useCallback(
-    (mode: TeamLaunchDialogMode) => {
-      if (retainedHistory && logicalTeamName) {
-        // Retained work is historical; never launch into a different history.
-        useStore.getState().openTeamTab(logicalTeamName);
-        return;
-      }
-      // Project relaunch preserves the saved approval policy and avoids a roster rewrite.
-      setLaunchDialogState({ open: true, mode: logicalTeamName ? 'relaunch' : mode });
-    },
-    [logicalTeamName, retainedHistory]
-  );
-
-  const closeLaunchDialog = useCallback(() => {
-    setLaunchDialogState((prev) => ({ ...prev, open: false }));
-  }, []);
-  const handleRestartTeam = useCallback(() => {
-    openLaunchDialog('relaunch');
-  }, [openLaunchDialog]);
   const handleLaunchDialogSubmit = useCallback(
     async (request: TeamLaunchRequest): Promise<void> => {
       if (retainedHistory && logicalTeamName) {
@@ -2053,6 +1929,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       request: TeamLaunchRequest,
       nextMembers: TeamCreateRequest['members'],
       memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+      rosterMetadata?: Parameters<typeof executeTeamRelaunch>[0]['rosterMetadata'],
       onMembersSaved?: () => void
     ): Promise<void> => {
       if (logicalTeamName) {
@@ -2086,8 +1963,18 @@ export const TeamDetailView = memo(function TeamDetailView({
           });
           return;
         }
-        if (data?.isAlive) await api.teams.stop(teamName);
-        await launchTeam(toLogicalProjectLaunchRequest(request, logicalTeamName));
+        await executeTeamRelaunch({
+          teamName: logicalTeamName,
+          isTeamAlive: data?.isAlive === true,
+          request: toLogicalProjectLaunchRequest(request, logicalTeamName),
+          members: nextMembers,
+          rosterReadOnly: true,
+          rosterMetadata,
+          stopTeam: (name) => api.teams.stop(name),
+          stopRun: api.teams.cancelProvisioning,
+          replaceMembers: (name, next) => api.teams.replaceMembers(name, next),
+          launchTeam,
+        });
         return;
       }
       await executeTeamRelaunch({
@@ -2097,6 +1984,7 @@ export const TeamDetailView = memo(function TeamDetailView({
         members: nextMembers,
         rosterReadOnly: false,
         memberSettingsRelaunch,
+        rosterMetadata,
         onMembersSaved,
         validateBeforeReplace: validateMemberSettingsRelaunch,
         stopTeam: async (nextTeamName) => {
@@ -2124,7 +2012,9 @@ export const TeamDetailView = memo(function TeamDetailView({
             throw error;
           }
         },
-        replaceMembers: (team, next) => api.teams.replaceMembers(team, next),
+        stopRun: api.teams.cancelProvisioning,
+        replaceMembers: (nextTeamName, nextRequest) =>
+          api.teams.replaceMembers(nextTeamName, nextRequest),
         launchTeam,
       });
     },
@@ -2146,17 +2036,20 @@ export const TeamDetailView = memo(function TeamDetailView({
       definitionMembers?: ResolvedTeamMember[]
     ) => {
       setEditTarget(null);
-      setLaunchDialogState(
-        buildChangeRuntimeLaunchState({
-          logicalTeamName,
-          isAlive: data?.isAlive === true,
-          isProvisioning: isTeamProvisioning,
-          memberSettingsDraft,
-          baselineMembers: definitionMembers ?? membersWithLiveBranches,
-        })
-      );
+      const next = buildChangeRuntimeLaunchState({
+        logicalTeamName,
+        isAlive: data?.isAlive === true,
+        isProvisioning: isTeamProvisioning,
+        memberSettingsDraft,
+        baselineMembers: definitionMembers ?? membersWithLiveBranches,
+      });
+      openLaunchDialog(next.mode, {
+        memberSettingsDraft: next.memberSettingsDraft,
+        baselineMembers: next.baselineMembers,
+        memberSettingsCommandId: next.memberSettingsCommandId,
+      });
     },
-    [data?.isAlive, isTeamProvisioning, logicalTeamName, membersWithLiveBranches]
+    [data?.isAlive, isTeamProvisioning, logicalTeamName, membersWithLiveBranches, openLaunchDialog]
   );
   const memberActions = useMemo(
     () => routeMemberActions(logicalTeamName, teamName, { addMember, removeMember, restoreMember }),
@@ -2444,14 +2337,13 @@ export const TeamDetailView = memo(function TeamDetailView({
     (taskId: string) => {
       void (async () => {
         try {
-          await updateKanban(teamName, taskId, { op: 'remove' });
-          await updateTaskStatus(teamName, taskId, 'completed');
+          await updateKanban(teamName, taskId, { op: 'disapprove' });
         } catch {
           // error via store
         }
       })();
     },
-    [teamName, updateKanban, updateTaskStatus]
+    [teamName, updateKanban]
   );
 
   const handleStartTask = useCallback(
@@ -2462,7 +2354,7 @@ export const TeamDetailView = memo(function TeamDetailView({
           if (data?.isAlive) {
             const task = taskMapRef.current.get(taskId);
             try {
-              if (result.notifiedOwner && task?.owner) {
+              if (result.notifiedOwner && task?.owner && !isHostTeamSelectionKey(teamName)) {
                 await api.teams.processSend(
                   teamName,
                   `Task ${formatTaskDisplayLabel(task)} "${task.subject}" has started. Please begin working on it.`
@@ -2521,8 +2413,8 @@ export const TeamDetailView = memo(function TeamDetailView({
             }
           }
 
-          // Also notify team lead so they can reassign/coordinate
-          if (data?.isAlive) {
+          // Legacy stdin coordination is separate from the canonical Host owner message.
+          if (data?.isAlive && !isHostTeamSelectionKey(teamName)) {
             try {
               const ownerSuffix = task?.owner ? ` ${task.owner} has been notified to stop.` : '';
               await api.teams.processSend(
@@ -2622,7 +2514,14 @@ export const TeamDetailView = memo(function TeamDetailView({
     try {
       await createTeamTask(teamName, request);
 
-      if (prompt && owner && data?.isAlive && !isTeamProvisioning && startImmediately !== false) {
+      if (
+        prompt &&
+        owner &&
+        data?.isAlive &&
+        !isTeamProvisioning &&
+        startImmediately !== false &&
+        !isHostTeamSelectionKey(teamName)
+      ) {
         const msg = `New task assigned to ${owner}: "${subject}". Instructions:\n${prompt}`;
         try {
           await api.teams.processSend(teamName, msg);
@@ -2765,7 +2664,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       return (
         <div className="size-full overflow-auto p-6">
           <div ref={provisioningBannerRef}>
-            <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
+            <TeamProvisioningBanner
+              teamName={logicalTeamName ?? teamName}
+              runtimeTeamName={provisioningRuntimeTeamName}
+            />
           </div>
           <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
             <div className="max-w-md text-center">
@@ -2799,7 +2701,7 @@ export const TeamDetailView = memo(function TeamDetailView({
       );
     }
 
-    if (error) {
+    if (error && !(data && isHostReadUnavailable(teamName, error, isElectronMode()))) {
       return (
         <div className="flex size-full items-center justify-center p-6">
           <div className="text-center">
@@ -2814,7 +2716,10 @@ export const TeamDetailView = memo(function TeamDetailView({
       return (
         <div className="size-full overflow-auto p-4">
           <div ref={provisioningBannerRef}>
-            <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
+            <TeamProvisioningBanner
+              teamName={logicalTeamName ?? teamName}
+              runtimeTeamName={provisioningRuntimeTeamName}
+            />
           </div>
           <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-text-muted)]">
             {t('detail.waitingForProvisioning')}
@@ -3071,7 +2976,7 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </div>
               </div>
 
-              {!retainedHistory && !data.isAlive && !isTeamProvisioning ? (
+              {!retainedHistory && data.isAlive === false && !isTeamProvisioning ? (
                 <TeamOfflineStatusBanner
                   teamName={teamName}
                   onLaunch={() => openLaunchDialog('launch')}
@@ -3079,7 +2984,10 @@ export const TeamDetailView = memo(function TeamDetailView({
               ) : null}
 
               <div ref={provisioningBannerRef}>
-                <TeamProvisioningBanner teamName={logicalTeamName ?? teamName} />
+                <TeamProvisioningBanner
+                  teamName={logicalTeamName ?? teamName}
+                  runtimeTeamName={provisioningRuntimeTeamName}
+                />
               </div>
 
               {data.warnings?.some((warning) => warning.toLowerCase().includes('kanban')) ? (
@@ -3246,6 +3154,8 @@ export const TeamDetailView = memo(function TeamDetailView({
                 defaultOpen={false}
               >
                 <TeamSessionsSection
+                  teamName={teamName}
+                  onRefresh={refreshSessions}
                   sessions={teamSessions}
                   sessionsLoading={sessionsLoading}
                   sessionsError={sessionsError}
@@ -3281,9 +3191,9 @@ export const TeamDetailView = memo(function TeamDetailView({
                   variant="flat"
                   title={t('processes.title')}
                   icon={<Terminal size={14} />}
-                  badge={data.isAlive ? data.processes.filter((p) => !p.stoppedAt).length : 0}
+                  badge={data.processes.filter((p) => isTeamProcessAlive(p, data.isAlive)).length}
                   headerExtra={
-                    data.isAlive && data.processes.some((p) => !p.stoppedAt) ? (
+                    data.processes.some((p) => isTeamProcessAlive(p, data.isAlive)) ? (
                       <span
                         className="pointer-events-none relative inline-flex size-2 shrink-0"
                         title={t('detail.status.active')}
@@ -3695,7 +3605,9 @@ export const TeamDetailView = memo(function TeamDetailView({
     <>
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
-      {renderBody()}
+      <HostBackendRetryAction teamName={teamName} dependencies={hostUi} onReady={refreshTeamData}>
+        {renderBody()}
+      </HostBackendRetryAction>
       {launchDialogOpen && (
         <Suspense
           fallback={
@@ -3709,17 +3621,21 @@ export const TeamDetailView = memo(function TeamDetailView({
           <LaunchTeamDialog
             mode={launchDialogState.mode}
             open={launchDialogOpen}
-            teamName={logicalTeamName ?? teamName}
+            teamName={launchTarget?.teamName ?? logicalTeamName ?? teamName}
             projectPermissionTeamName={logicalTeamName ? teamName : undefined}
             rosterReadOnly={Boolean(logicalTeamName)}
             members={
-              logicalTeamName && launchDialogState.memberSettingsDraft
+              launchTarget?.members ??
+              (logicalTeamName && launchDialogState.memberSettingsDraft
                 ? (launchDialogState.baselineMembers ?? [])
                 : isDraftTeamView
                   ? EMPTY_RESOLVED_MEMBERS
-                  : membersWithLiveBranches
+                  : membersWithLiveBranches)
             }
-            defaultProjectPath={launchDialogDefaultProjectPath}
+            runtimeRunId={
+              useStore.getState().currentProvisioningRunIdByTeam?.[logicalTeamName ?? teamName]
+            }
+            defaultProjectPath={launchTarget?.cwd ?? launchDialogDefaultProjectPath}
             provisioningError={provisioningError}
             clearProvisioningError={clearProvisioningError}
             activeTeams={isDraftTeamView ? undefined : activeTeamsForLaunch}
@@ -3727,6 +3643,7 @@ export const TeamDetailView = memo(function TeamDetailView({
             onLaunch={handleLaunchDialogSubmit}
             onRelaunch={handleRelaunchDialogSubmit}
             memberSettingsDraft={launchDialogState.memberSettingsDraft}
+            retainedLegacyLaunch={launchDialogState.retainedLegacyLaunch}
             validateMemberSettings={validateMemberSettingsRelaunch}
           />
         </Suspense>

@@ -1,3 +1,4 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import {
   assertMemberSettingsRelaunchRoster,
   isCanonicalSettingsLead,
@@ -82,5 +83,9 @@ export async function executeProjectMemberSettingsRelaunch(input: {
     }
     input.onMembersSaved?.();
   }
-  await input.launch(input.request);
+  await input.launch(
+    isHostTeamSelectionKey(logicalTeamName)
+      ? { ...input.request, savedRosterCommandId: commandId }
+      : input.request
+  );
 }

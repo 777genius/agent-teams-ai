@@ -147,6 +147,7 @@ export type CliProviderReasoningEffort =
   | 'ultra';
 
 export type CliProviderModelCatalogSource =
+  | 'claude-sdk'
   | 'anthropic-models-api'
   | 'anthropic-compatible-api'
   | 'app-server'
@@ -284,6 +285,10 @@ export type CliProviderStatusCheckErrorCode =
   | 'project_missing';
 
 export interface CliProviderStatus {
+  /** Finite app routing capability, never an account/config selector or launch proof. */
+  nativeAuthManagement?: 'claude';
+  /** Opaque display provenance only. Never an account/config selector or launch authority. */
+  catalogScope?: string;
   providerId: CliProviderId;
   displayName: string;
   supported: boolean;
@@ -450,8 +455,13 @@ export interface CliInstallerAPI {
 // OpenCode Runtime Installer
 // =============================================================================
 
-/** `override` is a binary selected through the OpenCode binary path environment variable. */
-export type OpenCodeRuntimeSource = 'app-managed' | 'override' | 'path' | 'missing';
+/** `captured-host` is an attested Host engine, independent of the installable CLI. */
+export type OpenCodeRuntimeSource =
+  | 'app-managed'
+  | 'override'
+  | 'path'
+  | 'missing'
+  | 'captured-host';
 
 /** A binary override the app does not launch, and the reason it falls back. */
 export interface OpenCodeRuntimeIgnoredOverride {
@@ -479,10 +489,25 @@ export interface OpenCodeRuntimeInstallProgress {
 }
 
 export interface OpenCodeRuntimeStatus {
+  /** Generation reported by the original captured native catalog; not a CLI version. */
+  nativeGeneration?: 'v1' | 'v2';
+  /** Captured engine version is separate from the selecting native CLI version. */
+  engineVersion?: string;
+  /** Opaque Host selection revision; no private paths or configuration cross this boundary. */
+  sourceRevision?: string;
   /** Availability of optional support; native installation identity is separate. */
   v2Support?: 'ready' | 'required';
   /** Exact newest V2 qualified by the pinned runtime for this native platform. */
   compatibleV2Version?: string | null;
+  /** Display-only CLI maintenance; never replaces readiness of the captured engine. */
+  v2Maintenance?:
+    | { kind: 'missing'; engineVersion: string }
+    | {
+        kind: 'installed';
+        cliVersion: string;
+        engineVersion: string;
+        support: 'required' | 'ready';
+      };
   installed: boolean;
   binaryPath?: string;
   version?: string;
@@ -503,6 +528,6 @@ export interface OpenCodeRuntimeAPI {
   readonly arch?: string;
   getStatus: () => Promise<OpenCodeRuntimeStatus>;
   install: (options?: OpenCodeRuntimeInstallOptions) => Promise<OpenCodeRuntimeStatus>;
-  invalidateStatus: () => Promise<void>;
+  invalidateStatus: (mode?: 'cache-only') => Promise<void>;
   onProgress: (cb: (event: unknown, data: OpenCodeRuntimeStatus) => void) => () => void;
 }

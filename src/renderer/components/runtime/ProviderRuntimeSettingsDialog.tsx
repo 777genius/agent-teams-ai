@@ -19,6 +19,7 @@ import {
   resolveCodexRuntimeSelection,
 } from '@features/codex-runtime-profile/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
+import { NativeNextPromptProviderSetting } from '@features/native-prompt-suggestions/renderer';
 import { RuntimeProviderManagementPanel } from '@features/runtime-provider-management/renderer';
 import { api } from '@renderer/api';
 import { ProviderBrandLogo } from '@renderer/components/common/ProviderBrandLogo';
@@ -67,11 +68,11 @@ import {
   getConnectionMethodCardsHint,
   validateAnthropicCompatibleBaseUrl,
 } from './providerConnectionCards';
+import { ProviderConnectionHeader } from './ProviderConnectionHeader';
 import {
   formatProviderAuthMethodLabelForProvider,
   formatProviderAuthModeLabelForProvider,
   formatProviderStatusText,
-  getProviderConnectLabel,
   getProviderCurrentRuntimeSummary,
   isConnectionManagedRuntimeProvider,
   shouldMaskCodexNegativeBootstrapState,
@@ -83,41 +84,15 @@ import {
   ProviderRuntimeBackendSelector,
 } from './ProviderRuntimeBackendSelector';
 
+import type {
+  ApiKeyProviderId,
+  PendingConnectionAction,
+  Props,
+} from './ProviderRuntimeSettingsDialog.types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { AnalyticsProviderCheckReason } from '@renderer/analytics/productAnalytics';
 import type { CliProviderAuthMode, CliProviderId, CliProviderStatus } from '@shared/types';
 import type { ApiKeyEntry } from '@shared/types/extensions';
-
-type ApiKeyProviderId = 'anthropic' | 'codex' | 'gemini';
-type PendingConnectionAction =
-  | 'auto'
-  | 'oauth'
-  | 'chatgpt'
-  | 'api_key'
-  | 'compatible'
-  | 'codex-custom-provider'
-  | null;
-
-interface Props {
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly providers: CliProviderStatus[];
-  readonly initialProviderId: CliProviderId;
-  readonly initialRuntimeProviderId?: string | null;
-  readonly initialRuntimeProviderAction?: 'connect' | 'reconnect' | 'select' | null;
-  readonly projectPath?: string | null;
-  readonly providerStatusLoading?: Partial<Record<CliProviderId, boolean>>;
-  readonly disabled?: boolean;
-  readonly codexRuntimeStatus?: CodexRuntimeStatus | null;
-  readonly codexRuntimeStatusLoading?: boolean;
-  readonly onInstallCodexRuntime?: () => Promise<void> | void;
-  readonly onSelectBackend: (providerId: CliProviderId, backendId: string) => Promise<void> | void;
-  readonly onRefreshProvider?: (
-    providerId: CliProviderId,
-    checkReason?: AnalyticsProviderCheckReason
-  ) => Promise<boolean | void> | boolean | void;
-  readonly onRequestLogin?: (providerId: CliProviderId) => void;
-}
 
 const API_KEY_PROVIDER_CONFIG: Record<
   ApiKeyProviderId,
@@ -688,6 +663,7 @@ export const ProviderRuntimeSettingsDialog = ({
   onSelectBackend,
   onRefreshProvider,
   onRequestLogin,
+  nativeClaudeAuthAction = null,
 }: Props): React.JSX.Element => {
   const { t } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
@@ -752,15 +728,28 @@ export const ProviderRuntimeSettingsDialog = ({
     [onRefreshProvider]
   );
 
+  const apiKeyDetailsRequestedRef = useRef(false);
+  const apiKeyStorageRequestedRef = useRef(false);
+  const apiKeyInitialSelectionRef = useRef<CliProviderId | null>(null);
+  const requestApiKeyDetails = useCallback(
+    (providerId: CliProviderId): void => {
+      if (!open || !isApiKeyProviderId(providerId) || apiKeyDetailsRequestedRef.current) return;
+      apiKeyDetailsRequestedRef.current = true;
+      void fetchApiKeys();
+    },
+    [fetchApiKeys, open]
+  );
+
   useEffect(() => {
+    apiKeyDetailsRequestedRef.current = false;
     if (!open) {
       return;
     }
 
+    apiKeyInitialSelectionRef.current = initialProviderId;
     setSelectedProviderId(initialProviderId);
-    void fetchApiKeys();
-    void fetchApiKeyStorageStatus();
-  }, [fetchApiKeyStorageStatus, fetchApiKeys, initialProviderId, open]);
+    requestApiKeyDetails(initialProviderId);
+  }, [initialProviderId, open, requestApiKeyDetails]);
   useEffect(() => {
     if (open) {
       return;
@@ -1047,6 +1036,19 @@ export const ProviderRuntimeSettingsDialog = ({
     apiKeyConfig &&
     (selectedProvider?.providerId !== 'codex' || !selectedProvider.connection?.supportsOAuth)
   );
+  useEffect(() => {
+    if (!open) {
+      apiKeyStorageRequestedRef.current = false;
+      return;
+    }
+    const initialSelection = apiKeyInitialSelectionRef.current;
+    if (initialSelection !== null && initialSelection !== selectedProviderId) return;
+    apiKeyInitialSelectionRef.current = null;
+    if (!showApiKeySection || !selectedApiKey || apiKeyStorageRequestedRef.current) return;
+    apiKeyStorageRequestedRef.current = true;
+    void fetchApiKeyStorageStatus();
+  }, [fetchApiKeyStorageStatus, open, selectedApiKey, selectedProviderId, showApiKeySection]);
+
   const connectionAlert =
     selectedProvider && !maskCodexNegativeBootstrapState
       ? getConnectionAlert(selectedProvider, t)
@@ -1766,6 +1768,7 @@ export const ProviderRuntimeSettingsDialog = ({
               onValueChange={(value) => {
                 if (!runtimeProviderOperationBlocking) {
                   setSelectedProviderId(value as CliProviderId);
+                  requestApiKeyDetails(value as CliProviderId);
                 }
               }}
             >
@@ -1881,40 +1884,17 @@ export const ProviderRuntimeSettingsDialog = ({
               />
             ) : (
               <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                      {t('providerRuntime.connection.title')}
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                      {getConnectionDescription(selectedProvider, t)}
-                    </div>
-                    {connectionProgressMessage ? (
-                      <div
-                        className="mt-2 inline-flex items-center gap-1.5 text-[11px]"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                      >
-                        <Loader2 className="size-3 animate-spin" />
-                        <span>{connectionProgressMessage}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                  {canRequestSubscriptionLogin ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={connectionBusy}
-                      onClick={() => onRequestLogin?.(selectedProvider.providerId)}
-                    >
-                      <Link2 className="mr-1 size-3.5" />
-                      {selectedProvider.authenticated &&
-                      (selectedProvider.authMethod === 'oauth_token' ||
-                        selectedProvider.authMethod === 'claude.ai')
-                        ? t('providerRuntime.actions.reconnectAnthropic')
-                        : getProviderConnectLabel(selectedProvider, t)}
-                    </Button>
-                  ) : null}
-                </div>
+                <ProviderConnectionHeader
+                  open={open}
+                  nativeAuthAction={nativeClaudeAuthAction}
+                  onProviderChanged={() => refreshProviderStatus('anthropic', 'provider_setup')}
+                  provider={selectedProvider}
+                  description={getConnectionDescription(selectedProvider, t)}
+                  progressMessage={connectionProgressMessage}
+                  busy={connectionBusy}
+                  canRequestLogin={canRequestSubscriptionLogin}
+                  onRequestLogin={onRequestLogin}
+                />
 
                 {showConnectionMethodCards ? (
                   <div className="space-y-2">
@@ -2461,6 +2441,10 @@ export const ProviderRuntimeSettingsDialog = ({
                     </div>
                   </div>
                 ) : null}
+                <NativeNextPromptProviderSetting
+                  providerId={selectedProvider.providerId}
+                  disabled={connectionBusy}
+                />
 
                 {selectedProvider.providerId === 'codex' ? (
                   <div

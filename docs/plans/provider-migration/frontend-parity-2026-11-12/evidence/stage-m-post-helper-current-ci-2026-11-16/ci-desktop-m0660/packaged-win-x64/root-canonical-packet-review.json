@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "kind": "ROOT_FINAL_CANONICAL_P08_PACKET_AND_WORDING_REVIEW",
+  "reviewedAtUtc": "2026-11-16 02:38:59 UTC",
+  "reviewer": "/root, independent of UI canonical packet author",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997349,
+  "jobId": 133040244339,
+  "conclusion": "APPROVE evidence attribution only; original step38 FAILURE, receipt INCOMPLETE and cleanup false remain open",
+  "image": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/extracted/_temp/windows-same-main-process-ui.before-crash.png",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/job-133040244339.log",
+      "bytes": 312815,
+      "blob": "54d03abce960911fabeea18886c7d307591245ef",
+      "sha256": "88401bfac2583e744b54b65d39593cb773e4de2c7b54bce90dbdea1d90d7d1fc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/artifact-14192765823.zip",
+      "bytes": 625025,
+      "blob": "ed207c9bf138be138427abcd2f93066716e439b0",
+      "sha256": "d84e424a053851aaab9c98e58fd3d2683632e8ad068b950bce926003cdd5f076"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/archive-audit.json",
+      "bytes": 2456,
+      "blob": "1e1abb1589aaf3f421b2cd1fe61711a7de1679f9",
+      "sha256": "921e66ee396cb714990b981e052a5976fc6dd79cc8629d8e007bbcab219e43d1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-packaged-artifacts-0220.json",
+      "bytes": 2023,
+      "blob": "14cbc8c0c56d232877a0934b966fdcf5b651904a",
+      "sha256": "da68a3637c026dcc031780492f60517efb0fadf6042cd79539a867c9a1ca7487"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0225.json",
+      "bytes": 210964,
+      "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+      "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/ui-phase-source-review.json",
+      "bytes": 12686,
+      "blob": "a5c6bcbffe16d2d699375e335be0a194704131c6",
+      "sha256": "eae7757371d43db93f86630ac88ccd92b2cabac5b568e29dbd928810981479f9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-byte-foundation.json",
+      "bytes": 14546,
+      "blob": "b51d14161c6cdb98c66e3f366fa489f2e0021e2c",
+      "sha256": "7ac302384de38eba0574e94cbcd5de3505f6b68bd40bffc3c9b7519d4ede643e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-source-pin-audit.json",
+      "bytes": 769896,
+      "blob": "1e24dc0aff1b7092325864003d72238b99581210",
+      "sha256": "3f97c11cd8e162e9e23881b9276429c37822941fe6c665fb99ae2138ae259510"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+      "bytes": 55527,
+      "blob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+      "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/audit.json",
+      "bytes": 96592,
+      "blob": "9e2d1e930560a228b4ab0a096074211851c2af32",
+      "sha256": "36eab371f0da48573bcc2d08b932488e43ef0aa90daaaeaba655bc8ca5981def"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/Plan29-packaged-win-x64-failure-appendix.md",
+      "bytes": 7512,
+      "blob": "3b74ee93b197787c77e7368cf12e057566b08412",
+      "sha256": "d15ad75cd0c0ca37811aee2c2db2df8b47320f5e0d9a4a0f6a9dbcde740f0f8b"
+    }
+  ],
+  "members": [
+    {
+      "name": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5382,
+      "sha256": "bdb5ca3216b29b614a987a8c0916a8c4847b2b83c5441302f366883e7161f079",
+      "crc32": "5f5373a3"
+    },
+    {
+      "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154517,
+      "sha256": "3962998118a070023cc160e39e7c8cb88d9b72feebe97438ee79f7be8f171288",
+      "crc32": "dc157fd2"
+    },
+    {
+      "name": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 780,
+      "sha256": "aff88b8d6fa750b9caa673e6b79570ec8fe33b3ec77f1ffd6dac469c94579aef",
+      "crc32": "2e455caa"
+    },
+    {
+      "name": "_temp/opencode-v2-packaged.json",
+      "bytes": 1186,
+      "sha256": "fdaa0c94021a8f0035e517750eb052bd4cea168eaf777dc2777214e25d2ca38a",
+      "crc32": "c91bf6b1"
+    },
+    {
+      "name": "_temp/windows-same-main-process-ui.app.log",
+      "bytes": 4766,
+      "sha256": "68281bffce158378af8edbc15f166a6b6b9efb1ae1a01f13d15417d89fd14e0f",
+      "crc32": "39f8d49a"
+    },
+    {
+      "name": "_temp/windows-same-main-process-ui.before-crash.png",
+      "bytes": 79896,
+      "sha256": "347f6b6883726b0ccaebfb5c181cdeea0c85005cf7ec957360a61dc551404221",
+      "crc32": "0488afdb"
+    },
+    {
+      "name": "_temp/windows-same-main-process-ui.controller.log",
+      "bytes": 42469,
+      "sha256": "b76513cb574dd577b0e2d382760ef5b95494ad9212aab210365149c141c73c3c",
+      "crc32": "5ba30e2f"
+    },
+    {
+      "name": "_temp/windows-same-main-process-ui.json",
+      "bytes": 750601,
+      "sha256": "b7201be98fe33679e7e6a5c8ee3366e942bde08a32090d39344a911cd342d2ae",
+      "crc32": "b1bb0816"
+    }
+  ],
+  "checkpoint": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/checkpoint-packaged-win-x64.json",
+    "bytes": 7603,
+    "blob": "5c94b5b2b064cb6ebf5de200d9c46a4ba21b06ef",
+    "sha256": "d57ea27d7354bb13f4546225596ec1031625512a57ed03fbef077f6b48466cd8"
+  },
+  "independentNativeR2": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/packaged-win-x64/independent-custody-source-review.json",
+    "bytes": 55527,
+    "blob": "88f73005c5f578ee64a15ebcdeba744f4f5113e8",
+    "sha256": "1db9d0a8fdb39dd65042f83aaff03d592dd1764782c9c650e883053c0fb8eaea"
+  },
+  "auditAndAppendixFullWordingRead": true,
+  "allElevenPayloadBytesRecomputed": true,
+  "allEightZipCrcAndExtractedBytesRechecked": true,
+  "canonicalFieldsJoinedToCompletedNativeR2": [
+    "sourceHead",
+    "runId",
+    "jobId",
+    "cleanup",
+    "firstFailure",
+    "threeOriginalHandleWitnesses",
+    "precedingPackagedNativeStep37",
+    "originalInputPins",
+    "inputFreeze",
+    "finitePeer",
+    "counts"
+  ],
+  "actualImageViewedByRoot": true,
+  "visualFinding": "The sole before-crash frame shows the running TEST Team, online/Idle alice and registered both services reply. No after-Retry or Kill image exists; this image cannot qualify those unreached phases.",
+  "findings": [
+    "Current Retry accepted ready at retained8748ms, then original binding/fixture afterRetry/public same-live rows completed before Gate502. The first failure is the strict original post-census remaining-budget check; which owner row/iteration is not retained.",
+    "Original10s phase,57 returned census calls/no ledger truncation,12 Retry census intervals totaling8603.7809ms and last9905.7538-to10678.6571ms remain descriptive original observations. No Windows/product cause or repair is inferred.",
+    "Original three-HANDLE alive-query prefix is established by original source ordering and afterRetryPublic. Individual witness stdout is not independently archived; native FILETIME and CIM census do not become interchangeable.",
+    "UI Stop count0of2 and afterQuit stops.size failure precede three zero-exit/lock/history suffix checks. fixture.close waits for witness exits without requiring zero status; no successful native cleanup is synthesized.",
+    "Main0/null,17 retained PID/births absent and original controller drained/rootExit1/active0 are separate containment facts. Cleanup remains false.",
+    "Separate step37 manual V2 PASS/cleanuptrue and619-Host source join remain confined to that original native route; no P08/P09/privacyGREEN/DesktopJourney/release transfer."
+  ],
+  "reviewScope": "Root final canonical packet and appendix review uses the separately completed Native full1798 Git/CRLF and custody/source R2; it does not relabel this final wording review as a second independent native execution.",
+  "mutations": "None to project source/refs/CI; only read-only Python/Git/archive inspection and this frozen report."
+}

@@ -1,0 +1,36 @@
+{
+  "kind": "independent-p08-source-r2",
+  "reviewer": "migration_scope_audit",
+  "reviewedAt": "2026-11-16T10:27:49.007Z",
+  "verdict": "GO_EXACT_PROSPECTIVE_CANDIDATE_ONLY",
+  "base": "fc0abec30ff37770c2d6b88cd29878600c6a7ee6",
+  "baseTree": "ab2fa12c51ebc58de813913c35ee88a8fc1d7413",
+  "path": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+  "before": {
+    "blob": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+    "bytes": 31223,
+    "lines": 485,
+    "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2"
+  },
+  "after": {
+    "blob": "78486e24742278c6f803607e02e1601329e505a0",
+    "bytes": 31554,
+    "lines": 491,
+    "sha256": "68d94bb45e702746612b72f7f47151e5d2d24659bcf99b443fa499a7b2d21981"
+  },
+  "checks": [
+    "Fetched exact preimage at immutable current fc0; unique replacement reconstructed complete expected postimage and SHA256.",
+    "Independently read current writer b41629b7: absence persists before separate settlement; positive confirmation requires actual settled outcome, same capture, live deadline and original authority.",
+    "Current contract83caa9c3 exposes existing optional true flag; strict validator dd1a705e validates original receipt and forbids malformed settlement/confirmation.",
+    "Completed absence with missing or pending settle intent stays in original loop; definitive no-dispatch still fails immediately; wrong completed/refused terminal retains original assertion failure.",
+    "One original stop.deadline, unchanged remaining checks and at-most25ms poll; no RPC/action/clock/witness/retry added.",
+    "All original post-loop assertions and all prefix/suffix bytes outside one replacement preserved; source cap491<800 without new exception.",
+    "Original current72 first assertion can observe an allowed intermediate record; missing failed snapshot does not prove later successful settlement."
+  ],
+  "limits": [
+    "Source inspection only; no compiler, test, application, native/provider, dependency or Git/workflow execution/mutation.",
+    "P09's frozen historical receipt/proposal analysis informed limits; this reviewer did not re-download or re-execute original Windows artifact.",
+    "Root exact current Plan/full-union binding and independent published R2 still required before source publication.",
+    "Original resulting-source packaged same-Main acceptance on both Windows architectures, full two Stops/three HANDLEs/actions/cleanup and original static checks remain required."
+  ]
+}

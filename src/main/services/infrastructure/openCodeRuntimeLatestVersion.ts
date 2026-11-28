@@ -1,13 +1,16 @@
+import { getLatestQualifiedOpenCodeV2Version } from '@features/opencode-compatibility';
 import {
-  classifyNativeVersion,
-  getLatestQualifiedOpenCodeV2Version,
-} from '@features/opencode-compatibility';
+  chooseOpenCodeInstallGeneration,
+  requestedOpenCodeInstallVersion,
+} from '@features/opencode-runtime-installer';
+import { selectOpenCodeInstallPackage } from '@features/opencode-runtime-installer/main';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { isVersionOlder } from '@shared/utils/version';
 
 import { fetchOpenCodePackageMetadata } from './openCodeRuntimePackageMetadata';
 
+import type { OpenCodeInstallTarget } from '@features/opencode-runtime-installer';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
 
 const logger = createLogger('OpenCodeRuntimeInstallerService');
@@ -42,15 +45,24 @@ export function preserveKnownOpenCodeUpdate(
   };
 }
 
-export async function resolveLatestOpenCodeVersion(installedVersion?: string): Promise<string> {
-  if (installedVersion?.startsWith('2.')) {
-    const qualified = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch);
-    if (!qualified) throw new Error('No compatible OpenCode V2 is qualified for this platform');
-    return qualified;
-  }
-  const metadata = await fetchOpenCodePackageMetadata('opencode-ai', 'latest', 3_000);
-  const classification = classifyNativeVersion(metadata.version!);
-  if (classification.kind !== 'recognized' || classification.generation !== 'v1')
-    throw new Error('No compatible stable OpenCode V1 update is available');
-  return metadata.version!;
+/** Offer the same CLI release as installation, not the separate V2 engine version. */
+export async function resolveLatestOpenCodeVersion(
+  installedVersion: string | undefined,
+  candidates: readonly { packageName: string }[],
+  target: OpenCodeInstallTarget = 'legacy-runtime'
+): Promise<string> {
+  const qualifiedV2Version = getLatestQualifiedOpenCodeV2Version(process.platform, process.arch);
+  const generation = chooseOpenCodeInstallGeneration(
+    undefined,
+    installedVersion,
+    qualifiedV2Version
+  );
+  const { metadata } = await selectOpenCodeInstallPackage(
+    generation,
+    qualifiedV2Version,
+    candidates,
+    (name, version) => fetchOpenCodePackageMetadata(name, version, 3_000),
+    requestedOpenCodeInstallVersion(generation, qualifiedV2Version, target)
+  );
+  return metadata.version;
 }

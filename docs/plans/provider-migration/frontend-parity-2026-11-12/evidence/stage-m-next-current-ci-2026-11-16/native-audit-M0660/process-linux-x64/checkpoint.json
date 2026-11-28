@@ -1,0 +1,60 @@
+{
+  "kind": "FROZEN_M_ORIGINAL_LINUX_PROCESS_EVIDENCE",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997272,
+  "jobId": 133017913714,
+  "artifactId": 14191426901,
+  "payloads": [
+    {
+      "path": "artifact-14191426901.zip",
+      "bytes": 1523241,
+      "blob": "a234dc6df38c6bd1efbddb53542a0893b9502fb3",
+      "sha256": "fd901e1748e031dac4b06ad2758f2f72d1d34f2aabe9faff93f7a0c12b9c4507"
+    },
+    {
+      "path": "job-133017913714.log",
+      "bytes": 137758,
+      "blob": "c9890985c7f3469140d3f87968045e020d002d11",
+      "sha256": "8f82592ace32db61b971e639cda76c58cc1fcbd8b1198b0057167bf56068c562"
+    },
+    {
+      "path": "job-api.json",
+      "bytes": 4412,
+      "blob": "59ee7f9a37e880f1eec059d8e3cbfec38be34b0b",
+      "sha256": "b89853f06656bbd3a81c54314d8d858ffdb4c5809dacf3c859b543efff1f8998"
+    },
+    {
+      "path": "artifact-api.json",
+      "bytes": 818,
+      "blob": "9547a2dafebb7ee430ec38e268c193d757ab35ae",
+      "sha256": "83af8200e67dcfabef9c07b17e60b0cb6e694f7f044859ce0ff1002a96480931"
+    },
+    {
+      "path": "archive-audit.json",
+      "bytes": 15484,
+      "blob": "399b6177fae2479e0529f3c1de5ad65f8e9807ca",
+      "sha256": "b1d98a98e51c62643ff54c2f339bb84f39a576164ecb8cf020aec43f99a7219a"
+    },
+    {
+      "path": "source-audit.json",
+      "bytes": 17813,
+      "blob": "b0221a2c9c364ee2ed064a56bc1a6541da084d5f",
+      "sha256": "f6eba055f2a5c0594982e803bf1c608c05fd15b79f3eb9ffa85408ef9a03e2e5"
+    },
+    {
+      "path": "audit.json",
+      "bytes": 62214,
+      "blob": "64f83d747cb01eb7178db4464ce21a8f80459204",
+      "sha256": "75fce93316837f9d623a898067c7c6058969fec9f0379bb9254351dec773aac4"
+    },
+    {
+      "path": "Plan29-linux-process-appendix.md",
+      "bytes": 7011,
+      "blob": "f335766cbbe2bcd3e1ef983f2dc4ba22cbf7c7e9",
+      "sha256": "eb795a6fdacafc24a88d96a953d7a95f04a48c9f600d4ae02b15a7fdf8f8edde"
+    }
+  ],
+  "payloadBytes": 1768751,
+  "recoverability": "The official ZIP retains all51originalmembers; extracted copies are reproducible without native execution. Source Git references are immutable. Original duplicate fixture directories do not represent additional executions.",
+  "signedUrlsRetained": false
+}

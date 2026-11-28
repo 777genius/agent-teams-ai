@@ -1,0 +1,35 @@
+{
+  "sourceCommit": "09c2859f932be6eeb6fe26289bb997d8e0a81289",
+  "toolchain": {
+    "node": "24.21.0",
+    "pnpm": "11.18.0"
+  },
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "recipe": "pnpm build; AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR=<archives> pnpm --filter @agent-teams/provider-implementations test:package",
+  "packages": {
+    "provider-implementations": {
+      "oldSha256": "fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89",
+      "newSha256": "691a7a62cdd5a92e2edb120f2c409790c9ca16215495cdf9daa099b3b8748bd9",
+      "changed": [
+        "package/dist/codex.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/codex-protocol/app-server.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/codex-protocol/app-server.js",
+        "package/dist/features/provider-session-implementation/internal.d.ts"
+      ],
+      "added": [
+        "package/dist/features/provider-session-implementation/adapters/codex-protocol/account-login.d.ts",
+        "package/dist/features/provider-session-implementation/adapters/codex-protocol/account-login.js"
+      ],
+      "removed": []
+    },
+    "provider-session-contracts": {
+      "oldSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "newSha256": "aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db",
+      "changed": [],
+      "added": [],
+      "removed": []
+    }
+  }
+}

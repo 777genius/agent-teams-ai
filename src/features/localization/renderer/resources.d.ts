@@ -3495,6 +3495,11 @@ export default interface Resources {
         "title": "Fast mode default",
         "unavailableForRuntime": "Fast mode is currently unavailable for this Anthropic runtime."
       },
+      "nativeNextPrompt": {
+        "description": "Suggests a next message in the composer after this provider's teammates reply. Uses extra model requests on your account. On by default; turn it off here. Applies to new teammate sessions after restarting Agent Teams.",
+        "error": "Could not save the setting.",
+        "title": "Next-message suggestions"
+      },
       "progress": {
         "applyingConnectionChanges": "Applying connection changes...",
         "refreshingProviderStatus": "Refreshing provider status...",
@@ -5038,6 +5043,7 @@ export default interface Resources {
       "schedule": {
         "agentDescription": "When the team is off, runs an isolated agent. When live, creates an assigned task.",
         "execution": "Execution",
+        "executionLimitsNote": "These limits apply only to standalone one-shot runs. Tasks assigned to a running team do not use them.",
         "historicalPromptAcknowledged": "I've reviewed the saved prompt and separated any lasting instructions. Keep the old prompt, but never run it for scheduled work.",
         "historicalPromptReviewRequired": "Review the team's saved one-time instructions before scheduling. Clear or separate the old launch prompt first.",
         "labelOptional": "Label (optional)",
@@ -5102,6 +5108,28 @@ export default interface Resources {
         "retry": "Retry",
         "stopTeam": "Stop team",
         "stopping": "Stopping..."
+      },
+      "aggregate": {
+        "emptyTasks": "No loaded tasks match this view.",
+        "emptyTeams": "No loaded teams match this view.",
+        "loadedCount": "{{count}} loaded",
+        "loadedTasks": "Loaded tasks",
+        "loadedTrash": "Trash ({{count}} loaded)",
+        "openTeam": "Open {{name}}",
+        "partialTasks": "Some tasks could not be loaded",
+        "partialTeams": "Some teams could not be loaded",
+        "refresh": "Refresh",
+        "staleDescription": "Previously loaded results remain visible. Their counts may be out of date.",
+        "staleTasks": "Tasks could not be refreshed",
+        "staleTeams": "Teams could not be refreshed",
+        "tasksDescription": "Showing loaded tasks only. Counts and filters do not include unavailable results.",
+        "teamsDescription": "Showing loaded teams only. Counts and filters do not include unavailable results.",
+        "unavailableOwners_one": "{{count}} unavailable owner; team count unknown",
+        "unavailableOwners_other": "{{count}} unavailable owners; team count unknown",
+        "unavailableTeams_one": "{{count}} unavailable team",
+        "unavailableTeams_other": "{{count}} unavailable teams",
+        "unknown": "Unknown",
+        "unknownTasks": "Task counts unavailable"
       },
       "deleteDraft": {
         "cancelLabel": "Cancel",
@@ -5564,6 +5592,11 @@ export default interface Resources {
         "previousDeliveryUnknown": "Previous delivery is unknown; sending again may create a duplicate",
         "reusedCrossTeamRequest": "Reused recent cross-team request",
         "teamOffline": "offline"
+      },
+      "suggestions": {
+        "dismiss": "Dismiss suggestion",
+        "insert": "Insert",
+        "tab": "Tab"
       },
       "teamSelector": {
         "current": "current",
@@ -6886,6 +6919,7 @@ export default interface Resources {
         "searchPlaceholder": "Search teams"
       },
       "title": "Review flow",
+      "unavailable": "Settings for {{count}} team or owner could not be read. Retry before editing those teams.",
       "unreadable": {
         "heading": "Teams with unreadable settings ({{count}})"
       },
@@ -6993,7 +7027,9 @@ export default interface Resources {
       "status": {
         "active": "Active",
         "disabled": "Disabled",
-        "paused": "Paused"
+        "hostUnsupported": "Host scheduling unavailable",
+        "paused": "Paused",
+        "saved": "Saved"
       },
       "title": "Schedules"
     },

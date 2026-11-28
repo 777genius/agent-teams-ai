@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "payloads": [
+    {
+      "path": "full-api-jobs-0135.json",
+      "bytes": 80872,
+      "blob": "183b3edd9c69a111e634a8405da05240b0f80916",
+      "sha256": "11c3dc036cbd05c520845a7546fef711a8f0672ee47ae76ad96ec0ab9695c0e5"
+    },
+    {
+      "path": "terminal-artifacts-0135.json",
+      "bytes": 8035,
+      "blob": "0643c77ab28f7b587a3238c565b5c82a2106a10d",
+      "sha256": "60c2bbadcdb5376f7ff468cc7533f58b3caf362b00661f9e3c562ac44ff94c97"
+    },
+    {
+      "path": "initial-api-runs-jobs-0038.json",
+      "bytes": 58753,
+      "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+      "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a"
+    },
+    {
+      "path": "frontend-shard1/source-identities.json",
+      "bytes": 1921,
+      "blob": "024dd0edb59966e87031e8e9808ccfd014622967",
+      "sha256": "153bdd1170a80538ec07656b9a6c2350b0f2bdc6047b9987a0072fb261ccf59c"
+    },
+    {
+      "path": "frontend-shard1/artifact-14190745426.zip",
+      "bytes": 295485,
+      "blob": "5ff6dad00241cbc8318d65def521bde3f4ba69e9",
+      "sha256": "b310349827f441e893c1a01b8dc8e08f48117c34ab3bc054e03ed75a612ad836"
+    },
+    {
+      "path": "frontend-shard1/job-133017915679.log",
+      "bytes": 170100,
+      "blob": "abace879b7e556e4896c9d56dc401a668d950bdc",
+      "sha256": "33a9b8f1e2d98b91c674706d3531264c9588cb4f3cc97958de7b1ce41251bc45"
+    },
+    {
+      "path": "frontend-shard1/archive-audit.json",
+      "bytes": 811,
+      "blob": "3e3c11679dbb75c5e4b257ddc448bb85a496ccdb",
+      "sha256": "ca3adff69fe03d16f6c106b949b0fc2879e94b0552e5a6bdb7523bb07ede25b7"
+    },
+    {
+      "path": "frontend-shard2/artifact-14190518295.zip",
+      "bytes": 312130,
+      "blob": "03cdaed16c1a6ce12be53e703d0b4c9a8b3207a6",
+      "sha256": "e8fdc6a88b5bcb5074ea5514ff7bdf1bfc6d0d6ae451cbd45c4452bc3a4a9941"
+    },
+    {
+      "path": "frontend-shard2/job-133017915909.log",
+      "bytes": 180180,
+      "blob": "be68dbe956fb04582ecf2ecb7422a91b059cd2ea",
+      "sha256": "e33202ccdd0eebd46129fa353a2e40192e040e0fe457ab4457fcfe6ebc1788cb"
+    },
+    {
+      "path": "frontend-shard2/archive-audit.json",
+      "bytes": 812,
+      "blob": "fe1769beab4870be2f5aa8437e2d47ac8a6ec5fe",
+      "sha256": "5391062d5ebbbf23e5954461525a5010a0df2e80f841112b98e8da415f833e28"
+    },
+    {
+      "path": "frontend-shard3/artifact-14191090316.zip",
+      "bytes": 296995,
+      "blob": "44ee292e19dc38d2d12458fe0bd865182668b27c",
+      "sha256": "777dedd9ef4ba8d66b6bb8be585a4e9e5ce23946e34fe6f7d83e48e7c7908193"
+    },
+    {
+      "path": "frontend-shard3/job-133017915890.log",
+      "bytes": 162556,
+      "blob": "b701d82da57a7537f4c2912bf96c71281b2ebb70",
+      "sha256": "95ea3de3360be310e1f00ed5734f245c59b1b8a0604cde1a881126edad8d9086"
+    },
+    {
+      "path": "frontend-shard3/archive-audit.json",
+      "bytes": 811,
+      "blob": "ca3e26c515ad75d312486a71d8d174b7b84679e5",
+      "sha256": "52724a58da0ab60852e9f177f91136d7ed43b1e5999e0e47b077beb445554f18"
+    },
+    {
+      "path": "frontend-shard4/artifact-14191065996.zip",
+      "bytes": 317929,
+      "blob": "a532edf74714fb354e2799aa104fbdeb1fe7e397",
+      "sha256": "5757d302b9f90918ab6f7d4e2a521fba6a92afaa99cdf7713f59fd6c3d788fff"
+    },
+    {
+      "path": "frontend-shard4/job-133017915894.log",
+      "bytes": 190645,
+      "blob": "68d1d51b510dacaf1ac8c363de598a1c0bf6470c",
+      "sha256": "f590a01d1e62ee122ca7ba9dd730a89e653876bf85c9a95d7366be5d857ffb84"
+    },
+    {
+      "path": "frontend-shard4/archive-audit.json",
+      "bytes": 812,
+      "blob": "100ccc0b1c41d94cdc0c741ba6bd8d5b36e0341c",
+      "sha256": "d01907119498776a40a1f4ada6545dca68038ea822e1219bc42610c5bcce7016"
+    },
+    {
+      "path": "frontend-all-shards/audit.json",
+      "bytes": 33685,
+      "blob": "e99488334fb7968d89ad084784b603906a2522ef",
+      "sha256": "986a8925c93b94bbf4fcbf0d5af95aa5e0b6eb3dc2f242faa062747c67b517f2"
+    },
+    {
+      "path": "frontend-all-shards/Plan29-frontend-all-shards-appendix.md",
+      "bytes": 4319,
+      "blob": "bea0a19cec3e4b83469c9b830c3ed64f29db1328",
+      "sha256": "7e7af98d0505c7fb0ed69ba301ea53c938886b5e5ba9cd6b8f1684d830f227bb"
+    }
+  ],
+  "counts": {
+    "uniqueFiles": 2162,
+    "defaultReporterFilesPassed": 2155,
+    "defaultReporterFilesSkipped": 7,
+    "defaultReporterFilesFailed": 0,
+    "assertionsPassed": 25822,
+    "assertionsSkipped": 38,
+    "assertionsFailed": 0,
+    "assertionsTodo": 0,
+    "totalAssertions": 25860
+  },
+  "archiveMemberRecovery": [
+    {
+      "shard": 1,
+      "artifact": {
+        "path": "frontend-shard1/artifact-14190745426.zip",
+        "bytes": 295485,
+        "blob": "5ff6dad00241cbc8318d65def521bde3f4ba69e9",
+        "sha256": "b310349827f441e893c1a01b8dc8e08f48117c34ab3bc054e03ed75a612ad836"
+      },
+      "originalJson": {
+        "path": "frontend-shard1/extracted/host-offline-tests-1.json",
+        "bytes": 2167252,
+        "blob": "cd9b794837702c216c77b04497b59426842f9f7e",
+        "sha256": "54fc14e8564883df77038e79ea91fc3779244aae8ce25fd1e68b03e47de9612c"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard1/extracted/host-offline-tests-1.log",
+        "bytes": 99629,
+        "blob": "c79d23415d24e557b0bd944872bb260e05fac9be",
+        "sha256": "3ac1e92b6e11b2b0e310a78faad99b7f1bc3e6ca9a46c4cca38f6ebcf22e6472"
+      }
+    },
+    {
+      "shard": 2,
+      "artifact": {
+        "path": "frontend-shard2/artifact-14190518295.zip",
+        "bytes": 312130,
+        "blob": "03cdaed16c1a6ce12be53e703d0b4c9a8b3207a6",
+        "sha256": "e8fdc6a88b5bcb5074ea5514ff7bdf1bfc6d0d6ae451cbd45c4452bc3a4a9941"
+      },
+      "originalJson": {
+        "path": "frontend-shard2/extracted/host-offline-tests-2.json",
+        "bytes": 2385119,
+        "blob": "39c3c0294ad1060136bcff7de3cf998ec774ddaa",
+        "sha256": "bb0b7bc28cbb68f59e6878f5a5f73d7206aa05a1ef91d0036c8b946672524c76"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard2/extracted/host-offline-tests-2.log",
+        "bytes": 107616,
+        "blob": "39b018d536b69db9c7d8a1060393dc721a95ce76",
+        "sha256": "59c7edbb4df9da5414f8d0ddb81ba1d8570e78ed6ee7449700ae87e12dd63cd9"
+      }
+    },
+    {
+      "shard": 3,
+      "artifact": {
+        "path": "frontend-shard3/artifact-14191090316.zip",
+        "bytes": 296995,
+        "blob": "44ee292e19dc38d2d12458fe0bd865182668b27c",
+        "sha256": "777dedd9ef4ba8d66b6bb8be585a4e9e5ce23946e34fe6f7d83e48e7c7908193"
+      },
+      "originalJson": {
+        "path": "frontend-shard3/extracted/host-offline-tests-3.json",
+        "bytes": 2189244,
+        "blob": "9f242b417c58e5defe256a3d693894e3439fdb17",
+        "sha256": "7e3eec85e0d8f9745c137d04276d8f1729019a0c6120756ee2bf567a2ffbc495"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard3/extracted/host-offline-tests-3.log",
+        "bytes": 93238,
+        "blob": "10ecfe833f4f8c12add91e45bf72f8e666e6c9d6",
+        "sha256": "c5f9dcb99b015961ce1a60c44d281fb2aa32bd2912b2b50c565ca78e3fe91b2d"
+      }
+    },
+    {
+      "shard": 4,
+      "artifact": {
+        "path": "frontend-shard4/artifact-14191065996.zip",
+        "bytes": 317929,
+        "blob": "a532edf74714fb354e2799aa104fbdeb1fe7e397",
+        "sha256": "5757d302b9f90918ab6f7d4e2a521fba6a92afaa99cdf7713f59fd6c3d788fff"
+      },
+      "originalJson": {
+        "path": "frontend-shard4/extracted/host-offline-tests-4.json",
+        "bytes": 2329337,
+        "blob": "90a3e6ecf054189ae6f2e66f6eeaf5eeea5b59f0",
+        "sha256": "081c8e3a2421f3762e7c77905ba7edabfc32ae24f50b8984686d33ec0a922a9d"
+      },
+      "originalTeeLog": {
+        "path": "frontend-shard4/extracted/host-offline-tests-4.log",
+        "bytes": 116652,
+        "blob": "01d99f1e22916e0477747d48b99bb75c30d4bd6f",
+        "sha256": "5ecdab1e6ef28180801b4a82a26d61864a70ba543fcc74423f6c9d484eb7f9d1"
+      }
+    }
+  ],
+  "frozenEarlierPackagesUnchanged": true,
+  "limits": [
+    "All38 skips and3 configured excluded filename patterns remain unqualified. Included files with differently suffixed live names can still be skipped by their original guards.",
+    "Only the original root Vitest frontend set, not the Team10-file Node contracts or the24 stderr privacy canaries.",
+    "No full worktree source census, reproducible output rebuild, native/provider/Desktop actions or physical cleanup qualification is inferred from this four-shard result.",
+    "Original engine warnings remain in raw prerequisite logs; original builds completed before tests, with no independent output inventory claim."
+  ]
+}

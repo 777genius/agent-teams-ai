@@ -1,0 +1,252 @@
+{
+  "kind": "published-G-complete-selected-source-readback",
+  "head": "387fa7ab81ddd57bdd274f763b8be90cfaaae484",
+  "tree": "0bf635e84287ce152a542bc4c06f25ec70b85dcb",
+  "parents": [
+    "6376001fa9db4b67c4d3264352680d29832a43c9"
+  ],
+  "checkedAtUTC": "2026-11-15T21:30:14.589049+00:00",
+  "sourceFetchExit": 0,
+  "selectedSourceCount": 32,
+  "integrationLeafCount": 7,
+  "hostSourceCount": 615,
+  "fullSelectedReadbackExact": true,
+  "unchangedPlan29": "65de751eea109b87b76cb6634e9120d8f9763e17",
+  "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "files": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96565,
+      "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+      "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "bytes": 7268,
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    },
+    {
+      "path": "packages/legacy-agent-host/package.json",
+      "bytes": 11847,
+      "blob": "063d101c59bbdcc9a6bb9d9961d12b468a5a944b",
+      "sha256": "fdb818b611e7dbb24371397f53cbe8fdbd4c9d7c546abd9784f8a719cd3fca1e"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "bytes": 14724,
+      "blob": "0482d11bb2a051a0710905c5393495ee7cec64bf",
+      "sha256": "bf1390ca8efbbcfffb4b61c138f1925d0c295f37def36d73c15377f013794438"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "bytes": 43732,
+      "blob": "b9dd573db23b3033b5f3db7024b317681ce31499",
+      "sha256": "89fbe1d8736a5797aa3198df213b89d5861a07012675e91aff78d1302459cf14"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/index.ts",
+      "bytes": 11111,
+      "blob": "755158699496506a62132c540f19b225c5a6222d",
+      "sha256": "5710013cfeac12d61f6f93ba995df696395c583803b2226be79195dff7dff095"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 198908,
+      "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+      "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "bytes": 87973,
+      "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+      "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/transport.test.ts",
+      "bytes": 23731,
+      "blob": "24c83547be0ee43bb6f2481618a4356a3855d832",
+      "sha256": "b49279f1685054763969aa51a08c294e0ea9acf5b640c7d94553cbcf59aa412c"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab"
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356"
+    },
+    {
+      "path": "packages/task-change-ledger/package.json",
+      "bytes": 2714,
+      "blob": "0fac5843889e1b28d53712f353bce1b0bae855a4",
+      "sha256": "a0db21117b905b414e825862d8bc93cfe9280975c8b91e1afa6cca2e1570a132"
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "bytes": 378,
+      "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c"
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "blob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2"
+    },
+    {
+      "path": "scripts/ci/check-team-provisioning-architecture.mjs",
+      "bytes": 6579,
+      "blob": "1fdae92a9123c6226ced3a66e716ca43d64cb230",
+      "sha256": "3e39047ef3dfdc3ad948f36c795aa3b5aa493916b03526a81f834199243f3cf6"
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "blob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072"
+    },
+    {
+      "path": "scripts/ci/team-provisioning-architecture-baseline.json",
+      "bytes": 15092,
+      "blob": "7e3e458d224cb898cbb01345c0c47f9de85b7ab4",
+      "sha256": "b987bba5a4a8e6f1e2e62d2a19df2cec654f9ed89b753e2c99f79e8da3abcd30"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "bytes": 52461,
+      "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+      "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "bytes": 2115,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+      "bytes": 20305,
+      "blob": "b8b6760f5623f55387dba4fec288947bce707bc7",
+      "sha256": "8d19cb46ef2729e862a37f13c32c0239d0fd7e0148b15873c1f0d1fad87cc6e7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21808,
+      "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+      "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-selection-ui.ts",
+      "bytes": 26261,
+      "blob": "cd4c8f81b07caa9b7d46f9c4f766fb978e82a40d",
+      "sha256": "a4f1f19bd9ce451946309c5aa6ed2a1437a9244494741937699360a7fe6bab60"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+      "bytes": 24968,
+      "blob": "bd427fbe8bdcba5a80674d220becd75d8bd6ef57",
+      "sha256": "771daf9353d767afc0cf6696779f37c07bbd404ad967845d230d6fd46a9bf0c6"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "bytes": 19234,
+      "blob": "7628e511b2f219ad27e517d4a96ecb7aec604131",
+      "sha256": "f4ea5ccdfd127a0ea0271a4923a8da12fcc2bf542a30a152f0b2d34360f781fe"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+      "bytes": 3804,
+      "blob": "7c84fc0167171b2d0cce7c002c660a93060444b8",
+      "sha256": "cb6cd06a6773f9533357c501d551f3ed04144900787f39291caba0abc1980290"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    {
+      "path": "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+      "bytes": 8676,
+      "blob": "e7731fd8ca546fd14ac6992d74ea78f3ad8e7981",
+      "sha256": "de8552ab68f316a41901b304e7315128c33ad848a059fd0d14a60de7d6bd4b9e"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/CapturedHostClient.ts",
+      "bytes": 32767,
+      "blob": "6a1c96ed27c412c822e25df22eda858d20bbc6b8",
+      "sha256": "4cc91e2d53dee212b8f41b70611a37880f000d7225329bb51d21f9b56816b138"
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 22666,
+      "blob": "91098e2083ed64dc4bd551df2424f40fbec064ee",
+      "sha256": "69f6948490d5f4c88f090135912bf8c8189c3558e2480eb1ee4ac69ac15a2c5c"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 56556,
+      "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "bytes": 646,
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+      "bytes": 45599,
+      "blob": "dfa8819f10940cce6d2c5c7c28f94c88a7cdab22",
+      "sha256": "e888e36cdc9b643c28c7303f166780d555cb72bd9da1e8db96e02bd827e09646"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 56556,
+      "blob": "296e4ccab2d1aea5d9eb88629c1fdf56a9c88329",
+      "sha256": "3cba93b8d78463415511f25e2b86132801fd5a0059d168072e39e03a0ad624b0"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 21808,
+      "blob": "6337cb07a04538d9e9ea1859a908efc554e2fc91",
+      "sha256": "8f56cd1d61ee0330082dd3c4a7fa1faf8c0acc294ee0cc18076a2e8b6ba0aad7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "bytes": 52461,
+      "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+      "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 198908,
+      "blob": "c22601ad6648e7a5c47bf46d3214c0f8f3105e0f",
+      "sha256": "c5f732771761b0ebad511bdc8d407b146f9c9636be5f6542e0a356920a749f2c"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 103573,
+      "blob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+      "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "bytes": 96565,
+      "blob": "4afbfc0ed5f388d07593198fc220073fafd96514",
+      "sha256": "7be5f3ece9c396cba8c09e0eef84c3bb9c216cadb0b301363ae48d9439ea2b70"
+    }
+  ]
+}

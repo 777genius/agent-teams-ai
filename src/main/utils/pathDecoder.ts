@@ -1,3 +1,4 @@
+import { getOptionalElectronMain } from '@main/utils/optionalElectronMain';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -310,11 +311,7 @@ export function buildTodoPath(claudeBasePath: string, sessionId: string): string
  */
 function getElectronHome(): string | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Lazy require to avoid hard dependency on electron in test environments
-    const electron = require('electron') as {
-      app?: { getPath: (name: string) => string };
-    };
-    const app = electron.app;
+    const app = getOptionalElectronMain()?.app;
     if (app && typeof app.getPath === 'function') {
       const home = app.getPath('home');
       if (home) return home;
@@ -566,13 +563,13 @@ export function getAppDataBasePath(): string {
   if (appDataBasePathOverride) return appDataBasePathOverride;
   // Fallback: resolve lazily from Electron app (safe after app.whenReady)
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { app } = require('electron') as typeof import('electron');
-    return app.getPath('userData');
+    const app = getOptionalElectronMain()?.app;
+    if (app) return app.getPath('userData');
   } catch {
-    // Outside Electron (tests, CLI): use the new fallback path and migrate legacy data once.
-    return getFallbackAppDataBasePath();
+    // Electron app paths may be unavailable before initialization.
   }
+  // Outside Electron (tests, CLI): use the new fallback path and migrate legacy data once.
+  return getFallbackAppDataBasePath();
 }
 
 function getFallbackAppDataBasePath(): string {

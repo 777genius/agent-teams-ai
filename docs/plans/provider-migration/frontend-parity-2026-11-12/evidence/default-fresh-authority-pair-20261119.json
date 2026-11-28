@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "kind": "default-fresh-provider-allocation-authority-pair",
+  "recordedAt": "2026-11-19T20:35:42.663730+00:00",
+  "sourceBase": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+  "status": "local final candidate PASS; original Windows and GUI qualification pending for published candidate",
+  "sourceFiles": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/runtimeControlAuthority.ts",
+      "bytes": 5118,
+      "sha256": "aae5ab79d92ca2c6ad1c5ed06744ca6e40b13a98c6e801e374802967c5c722b7",
+      "gitBlobSha": "caa91202053b2f80c78da05fb26be9483ea835ec"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+      "bytes": 8704,
+      "sha256": "ca08d8b8df706da5cced63fdf51b3088b24889128e7f29b0aab330c616cfa232",
+      "gitBlobSha": "a1a99e79d2a9bd3ba5cd187920e05a897d2dbdfe"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+      "bytes": 1143,
+      "sha256": "06f9e6879e0a806029c2fbc0fd55aa5f4741fdda8bee71dda87484779069aceb",
+      "gitBlobSha": "5827523cf3dc9ee3e47e79e4f4f6eae5b8b995ce"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+      "bytes": 34489,
+      "sha256": "9c87416bacfc3c4f79a2ded42c039ae13687bc45ae6ae34f135c6d54d0784c93",
+      "gitBlobSha": "b1e095fbe5abbe0ddbb66f4ca7a3764b6a50abb5"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+      "bytes": 7503,
+      "sha256": "f3ecbccb830126422c3c9058a96ae17af4346f6472b31f6b11170843a30ff43b",
+      "gitBlobSha": "6a8d69a230853ece35d51e462e51f87fffb13921"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "bytes": 35198,
+      "sha256": "eacdf3534e3c5e9ac8709ee149ead698272900e90f7b30ae7c5bf35ebfb607ae",
+      "gitBlobSha": "fd4714dd361bc1e04dfe16f38611403d0f38deb2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+      "bytes": 5348,
+      "sha256": "74fb65d52520ae92e5284649b742ea52f73ce338666b0cec45f0798f894ead38",
+      "gitBlobSha": "5cd7b9a5c0b2cdc6917526b851cbf4ed5328e6a2"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+      "bytes": 20534,
+      "sha256": "38c42051561c5aca7e97f6ada0fb74c4bc3ccf397d3db45a93521d66053f5703",
+      "gitBlobSha": "72895d70cbb87372eabdcbfc0ca35510b3110cb8"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+      "bytes": 8071,
+      "sha256": "5aeb27d52112984292843ffbb9e5aa651466e068b33b40f1c4e93029d643e6a1",
+      "gitBlobSha": "07e578267ffa9c78ec4a5cc872070f13ee1336a1"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/default-fresh-authority-observer.ts",
+      "bytes": 9433,
+      "sha256": "e9c1f5018ed9d319864bbbbb5fb6a87c0d09710f339da889ab010196637bbda4",
+      "gitBlobSha": "95f7e7cb3359c95b445e2d8d977da11a42097ca4"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "bytes": 289784,
+      "sha256": "2cbf0baf54c0a06950b59d7137c79ad4b3b56a706527e33ee848c72093fda4a5",
+      "gitBlobSha": "efb8d3da0ad6957d6a050bc2804c253f8ad6f42d"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-control-authority.test.ts",
+      "bytes": 26801,
+      "sha256": "093a6c180c654d32ab096ec3edfb3270ccde1bda0d492ca41300b8daa663edf3",
+      "gitBlobSha": "291e870550f9bcc062a67616f174e044b3532569"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+      "bytes": 33794,
+      "sha256": "cb7a6c95737ce23115a0a67115ee2997811207255444940a8063825cb1fbd3a2",
+      "gitBlobSha": "e9731c0a940514e0accd5c87c6114fc2123b9dfa"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-open-diagnostic.test.ts",
+      "bytes": 39611,
+      "sha256": "91443b5072e023900c73667c4e6b3a36d7b8a60d05310051f3cf6699bfea5e54",
+      "gitBlobSha": "f5bdb5e51a8de400001478310a18bb2252bbd739"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 26529,
+      "sha256": "c08478d72877785a4be157c98fb1dfb9930b879762b6c336f572c4fa35942d40",
+      "gitBlobSha": "a1c342d5aa32b1d7bc54efaf25d6813d70461539"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "bytes": 33370,
+      "sha256": "f8442e4b59447b4d41ab2a36bc67d29f69fd6f694483408eb93479a0bfaaa3b0",
+      "gitBlobSha": "88e280ac4b7df31ea81f4fe61a47b01d70effa48"
+    }
+  ],
+  "builtJavaScript": [
+    {
+      "path": "packages/legacy-agent-host/dist/composition/runtimeControlAuthority.js",
+      "bytes": 4374,
+      "sha256": "9807a2b1dbee9ca50f9e704fcae0e704a90dac8c16285fa1276e0be1ff2e5e04"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createRuntimeTeamLaunch.js",
+      "bytes": 7708,
+      "sha256": "b42d77ce94612af017ae6c507170debd8cc5f463f7f9f8e3fa0d3ce84395f8eb"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/captureTeamAccountRead.js",
+      "bytes": 1053,
+      "sha256": "4333bad59d4b681bb0a936433e8bd7257a14c6284080bb3ad19e4209327d2a38"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/team/TeamOwner.js",
+      "bytes": 31663,
+      "sha256": "070cd5463d21c60cfc2bf58b002393362aad48873850e1fcd552b57e98d2ef9e"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/teamRoster.js",
+      "bytes": 6675,
+      "sha256": "3397a93d1ce6a3b0bb3ee0389ab9ca6cb72b0af204541660666785626c10902d"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/RuntimeTeamCoordinator.js",
+      "bytes": 32810,
+      "sha256": "2d19055d85b3fa1ff42b1e92336eb32ac143b89e7e901f934e47ad359ecc1a87"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/captureMemberProviderAuthority.js",
+      "bytes": 4967,
+      "sha256": "3bc8a76706c20a06afcf0caa67146763c87ca0c4136fd48445821720e3530fe9"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/composition/createRuntimeMemberProviderFactory.js",
+      "bytes": 19840,
+      "sha256": "e56173204e0b1dec7f7343a5bd253b7e8e8088524ad9a8454027acaa420c9889"
+    },
+    {
+      "path": "packages/legacy-agent-host/dist/diagnostics/modelReadinessTiming.js",
+      "bytes": 10999,
+      "sha256": "171e18fcefd88ed8db89c815e957e24702e4fe09f1601168157cfd5427d4189a"
+    }
+  ],
+  "behavior": {
+    "physicalPublications": {
+      "before": 2,
+      "after": 1
+    },
+    "namespaceChecksPerPair": 8,
+    "freshStateReadsPerPair": 7,
+    "actualDefaultHostPairsObserved": 17,
+    "order": [
+      "provider",
+      "execution",
+      "control"
+    ],
+    "authorityResultsCached": false,
+    "newOwnerOrProviderSPI": false,
+    "nativeReadinessCutoffChanged": false,
+    "fallbackRestoreRestartLive": "original paths retained; ordinary non-checkpoint selection remains eligible",
+    "unlock": "original provider fence now releases after allocation; error remains fatal and no retry/native continuation follows",
+    "timing": "exclusive Provider subtracts raw nested Allocation before accumulation; original4 clocks enabled/0 disabled; invalid child sample truncates/omits Provider"
+  },
+  "validation": {
+    "RED": "actual Host NDJSON team.launch.start -> default openSession -> original factory -> controlled OpenCodeV2 opening canAllocate:17 pairs show2/8/7, fails2!=1",
+    "core": {
+      "passed": 42,
+      "failed": 0,
+      "sessionId": 21241,
+      "log": "default-fresh-pair-regressions-qualified.log"
+    },
+    "hostAndRecovery": {
+      "passed": 8,
+      "failed": 0,
+      "sessionId": 76051,
+      "log": "default-fresh-pair-host-paths-final.log"
+    },
+    "canonicalHostBuild": {
+      "exitCode": 0,
+      "sessionId": 61815,
+      "compiler": "TypeScript7.0.2",
+      "node": "24.21.0",
+      "log": "default-fresh-pair-host-build-final.log"
+    },
+    "canonicalFullHostTestTypes": {
+      "exitCode": 0,
+      "sessionId": 65155,
+      "compilerOptionsChanged": false,
+      "environment": {
+        "GOMEMLIMIT": "1536MiB",
+        "GOMAXPROCS": "2"
+      },
+      "log": "default-fresh-pair-test-types-qualified.log"
+    },
+    "lint": "all16 paths0errors; initial new-test finally warning corrected, final7 test/pin paths0errors0warnings",
+    "sourceGuard": "5166 production paths,141 existing frozen exceptions,800-line cap PASS",
+    "architectureGuard": "PASS; no facade/service cast/dependency ownership count increased",
+    "independentReview": "locked conceptualR1,9productionR2,6root-test/pinR2 PASS; root separately reviewed delegated timingtest"
+  },
+  "correctedAttempts": [
+    {
+      "kind": "test setup",
+      "detail": "First RED expected TEST-human instead of actual human; corrected before authoritative RED."
+    },
+    {
+      "kind": "compiler",
+      "detail": "First fullHosttesttypes concurrent with tests endedSIGKILL137, notPASS. Alone unchangedscope with boundedcompiler found2implicit-any restore callback parameters; typed them. Added live capture fixture also needed requiredcwd; fixed. Final fullscopePASS."
+    },
+    {
+      "kind": "test setup",
+      "detail": "Initial selected-restore definition without its journal refusedrestore-journal-corrupt; rebuilt via realstart/stop/selectRestore. Original startMember settles open failures; test now checks captured assertions and explicitchecked flag. Corrected2/2 then final42/42PASS."
+    },
+    {
+      "kind": "source R2",
+      "detail": "Raw child duration subtraction explicitly grouped before accumulation; finalHostbuilt and finalscopechecked."
+    },
+    {
+      "kind": "environment",
+      "detail": "Environment briefly unavailable after completedlocalchecks; returned without code reconstruction. All16 bytecounts/SHA256 and both frozen manifests reverified."
+    }
+  ],
+  "limits": [
+    "Controlled V2 default-start proof does not execute a real engine or replace original WindowsV1 saved-capture qualification. Actual WindowsTeamA route eligibility independently source-reviewed.",
+    "Selected restore branch test uses a controlled checkpoint verifier and intercepts restoreSession before actual restore/provider work; existing mixedHost restore/cold scenario separately passed.",
+    "Four genuine existing roster-recovery regressions passed; unchanged recovery source proof does not invent a positive pending/current native pair.",
+    "No native timing benefit, installed-runtime,release or merge qualification claimed. No realClaude/Codex or manualCIaction."
+  ],
+  "reviews": [
+    {
+      "path": "default-fresh-pair-revised-r1-plan.json",
+      "sha256": "6d5ee04bd7a0616f731bed728a9bf2feece632030073d023e46bb9d8a6aede93"
+    },
+    {
+      "path": "default-fresh-pair-independent-r1.json",
+      "sha256": "216d8254d043c1529f0c00a4c2eaec0b3afdf1548cc9e9d15f1fff2c3066f775"
+    },
+    {
+      "path": "default-fresh-pair-production-postimage.json",
+      "sha256": "05ad10cb63ef9955a03acd8e37a81139ed4a059fb37d93f5b2c1544f0b7d1edc"
+    },
+    {
+      "path": "default-fresh-pair-production-independent-r2.json",
+      "sha256": "957f2b5b12d6933694a9c9dde984b5965260c05ee31e91c1ccdbea6821d5611a"
+    },
+    {
+      "path": "default-fresh-pair-test-pin-postimage.json",
+      "sha256": "8b4e9f9f2f108b8359191c675d6acf4345286e2620be1457c921637c7ef1e999"
+    },
+    {
+      "path": "default-fresh-pair-test-pin-independent-r2-final.json",
+      "sha256": "6ebec6e50ebf6f76017d4e84371fd908bdebb56b4c81c9c59f42ab484277a667"
+    },
+    {
+      "path": "default-fresh-pair-roster-recovery-source-proof.json",
+      "sha256": "0372d1444bf65ce68c4f0509d66af96956d47c647104756c43d5cdca062f3f96"
+    },
+    {
+      "path": "default-fresh-pair-red-manifest.json",
+      "sha256": "2cd698c6fc7b8b9935299028a22a43896bafeca9677dd565f2fe77c2d02829a0"
+    }
+  ],
+  "checksArchive": {
+    "path": "default-fresh-authority-pair-checks-20261119.tar.gz",
+    "bytes": 39423,
+    "sha256": "5eb3ddd64a8cce9d701a86c041d3a1cf309d217f8d7b1f2426dfa158921123e6",
+    "entries": 30
+  }
+}

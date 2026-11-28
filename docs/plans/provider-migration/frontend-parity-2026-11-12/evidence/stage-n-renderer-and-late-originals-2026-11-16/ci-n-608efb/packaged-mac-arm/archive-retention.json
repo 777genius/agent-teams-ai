@@ -1,0 +1,71 @@
+{
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234711,
+  "jobId": 133091842577,
+  "artifactId": 14197619815,
+  "zip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/packaged-mac-arm/artifact-14197619815.zip",
+    "bytes": 1063377,
+    "blob": "a32a9f43729b1dee6b13e2fd5eb728a86d840599",
+    "sha256": "0ed3da591c5340c43b91c5f70c2ea4a9d3a91a9e7dba0724f0e80e1e5adbbc4f"
+  },
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "allExtractedBytesExact": true,
+  "members": [
+    {
+      "name": "agent-teams-ai/agent-teams-ai/resources/legacy-agent-host/opencode-v2-candidate.json",
+      "bytes": 1154733,
+      "sha256": "d9c4142bbb4f3b56ecd9125295d28ddad7acee4c7664beb912285b5e5ad5fe44",
+      "crc32": "111b58c6"
+    },
+    {
+      "name": "_temp/TEST-desktop-backend-rzogPa/ui-automatic-app-relaunch-successor.png",
+      "bytes": 138434,
+      "sha256": "65d152c93300287c8965a43a8c744aa19f23aa373b0166abf7d37fdfa093b525",
+      "crc32": "d5b7ff04"
+    },
+    {
+      "name": "_temp/TEST-desktop-backend-rzogPa/ui-emulated-lifecycle-launch.png",
+      "bytes": 221557,
+      "sha256": "87163a6ae518831f8455ded1524d0e9efd53987470a704725134e764e94f9c6d",
+      "crc32": "1f7aeb5f"
+    },
+    {
+      "name": "_temp/TEST-desktop-backend-rzogPa/ui-emulated-lifecycle-stopped.png",
+      "bytes": 199695,
+      "sha256": "83d2fe1e74895603ee9161120b68ed0dcd848cee57a3ce2b31d0421f12620f18",
+      "crc32": "91c8ff3c"
+    },
+    {
+      "name": "_temp/opencode-v2-packaged-inputs.json",
+      "bytes": 2374,
+      "sha256": "54e4d8aeaa61324a458c5004b157758016902431a74ea5a90180d33171191217",
+      "crc32": "c44d5e4d"
+    },
+    {
+      "name": "_temp/opencode-v2-packaged-native.json",
+      "bytes": 5286,
+      "sha256": "e4b4b43b89c98d16bab9ef3834a134360ed8cf9314a90b2ffbfdfd976d5ae184",
+      "crc32": "2713dc31"
+    },
+    {
+      "name": "_temp/opencode-v2-packaged.json",
+      "bytes": 1189,
+      "sha256": "95d89a1060cce2d0489f9203a90b068b8b4325e49401b89564fbce1e4f1bcfe3",
+      "crc32": "35381ff4"
+    },
+    {
+      "name": "_temp/packaged-app-relaunch.app.log",
+      "bytes": 3027,
+      "sha256": "b3f65bc5e6a43129e17d8f880da784837f9f5f00f5e7ec1620c0d870699913e6",
+      "crc32": "3bb405ca"
+    },
+    {
+      "name": "_temp/packaged-app-relaunch.json",
+      "bytes": 670024,
+      "sha256": "7b17b16e9c240d6c59acbaae90e63794b92cef494d39495da045803450dcf35a",
+      "crc32": "0a48f38d"
+    }
+  ]
+}

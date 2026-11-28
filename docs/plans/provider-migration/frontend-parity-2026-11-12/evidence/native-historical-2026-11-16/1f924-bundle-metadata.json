@@ -1,0 +1,32 @@
+{
+  "schema": "recoverable-native-bundle-publication/v1",
+  "cohort": "1f924",
+  "source": "1f9242563bec2641b25077c3aa83a999bd7f4871",
+  "archive": {
+    "path": "1f924-native-evidence.zip",
+    "bytes": 628187,
+    "blob": "eac84d0558575cb6c58f8a9a2e858f2ea5a88764",
+    "sha256": "bc75cc356f898018bd49f2526cb72dbeb60e2d4e2a3f7d627b98461b1da9cb3c"
+  },
+  "inventory": {
+    "path": "1f924-inventory.json",
+    "bytes": 10936,
+    "blob": "9655b94ec28a8e76c917047cd3f2b2bf78d73d14",
+    "sha256": "6bd1f669eed230c7da2c530a913ad0f36bc0a381f85b10abda1e933419daec38"
+  },
+  "readme": {
+    "path": "1f924-README.md",
+    "bytes": 1044,
+    "blob": "32e5b5ccdfdab0f2b92bb84f166241b7878831fe",
+    "sha256": "ea35ca2cde7a3fd0c5c4c51514eb4c1f002af50b507f90a21fbb3dc17e96a5f0"
+  },
+  "payloadFileCount": 45,
+  "payloadBytes": 2445016,
+  "outerMembers": 47,
+  "originalArchiveCount": 8,
+  "allOriginalPayloadHashesMatched": true,
+  "fullOuterByteReadbackExact": true,
+  "outerCRCAllPass": true,
+  "originalZipCRCsChecked": true,
+  "signedUrlScanPassed": true
+}

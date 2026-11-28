@@ -24,10 +24,14 @@ function launchDialogElements(source: string): string[] {
   return elements;
 }
 
-/** Text of the options passed to the first `executeTeamRelaunch({ ... })` call. */
-function relaunchCall(source: string): string {
-  const start = source.indexOf('executeTeamRelaunch({');
-  return source.slice(start, source.indexOf('launchTeam,\n', start));
+/** Every relaunch call, retaining its position so the project early return is checked. */
+function relaunchCalls(source: string): { start: number; text: string }[] {
+  return [...source.matchAll(/executeTeamRelaunch\(\{/g)].map((match) => {
+    const start = match.index;
+    const end = source.indexOf('launchTeam,\n', start);
+    if (end < 0) throw new Error('Relaunch call must retain its launchTeam port');
+    return { start, text: source.slice(start, end + 'launchTeam,'.length) };
+  });
 }
 
 describe('launch dialog wiring of per-project teams', () => {
@@ -36,11 +40,38 @@ describe('launch dialog wiring of per-project teams', () => {
     const dialogs = launchDialogElements(source);
     expect(dialogs).toHaveLength(1);
     expect(dialogs[0]).toContain('rosterReadOnly={Boolean(logicalTeamName)}');
-    expect(source).toMatch(/setLaunchDialogState\(\s*buildChangeRuntimeLaunchState\(\{/);
+    const changeRuntime = source.slice(
+      source.indexOf('const handleChangeLeadRuntime ='),
+      source.indexOf('const memberActions =')
+    );
+    expect(changeRuntime).toMatch(/const next = buildChangeRuntimeLaunchState\(\{/);
+    // The owned opener preserves retained-team selection and the complete settings intent.
+    const launchSettings = changeRuntime.match(
+      /openLaunchDialog\(\s*next\.mode,\s*\{([\s\S]*?)\}\s*\)/
+    )?.[1];
+    expect(launchSettings).toBeDefined();
+    for (const field of ['memberSettingsDraft', 'baselineMembers', 'memberSettingsCommandId']) {
+      expect(launchSettings).toMatch(new RegExp(`\\b${field}:\\s*next\\.${field}\\b`));
+    }
+    expect(changeRuntime).not.toContain('setLaunchDialogState(');
     // A per-project relaunch returns before the shared relaunch flow, which is for ordinary teams.
     const handler = source.slice(source.indexOf('const handleRelaunchDialogSubmit'));
-    expect(handler.indexOf('if (logicalTeamName) {')).toBeLessThan(handler.indexOf('executeTeamRelaunch({'));
-    expect(relaunchCall(source)).toContain('rosterReadOnly: false');
+    const calls = relaunchCalls(handler);
+    expect(calls).toHaveLength(2);
+    const [project, shared] = calls;
+    expect(handler.indexOf('if (logicalTeamName) {')).toBeGreaterThanOrEqual(0);
+    expect(handler.indexOf('if (logicalTeamName) {')).toBeLessThan(project.start);
+    expect(project.text).toContain('teamName: logicalTeamName');
+    expect(project.text).toContain(
+      'request: toLogicalProjectLaunchRequest(request, logicalTeamName)'
+    );
+    expect(project.text).toContain('rosterReadOnly: true');
+    expect(handler.slice(project.start + project.text.length, shared.start)).toMatch(
+      /^\s*\}\);\s*return;\s*\}\s*await\s*$/
+    );
+    expect(shared.text).toContain('teamName,');
+    expect(shared.text).toContain('request,');
+    expect(shared.text).toContain('rosterReadOnly: false');
   });
 
   it('TeamListView marks the roster read-only for both modes and for the relaunch flow when it runs a project copy', () => {
@@ -48,9 +79,13 @@ describe('launch dialog wiring of per-project teams', () => {
     const dialogs = launchDialogElements(source);
     expect(dialogs).toHaveLength(2);
     for (const dialog of dialogs) {
-      expect(dialog).toContain('rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}');
+      expect(dialog).toContain(
+        'rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}'
+      );
     }
-    expect(relaunchCall(source)).toContain(
+    const calls = relaunchCalls(source);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].text).toContain(
       'rosterReadOnly: launchDialogProjectPermissionTeamName !== undefined'
     );
   });

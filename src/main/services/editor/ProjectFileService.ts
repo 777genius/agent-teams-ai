@@ -22,7 +22,11 @@ import { shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-import { assertEditorFilePathUnchanged, boundedTextRead, resolveEditorFilePath } from './boundedTextRead';
+import {
+  assertEditorFilePathUnchanged,
+  boundedTextRead,
+  resolveEditorFilePath,
+} from './boundedTextRead';
 
 import type {
   BinaryPreviewResult,
@@ -250,18 +254,28 @@ export class ProjectFileService {
     }
 
     // Publish to the target instead of replacing the symlink. Recheck on every rename retry.
-    await atomicWriteAsync(target, content, { beforeCommit: async () => {
-      await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target, true);
-      let current: typeof existing;
-      try { current = await fs.lstat(target); } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      }
-      if (existing ? !current?.isFile() || existing.dev !== current.dev ||
-          existing.ino !== current.ino || existing.size !== current.size ||
-          existing.mtimeMs !== current.mtimeMs : current !== undefined) {
-        throw new Error('File changed during write. Please retry.');
-      }
-    } });
+    await atomicWriteAsync(target, content, {
+      beforeCommit: async () => {
+        await assertEditorFilePathUnchanged(projectRoot, normalizedPath, target, true);
+        let current: typeof existing;
+        try {
+          current = await fs.lstat(target);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        }
+        if (
+          existing
+            ? !current?.isFile() ||
+              existing.dev !== current.dev ||
+              existing.ino !== current.ino ||
+              existing.size !== current.size ||
+              existing.mtimeMs !== current.mtimeMs
+            : current !== undefined
+        ) {
+          throw new Error('File changed during write. Please retry.');
+        }
+      },
+    });
 
     // 7. Get post-write stats
     const stats = await fs.stat(target);

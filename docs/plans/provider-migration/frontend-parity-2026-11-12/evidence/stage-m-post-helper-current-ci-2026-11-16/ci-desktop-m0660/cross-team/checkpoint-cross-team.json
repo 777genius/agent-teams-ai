@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916047,
+  "outcome": "FAIL original comment-focus gate before later Cross controls",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/job-133017916047.log",
+      "bytes": 188846,
+      "blob": "08a9bde4944bd24376ceaf09a87444231936be39",
+      "sha256": "b88ecff84df20b1f0526fca453965b746c8f2ac1398991887974ba989ca6c23c"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/artifact-14192410704.zip",
+      "bytes": 1436127,
+      "blob": "0525b930a2e5fd5cd3d05c701ac3925c0288972f",
+      "sha256": "49a1f1d6408374dcbd48db0483e8c9e02b07d3d5ff803032291b85f270ebcb50"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/archive-audit.json",
+      "bytes": 6093,
+      "blob": "bce68655c00f21159b04f8ad74b535a629912de1",
+      "sha256": "075055c8a92ed9704b3072a7fc8680a022ba3567472c36af5bd076bb382ea350"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+      "bytes": 19753,
+      "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+      "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0215.json",
+      "bytes": 210786,
+      "blob": "ce23677db2bb7bd7b13466fc141f8354a709932b",
+      "sha256": "5970c06c49581ee9d93fc68b749d63df855689aaacd8878ef870853ebbb0b860"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/audit.json",
+      "bytes": 169543,
+      "blob": "f3cf04d5c7e16ddb485c897df02c0fe759f10417",
+      "sha256": "4d6390338bc261608cb364ebec744cddd0391ff0179bcbb65e2a6a84a0ce29b1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/cross-team/Plan29-cross-team-failure-appendix.md",
+      "bytes": 6359,
+      "blob": "afbca9fed68bc56e5014d0c9cfffc86b09227752",
+      "sha256": "f7f2743ea93ce4edb787c693b2846271237ab7d19981dc22935a33b1fa266c72"
+    }
+  ],
+  "recoverableOriginalMembers": [
+    {
+      "path": "TEST-desktop-backend-wUzd4r/desktop-app.log",
+      "crc32": "8b208016",
+      "bytes": 22811,
+      "blob": "291e797d7e35a2e27b7333918b382a07d5d70d43",
+      "sha256": "e6cfdb0721eb408cf48158e736978904bd5c21d7569ed8d467ff475b9cbd1480"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/desktop-descriptor.json",
+      "crc32": "2b877bec",
+      "bytes": 2993,
+      "blob": "80b16fe93a9abcd70b548461885367a54c69d842",
+      "sha256": "f978341f27daae95117761325230dd59dabd1f303849d552e1117a939bb855e0"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/desktop-backend-receipt.json",
+      "crc32": "03783207",
+      "bytes": 905927,
+      "blob": "feb446be328b0befa1f06f2a692126886f09d7e0",
+      "sha256": "a5559c472af67b90541a598c75d94e97345db0eff84cced30c7ea34ab4f11f54"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/host-profile.json",
+      "crc32": "7f23adee",
+      "bytes": 2618,
+      "blob": "2342d53b42d99fce33399e306c54102a98872716",
+      "sha256": "9a24587d026643acb1ebe64ebff50531cec39350f5df3b794fcc55934ad327b4"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/hoststore/teams/test-desktop-backend/group-chats.json",
+      "crc32": "6171997d",
+      "bytes": 340,
+      "blob": "5e3e4ecaab6badfdb48a590217d421c8054b8b02",
+      "sha256": "f174510346f0d16652fbed767cecae1f8f0fd732752f76fa205c46e7ded57bf2"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "crc32": "9947972d",
+      "bytes": 1295,
+      "blob": "56185db3785ed078abdc45ce312de8c7330dd390",
+      "sha256": "f0f219db40ab8993d38a7b1dd0635dd078566e815c5593bf10430f255fb0ca5c"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-failure.png",
+      "crc32": "217d4c67",
+      "bytes": 126006,
+      "blob": "79dde3482a0588f28131950edc35ff4a77a53334",
+      "sha256": "a5b8955581d0ab2ee8396abbafbd97d91d5d3577a5b188eadc8be9ca8f5f4e8c"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-group-seed-receipt.json",
+      "crc32": "a5e3ed29",
+      "bytes": 593,
+      "blob": "133738a6787d3f1c3df61536335b4a792ad8233e",
+      "sha256": "29461f100115e9a6ecde9829a9f8606075caad08d639c9cc19c99cff8c7ab1aa"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-seed-receipt.json",
+      "crc32": "09e21d47",
+      "bytes": 2197,
+      "blob": "f38854ebb50a3a02b1998698b2cb555fff11722c",
+      "sha256": "922a7d4c62e3f70abadc584f502885db3aaebc44a9a3378dd45cb4cb4c09db25"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-assigned-blocked.png",
+      "crc32": "59291c00",
+      "bytes": 109479,
+      "blob": "0247671b13f403ce67873b8deb6198596d0e3140",
+      "sha256": "cb503c3031ab0601410de197b3121d5e95881e820c818960223d55cfb122bfe4"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-attachment-added.png",
+      "crc32": "d5b82d15",
+      "bytes": 127508,
+      "blob": "c1aede06ae1448188496d006a0cd1377f782d717",
+      "sha256": "786b8ee3f90963bc6988badbd16ccacd2a9544996a24c8ee69e04a4161460c4e"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-blocked-start.png",
+      "crc32": "252580d8",
+      "bytes": 145382,
+      "blob": "38d00b762753eb9d422bcdf661f1024b4b470974",
+      "sha256": "028ab933ae449b8db05b158877f48f5f1841cc5388086e1b5da015ce9da61994"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-initial.png",
+      "crc32": "eb1ca106",
+      "bytes": 108012,
+      "blob": "f19b237c80062fe231a0657888e8342f44f8eadf",
+      "sha256": "4600b6d53245608af52cc36de92eca2fedc4f24ca30063b3e0a21824bb65c0d8"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-reloaded.png",
+      "crc32": "8e064128",
+      "bytes": 124111,
+      "blob": "e6e3bb65bf898c7b5e8993c5eb68a752ed9959bc",
+      "sha256": "d9d424a8bb27dfc67abf8eaa480339058acfc2d1254bd31502aee3f3c30edd61"
+    },
+    {
+      "path": "TEST-desktop-backend-wUzd4r/ui-task-board-reordered.png",
+      "crc32": "31dca1e8",
+      "bytes": 145329,
+      "blob": "7c61277231be9180f3aecd3834bfb7df190e197e",
+      "sha256": "ed510a4b0426361fc25c85c50cd50eed2c62e6c6c03495ae0c8d0ce54291caf0"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-ZHrOkm/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-ZHrOkm/linux-child-exec/manifest.json",
+      "crc32": "e3de74e8",
+      "bytes": 2406,
+      "blob": "9d295189c6e88a7f57193e79097621d00f21c395",
+      "sha256": "4ef7cd76c1a549d6fef41c4dc7561b5433547278d59b0c2907affe2be9a646f1"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "67439d55",
+      "bytes": 1803,
+      "blob": "2248a139ec132f4931eb15dbe2c142be631ff42a",
+      "sha256": "245b3907e2d04c2f2bac94d3d39737e17b9c0be62f1af1861594762a63369410"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "b2c43fc6",
+      "bytes": 271,
+      "blob": "bcf3cd4be0a93af7d12780d6ee26dea1c3b7b3fa",
+      "sha256": "5492b9346f26384f4bbf209504f8eac703ba95c1379f3aea3915edd327f450f7"
+    },
+    {
+      "path": "host-emulated-task-board-cross-team-ui.log",
+      "crc32": "4cf7d194",
+      "bytes": 7054,
+      "blob": "0626009229a3f113eb711abf2e282505de666228",
+      "sha256": "2cd40519dfbb73ae86a759c4d94c52e17f022bf5404ca8b90142efe5955857a2"
+    }
+  ],
+  "actuallyViewedPngCount": 7,
+  "limits": [
+    "This is an original offline task-board prefix failure, before the later review/notification/cross-Team routing sequence; no availability or clarification cause is transferred from historical failures.",
+    "The original 20-second wait has a before-read cutoff only; no strict after-read bound or atomic/continuous focus guarantee is invented.",
+    "Retained event callbacks prove the one click reached the actual textarea and focus later left it. They do not identify why it became disabled or why React/current-owner observations changed.",
+    "Last transition samples have no per-transition timestamps; post-read and event clocks are separate observation windows, not an atomic state history.",
+    "The final empty process group and launcher0/null are retained; a separately captured Host identity/absence/custody proof is unavailable. Passive Main child callbacks are preserved without assigning the long-lived child a Host identity.",
+    "No Runtime or management providers were configured. The single admitted sentinel version check does not qualify native providers. preQuitCount/postQuitOrCleanupInvocations are null.",
+    "Original post-failure verifier step30 fails as well. No Task comment submission, attachment comment, final Cross availability route, complete flow or privacy GREEN is qualified."
+  ]
+}

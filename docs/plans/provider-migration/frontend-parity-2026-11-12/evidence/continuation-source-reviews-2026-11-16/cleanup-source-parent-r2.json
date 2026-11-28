@@ -1,0 +1,81 @@
+{
+  "kind": "independent-cleanup1-209-source-parent-published-r1-preservation-r2",
+  "verdict": "APPROVE focused actual209 parent rebind for the exactb1f one-path source child under fresh unchanged-parent lease. Actual03242 R1 remains a fully preserved published ancestor.",
+  "packet": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-source-parent-209-selection.json",
+    "bytes": 3411329,
+    "git": "ffc17149f8fb4f31221719ed1b8ddbb301e0cf68",
+    "sha256": "c424e0afa698ab5d4fa792a2242d97de2dbb04e7462abfe5fd45a499e9e76db2"
+  },
+  "actualIncomingReadback": {
+    "path": "/tmp/migration-evidence-20261116/root/incoming209-full-readback.json",
+    "bytes": 275536,
+    "git": "8f1eece846ef10b97487f4f46a6d06a33bd88c23",
+    "sha256": "06d8ef670b7e383f17bcc8753a1e3dcba5db78ba94180bfbaa6cad410175323f"
+  },
+  "actualPublishedR1Readback": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-published-docs-03242-readback.json",
+    "bytes": 686771,
+    "git": "16267dfb22aa4e5c4aef75d7255bc0190738cca6",
+    "sha256": "127697867614fd19606f060fbadb87d231bed6137916e65a1c7bb69405b3ca92"
+  },
+  "publishedR1IndependentR2": {
+    "path": "/tmp/migration-evidence-20261116/native/cleanup1-published-r1-03242-independent-r2.json",
+    "bytes": 8741,
+    "git": "a200378a94ac226cef50fe04f750d8c2e43cbd83",
+    "sha256": "211ba7334fe40e0195c9a252d0b2cc8a7cdf356ea9fbc6a125afd8e007d7a12e"
+  },
+  "incoming": {
+    "sha": "209aab743e0da2a8bce68b708281ebcb826c2570",
+    "soleParent": "03242bf1063cc7fdbaf9e1ee633ce607debf9fdc",
+    "tree": "571b36c6aecb0873117bec5bdeca2a5cb48e00d6",
+    "onlyPath": ".github/workflows/host-emulated-acceptance.yml",
+    "beforeGit": "a1513210012356a5178620b1f370bd1daf0de9d9",
+    "beforeBytes": 106650,
+    "afterGit": "3774658a0ab266686930fbe7e28ecb9e26711ebf",
+    "afterBytes": 123003,
+    "afterSha256": "eea6e7d63b0e60b05008f7fe9dcfcb6bde27d7488a8b8ae883dfc2bf0207e14b",
+    "completeActualDiffForwardAndInverseExact": true
+  },
+  "wholeTreeProof": {
+    "publishedR1Tree": "49f5164376c1e4b4964eef521003c8b548d0e648",
+    "actual209Tree": "571b36c6aecb0873117bec5bdeca2a5cb48e00d6",
+    "sourceProjectedTree": "fcbfc84bc852f0c782938f2a6f4332afd0462e45",
+    "leaves": 11107,
+    "incomingChangedOnlyWorkflow": true,
+    "allEightActualPublishedR1LeavesPreserved": true,
+    "sourcePreimageUnchanged": {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "size": 59419
+    },
+    "futureSourceAfter": {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "size": 59461
+    },
+    "futureSourceChangesOnly": [
+      "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+    ],
+    "futureOther11106LeavesExact": true,
+    "incomingWorkflowPreservedInSourceChild": true
+  },
+  "sequenceBoundary": [
+    "Actual03242 documentary commit/8fullbody reviewa200 remains the applicable publishedR1;209 is its sole-child incoming workflow change.",
+    "No R1 rewrite or source semantic revision is selected: P10prefix1b017/P10after4e05, fullR1 3cc579 and sourceR2 4e39 remain exact.",
+    "The current one-path afterimage is still59461B/800L/b1f; its fresh source child must use209 as actual parent unless another incoming change is separately preserved.",
+    "Actual source publication/readback and independent final preservation review remain pending."
+  ],
+  "scopeBoundary": "This is a complete byte/tree/ancestor preservation review. The separately incoming Plan55 workflow semantics are assigned as the next bounded review and are not claimed approved by this delta-only report. No runtime/CI qualification is inferred.",
+  "actions": {
+    "apiCalls": 0,
+    "cohortPolls": 0,
+    "projectOrNativeExecution": 0,
+    "gitIndexOrRefMutation": 0,
+    "canonicalWrites": 0
+  }
+}

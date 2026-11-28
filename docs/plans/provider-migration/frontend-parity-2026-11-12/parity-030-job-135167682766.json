@@ -1,0 +1,882 @@
+{
+  "schema": "current-head-original-ui-job-failure-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682766,
+    "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-11-18T22:43:20Z",
+    "completed_at": "2026-11-18T22:53:26Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682766",
+    "runner_name": "GitHub Actions 1000395236"
+  },
+  "failedSteps": [
+    {
+      "name": "Exercise original OpenCode V2 native Desktop journey",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 34,
+      "started_at": "2026-11-18T22:47:55Z",
+      "completed_at": "2026-11-18T22:53:08Z"
+    },
+    {
+      "name": "Verify original V2 journey receipts, source binding and cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 37,
+      "started_at": "2026-11-18T22:53:08Z",
+      "completed_at": "2026-11-18T22:53:10Z"
+    }
+  ],
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682766,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-18 22:54:19 UTC",
+    "bytes": 241910,
+    "sha256": "e0276b385fb8844632de606d2bfa80ee0b600c2d1c64cb93c85a5ce850d927be",
+    "computedGitBlobSha": "11ae8989bfff4c6ab8db0e218813cf208777b426",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682766-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "11ae8989bfff4c6ab8db0e218813cf208777b426",
+    "exactReadback": true
+  },
+  "artifact": {
+    "artifactId": 14479602395,
+    "phase": "GitHub-download-endpoint-permanently-retired",
+    "fileId": "file_00000000b70881f48f4f7542d0668df4",
+    "bytes": 303969,
+    "sha256": "0ada06b179fb068903132a9603ac09db8f4490450a90efb0bac46f1fcde8ea33",
+    "digestMatchesOriginalUploadLog": true,
+    "zipLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-opencode-review-darwin-arm64-14479602395.zip"
+  },
+  "originalReceipt": {
+    "name": "TEST-desktop-backend-d4h81S/desktop-backend-receipt.json",
+    "bytes": 869852,
+    "sha256": "787db5cacb26470637980fa8aaec7316b408b7fedc44754a19189d0671590161"
+  },
+  "artifactOriginalInputs": {
+    "host-emulated-inputs.json": {
+      "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "nativeProviders": "OpenCode V2 with finite localhost model only",
+      "values": {
+        "LEGACY_DESKTOP_BACKEND_GO": "1",
+        "LEGACY_DESKTOP_EMULATED_ONLY": "1",
+        "LEGACY_DESKTOP_COREPACK_HOME": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-etBSbm/cache",
+        "LEGACY_DESKTOP_NODE_SHA256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "LEGACY_DESKTOP_HOST_ENTRY_SHA256": "4e1841072540175636a776082693780021827ce56d0b5c2aa11f9e8511d132ba",
+        "LEGACY_DESKTOP_PNPM_PATH": "/Users/runner/work/_temp/TEST-emulated-ui-inputs-etBSbm/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "LEGACY_DESKTOP_PNPM_SHA256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+        "LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+        "LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      }
+    },
+    "host-emulated-opencode-v2-inputs.json": {
+      "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+      "status": "READY",
+      "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "platform": "darwin-arm64",
+      "nodeVersion": "v24.21.0",
+      "productQualified": false,
+      "stage": "prepared",
+      "baseArchiveSha256": "facece83f619c4b1c1ec3a76cff25727d85a2b75d18812cbc3a5b729e855ecc9",
+      "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+      "bun": {
+        "path": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun",
+        "sha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+        "version": "1.4.4"
+      },
+      "osBuild": "24H232",
+      "productTupleAdmitted": true,
+      "processArtifact": {
+        "manifest": {
+          "schemaVersion": 1,
+          "abi": "napi-8",
+          "platform": "darwin",
+          "architecture": "arm64",
+          "osBuild": "24H232",
+          "library": "registered-process.node",
+          "sourceSha256": "a2f6d70bd04251308a1f70fe4374fe5fd343feb6939db3df7d030f03d7d1e6b5",
+          "binarySha256": "662b16ef15beb4aa2667c4a770ea4ffa17f15990bfc12f1a2444bf778ea76adc",
+          "compilerSha256": "4c458256bcdf913774de1bb4a37768244d3b41f32ad55afb2dfec3432f46f4fe",
+          "sdkSettingsSha256": "58a133735f0a55a624a1703067059f6e78925e51725ec6e1f966072e142c9c42",
+          "headers": [
+            {
+              "file": "node_api.h",
+              "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+            },
+            {
+              "file": "node_api_types.h",
+              "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+            },
+            {
+              "file": "js_native_api.h",
+              "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+            },
+            {
+              "file": "js_native_api_types.h",
+              "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+            },
+            {
+              "file": "node_version.h",
+              "sha256": "bd056729fddf4bfa58687036219f07417c334c4ecfcb513ac256fa254451bfc9"
+            }
+          ]
+        },
+        "manifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+        "directory": "/Users/runner/work/_temp/TEST-opencode-v2-inputs-5lenkE/process-artifact"
+      },
+      "supportArchiveSha256": "63776ffeade65263c217042e431bbf71d3d75c0b0b59f6515a0e503e068f012b",
+      "manifestSha256": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204"
+    }
+  },
+  "observed": {
+    "status": "INCOMPLETE",
+    "mode": "native-review-ui",
+    "nativeProvider": "opencode",
+    "nativeGeneration": "v2",
+    "scope": "Actual foreground Read/Edit after original Task Start, canonical native capture proof, original Changes hunk decisions, Stop, renderer reload and separate Host restart; narrow qualified file effects, no global M13 claim",
+    "excluded": [
+      "vendor model qualification",
+      "full P4/P8",
+      "full fork-free/P5 sentinel qualification",
+      "legacy maintenance cutover"
+    ],
+    "startupOutcome": {
+      "elapsedMs": 55263,
+      "matchingMainFound": true,
+      "appExitCode": null,
+      "appSignalCode": null,
+      "spawnError": false
+    },
+    "failureSource": {
+      "kind": "error",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:264:13",
+        "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts:94:3",
+        "scripts/legacy-agent-host/desktop-native-review-compose.ts:48:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:451:7",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+      ]
+    },
+    "failure": "UI read timed out: original captured V2 readiness permits Launch; no mutation retry",
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 8498,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "shell-env",
+          "allowed": true,
+          "argc": 2,
+          "flags": [
+            "-lic"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification."
+    },
+    "model": {
+      "observations": [],
+      "probes": [
+        {
+          "model": "TEST-model",
+          "tools": 0
+        }
+      ],
+      "failures": [],
+      "inference": "Local scripted model; original V2 tools and Host own every file and Task effect"
+    }
+  },
+  "originalReviewProofWithoutSteps": {
+    "status": "INCOMPLETE",
+    "provider": "opencode-v2",
+    "version": "2.1.4",
+    "scope": "Original Launch and Task Start, exact native read/two edits, targeted Stop, Changes Keep/Reject/Undo/Redo/history and renderer reload",
+    "seedSha256": "20fecef8b64b2ccf84801338a9aec76a34149572fee3a3718d533e4b398a1b73",
+    "sourceSha256": "420af7899047a5e32553a8678a28f8fb3baa2681dc8b80b2ebd49aefc3083a9b",
+    "modelSourceSha256": "a849ecf59b41f87ecf0bdc56196fffb032cbb3b7583c9665e7c35e1b089fc6d3",
+    "intervalCoverage": "partial; only the exact native edit byte chain is qualified",
+    "originalGlobalMetadata": {
+      "captured": {
+        "host": {
+          "pid": 10010,
+          "parentPid": 9517,
+          "groupId": 8498,
+          "birth": "Wed Nov 18 22:49:09 2026",
+          "command": "/Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node"
+        },
+        "children": [
+          {
+            "pid": 13113,
+            "parentPid": 10010,
+            "groupId": 13113,
+            "birth": "Wed Nov 18 22:50:25 2026",
+            "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+          }
+        ],
+        "metadataLineage": {
+          "profileHashes": [
+            "907fddfe99275d82b5f5ef10d2e85ed658183f0a1f60e2b80dd471fdb1f06dcf"
+          ],
+          "events": [
+            {
+              "hostPid": 10010,
+              "profileHash": "907fddfe99275d82b5f5ef10d2e85ed658183f0a1f60e2b80dd471fdb1f06dcf",
+              "mode": "provider",
+              "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+              "pid": 13113,
+              "startIdentityHash": "ec2956d6361f9f20965afefb169082416f891c5fed708843b227972489e4b9dd",
+              "stage": "ready"
+            }
+          ],
+          "births": [
+            {
+              "pid": 13113,
+              "parentPid": 10010,
+              "groupId": 13113,
+              "birth": "Wed Nov 18 22:50:25 2026",
+              "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+            }
+          ]
+        }
+      },
+      "source": {
+        "sourceId": "a58720a0561cc06261c61dd461503e2c1ef222e522ddd1f46581d08458e38550",
+        "revision": "a62dd81556f07e5abaeb02110e2fc2899e55b01a88af368e3934a0f6b1e655a0",
+        "profileId": "runtime-source:a62dd81556f07e5abaeb02110e2fc2899e55b01a88af368e3934a0f6b1e655a0",
+        "configRevision": "runtime-source:a62dd81556f07e5abaeb02110e2fc2899e55b01a88af368e3934a0f6b1e655a0",
+        "scope": "global",
+        "projectPath": null
+      },
+      "runtimeDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  },
+  "originalReviewProofStepCount": 12,
+  "originalReviewProofStepLabels": [
+    {
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click",
+      "subject": "TEST persisted Host sidebar seed"
+    },
+    {
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "subject": "TEST persisted Host sidebar seed",
+      "state": "attempted"
+    },
+    {
+      "observation": "passive input delivery after sidebar click"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover Open team"
+    },
+    {
+      "action": "mouseClick",
+      "label": "Open team",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover original saved V2 Team Launch"
+    },
+    {
+      "action": "mouseClick",
+      "label": "original saved V2 Team Launch",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover expand original optional launch settings"
+    },
+    {
+      "action": "mouseClick",
+      "label": "expand original optional launch settings",
+      "state": "attempted"
+    },
+    {
+      "action": "mouseWheel",
+      "label": "original V2 review prompt"
+    },
+    {
+      "action": "mouseMoved",
+      "label": "hover focus original V2 review bootstrap"
+    },
+    {
+      "action": "mouseClick",
+      "label": "focus original V2 review bootstrap",
+      "state": "attempted"
+    }
+  ],
+  "originalFinalDialogSnapshot": [
+    {
+      "text": "Close\nLaunch Team\n\nStart team host-team:TEST-desktop-handle-TEST-desktop-backend-d4h81S using its configured agent runtimes.\n\nLaunch mode\nFresh Launch\n\nSettings changed. Use Fresh Launch to apply the edited configuration.\n\nProject\nFrom project list\nCustom path\nBrowse\nOptional launch settings\nOptional\n\nKeep the launch flow focused on the project path and only expand this when you want extra control.\n\nMembers\nlead\nTeam Lead\nTE\nTEST-model\nSync model with teammates\n\nNext launch will use TEST-model · via Test Local instead of OpenCode · Default.\n\nPrompt for team lead (optional)\nTip: Use @ for members/files and # for tasks\nAuto-approve all tools\n\nAutonomous mode: team tools execute without confirmation. Be cautious with untrusted code.\n\nTeam relaunch starts a fresh lead session. Durable team state, task board, and member configuration are rehydrated into the launch prompt.\n\nAdvanced\nSELECTED PROVIDERS\nOpenCode (200+ providers)\nReady\n\nRuntime environment is not available - launch is blocked\n\nThe captured Team model check did not succeed.\n\nPre-flight check to catch errors before launch\n\nOpenCode (OpenCode native): Needs attention\nCopy diagnostics\n\nResolve the issue above, then reopen this dialog.\n\nLaunch team",
+      "buttons": [
+        {
+          "text": "Close",
+          "disabled": false,
+          "x": 876,
+          "y": -285.953125,
+          "width": 28,
+          "height": 28
+        },
+        {
+          "text": "Fresh Launch",
+          "disabled": false,
+          "x": 134,
+          "y": -178.953125,
+          "width": 745,
+          "height": 32
+        },
+        {
+          "text": "From project list",
+          "disabled": false,
+          "x": 124,
+          "y": -60.953125,
+          "width": 118.21875,
+          "height": 24
+        },
+        {
+          "text": "Custom path",
+          "disabled": false,
+          "x": 242.21875,
+          "y": -60.953125,
+          "width": 97.984375,
+          "height": 24
+        },
+        {
+          "text": "Browse",
+          "disabled": false,
+          "x": 823.546875,
+          "y": -63.953125,
+          "width": 68.453125,
+          "height": 32
+        },
+        {
+          "text": "Optional launch settingsOptional",
+          "disabled": false,
+          "x": 122,
+          "y": -14.953125,
+          "width": 769,
+          "height": 48
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 138,
+          "y": 104.046875,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 803,
+          "y": 104.046875,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 843,
+          "y": 104.046875,
+          "width": 32,
+          "height": 32
+        },
+        {
+          "text": "TETEST-model",
+          "disabled": false,
+          "x": 510,
+          "y": 161.046875,
+          "width": 157.421875,
+          "height": 32
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 681.421875,
+          "y": 169.046875,
+          "width": 16,
+          "height": 16
+        },
+        {
+          "text": "",
+          "disabled": false,
+          "x": 138,
+          "y": 434.921875,
+          "width": 16,
+          "height": 16
+        },
+        {
+          "text": "Advanced",
+          "disabled": false,
+          "x": 138,
+          "y": 572.921875,
+          "width": 89.953125,
+          "height": 16
+        },
+        {
+          "text": "Copy diagnostics",
+          "disabled": false,
+          "x": 157,
+          "y": 759.921875,
+          "width": 119.015625,
+          "height": 26
+        },
+        {
+          "text": "Launch team",
+          "disabled": true,
+          "x": 728.296875,
+          "y": 622.921875,
+          "width": 163.703125,
+          "height": 44
+        }
+      ]
+    }
+  ],
+  "originalConsoleFailureDiagnostics": [
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "stable",
+        "boundary": "preparation",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042003790,
+        "lastCheckAtMs": 1795042003790,
+        "ownerStarted": 1,
+        "ownerResolved": 1,
+        "preparationStarted": 1,
+        "preparationResolved": 0,
+        "readsStarted": 0,
+        "readsResolved": 0,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042031713
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014056,
+        "lastCheckAtMs": 1795042014158,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044056
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014163,
+        "lastCheckAtMs": 1795042014265,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044163
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014268,
+        "lastCheckAtMs": 1795042014369,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044268
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014370,
+        "lastCheckAtMs": 1795042014471,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044370
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014473,
+        "lastCheckAtMs": 1795042014575,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044473
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014688,
+        "lastCheckAtMs": 1795042014792,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044688
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014793,
+        "lastCheckAtMs": 1795042014897,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044793
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042014899,
+        "lastCheckAtMs": 1795042015000,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042044899
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042015002,
+        "lastCheckAtMs": 1795042015104,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042045002
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042015107,
+        "lastCheckAtMs": 1795042015208,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042045107
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042015210,
+        "lastCheckAtMs": 1795042015311,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042045210
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042015312,
+        "lastCheckAtMs": 1795042015419,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042045312
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042015421,
+        "lastCheckAtMs": 1795042015530,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042045421
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "none",
+        "firstCheckAtMs": 1795042015532,
+        "lastCheckAtMs": 1795042015635,
+        "ownerStarted": 2,
+        "ownerResolved": 2,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 2,
+        "readsResolved": 1,
+        "postReadLate": 0,
+        "contextRetries": 0,
+        "deadlineMs": 1795042045532
+      }
+    },
+    {
+      "kind": "TEST_DESKTOP_READ_WAIT",
+      "read": {
+        "phase": "other",
+        "boundary": "evaluate",
+        "cutoff": "after-evaluate",
+        "firstCheckAtMs": 1795042265303,
+        "lastCheckAtMs": 1795042385307,
+        "ownerStarted": 647,
+        "ownerResolved": 647,
+        "preparationStarted": 0,
+        "preparationResolved": 0,
+        "readsStarted": 647,
+        "readsResolved": 647,
+        "postReadLate": 1,
+        "contextRetries": 0,
+        "deadlineMs": 1795042385255
+      }
+    },
+    {
+      "status": "INCOMPLETE",
+      "receipt": "/Users/runner/work/_temp/TEST-desktop-backend-d4h81S/desktop-backend-receipt.json",
+      "failureSource": {
+        "kind": "error",
+        "frames": [
+          "scripts/legacy-agent-host/desktop-ui-controls.ts:264:13",
+          "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts:94:3",
+          "scripts/legacy-agent-host/desktop-native-review-compose.ts:48:7",
+          "scripts/legacy-agent-host/desktop-backend-smoke.ts:451:7",
+          "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+        ]
+      },
+      "nativeReviewFailure": {
+        "schemaVersion": 1,
+        "status": "available",
+        "source": "retained-original-proof-markers",
+        "atomicWithFailure": false,
+        "identifiesTimedOutCall": false,
+        "startup": {
+          "rendererTargetRecorded": true,
+          "diagnosticsRecorded": true,
+          "documentStatus": "DOCUMENT_READY",
+          "commands": {
+            "count": 6,
+            "atCaptureLimit": false,
+            "lastRetainedCommand": {
+              "method": "Network.enable",
+              "outcome": "acknowledged"
+            }
+          },
+          "appReadiness": {
+            "status": "READY",
+            "observations": 24,
+            "atCaptureLimit": true
+          },
+          "discoveryReadinessRecorded": true
+        },
+        "review": {
+          "recorded": true,
+          "status": "INCOMPLETE",
+          "globalMetadataRecorded": true,
+          "projectMetadataRecorded": false,
+          "stopRecorded": false,
+          "stepCount": 12
+        }
+      }
+    }
+  ],
+  "sourceHashesBeforeAndAfterEqual": true,
+  "originalFailurePng": {
+    "artifactEntry": "TEST-desktop-backend-d4h81S/ui-failure.png",
+    "localPath": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682766-ui-failure.png",
+    "bytes": 73707,
+    "sha256": "29f229703126b161365f63fadb2c01e6a808616449af9ccf31be55544ec22c78",
+    "width": 1024,
+    "height": 681,
+    "viewedAsOriginal": true,
+    "boundedObservations": [
+      "The expanded launch dialog contains TEST_NATIVE_V2_REVIEW_BOOTSTRAP in its prompt and a TEST-model member control.",
+      "The green Launch team footer is partly clipped at the modal bottom. This separate visual observation does not explain the captured disabled-button readiness predicate."
+    ]
+  },
+  "classification": {
+    "firstRefusal": "Captured Team model/preflight check blocks original Launch: dialog says runtime environment unavailable, captured Team model check did not succeed, OpenCode needs attention, resolve then reopen; Launch team disabled=true.",
+    "firstError": "UI read timed out: original captured V2 readiness permits Launch; no mutation retry, waitRead desktop-ui-controls.ts264:13 from desktop-opencode-v2-review-ui-smoke.ts94:3.",
+    "stage": "Main/document ready, global metadata retained; incomplete twelve-step proof ends bootstrap focus before final Launch/Task Start/edit/Stop/review acceptance.",
+    "finiteModel": "One TEST-model tools0 probe; original observations[] and failures[]. This is no inference or edit success claim.",
+    "secondaryFailure": "Workflow step37 receipt.status INCOMPLETE does not equal PASS.",
+    "cleanup": "Guarded failure Quit acknowledged; app exit0, remaining[], capturedHostAbsent true; selected source hashes unchanged.",
+    "qualification": "Preset scope/intervalCoverage strings are not completed results. No native edit-chain, project metadata, Stop, review action, cold-readback, vendor authentication or full parity PASS is claimed."
+  },
+  "retiredEndpoints": {
+    "jobLog": true,
+    "artifactDownload": true
+  }
+}

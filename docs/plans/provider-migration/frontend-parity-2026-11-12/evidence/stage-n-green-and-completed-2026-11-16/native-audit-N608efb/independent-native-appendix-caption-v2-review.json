@@ -1,0 +1,37 @@
+{
+  "schema": "independent-N-native-appendix-caption-v2-review/v1",
+  "reviewer": "migration_scope",
+  "createdAt": "2026-11-16T04:06:20.125868+00:00",
+  "result": "APPROVE_EXACT_CAPTION_CORRECTION",
+  "v1Preserved": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix.md",
+    "bytes": 8606,
+    "blob": "f0e9cde116f4737f3dad217df433655d3dd27f98",
+    "sha256": "cb93a50c42c0f0c3c94502ddeb8ea30171d0daf9c3382a2b3be86ad7f93e3c85"
+  },
+  "v2": {
+    "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/Plan29-nine-completed-native-originals-appendix-v2.md",
+    "bytes": 8628,
+    "blob": "2f39446690ac43523d818d4cca28d4c73f69a22c",
+    "sha256": "9b70a7ac414a0e26f073dee1aa20bec02c87d577cc6c5051175191c02d331b2c"
+  },
+  "singleReplacement": {
+    "before": "31 phase records, 64 helper passes",
+    "after": "31 completed internal phases, 64 observed helper records"
+  },
+  "fullForwardAndInverseBytesExact": true,
+  "semanticBasis": {
+    "independentWindowsARMReview": {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/independent-windows-arm64-process-v2-review.json",
+      "bytes": 60920,
+      "blob": "34dae6a5a1532bc08f70e10c10e1589003f28a1e",
+      "sha256": "3a002d9ac438229ed1911fdee794d8d3b3120169db66f0a604dcc9df93aa4804"
+    },
+    "nativePhaseRowsPerInvocation": 271,
+    "completedInternalPhasesPerInvocation": 31,
+    "observedHelperRecordsPerInvocation": 64,
+    "expectedNegativeAndSignalRecordsRemainSeparate": true
+  },
+  "limit": "Approves exact correction and previously reviewed ARM-related claims; does not substitute for separately owned other-platform semantic R2. All other v1 bytes unchanged.",
+  "projectExecutionOrSourceMutation": false
+}

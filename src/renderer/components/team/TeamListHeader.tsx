@@ -24,6 +24,8 @@ interface Props {
   projectPath: string | null;
   teams: TeamSummary[];
   aliveTeams: string[];
+  incomplete?: boolean;
+  aliveKnown?: boolean;
   onProjectChange(value: string | null): void;
   onManagementApplied(): void;
   onManagementSettings(): void;
@@ -47,6 +49,8 @@ export const TeamListHeader = ({
   projectPath,
   teams,
   aliveTeams,
+  incomplete = false,
+  aliveKnown = true,
   onProjectChange,
   onManagementApplied,
   onManagementSettings,
@@ -83,6 +87,8 @@ export const TeamListHeader = ({
             selectedProjectPath={projectPath}
             teams={teams}
             aliveTeams={aliveTeams}
+            incomplete={incomplete}
+            aliveKnown={aliveKnown}
             onFilterChange={onFilterChange}
             onProjectChange={onProjectChange}
           />

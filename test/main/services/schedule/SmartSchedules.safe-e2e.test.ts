@@ -3,12 +3,12 @@
  * dispatch, with provider/process side effects replaced by deterministic ports.
  * Runs without credentials, installed agent CLI, or network access.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JsonScheduleRepository } from '../../../../src/main/services/schedule/JsonScheduleRepository';
 import { SchedulerService } from '../../../../src/main/services/schedule/SchedulerService';
@@ -46,7 +46,7 @@ describe('Smart schedules filesystem safe E2E', () => {
       model: 'sonnet',
       members: [{ name: 'alice' }],
     };
-    let running = true;
+    const running = true;
     port = {
       isTeamAlive: vi.fn(() => running),
       isTeamLaunching: vi.fn(() => false),
@@ -70,6 +70,7 @@ describe('Smart schedules filesystem safe E2E', () => {
       getMemberStatuses: vi.fn(async () => ({ runId: 'active-team-run', statuses: {} })),
       getLeadName: vi.fn(async () => 'lead'),
       getSavedRequest: vi.fn(async () => saved),
+      hasLaunchConfig: vi.fn(async () => true),
       attachMember: vi.fn(async () => undefined),
       createTask: vi.fn(async () => ({
         id: 'e2e-task',
@@ -123,6 +124,48 @@ describe('Smart schedules filesystem safe E2E', () => {
     }, { timeout: 8000 });
     return (await repository.listRuns(scheduleId))[0];
   }
+
+  it('refuses to persist, resume or execute Host-owned schedules through legacy services', async () => {
+    const hostTeam = 'host-team:TEST-captured-handle';
+    const hostInput = { ...input(), teamName: hostTeam, executionMode: 'agent' as const };
+    await expect(scheduler.createSchedule(hostInput)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    expect(await repository.listSchedules()).toHaveLength(0);
+
+    // Old records remain readable for cleanup, but never become executable.
+    const now = new Date().toISOString();
+    const retained: Schedule = {
+      ...hostInput,
+      id: 'retained-host-schedule',
+      status: 'active',
+      maxConsecutiveFailures: 3,
+      consecutiveFailures: 0,
+      maxTurns: 5,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await repository.saveSchedule(retained);
+    await scheduler.stop();
+    await scheduler.start();
+    await expect(scheduler.triggerNow(retained.id)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    await expect(scheduler.updateSchedule(retained.id, { label: 'Unsafe' })).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    await expect(scheduler.resumeSchedule(retained.id)).rejects.toThrow(
+      'Host-backed teams require owner-aware scheduling'
+    );
+    expect((await repository.listRuns(retained.id))).toHaveLength(0);
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+
+    await scheduler.pauseSchedule(retained.id);
+    await scheduler.deleteSchedule(retained.id);
+    expect(await repository.listSchedules()).toHaveLength(0);
+  });
 
   it('reads unmodified preexisting JSON and continues the one-shot executor after editing', async () => {
     const now = new Date().toISOString();
@@ -218,6 +261,57 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(savedSchedule?.taskFirst).toBe(true);
   });
 
+  it('dispatches a fresh real cron occurrence after a completed manual run and cron edit', async () => {
+    const tasks = new Map<string, TeamTask>();
+    port.getPreviousRuns = async (id, runId) =>
+      (await repository.listRuns(id)).filter((run) => run.id !== runId);
+    port.getTask = async (_team, taskId) => tasks.get(taskId) ?? null;
+    port.hasRunnableConfig = vi.fn(async () => true);
+    port.hasActiveOwnedTask = vi.fn(async () => false);
+    port.createTask = vi.fn(async (_team, request) => {
+      const task: TeamTask = {
+        id: request.command!.commandId,
+        subject: request.subject,
+        owner: request.owner,
+        status: 'pending',
+      };
+      tasks.set(task.id, task);
+      return task;
+    });
+    port.startTaskByUser = vi.fn(async (_team, taskId, admission) => {
+      expect(await admission!.canStart()).toBe(true);
+      tasks.get(taskId)!.status = 'completed';
+      return { notifiedOwner: true };
+    });
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', taskFirst: true, reviewedSavedPrompt: true,
+    });
+    await scheduler.updateSchedule(schedule.id, { label: 'Edited schedule' });
+    await scheduler.pauseSchedule(schedule.id);
+    await scheduler.resumeSchedule(schedule.id);
+    await scheduler.triggerNow(schedule.id);
+    const manual = await waitForRun(schedule.id, 'dispatched');
+    expect(tasks.get(manual.linkedTaskId!)?.status).toBe('completed');
+
+    const at = new Date(Math.ceil((Date.now() + 2000) / 1000) * 1000);
+    const cronExpression = `${at.getUTCSeconds()} ${at.getUTCMinutes()} ${at.getUTCHours()} ${at.getUTCDate()} ${at.getUTCMonth() + 1} *`;
+    const armed = await scheduler.updateSchedule(schedule.id, { cronExpression });
+    expect(armed.nextRunAt).toBe(at.toISOString());
+    await vi.waitFor(
+      async () => {
+        const runs = await repository.listRuns(schedule.id);
+        expect(runs).toHaveLength(2);
+        expect(runs.find((run) => run.id !== manual.id)?.status).toBe('dispatched');
+      },
+      { timeout: 5000 }
+    );
+    await scheduler.pauseSchedule(schedule.id);
+    expect(tasks.size).toBe(2);
+    expect(port.createTask).toHaveBeenCalledTimes(2);
+    expect(port.startTaskByUser).toHaveBeenCalledTimes(2);
+    expect(oneShot).not.toHaveBeenCalled();
+  });
+
   it('carries the unfinished task through more skips than the retained run history', async () => {
     const unfinished = { id: 'e2e-task', subject: 'Long-running work', status: 'in_progress' } as TeamTask;
     port.getPreviousRuns = async (id, runId) =>
@@ -298,6 +392,62 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(port.runOneShot).not.toHaveBeenCalled();
   });
 
+  it('rejects a metadata-only team draft before saving and safely skips retained schedules', async () => {
+    port.hasLaunchConfig = vi.fn(async () => false);
+    const draftInput = { ...input(), executionMode: 'team' as const };
+    await expect(scheduler.createSchedule(draftInput)).rejects.toThrow('Finish team setup');
+    expect(await repository.listSchedules()).toHaveLength(0);
+
+    const now = new Date().toISOString();
+    const retained: Schedule = {
+      ...draftInput, id: 'retained-draft', status: 'active', maxConsecutiveFailures: 3,
+      consecutiveFailures: 0, maxTurns: 5, createdAt: now, updatedAt: now,
+    };
+    await repository.saveSchedule(retained);
+    await expect(scheduler.updateSchedule(retained.id, { label: 'Retry' })).rejects.toThrow('Finish team setup');
+    await expect(scheduler.resumeSchedule(retained.id)).rejects.toThrow('Finish team setup');
+    port.isTeamAlive = vi.fn(() => false);
+    await scheduler.triggerNow(retained.id);
+    const run = await waitForRun(retained.id, 'skipped');
+    expect(run.summary).toContain('Finish team setup');
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(oneShot).not.toHaveBeenCalled();
+  });
+
+  it('persists a selected teammate HOLD without silently spawning a standalone agent', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: 'alice', label: 'Alice backlog',
+    });
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'skipped');
+    expect(run.summary).toContain('Selected teammate "alice" cannot run');
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+    await scheduler.stop();
+    await scheduler.start();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('skipped');
+    expect((await repository.getSchedule(schedule.id))?.targetMember).toBe('alice');
+  });
+
+  it('persists a skipped run after a scheduled agent team is deleted', async () => {
+    const schedule = await scheduler.createSchedule({
+      ...input(), executionMode: 'agent', targetMember: 'alice',
+    });
+    // Schedule JSON survives team removal, but must not execute instructions.
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => null);
+    await scheduler.triggerNow(schedule.id);
+    const run = await waitForRun(schedule.id, 'skipped');
+    expect(run.summary).toContain('configuration is missing');
+    expect(oneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect((await repository.listRuns(schedule.id))[0]?.status).toBe('skipped');
+  });
+
   it('starts a stopped team once from its saved provider profile without a second task', async () => {
     port.isTeamAlive = vi.fn(() => false);
     const schedule = await scheduler.createSchedule({
@@ -335,13 +485,14 @@ describe('Smart schedules filesystem safe E2E', () => {
     let releaseWrite!: () => void;
     const writeGate = new Promise<void>((resolve) => { releaseWrite = resolve; });
     let writeStarted = false;
-    const saveSchedule = repository.saveSchedule.bind(repository);
-    vi.spyOn(repository, 'saveSchedule').mockImplementation(async (candidate) => {
-      if (candidate.id === schedule.id && candidate.lastRunAt) {
+    const metadata = repository as unknown as { writeSchedulesFile(filePath: string, rows: Schedule[]): Promise<void> };
+    const writeSchedulesFile = metadata.writeSchedulesFile.bind(repository);
+    vi.spyOn(metadata, 'writeSchedulesFile').mockImplementation(async (filePath, rows) => {
+      if (rows.some((candidate) => candidate.id === schedule.id && candidate.lastRunAt)) {
         writeStarted = true;
         await writeGate;
       }
-      return saveSchedule(candidate);
+      return writeSchedulesFile(filePath, rows);
     });
 
     await scheduler.triggerNow(schedule.id);
@@ -393,5 +544,4 @@ describe('Smart schedules filesystem safe E2E', () => {
     expect(oneShot).toHaveBeenCalledOnce();
     expect(port.createTask).not.toHaveBeenCalled();
   });
-
 });

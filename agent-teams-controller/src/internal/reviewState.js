@@ -4,6 +4,7 @@ const REVIEW_LIFECYCLE_EVENTS = new Set([
   'review_requested',
   'review_changes_requested',
   'review_approved',
+  'review_disapproved',
   'review_completed',
   'human_approved',
   'review_started',
@@ -143,6 +144,7 @@ function getCurrentReviewRequest(task) {
     if (
       event.type === 'review_changes_requested' ||
       event.type === 'review_approved' ||
+      event.type === 'review_disapproved' ||
       event.type === 'review_completed' ||
       event.type === 'human_approved' ||
       event.type === 'task_created' ||

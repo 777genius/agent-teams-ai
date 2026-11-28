@@ -1,0 +1,9 @@
+{
+  "status": "FAIL",
+  "operation": "socket(AF_UNIX, SOCK_STREAM) creation",
+  "errno": 1,
+  "error": "Operation not permitted",
+  "evidence": "original executor stderr before bind; previous worker bind failure is a separate record",
+  "appLaunched": false,
+  "fallbackAttempted": false
+}

@@ -24,7 +24,7 @@ import {
   TaskDetailEditorRouteFeedback,
   TaskDetailReadCoordinator,
   TaskDetailReviewRouteFeedback,
-} from '@features/team-task-detail/renderer';
+} from '@features/team-task-detail/renderer/shell';
 import { isElectronMode } from '@renderer/api';
 import { getTrafficLightPaddingForZoom } from '@renderer/constants/layout';
 import { useFullScreen } from '@renderer/hooks/useFullScreen';
@@ -174,7 +174,10 @@ export const TabbedLayout = (): React.JSX.Element => {
       >
         <TabBarRow />
         <CliInstallWarningBanner />
-        <div className="flex min-w-0 flex-1 overflow-hidden" style={{ containerType: 'inline-size' }}>
+        <div
+          className="flex min-w-0 flex-1 overflow-hidden"
+          style={{ containerType: 'inline-size' }}
+        >
           {/* Command Palette (Cmd+K) */}
           <CommandPalette />
 
@@ -187,7 +190,9 @@ export const TabbedLayout = (): React.JSX.Element => {
           </div>
 
           {/* Sidebar - Task list / Sessions (right side) */}
-          {!hideSidebarForActiveTab && <Sidebar hideOnNarrowSettings={activeTabType === 'settings'} />}
+          {!hideSidebarForActiveTab && (
+            <Sidebar hideOnNarrowSettings={activeTabType === 'settings'} />
+          )}
         </div>
 
         {/* Drag overlay - semi-transparent ghost of the dragged tab */}

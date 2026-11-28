@@ -17,9 +17,11 @@ export function attachmentTargetForMember(member: ResolvedTeamMember, projectPat
   return {
     model: member.model,
     projectPath:
-      member.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
-        ? member.cwd?.trim() || projectPath
-        : projectPath || member.cwd?.trim() || null,
+      member.runtimeOwner === 'captured-host'
+        ? member.cwd?.trim() || null
+        : member.laneKind === 'secondary' && member.laneOwnerProviderId === 'opencode'
+          ? member.cwd?.trim() || projectPath
+          : projectPath || member.cwd?.trim() || null,
   };
 }
 
@@ -72,6 +74,7 @@ export function resolveMemberAttachmentCapability(
       providerId,
       model,
       declaredInputModalities: declaration?.declaredInputModalities,
+      ...(member.nativeMediaTransport ? { nativeMediaTransport: member.nativeMediaTransport } : {}),
       nativeInboxTextAttachmentsSupported:
         !isLeadMember(member) &&
         member.nativeInboxAttachmentsSupported === true &&
@@ -151,7 +154,16 @@ export function validateAttachmentPayloadsForMember(input: {
     }
     if (
       getMessageAttachmentRoute(
-        { providerId: getMemberProviderId(member), isLeadRecipient: isLeadMember(member) },
+        {
+          providerId: getMemberProviderId(member),
+          isLeadRecipient: isLeadMember(member),
+          ...(member.nativeMediaTransport
+            ? { nativeMediaTransport: member.nativeMediaTransport.revision }
+            : {}),
+          ...(member.nativeInboxTextAttachmentsSupported !== undefined
+            ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
+            : {}),
+        },
         attachment.mimeType,
         validUtf8
       ) === 'reference'
@@ -248,7 +260,16 @@ export function isReferenceAttachmentForMember(
   }
   return (
     getMessageAttachmentRoute(
-      { providerId: getMemberProviderId(member), isLeadRecipient: isLeadMember(member) },
+      {
+        providerId: getMemberProviderId(member),
+        isLeadRecipient: isLeadMember(member),
+        ...(member.nativeMediaTransport
+          ? { nativeMediaTransport: member.nativeMediaTransport.revision }
+          : {}),
+        ...(member.nativeInboxTextAttachmentsSupported !== undefined
+          ? { nativeInboxTextAttachmentsSupported: member.nativeInboxTextAttachmentsSupported }
+          : {}),
+      },
       attachment.mimeType,
       validUtf8
     ) === 'reference'

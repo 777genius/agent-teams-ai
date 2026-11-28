@@ -2,11 +2,13 @@ import {
   classifyNativeVersion,
   getLatestQualifiedOpenCodeV2Version,
   isRecognizedOpenCodeRuntimeVersion,
+  parseOpenCodeSemver,
+  semverLt,
 } from '@features/opencode-compatibility';
 import {
   chooseOpenCodeInstallGeneration,
-  DEFAULT_OPENCODE_V1_INSTALL_VERSION,
   parseOpenCodeInstallOptions,
+  requestedOpenCodeInstallVersion,
 } from '@features/opencode-runtime-installer';
 import {
   downloadOpenCodePackage,
@@ -42,6 +44,10 @@ import { promises as fsp, readdirSync, readFileSync } from 'fs';
 import path from 'path';
 
 import {
+  legacyOpenCodeRuntimeBinarySizeError,
+  projectLegacyOpenCodeRuntimeStatus,
+} from './openCodeLegacyRuntimeCompatibility';
+import {
   preserveKnownOpenCodeUpdate,
   resolveLatestOpenCodeVersion,
   withLatestOpenCodeVersion,
@@ -71,6 +77,7 @@ import {
 import { collectWindowsNativeOpenCodeBinaryCandidates } from './openCodeWindowsNpmBinaryDiscovery';
 
 import type { VerifiedOpenCodeBinaryProbe } from './openCodeRuntimeResolverCache';
+import type { OpenCodeInstallTarget } from '@features/opencode-runtime-installer';
 import type {
   OpenCodeRuntimeInstallOptions,
   OpenCodeRuntimeInstallProgress,
@@ -595,6 +602,10 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   async getStatus(): Promise<OpenCodeRuntimeStatus> {
+    return projectLegacyOpenCodeRuntimeStatus(await this.getStatusSnapshot());
+  }
+
+  private async getStatusSnapshot(): Promise<OpenCodeRuntimeStatus> {
     if (this.installPromise && this.latestStatus) {
       return this.latestStatus;
     }
@@ -621,8 +632,11 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   /** Version-only readiness checks must not wait for npm update metadata. */
-  getReadinessStatus(): Promise<OpenCodeRuntimeStatus> {
-    return this.resolveInstalledStatus();
+  async getReadinessStatus(
+    target: OpenCodeInstallTarget = 'legacy-runtime'
+  ): Promise<OpenCodeRuntimeStatus> {
+    const status = await this.resolveInstalledStatus();
+    return target === 'captured-host' ? status : projectLegacyOpenCodeRuntimeStatus(status);
   }
 
   private async resolveStatus(statusCacheGeneration: number): Promise<OpenCodeRuntimeStatus> {
@@ -632,8 +646,9 @@ export class OpenCodeRuntimeInstallerService {
       status.installed && status.source !== 'override'
         ? await withLatestOpenCodeVersion(
             status,
-            () => resolveLatestOpenCodeVersion(status.version),
-            this.latestStatus?.latestVersion
+            () =>
+              resolveLatestOpenCodeVersion(status.version, getOpenCodeRuntimePlatformCandidates()),
+            status.version?.startsWith('2.') ? undefined : this.latestStatus?.latestVersion
           )
         : status;
     this.rememberStatusIfCurrent(versionAwareStatus, statusCacheGeneration);
@@ -664,16 +679,19 @@ export class OpenCodeRuntimeInstallerService {
       : appManagedStatus;
   }
 
-  async install(options?: OpenCodeRuntimeInstallOptions): Promise<OpenCodeRuntimeStatus> {
+  async install(
+    options?: OpenCodeRuntimeInstallOptions,
+    target: OpenCodeInstallTarget = 'legacy-runtime'
+  ): Promise<OpenCodeRuntimeStatus> {
     const validated = parseOpenCodeInstallOptions(options);
-    const intent = JSON.stringify(validated);
+    const intent = JSON.stringify([target, validated]);
     if (this.installPromise) {
       if (intent !== this.installGeneration)
         throw new Error('A different OpenCode generation is already being installed');
       return this.installPromise;
     }
     this.installGeneration = intent;
-    this.installPromise = this.installInternal(validated).finally(() => {
+    this.installPromise = this.installInternal(validated, target).finally(() => {
       this.installPromise = null;
       this.installGeneration = undefined;
     });
@@ -778,7 +796,8 @@ export class OpenCodeRuntimeInstallerService {
   }
 
   private async installInternal(
-    options: OpenCodeRuntimeInstallOptions
+    options: OpenCodeRuntimeInstallOptions,
+    target: OpenCodeInstallTarget
   ): Promise<OpenCodeRuntimeStatus> {
     // Cold PATH discovery and overrides use the same selected native identity as launch.
     clearOpenCodeRuntimeResolverCache();
@@ -796,6 +815,10 @@ export class OpenCodeRuntimeInstallerService {
           previousStatus.installed &&
           previousStatus.v2Support === 'required')
       ) {
+        if (target !== 'captured-host') {
+          const compatible = await projectLegacyOpenCodeRuntimeStatus(selectedBeforeInstall);
+          if (compatible !== selectedBeforeInstall) throw new Error(compatible.error);
+        }
         if (!previousStatus.installed || !previousStatus.version?.startsWith('2.'))
           throw new Error('OpenCode V2 support requires a verified selected native V2 CLI');
         await this.v2Support.install(previousStatus.version, (progress) =>
@@ -824,11 +847,19 @@ export class OpenCodeRuntimeInstallerService {
         compatibleV2Version,
         getOpenCodeRuntimePlatformCandidates(),
         fetchOpenCodePackageMetadata,
-        generation === 'v1' && !previousStatus.installed && !options.generation
-          ? DEFAULT_OPENCODE_V1_INSTALL_VERSION
-          : undefined
+        requestedOpenCodeInstallVersion(generation, compatibleV2Version, target)
       );
       const platformMetadata = selected.metadata;
+      const previousVersion = classifyNativeVersion(previousStatus.version ?? '');
+      if (
+        previousStatus.installed &&
+        previousVersion.kind === 'recognized' &&
+        previousVersion.generation === generation &&
+        semverLt(parseOpenCodeSemver(platformMetadata.version)!, previousVersion.version)
+      )
+        throw new Error(
+          `Resolved OpenCode ${platformMetadata.version} would downgrade the verified selected ${previousVersion.version}; keeping the current runtime`
+        );
 
       this.publishProgress({
         phase: 'downloading',
@@ -844,16 +875,18 @@ export class OpenCodeRuntimeInstallerService {
         tarball,
         getExecutableName(),
         generation === 'v2'
-          ? { packageName: selected.packageName, version: platformMetadata.version! }
+          ? { packageName: selected.packageName, version: platformMetadata.version }
           : undefined
       );
       const binary = extracted.binary;
+      const compatibilityError = legacyOpenCodeRuntimeBinarySizeError(binary.byteLength);
+      if (target !== 'captured-host' && compatibilityError) throw new Error(compatibilityError);
       const runtimeRoot = getRuntimeRootPath();
       const tempDir = path.join(runtimeRoot, `installing-${process.pid}-${randomUUID()}`);
       const versionDir = path.join(
         runtimeRoot,
         'versions',
-        platformMetadata.version!,
+        platformMetadata.version,
         selected.packageName,
         ...(generation === 'v2' ? [randomUUID()] : [])
       );
@@ -895,7 +928,19 @@ export class OpenCodeRuntimeInstallerService {
           isAbsoluteExistingFile(binaryPath) &&
           (await probeOpenCodeBinaryVersion(binaryPath)).ok;
         if (!canReuseExistingRuntime) {
-          await fsp.rm(versionDir, { recursive: true, force: true });
+          if (generation === 'v1') {
+            const exists = await fsp.lstat(versionDir).then(
+              () => true,
+              (error: unknown) => {
+                if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+                throw error;
+              }
+            );
+            if (exists)
+              throw new Error(
+                'Existing OpenCode V1 installation differs from the selected package; keeping its original bytes'
+              );
+          } else await fsp.rm(versionDir, { recursive: true, force: true });
           await fsp.mkdir(path.dirname(versionDir), { recursive: true });
           await retryOnTransientFsError(
             () => fsp.rename(tempDir, versionDir),

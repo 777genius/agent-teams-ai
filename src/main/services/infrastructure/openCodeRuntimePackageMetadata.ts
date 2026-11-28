@@ -6,21 +6,35 @@ export interface NpmPackageMetadata {
   version?: string;
   dist?: { tarball?: string; integrity?: string };
   optionalDependencies?: Record<string, string>;
+  versions?: Record<string, NpmPackageMetadata>;
 }
 
+/** A null version reads one registry versions snapshot instead of a mutable tag. */
 export async function fetchOpenCodePackageMetadata(
   packageName: string,
-  version = 'latest',
+  version: string | null = 'latest',
   timeoutMs = FETCH_TIMEOUT_MS
 ): Promise<NpmPackageMetadata> {
-  const url = `${NPM_REGISTRY_BASE_URL}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`;
+  const url = `${NPM_REGISTRY_BASE_URL}/${encodeURIComponent(packageName)}${
+    version === null ? '' : `/${encodeURIComponent(version)}`
+  }`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) throw new Error(`HTTP ${response.status} from ${url}`);
+    const response = await fetch(url, {
+      signal: controller.signal,
+      ...(version === null ? { headers: { Accept: 'application/vnd.npm.install-v1+json' } } : {}),
+    });
+    if (!response.ok)
+      throw Object.assign(new Error(`HTTP ${response.status} from ${url}`), {
+        status: response.status,
+      });
     const parsed = (await response.json()) as NpmPackageMetadata;
-    if (!parsed.version || !parsed.dist?.tarball || !parsed.dist.integrity) {
+    if (
+      version === null
+        ? !parsed?.versions || typeof parsed.versions !== 'object' || Array.isArray(parsed.versions)
+        : !parsed?.version || !parsed.dist?.tarball || !parsed.dist.integrity
+    ) {
       throw new Error(`Invalid npm metadata for ${packageName}@${version}`);
     }
     return parsed;

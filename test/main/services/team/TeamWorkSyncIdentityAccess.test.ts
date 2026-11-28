@@ -3,10 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { KeyedMutex } from '@features/internal-storage/main';
-import { TeamPermanentDeletionIdentity } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIdentity';
-import { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
+import { createTeamPermanentDeletionIdentity } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIdentity';
+import { createTeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
 import { getTeamsBasePath, setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { LegacySourceWriteAdmissionPolicy } from '@agent-teams/legacy-agent-host/lifecycle';
+import type { TeamWorkSyncIdentityAccess } from '@main/services/team/permanent-deletion/TeamWorkSyncIdentityAccess';
 
 describe('TeamWorkSyncIdentityAccess', () => {
   let root: string;
@@ -25,11 +28,11 @@ describe('TeamWorkSyncIdentityAccess', () => {
     priorIdentity = false;
     deleting = false;
     fence = new KeyedMutex();
-    const owner = new TeamPermanentDeletionIdentity(() => deleting);
+    const owner = createTeamPermanentDeletionIdentity(() => deleting);
     claim = vi.fn((teamName: string, identityId: string) =>
       owner.claimIdentityMarker(teamName, identityId, true)
     );
-    access = new TeamWorkSyncIdentityAccess({
+    access = createTeamWorkSyncIdentityAccess({
       withFence: (teamName, operation) => fence.run(teamName, operation),
       isFenced: async () => deleting,
       observePriorIdentity: async () => (priorIdentity ? 'known' : 'absent'),
@@ -124,6 +127,64 @@ describe('TeamWorkSyncIdentityAccess', () => {
     });
     expect(commit).not.toHaveBeenCalled();
     expect(claim).not.toHaveBeenCalled();
+  });
+
+  it('always supplies a callable publication assertion without an optional source policy', async () => {
+    await config('original');
+    await expect(
+      access.withCurrentPublication('sandbox', 'original', async (assertCurrent) => {
+        expect(typeof assertCurrent).toBe('function');
+        assertCurrent();
+        await Promise.resolve();
+        assertCurrent();
+        return 'written';
+      })
+    ).resolves.toEqual({ current: true, value: 'written' });
+  });
+
+  it('retains the original configured source assertion after await without recapturing', async () => {
+    await config('original');
+    let current = true;
+    const assertCurrent = vi.fn(() => {
+      if (!current) throw new Error('TEST original source revoked');
+    });
+    const capture = vi.fn(() => {
+      throw new Error('Unexpected fresh source capture');
+    });
+    const policy: LegacySourceWriteAdmissionPolicy = {
+      capture,
+      current: () => ({
+        kind: 'admitted',
+        sourceKey: teamRoot,
+        assertOwnerCurrent: assertCurrent,
+        assertCurrent,
+        run: (operation) => operation(),
+        publish: (operation) => operation(),
+      }),
+      bindExecution: () => {
+        throw new Error('Unexpected queued source capture');
+      },
+    };
+    access = createTeamWorkSyncIdentityAccess({
+      sourceWriteAdmissionPolicy: () => policy,
+      withFence: (teamName, operation) => fence.run(teamName, operation),
+      isFenced: async () => false,
+      observePriorIdentity: async () => 'absent',
+      claimMarker: claim,
+    });
+    const write = vi.fn();
+    await expect(
+      access.withCurrentPublication('sandbox', 'original', async (guard) => {
+        guard();
+        await Promise.resolve();
+        current = false;
+        guard();
+        write();
+      })
+    ).rejects.toThrow('TEST original source revoked');
+    expect(write).not.toHaveBeenCalled();
+    expect(capture).not.toHaveBeenCalled();
+    expect(assertCurrent).toHaveBeenCalledTimes(3);
   });
 
   it('does not treat a config read failure as a missing marker', async () => {

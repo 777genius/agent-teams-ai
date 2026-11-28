@@ -3,18 +3,37 @@ import {
   createLoadingMultimodelCliStatus,
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
+  refreshCodexProviderStatusAfterRuntimeInstall,
 } from '@renderer/store/slices/cliInstallerSlice';
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
-import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
+import type {
+  CliInstallerSlice,
+  CliProviderStatusFetchOptions,
+} from '@renderer/store/slices/cliInstallerSlice';
 import type { ElectronAPI } from '@shared/types/api';
 import type {
+  CliInstallationStatus,
   CliProviderReasoningEffort,
   CliProviderStatus,
   OpenCodeRuntimeStatus,
 } from '@shared/types/cliInstaller';
 import type { StateCreator } from 'zustand';
+
+// Keep the real slice and Zustand; only the external preload API is controlled here.
+vi.mock('@renderer/api', () => ({
+  api: new Proxy(
+    {},
+    {
+      get(_target, property) {
+        return Reflect.get(window.electronAPI ?? {}, property);
+      },
+    }
+  ),
+  isElectronMode: () => Boolean(window.electronAPI),
+}));
 
 function createCliInstallerStore() {
   return createStore<CliInstallerSlice>()(
@@ -524,6 +543,1464 @@ describe('OpenCode runtime rejection state', () => {
   });
 });
 
+describe('provider status loading ownership', () => {
+  async function waitForCompletion(promise: Promise<unknown>): Promise<void> {
+    const completed = vi.fn();
+    void promise.then(completed, completed);
+    await vi.waitFor(() => expect(completed).toHaveBeenCalledTimes(1));
+    await promise;
+  }
+
+  function pendingStatusStore() {
+    const store = createCliInstallerStore();
+    const previousApi = window.electronAPI;
+    const base = createLoadingMultimodelCliStatus();
+    const ready = (
+      model: string,
+      providerId: CliProviderStatus['providerId'] = 'opencode'
+    ): CliProviderStatus => ({
+      ...base.providers.find((provider) => provider.providerId === providerId)!,
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusCheckErrorCode: undefined,
+      statusMessage: null,
+      capabilities: {
+        ...base.providers.find((provider) => provider.providerId === providerId)!.capabilities,
+        teamLaunch: true,
+      },
+      models: [model],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId,
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: new Date().toISOString(),
+        staleAt: new Date(Date.now() + 60_000).toISOString(),
+        defaultModelId: model,
+        defaultLaunchModel: model,
+        models: [
+          {
+            id: model,
+            launchModel: model,
+            displayName: model,
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    });
+    const responses: {
+      resolve: (value: CliProviderStatus) => void;
+      reject: (reason: unknown) => void;
+    }[] = [];
+    const reads: Promise<boolean>[] = [];
+    const getProviderStatus = vi.fn(
+      () => new Promise<CliProviderStatus>((resolve, reject) => responses.push({ resolve, reject }))
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: { getProviderStatus, invalidateStatus: vi.fn(async () => undefined) },
+      },
+    });
+    store.setState({
+      cliStatus: { ...base, installed: true, providers: [ready('opencode/global-previous')] },
+    });
+    return {
+      store,
+      ready,
+      responses,
+      getProviderStatus,
+      fetch(
+        options: Parameters<CliInstallerSlice['fetchCliProviderStatus']>[1],
+        providerId: CliProviderStatus['providerId'] = 'opencode'
+      ) {
+        const read = store.getState().fetchCliProviderStatus(providerId, options);
+        reads.push(read);
+        return read;
+      },
+      async cleanup() {
+        for (const response of responses) response.resolve(ready('opencode/cleanup'));
+        await Promise.allSettled(reads);
+        store.setState({ cliStatus: null });
+        try {
+          await store.getState().invalidateCliStatus();
+        } finally {
+          Object.defineProperty(window, 'electronAPI', {
+            configurable: true,
+            writable: true,
+            value: previousApi,
+          });
+        }
+      },
+    };
+  }
+
+  it('keeps provider loading while a project request outlives a global request', async () => {
+    const fixture = pendingStatusStore();
+    const projectPath = '/sandbox/opencode-overlapping-status';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    fixture.store.setState({
+      cliProviderStatusByScope: { [scopeKey]: fixture.ready('ollama/project-previous') },
+    });
+    try {
+      const globalRead = fixture.fetch({ silent: false });
+      const projectRead = fixture.fetch({ projectPath, silent: false });
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(1, 'opencode');
+      expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(2, 'opencode', { projectPath });
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[0].resolve(fixture.ready('opencode/global-current'));
+      await expect(globalRead).resolves.toBe(true);
+      const pending = fixture.store.getState();
+      expect(pending.cliStatus?.providers[0].models).toEqual(['opencode/global-current']);
+      expect(pending.cliProviderStatusByScope[scopeKey]).toMatchObject({
+        statusCheckOutcome: 'pending',
+        models: ['ollama/project-previous'],
+      });
+      expect(pending.cliProviderStatusLoading.opencode).toBe(true);
+      expect(pending.cliStatus?.authStatusChecking).toBe(true);
+      fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+      expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+      expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
+        'ollama/project-current',
+      ]);
+      expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+        'opencode/global-current',
+      ]);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it.each(['reject', 'invalidate'] as const)(
+    'settles aggregate auth after the final project read ends with %s',
+    async (outcome) => {
+      const fixture = pendingStatusStore();
+      const projectPath = '/sandbox/TEST-opencode-auth-settlement';
+      try {
+        const globalRead = fixture.fetch({ silent: false });
+        const projectRead = fixture.fetch({ projectPath });
+        fixture.responses[0].resolve(fixture.ready('opencode/global-current'));
+        await expect(globalRead).resolves.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(true);
+        if (outcome === 'reject') {
+          const error = new Error('TEST project status rejected');
+          fixture.responses[1].reject(error);
+          await expect(projectRead).resolves.toBe(false);
+          expect(vi.mocked(console.error).mock.calls).toEqual([
+            ['[Store:cliInstaller]', 'Failed to fetch opencode CLI status:', error],
+          ]);
+          vi.mocked(console.error).mockClear();
+        } else {
+          fixture.store.getState().invalidateCliProviderModelCatalog({ scopedOnly: true });
+          expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+          fixture.responses[1].resolve(fixture.ready('ollama/obsolete-project'));
+          await expect(projectRead).resolves.toBe(false);
+        }
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus).toMatchObject({
+          authStatusChecking: false,
+          authLoggedIn: true,
+          providers: [{ models: ['opencode/global-current'] }],
+        });
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each([
+    { outcome: 'resolve', successor: false, projectPath: undefined },
+    { outcome: 'reject', successor: false, projectPath: '/sandbox/TEST-codex-install-epoch' },
+    { outcome: 'resolve', successor: true, projectPath: '/sandbox/TEST-codex-install-epoch' },
+    { outcome: 'reject', successor: true, projectPath: undefined },
+  ] as const)(
+    'retires old-epoch loading on Codex install: $outcome, successor=$successor, scope=$projectPath',
+    async ({ outcome, successor, projectPath }) => {
+      const fixture = pendingStatusStore();
+      const codexReady: CliProviderStatus = {
+        ...fixture.ready('codex/installed', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex runtime',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      let refresh: Promise<void> | undefined;
+      try {
+        const oldRead = fixture.fetch({ projectPath });
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        await vi.waitFor(() => expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2));
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(2, 'codex');
+        fixture.responses[1].resolve(codexReady);
+        await waitForCompletion(refresh);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+
+        const currentRead = successor ? fixture.fetch({ projectPath }) : null;
+        if (outcome === 'reject') {
+          const error = new Error('TEST retired epoch rejected');
+          fixture.responses[0].reject(error);
+          await expect(oldRead).resolves.toBe(false);
+          expect(vi.mocked(console.error).mock.calls).toEqual([
+            ['[Store:cliInstaller]', 'Failed to fetch opencode CLI status:', error],
+          ]);
+          vi.mocked(console.error).mockClear();
+        } else {
+          fixture.responses[0].resolve(fixture.ready('opencode/obsolete-epoch'));
+          await expect(oldRead).resolves.toBe(false);
+        }
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(successor);
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/global-previous',
+        ]);
+        if (currentRead) {
+          expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+          fixture.responses[2].resolve(fixture.ready('opencode/current-epoch'));
+          await expect(currentRead).resolves.toBe(true);
+        }
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+      } finally {
+        fixture.getProviderStatus.mockResolvedValue(codexReady);
+        fixture.responses[1]?.resolve(codexReady);
+        try {
+          if (refresh) await waitForCompletion(refresh);
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  );
+
+  it.each([false, true])(
+    'retires whole-status ownership on Codex install without disturbing a successor=%s',
+    async (successor) => {
+      const fixture = pendingStatusStore();
+      const metadataResponses: ((status: CliInstallationStatus) => void)[] = [];
+      const metadataReads: Promise<void>[] = [];
+      const getStatus = vi.fn(
+        () => new Promise<CliInstallationStatus>((resolve) => metadataResponses.push(resolve))
+      );
+      Object.assign(window.electronAPI.cliInstaller, { getStatus });
+      const codexReady: CliProviderStatus = {
+        ...fixture.ready('codex/installed', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex runtime',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      const currentMetadata: CliInstallationStatus = {
+        ...createLoadingMultimodelCliStatus(),
+        installed: false,
+        launchError: 'TEST current metadata',
+      };
+      let refresh: Promise<void> | undefined;
+      try {
+        const oldRead = fixture.store.getState().fetchCliStatus();
+        metadataReads.push(oldRead);
+        expect(fixture.store.getState().cliStatusLoading).toBe(true);
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        await vi.waitFor(() => expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1));
+        fixture.responses[0].resolve(codexReady);
+        await waitForCompletion(refresh);
+        expect(fixture.store.getState().cliStatusLoading).toBe(false);
+        const currentRead = successor ? fixture.store.getState().fetchCliStatus() : null;
+        if (currentRead) metadataReads.push(currentRead);
+        expect(getStatus).toHaveBeenCalledTimes(successor ? 2 : 1);
+        metadataResponses[0]({ ...currentMetadata, launchError: 'TEST obsolete metadata' });
+        await oldRead;
+        expect(fixture.store.getState().cliStatusLoading).toBe(successor);
+        expect(fixture.store.getState().cliStatus?.launchError).toBeNull();
+        if (currentRead) {
+          metadataResponses[1](currentMetadata);
+          await currentRead;
+          expect(fixture.store.getState().cliStatus?.launchError).toBe('TEST current metadata');
+        }
+        expect(fixture.store.getState().cliStatusLoading).toBe(false);
+      } finally {
+        fixture.getProviderStatus.mockResolvedValue(codexReady);
+        fixture.responses[0]?.resolve(codexReady);
+        for (const resolve of metadataResponses) resolve(currentMetadata);
+        try {
+          await waitForCompletion(Promise.all([...metadataReads, refresh]));
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  );
+
+  it.each([false, true])(
+    'recovers only the current rejected Codex invalidation with a fresh unrelated global read: superseded=%s',
+    async (superseded) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      let resolveInvalidation!: () => void;
+      let rejectInvalidation!: (error: Error) => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        resolveInvalidation = resolve;
+        rejectInvalidation = reject;
+      });
+      invalidateStatus.mockReturnValueOnce(acknowledgement);
+      const installed: CodexRuntimeStatus = {
+        installed: true,
+        binaryPath: '/sandbox/TEST-codex-recovery/codex',
+        latestVersion: null,
+        updateAvailable: false,
+        source: 'app-managed',
+        state: 'ready',
+      };
+      Object.assign(window.electronAPI, {
+        codexRuntime: {
+          install: vi.fn(async () => installed),
+          invalidateStatus: vi.fn(async () => undefined),
+        },
+      });
+      const error = new Error('TEST CLI invalidation failed after retiring old reads');
+      let install: Promise<void> | undefined;
+      try {
+        const oldRead = fixture.fetch({ silent: false, requireModelList: true });
+        install = fixture.store.getState().installCodexRuntime();
+        await vi.waitFor(() => expect(invalidateStatus).toHaveBeenCalledTimes(1));
+        expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode');
+        let successor: Promise<boolean> | undefined;
+        if (superseded) {
+          await fixture.store.getState().invalidateCliStatus();
+          successor = fixture.fetch({ silent: false, requireModelList: true });
+        }
+        rejectInvalidation(error);
+        await waitForCompletion(install);
+        expect(fixture.store.getState().codexRuntimeError).toBe(superseded ? null : error.message);
+        fixture.responses[0].resolve(fixture.ready('opencode/retired-before-rejection'));
+        await expect(oldRead).resolves.toBe(false);
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/global-previous',
+        ]);
+
+        // A failed invalidation may already have cleared Main's cache. Only a fresh
+        // read can recover it; a retired response must never regain publication.
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(2, 'opencode');
+        fixture.responses[1].resolve(fixture.ready('opencode/fresh-after-rejection'));
+        if (successor) await expect(successor).resolves.toBe(true);
+        await vi.waitFor(() =>
+          expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+            'opencode/fresh-after-rejection',
+          ])
+        );
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(vi.mocked(console.warn).mock.calls).toEqual(
+          superseded
+            ? []
+            : [['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error]]
+        );
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+        resolveInvalidation();
+        for (const response of fixture.responses)
+          response.resolve(fixture.ready('opencode/cleanup'));
+        try {
+          if (install) await waitForCompletion(install);
+        } finally {
+          await fixture.cleanup();
+          vi.mocked(console.warn).mockClear();
+        }
+      }
+    }
+  );
+
+  it.each(['success', 'failure'] as const)(
+    'does not recover over a completed global successor after rejected invalidation: %s',
+    async (outcome) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      let acknowledge!: () => void;
+      let reject!: (error: Error) => void;
+      const pending = new Promise<void>((resolve, refuse) => {
+        acknowledge = resolve;
+        reject = refuse;
+      });
+      invalidateStatus.mockReturnValueOnce(pending);
+      let refresh: Promise<void> | undefined;
+      try {
+        const oldRead = fixture.fetch({ silent: false });
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        const successor = fixture.fetch({ silent: false });
+        if (outcome === 'success') {
+          fixture.responses[1].resolve(fixture.ready('opencode/settled-successor'));
+          await expect(successor).resolves.toBe(true);
+        } else {
+          fixture.responses[1].reject(new Error('TEST successor failed'));
+          await expect(successor).resolves.toBe(false);
+          vi.mocked(console.error).mockClear();
+        }
+        const currentStatus = fixture.store.getState().cliStatus;
+        const currentError = fixture.store.getState().cliStatusError;
+        const error = new Error('TEST earlier invalidation failed');
+        reject(error);
+        await expect(refresh).rejects.toBe(error);
+        fixture.responses[0].resolve(fixture.ready('opencode/retired-global'));
+        await expect(oldRead).resolves.toBe(false);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.store.getState().cliStatus).toStrictEqual(currentStatus);
+        expect(fixture.store.getState().cliStatusError).toBe(currentError);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+        acknowledge();
+        for (const response of fixture.responses)
+          response.resolve(fixture.ready('opencode/cleanup'));
+        if (refresh) await refresh.catch(() => undefined);
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('does not recover a rejected invalidation after generation-only catalog retirement', async () => {
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    let acknowledge!: () => void;
+    let reject!: (error: Error) => void;
+    const pending = new Promise<void>((resolve, refuse) => {
+      acknowledge = resolve;
+      reject = refuse;
+    });
+    invalidateStatus.mockReturnValueOnce(pending);
+    let refresh: Promise<void> | undefined;
+    try {
+      const oldRead = fixture.fetch({ silent: false });
+      refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+      fixture.store.getState().invalidateCliProviderModelCatalog();
+      const error = new Error('TEST invalidation lost catalog generation');
+      reject(error);
+      await expect(refresh).rejects.toBe(error);
+      fixture.responses[0].resolve(fixture.ready('opencode/retired-generation'));
+      await expect(oldRead).resolves.toBe(false);
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode');
+      expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+        'opencode/global-previous',
+      ]);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+    } finally {
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+      acknowledge();
+      for (const response of fixture.responses) response.resolve(fixture.ready('opencode/cleanup'));
+      if (refresh) await refresh.catch(() => undefined);
+      await fixture.cleanup();
+    }
+  });
+
+  it.each(['invalidation-set', 'recovery-loading-set'] as const)(
+    'keeps a synchronous subscriber successor through rejected invalidation recovery: %s',
+    async (stage) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      let acknowledge!: () => void;
+      let reject!: (error: Error) => void;
+      const pending = new Promise<void>((resolve, refuse) => {
+        acknowledge = resolve;
+        reject = refuse;
+      });
+      invalidateStatus.mockReturnValueOnce(pending);
+      let refresh: Promise<void> | undefined;
+      let newerInvalidation: Promise<void> | undefined;
+      let successor: Promise<boolean> | undefined;
+      let unsubscribe = () => {};
+      const subscriber = vi.fn();
+      try {
+        const oldRead = fixture.fetch({ silent: false, requireModelList: true });
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        unsubscribe = fixture.store.subscribe((state, previous) => {
+          const boundary =
+            stage === 'invalidation-set'
+              ? state.cliProviderStatusScopeRevision !== previous.cliProviderStatusScopeRevision
+              : state.cliProviderStatusLoading.opencode === true &&
+                previous.cliProviderStatusLoading.opencode !== true;
+          if (!boundary) return;
+          unsubscribe();
+          subscriber();
+          newerInvalidation = fixture.store.getState().invalidateCliStatus();
+          successor = fixture.fetch({ silent: false, requireModelList: true });
+        });
+        const error = new Error('TEST invalidation rejected before synchronous successor');
+        reject(error);
+        await expect(refresh).rejects.toBe(error);
+        await newerInvalidation;
+        expect(subscriber).toHaveBeenCalledTimes(1);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        // A late registration by the superseded recovery must not replace the
+        // successor's actual in-flight model request or cause another API read.
+        const joined = fixture.fetch({ silent: true });
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        fixture.responses[0].resolve(fixture.ready('opencode/retired-before-subscriber'));
+        await expect(oldRead).resolves.toBe(false);
+        fixture.responses[1].resolve(fixture.ready('opencode/subscriber-current'));
+        await expect(successor).resolves.toBe(true);
+        await expect(joined).resolves.toBe(true);
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/subscriber-current',
+        ]);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+      } finally {
+        unsubscribe();
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+        acknowledge();
+        for (const response of fixture.responses)
+          response.resolve(fixture.ready('opencode/cleanup'));
+        if (refresh) await refresh.catch(() => undefined);
+        await newerInvalidation;
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('does not dispatch or register a global read retired by a synchronous admission subscriber', async () => {
+    const fixture = pendingStatusStore();
+    let newerInvalidation: Promise<void> | undefined;
+    let successor: Promise<boolean> | undefined;
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = fixture.store.subscribe((state, previous) => {
+        if (
+          state.cliProviderStatusLoading.opencode !== true ||
+          previous.cliProviderStatusLoading.opencode === true
+        )
+          return;
+        unsubscribe();
+        newerInvalidation = fixture.store.getState().invalidateCliStatus();
+        successor = fixture.fetch({ silent: false, requireModelList: true });
+      });
+      const retired = fixture.fetch({ silent: false, requireModelList: true });
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode');
+      await newerInvalidation;
+      const joined = fixture.fetch({ silent: true });
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      fixture.responses[0].resolve(fixture.ready('opencode/admission-subscriber-current'));
+      await expect(retired).resolves.toBe(false);
+      await expect(successor).resolves.toBe(true);
+      await expect(joined).resolves.toBe(true);
+      expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+        'opencode/admission-subscriber-current',
+      ]);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+    } finally {
+      unsubscribe();
+      fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+      for (const response of fixture.responses) response.resolve(fixture.ready('opencode/cleanup'));
+      await newerInvalidation;
+      await fixture.cleanup();
+    }
+  });
+
+  it('does not recover a detached OpenCode intent during runtime replacement', async () => {
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    let acknowledge!: () => void;
+    let reject!: (error: Error) => void;
+    const pending = new Promise<void>((resolve, refuse) => {
+      acknowledge = resolve;
+      reject = refuse;
+    });
+    invalidateStatus.mockReturnValueOnce(pending);
+    let finishReplacement!: (status: OpenCodeRuntimeStatus) => void;
+    const replacement = new Promise<OpenCodeRuntimeStatus>((resolve) => {
+      finishReplacement = resolve;
+    });
+    const failedReplacement: OpenCodeRuntimeStatus = {
+      installed: false,
+      latestVersion: null,
+      updateAvailable: false,
+      source: 'missing',
+      state: 'failed',
+    };
+    Object.assign(window.electronAPI, {
+      openCodeRuntime: {
+        install: vi.fn(() => replacement),
+        invalidateStatus: vi.fn(async () => undefined),
+      },
+    });
+    let refresh: Promise<void> | undefined;
+    let install: Promise<void> | undefined;
+    try {
+      const oldRead = fixture.fetch({ silent: false, requireModelList: true });
+      refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+      install = fixture.store.getState().installOpenCodeRuntime();
+      const error = new Error('TEST Codex invalidation rejected during OpenCode replacement');
+      reject(error);
+      await expect(refresh).rejects.toBe(error);
+      fixture.responses[0].resolve(fixture.ready('opencode/replaced-executable'));
+      await expect(oldRead).resolves.toBe(false);
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode');
+      expect(fixture.store.getState().cliStatus?.providers[0].capabilities.teamLaunch).toBe(false);
+      expect(fixture.store.getState().openCodeRuntimeStatusLoading).toBe(true);
+    } finally {
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+      acknowledge();
+      finishReplacement(failedReplacement);
+      for (const response of fixture.responses) response.resolve(fixture.ready('opencode/cleanup'));
+      if (refresh) await refresh.catch(() => undefined);
+      if (install) await waitForCompletion(install);
+      await fixture.cleanup();
+    }
+  });
+
+  it.each([
+    { silent: true, inheritedVisible: false },
+    { silent: false, inheritedVisible: false },
+    { silent: true, inheritedVisible: true },
+  ])(
+    'preserves recovery mode, reason and visibility: silent=$silent inherited=$inheritedVisible',
+    async ({ silent, inheritedVisible }) => {
+      const fixture = pendingStatusStore();
+      const originalFetch = fixture.store.getState().fetchCliProviderStatus;
+      const observedFetch = vi.fn(originalFetch);
+      fixture.store.setState({ fetchCliProviderStatus: observedFetch });
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      let acknowledge!: () => void;
+      let reject!: (error: Error) => void;
+      const pending = new Promise<void>((resolve, refuse) => {
+        acknowledge = resolve;
+        reject = refuse;
+      });
+      invalidateStatus.mockReturnValueOnce(pending);
+      const options: CliProviderStatusFetchOptions = {
+        silent,
+        requireModelList: true,
+        verifyModels: false,
+        checkReason: 'manual_refresh',
+      };
+      const originalOptions = { ...options };
+      let refresh: Promise<void> | undefined;
+      try {
+        const predecessor = inheritedVisible ? fixture.fetch({ silent: false }) : undefined;
+        const oldRead = fixture.fetch(options);
+        options.silent = !silent;
+        options.requireModelList = false;
+        options.checkReason = 'runtime_install';
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        const error = new Error('TEST recovery must retain admitted options');
+        reject(error);
+        await expect(refresh).rejects.toBe(error);
+        expect(observedFetch.mock.calls.at(-1)).toEqual([
+          'opencode',
+          { ...originalOptions, epoch: expect.any(Number) },
+        ]);
+        const expectedCalls = inheritedVisible ? 3 : 2;
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(expectedCalls);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode === true).toBe(
+          !silent || inheritedVisible
+        );
+        const joined = fixture.fetch({ silent: true });
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(expectedCalls);
+        for (const response of fixture.responses.slice(0, -1)) {
+          response.resolve(fixture.ready('opencode/retired-mode'));
+        }
+        await expect(oldRead).resolves.toBe(false);
+        if (predecessor) await expect(predecessor).resolves.toBe(false);
+        fixture.responses.at(-1)!.resolve(fixture.ready('opencode/recovered-models'));
+        await expect(joined).resolves.toBe(true);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(false);
+      } finally {
+        fixture.store.setState({ fetchCliProviderStatus: originalFetch });
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+        acknowledge();
+        for (const response of fixture.responses)
+          response.resolve(fixture.ready('opencode/cleanup'));
+        if (refresh) await refresh.catch(() => undefined);
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('recovers the global intent despite newer project and different-provider reads', async () => {
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    let acknowledge!: () => void;
+    let reject!: (error: Error) => void;
+    const pending = new Promise<void>((resolve, refuse) => {
+      acknowledge = resolve;
+      reject = refuse;
+    });
+    invalidateStatus.mockReturnValueOnce(pending);
+    let refresh: Promise<void> | undefined;
+    try {
+      const oldRead = fixture.fetch({ silent: false });
+      refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+      const projectRead = fixture.fetch({
+        silent: true,
+        projectPath: '/sandbox/TEST-recovery-project',
+      });
+      await expect(projectRead).resolves.toBe(false);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      const foreignRead = fixture.fetch({ silent: false }, 'anthropic');
+      fixture.responses[1].resolve(fixture.ready('anthropic/current-other-provider', 'anthropic'));
+      await expect(foreignRead).resolves.toBe(true);
+      const error = new Error('TEST unrelated scopes must not cancel recovery');
+      reject(error);
+      await expect(refresh).rejects.toBe(error);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(3);
+      expect(fixture.getProviderStatus).toHaveBeenNthCalledWith(3, 'opencode');
+      fixture.responses[0].resolve(fixture.ready('opencode/retired-global'));
+      await expect(oldRead).resolves.toBe(false);
+      await expect(projectRead).resolves.toBe(false);
+      fixture.responses[2].resolve(fixture.ready('opencode/current-global'));
+      await vi.waitFor(() =>
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/current-global',
+        ])
+      );
+      expect(
+        fixture.store
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')?.models
+      ).toEqual(['anthropic/current-other-provider']);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+    } finally {
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/cleanup'));
+      acknowledge();
+      for (const response of fixture.responses) response.resolve(fixture.ready('opencode/cleanup'));
+      if (refresh) await refresh.catch(() => undefined);
+      await fixture.cleanup();
+    }
+  });
+
+  it.each([false, true])(
+    'publishes Codex install invalidation errors only for the current epoch: superseded=%s',
+    async (superseded) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      let rejectInvalidation!: (error: Error) => void;
+      let resolveInvalidation!: () => void;
+      const acknowledgement = new Promise<void>((resolve, reject) => {
+        resolveInvalidation = resolve;
+        rejectInvalidation = reject;
+      });
+      invalidateStatus.mockReturnValueOnce(acknowledgement);
+      const installed: CodexRuntimeStatus = {
+        installed: true,
+        binaryPath: '/sandbox/TEST-codex-install/codex',
+        version: 'TEST-codex-runtime',
+        latestVersion: 'TEST-codex-runtime',
+        updateAvailable: false,
+        source: 'app-managed',
+        state: 'ready',
+      };
+      const currentOwnerError = 'TEST current backend error';
+      const currentStatus: CodexRuntimeStatus = {
+        ...installed,
+        version: 'TEST-current-backend-runtime',
+        error: currentOwnerError,
+      };
+      const runtime = {
+        install: vi.fn(async () => installed),
+        invalidateStatus: vi.fn(async () => undefined),
+        getStatus: vi.fn(async () => currentStatus),
+      };
+      Object.assign(window.electronAPI, { codexRuntime: runtime });
+      let install: Promise<void> | undefined;
+      const error = new Error('TEST install invalidation rejected');
+      try {
+        install = fixture.store.getState().installCodexRuntime();
+        await vi.waitFor(() => expect(invalidateStatus).toHaveBeenCalledTimes(1));
+        expect(runtime.install).toHaveBeenCalledTimes(1);
+        expect(runtime.invalidateStatus).toHaveBeenCalledTimes(1);
+        expect(fixture.store.getState().codexRuntimeStatus).toBe(installed);
+        if (superseded) {
+          await fixture.store.getState().invalidateCliStatus();
+          await fixture.store.getState().fetchCodexRuntimeStatus();
+          expect(fixture.store.getState().codexRuntimeError).toBe(currentOwnerError);
+        }
+        rejectInvalidation(error);
+        await waitForCompletion(install);
+        expect(fixture.store.getState().codexRuntimeError).toBe(
+          superseded ? currentOwnerError : error.message
+        );
+        expect(fixture.store.getState().codexRuntimeStatus).toBe(
+          superseded ? currentStatus : installed
+        );
+        expect(fixture.store.getState().codexRuntimeStatusLoading).toBe(false);
+        expect(invalidateStatus).toHaveBeenCalledTimes(superseded ? 2 : 1);
+        expect(runtime.getStatus).toHaveBeenCalledTimes(superseded ? 1 : 0);
+        expect(fixture.getProviderStatus).not.toHaveBeenCalled();
+        expect(vi.mocked(console.warn).mock.calls).toEqual(
+          superseded
+            ? []
+            : [['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error]]
+        );
+        vi.mocked(console.warn).mockClear();
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        const cleanupProvider: CliProviderStatus = {
+          ...fixture.ready('codex/cleanup', 'codex'),
+          availableBackends: [
+            {
+              id: 'codex-native',
+              label: 'TEST Codex cleanup',
+              description: 'TEST app-managed runtime',
+              available: true,
+              selectable: true,
+              recommended: true,
+            },
+          ],
+        };
+        fixture.getProviderStatus.mockResolvedValue(cleanupProvider);
+        resolveInvalidation();
+        for (const response of fixture.responses) {
+          response.resolve(cleanupProvider);
+        }
+        try {
+          if (install) await waitForCompletion(install);
+        } finally {
+          await fixture.cleanup();
+        }
+      }
+    }
+  );
+
+  it('publishes the current Codex install error from the second invalidation attempt', async () => {
+    vi.useFakeTimers();
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    let rejectRetry!: (error: Error) => void;
+    let resolveRetry!: () => void;
+    const retryAcknowledgement = new Promise<void>((resolve, reject) => {
+      resolveRetry = resolve;
+      rejectRetry = reject;
+    });
+    invalidateStatus.mockResolvedValueOnce(undefined).mockReturnValueOnce(retryAcknowledgement);
+    const installed: CodexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/sandbox/TEST-codex-retry/codex',
+      latestVersion: null,
+      updateAvailable: false,
+      source: 'app-managed',
+      state: 'ready',
+    };
+    Object.assign(window.electronAPI, {
+      codexRuntime: {
+        install: vi.fn(async () => installed),
+        invalidateStatus: vi.fn(async () => undefined),
+      },
+    });
+    let install: Promise<void> | undefined;
+    const error = new Error('TEST current second invalidation rejected');
+    try {
+      install = fixture.store.getState().installCodexRuntime();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('codex');
+      fixture.responses[0].resolve(fixture.ready('codex/not-installed', 'codex'));
+      await vi.advanceTimersByTimeAsync(699);
+      expect(invalidateStatus).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(invalidateStatus).toHaveBeenCalledTimes(2);
+      rejectRetry(error);
+      await vi.advanceTimersByTimeAsync(0);
+      await waitForCompletion(install);
+      expect(fixture.store.getState().codexRuntimeError).toBe(error.message);
+      expect(fixture.store.getState().codexRuntimeStatus).toBe(installed);
+      expect(fixture.store.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(vi.mocked(console.warn).mock.calls).toEqual([
+        ['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error],
+      ]);
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      const cleanupProvider: CliProviderStatus = {
+        ...fixture.ready('codex/cleanup', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex cleanup',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      fixture.getProviderStatus.mockResolvedValue(cleanupProvider);
+      resolveRetry();
+      for (const response of fixture.responses) response.resolve(cleanupProvider);
+      try {
+        await vi.advanceTimersByTimeAsync(2_100);
+        if (install) await waitForCompletion(install);
+      } finally {
+        await fixture.cleanup();
+        vi.useRealTimers();
+      }
+    }
+  });
+
+  it('publishes a Codex runtime invalidation error before CLI refresh acquires an epoch', async () => {
+    const fixture = pendingStatusStore();
+    const error = new Error('TEST runtime invalidation rejected');
+    const installed: CodexRuntimeStatus = {
+      installed: true,
+      binaryPath: '/sandbox/TEST-codex-runtime-invalidation/codex',
+      latestVersion: null,
+      updateAvailable: false,
+      source: 'app-managed',
+      state: 'ready',
+    };
+    const runtime = {
+      install: vi.fn(async () => installed),
+      invalidateStatus: vi.fn().mockRejectedValue(error),
+    };
+    Object.assign(window.electronAPI, { codexRuntime: runtime });
+    let install: Promise<void> | undefined;
+    try {
+      install = fixture.store.getState().installCodexRuntime();
+      await waitForCompletion(install);
+      expect(fixture.store.getState().codexRuntimeError).toBe(error.message);
+      expect(fixture.store.getState().codexRuntimeStatus).toBe(installed);
+      expect(fixture.store.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(runtime.install).toHaveBeenCalledTimes(1);
+      expect(runtime.invalidateStatus).toHaveBeenCalledTimes(1);
+      expect(window.electronAPI.cliInstaller.invalidateStatus).not.toHaveBeenCalled();
+      expect(fixture.getProviderStatus).not.toHaveBeenCalled();
+      expect(vi.mocked(console.warn).mock.calls).toEqual([
+        ['[Store:cliInstaller]', 'Codex status refresh after installation failed:', error],
+      ]);
+      vi.mocked(console.warn).mockClear();
+    } finally {
+      try {
+        if (install) await waitForCompletion(install);
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  });
+
+  it.each(['invalidation', 'provider', 'retry-delay'] as const)(
+    'does not let an install refresh superseded during %s adopt a newer invalidation',
+    async (stage) => {
+      vi.useFakeTimers();
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      let acknowledgeOld!: () => void;
+      let acknowledgeNew!: () => void;
+      const oldAcknowledgement = new Promise<void>((resolve) => {
+        acknowledgeOld = resolve;
+      });
+      const newAcknowledgement = new Promise<void>((resolve) => {
+        acknowledgeNew = resolve;
+      });
+      const codexReady: CliProviderStatus = {
+        ...fixture.ready('codex/installed', 'codex'),
+        availableBackends: [
+          {
+            id: 'codex-native',
+            label: 'TEST Codex runtime',
+            description: 'TEST app-managed runtime',
+            available: true,
+            selectable: true,
+            recommended: true,
+          },
+        ],
+      };
+      if (stage === 'invalidation') invalidateStatus.mockReturnValueOnce(oldAcknowledgement);
+      else invalidateStatus.mockResolvedValueOnce(undefined);
+      invalidateStatus.mockReturnValueOnce(newAcknowledgement);
+      let refresh: Promise<void> | undefined;
+      let newerInvalidation: Promise<void> | undefined;
+      try {
+        refresh = refreshCodexProviderStatusAfterRuntimeInstall(fixture.store.getState);
+        await vi.advanceTimersByTimeAsync(0);
+        if (stage === 'retry-delay') {
+          fixture.responses[0].resolve(fixture.ready('codex/not-installed', 'codex'));
+          await vi.advanceTimersByTimeAsync(0);
+          expect(vi.getTimerCount()).toBe(1);
+        }
+        const providersBeforeInvalidation = fixture.store.getState().cliStatus?.providers;
+        newerInvalidation = fixture.store.getState().invalidateCliStatus();
+        acknowledgeOld();
+        if (stage === 'provider') fixture.responses[0].resolve(codexReady);
+        await vi.advanceTimersByTimeAsync(700);
+        expect(invalidateStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(stage === 'invalidation' ? 0 : 1);
+        expect(fixture.store.getState().cliProviderStatusLoading.codex).not.toBe(true);
+        expect(fixture.store.getState().cliStatus?.providers).toEqual(providersBeforeInvalidation);
+        await refresh;
+      } finally {
+        acknowledgeOld();
+        acknowledgeNew();
+        fixture.getProviderStatus.mockResolvedValue(codexReady);
+        for (const response of fixture.responses) response.resolve(codexReady);
+        try {
+          await vi.advanceTimersByTimeAsync(2_100);
+          await Promise.all([refresh, newerInvalidation]);
+        } finally {
+          await fixture.cleanup();
+          vi.useRealTimers();
+        }
+      }
+    }
+  );
+
+  function pendingMainInvalidation() {
+    let resolve!: () => void;
+    let reject!: (error: Error) => void;
+    const promise = new Promise<void>((acknowledge, refuse) => {
+      resolve = acknowledge;
+      reject = refuse;
+    });
+    return { promise, resolve, reject };
+  }
+
+  it.each(['pending', 'completed'] as const)(
+    'preserves a %s scoped successor after a superseded Main invalidation rejects',
+    async (successorState) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      const old = pendingMainInvalidation();
+      invalidateStatus.mockReturnValueOnce(old.promise);
+      const oldResult = fixture.store
+        .getState()
+        .invalidateCliStatus()
+        .catch((error: unknown) => error);
+      const projectPath = '/sandbox/TEST-current-scoped-invalidation';
+      const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+      try {
+        await fixture.store.getState().invalidateCliStatus();
+        const revision = fixture.store.getState().cliProviderStatusScopeRevision;
+        const successor = fixture.fetch({ projectPath, requireModelList: true });
+        if (successorState === 'completed') {
+          fixture.responses[0].resolve(fixture.ready('opencode/current-scoped'));
+          await expect(successor).resolves.toBe(true);
+        }
+        const before = fixture.store.getState();
+        const error = new Error('TEST superseded Main invalidation rejected');
+        old.reject(error);
+        await expect(oldResult).resolves.toBe(error);
+        expect(fixture.store.getState().cliProviderStatusScopeRevision).toBe(revision);
+        expect(fixture.store.getState().cliProviderStatusByScope).toBe(
+          before.cliProviderStatusByScope
+        );
+        expect(fixture.store.getState().cliProviderStatusLoading).toBe(
+          before.cliProviderStatusLoading
+        );
+        if (successorState === 'pending') {
+          const joined = fixture.fetch({ projectPath, silent: true });
+          expect(fixture.getProviderStatus).toHaveBeenCalledTimes(1);
+          fixture.responses[0].resolve(fixture.ready('opencode/current-scoped'));
+          await expect(successor).resolves.toBe(true);
+          await expect(joined).resolves.toBe(true);
+        }
+        expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
+          'opencode/current-scoped',
+        ]);
+        expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+          projectPath,
+        });
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        old.resolve();
+        await oldResult;
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('still retires a scoped read predating an older successful Main invalidation', async () => {
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    const old = pendingMainInvalidation();
+    invalidateStatus.mockReturnValueOnce(old.promise);
+    const oldResult = fixture.store.getState().invalidateCliStatus();
+    const projectPath = '/sandbox/TEST-successful-old-main-invalidation';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    try {
+      await fixture.store.getState().invalidateCliStatus();
+      const revision = fixture.store.getState().cliProviderStatusScopeRevision;
+      const preAcknowledgement = fixture.fetch({ projectPath });
+      old.resolve();
+      await oldResult;
+      expect(fixture.store.getState().cliProviderStatusScopeRevision).toBe(revision + 1);
+      fixture.responses[0].resolve(fixture.ready('opencode/predates-old-success'));
+      await expect(preAcknowledgement).resolves.toBe(false);
+      expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]).toBeUndefined();
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+      const current = fixture.fetch({ projectPath });
+      fixture.responses[1].resolve(fixture.ready('opencode/after-old-success'));
+      await expect(current).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
+        'opencode/after-old-success',
+      ]);
+    } finally {
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      old.resolve();
+      await oldResult;
+      await fixture.cleanup();
+    }
+  });
+
+  it.each([
+    { outcome: 'resolve', globalEpoch: false },
+    { outcome: 'reject', globalEpoch: false },
+    { outcome: 'resolve', globalEpoch: true },
+    { outcome: 'reject', globalEpoch: true },
+  ] as const)(
+    'holds scoped admission until Main $outcome even with a newer global epoch=$globalEpoch',
+    async ({ outcome, globalEpoch }) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      const pending = pendingMainInvalidation();
+      invalidateStatus.mockReturnValueOnce(pending.promise);
+      const invalidation = fixture.store
+        .getState()
+        .invalidateCliStatus()
+        .catch((error: unknown) => error);
+      const projectPath = '/sandbox/TEST-pending-main-invalidation';
+      const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+      fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/current-after-main'));
+      try {
+        if (globalEpoch) {
+          const metadata = {
+            ...createLoadingMultimodelCliStatus(),
+            installed: true,
+            providers: [],
+          };
+          const getStatus = vi.fn(async () => metadata);
+          Object.assign(window.electronAPI.cliInstaller, { getStatus });
+          await fixture.store.getState().fetchCliStatus();
+          expect(getStatus).toHaveBeenCalledTimes(1);
+          expect(fixture.store.getState().cliStatus?.installed).toBe(true);
+        }
+        const revision = fixture.store.getState().cliProviderStatusScopeRevision;
+        await expect(fixture.fetch({ projectPath })).resolves.toBe(false);
+        expect(fixture.getProviderStatus).not.toHaveBeenCalled();
+        expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]).toBeUndefined();
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).not.toBe(true);
+        const error = new Error('TEST current Main invalidation rejected');
+        if (outcome === 'reject') pending.reject(error);
+        else pending.resolve();
+        await expect(invalidation).resolves.toBe(outcome === 'reject' ? error : undefined);
+        expect(fixture.store.getState().cliProviderStatusScopeRevision).toBe(revision + 1);
+        await expect(fixture.fetch({ projectPath })).resolves.toBe(true);
+        expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+          projectPath,
+        });
+        expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
+          'opencode/current-after-main',
+        ]);
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        pending.resolve();
+        await invalidation;
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each(['resolve', 'reject'] as const)(
+    'keeps the newer Main admission barrier when an older invalidation ends with %s',
+    async (outcome) => {
+      const fixture = pendingStatusStore();
+      const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+      const old = pendingMainInvalidation();
+      const current = pendingMainInvalidation();
+      invalidateStatus.mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+      const oldResult = fixture.store
+        .getState()
+        .invalidateCliStatus()
+        .catch((error: unknown) => error);
+      const currentResult = fixture.store.getState().invalidateCliStatus();
+      const projectPath = '/sandbox/TEST-newer-main-barrier';
+      fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/after-current-barrier'));
+      try {
+        const error = new Error('TEST older Main barrier rejected');
+        if (outcome === 'reject') old.reject(error);
+        else old.resolve();
+        await expect(oldResult).resolves.toBe(outcome === 'reject' ? error : undefined);
+        await expect(fixture.fetch({ projectPath })).resolves.toBe(false);
+        expect(fixture.getProviderStatus).not.toHaveBeenCalled();
+        current.resolve();
+        await currentResult;
+        await expect(fixture.fetch({ projectPath })).resolves.toBe(true);
+        expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+          projectPath,
+        });
+      } finally {
+        invalidateStatus.mockReset().mockResolvedValue(undefined);
+        old.resolve();
+        current.resolve();
+        await Promise.all([oldResult, currentResult]);
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it('admits the scoped subscriber woken by its Main invalidation completion', async () => {
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    const pending = pendingMainInvalidation();
+    invalidateStatus.mockReturnValueOnce(pending.promise);
+    const invalidation = fixture.store.getState().invalidateCliStatus();
+    const projectPath = '/sandbox/TEST-main-completion-subscriber';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/completion-subscriber'));
+    let subscriber: Promise<boolean> | undefined;
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = fixture.store.subscribe((state, previous) => {
+        if (state.cliProviderStatusScopeRevision === previous.cliProviderStatusScopeRevision)
+          return;
+        unsubscribe();
+        subscriber = fixture.fetch({ projectPath });
+      });
+      pending.resolve();
+      await invalidation;
+      expect(subscriber).toBeDefined();
+      await expect(subscriber).resolves.toBe(true);
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+        projectPath,
+      });
+      expect(fixture.store.getState().cliProviderStatusByScope[scopeKey]?.models).toEqual([
+        'opencode/completion-subscriber',
+      ]);
+    } finally {
+      unsubscribe();
+      invalidateStatus.mockReset().mockResolvedValue(undefined);
+      pending.resolve();
+      await invalidation;
+      await fixture.cleanup();
+    }
+  });
+
+  it('releases scoped admission when the opening Main invalidation subscriber rejects', async () => {
+    const fixture = pendingStatusStore();
+    const invalidateStatus = vi.mocked(window.electronAPI.cliInstaller.invalidateStatus);
+    const error = new Error('TEST opening invalidation subscriber rejected');
+    const projectPath = '/sandbox/TEST-opening-invalidation-subscriber';
+    fixture.getProviderStatus.mockResolvedValue(fixture.ready('opencode/after-opening-rejection'));
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = fixture.store.subscribe((state, previous) => {
+        if (state.cliProviderStatusByScope === previous.cliProviderStatusByScope) return;
+        unsubscribe();
+        throw error;
+      });
+      await expect(fixture.store.getState().invalidateCliStatus()).rejects.toBe(error);
+      expect(invalidateStatus).not.toHaveBeenCalled();
+      await expect(fixture.fetch({ projectPath })).resolves.toBe(true);
+      expect(fixture.getProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+        projectPath,
+      });
+      expect(
+        fixture.store.getState().cliProviderStatusByScope[
+          getCliProviderStatusScopeKey('opencode', projectPath)
+        ]?.models
+      ).toEqual(['opencode/after-opening-rejection']);
+    } finally {
+      unsubscribe();
+      await fixture.cleanup();
+    }
+  });
+
+  it('keeps an independent silent global read quiet', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const read = fixture.fetch({ silent: true });
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBeUndefined();
+      fixture.responses[0].resolve(fixture.ready('opencode/quiet-current'));
+      await expect(read).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBeUndefined();
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('does not transfer project loading to an independent silent global read', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const projectRead = fixture.fetch({
+        projectPath: '/sandbox/opencode-silent-project',
+        silent: true,
+      });
+      const globalRead = fixture.fetch({ silent: true });
+      expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[0].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+      fixture.responses[1].resolve(fixture.ready('opencode/quiet-current'));
+      await expect(globalRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('keeps a visible global request loading when the project response finishes first', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const globalRead = fixture.fetch({ silent: false });
+      const projectRead = fixture.fetch({
+        projectPath: '/sandbox/opencode-project-first',
+        silent: false,
+      });
+      fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+        'opencode/global-previous',
+      ]);
+      fixture.responses[0].resolve(fixture.ready('opencode/global-current'));
+      await expect(globalRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('keeps project loading when the visible global request rejects', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const globalRead = fixture.fetch({ silent: false });
+      const projectRead = fixture.fetch({
+        projectPath: '/sandbox/opencode-after-global-rejection',
+        silent: false,
+      });
+      const error = new Error('TEST global status rejected');
+      fixture.responses[0].reject(error);
+      await expect(globalRead).resolves.toBe(false);
+      expect(vi.mocked(console.error).mock.calls).toEqual([
+        ['[Store:cliInstaller]', 'Failed to fetch opencode CLI status:', error],
+      ]);
+      vi.mocked(console.error).mockClear();
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+      fixture.responses[1].resolve(fixture.ready('ollama/project-current'));
+      await expect(projectRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it('does not keep OpenCode loading for a different pending provider', async () => {
+    const fixture = pendingStatusStore();
+    try {
+      const codexRead = fixture.fetch({ silent: false }, 'codex');
+      const openCodeRead = fixture.fetch({ silent: false });
+      fixture.responses[1].resolve(fixture.ready('opencode/current'));
+      await expect(openCodeRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading).toMatchObject({
+        opencode: false,
+        codex: true,
+      });
+      fixture.responses[0].resolve(fixture.ready('codex/current', 'codex'));
+      await expect(codexRead).resolves.toBe(true);
+      expect(fixture.store.getState().cliProviderStatusLoading.codex).toBe(false);
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
+  it.each([true, false])(
+    'retires only project loading while a global request remains silent=%s',
+    async (silent) => {
+      const fixture = pendingStatusStore();
+      const projectPath = '/sandbox/opencode-retired-project';
+      try {
+        const projectRead = fixture.fetch({ projectPath, silent: true });
+        const globalRead = fixture.fetch({ silent });
+        fixture.store.getState().invalidateCliProviderModelCatalog({ scopedOnly: true });
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
+          silent ? undefined : true
+        );
+        expect(fixture.store.getState().cliStatus?.authStatusChecking).toBe(!silent);
+        fixture.responses[0].resolve(fixture.ready('ollama/obsolete-project'));
+        await expect(projectRead).resolves.toBe(false);
+        expect(fixture.store.getState().cliProviderStatusByScope).not.toHaveProperty(
+          getCliProviderStatusScopeKey('opencode', projectPath)
+        );
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
+          silent ? undefined : true
+        );
+        fixture.responses[1].resolve(fixture.ready('opencode/global-current'));
+        await expect(globalRead).resolves.toBe(true);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(
+          silent ? undefined : false
+        );
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  );
+
+  it.each(['old-first', 'new-first'] as const)(
+    'settles visible loading when a silent model request supersedes it (%s)',
+    async (order) => {
+      const fixture = pendingStatusStore();
+      try {
+        const oldRead = fixture.fetch({ silent: false });
+        const currentRead = fixture.fetch({ silent: true, requireModelList: true });
+        expect(fixture.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+        if (order === 'old-first') {
+          fixture.responses[0].resolve(fixture.ready('opencode/obsolete'));
+          await expect(oldRead).resolves.toBe(false);
+          expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(true);
+          expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+            'opencode/global-previous',
+          ]);
+        }
+        fixture.responses[1].resolve(fixture.ready('opencode/newest'));
+        await expect(currentRead).resolves.toBe(true);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+        fixture.responses[0].resolve(fixture.ready('opencode/obsolete'));
+        await expect(oldRead).resolves.toBe(false);
+        expect(fixture.store.getState().cliProviderStatusLoading.opencode).toBe(false);
+        expect(fixture.store.getState().cliStatus?.providers[0].models).toEqual([
+          'opencode/newest',
+        ]);
+      } finally {
+        await fixture.cleanup();
+      }
+    }
+  );
+});
+
 describe('provider catalog invalidation races', () => {
   it('settles an OpenCode partial response after the bounded retry', async () => {
     const previousApi = window.electronAPI;
@@ -607,6 +2084,7 @@ describe('provider catalog invalidation races', () => {
       expect(store.getState().cliProviderStatusLoading.codex).toBe(true);
       store.getState().invalidateCliProviderModelCatalog();
       expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+      expect(store.getState().cliStatus?.authStatusChecking).toBe(false);
       resolveStatus({
         providerId: 'codex',
         models: [],

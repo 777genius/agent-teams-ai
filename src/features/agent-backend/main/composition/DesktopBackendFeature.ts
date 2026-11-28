@@ -1,0 +1,764 @@
+import { isAbsolute, resolve } from 'node:path';
+
+import { crossTeamTeamResourceRef } from '@agent-teams/legacy-agent-host/cross-team';
+import { createdTeamSelectionSignature } from '@shared/utils/createdTeamReadiness';
+
+import {
+  assertBackendRequestGuard,
+  BackendRoutingError,
+  ownerKey,
+} from '../application/backendBinding';
+import { BackendOwnerRouter } from '../application/BackendOwnerRouter';
+import { createCapturedHostBackup } from '../application/createCapturedHostBackup';
+import { prepareCreatedHostTeam } from '../application/createdHostTeam';
+import { ForegroundModelChecks } from '../application/ForegroundModelChecks';
+import { prepareCapturedTeamModels } from '../application/prepareCapturedTeamModels';
+import { refreshCapturedRuntimeConfiguration } from '../application/refreshCapturedRuntimeConfiguration';
+import { CapturedHostClient } from '../infrastructure/CapturedHostClient';
+import { captureCreatedTeamConversation } from '../infrastructure/CapturedLocalModelReadiness';
+import { capturedRuntimeSourceGrant } from '../infrastructure/capturedRuntimeSourceGrant';
+import { CapturedScheduledRuns } from '../infrastructure/CapturedScheduledRuns';
+import { CapturedTeamRegistry } from '../infrastructure/CapturedTeamRegistry';
+import { captureMainWindowsCustody } from '../infrastructure/CapturedWindowsCustody';
+import { FileHandleBindingStore } from '../infrastructure/FileHandleBindingStore';
+import { loadDesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
+import {
+  type CapturedConnectionUnavailable,
+  readCapturedConnectionAvailability,
+  readCapturedOwnerAvailability,
+} from '../infrastructure/readCapturedConnectionAvailability';
+import { CapturedStoppedTeamImport } from '../infrastructure/stopped-import/CapturedStoppedTeamImport';
+
+import { captureHostPromptSuggestions } from './captureHostPromptSuggestions';
+import { createDesktopBackendFacade } from './createDesktopBackendFacade';
+import { DesktopBackendManagementTargets } from './DesktopBackendManagementTargets';
+
+import type { BackendHandle } from '../../contracts';
+import type { BackendConnectionSnapshot } from '../../contracts/connections';
+import type { BackendOperationsFacade } from '../adapters/input/BackendOperationsFacade';
+import type {
+  BackendOwnerRef,
+  BackendRequestGuard,
+  HandleBindingStore,
+} from '../application/backendBinding';
+import type { CapturedBackendOwner } from '../application/BackendOwnerRouter';
+import type { CapturedTeamModelRequest } from '../application/prepareCapturedTeamModels';
+import type { CapturedProviderManagement } from '../infrastructure/CapturedProviderManagement';
+import type { DesktopBackendDescriptor } from '../infrastructure/loadDesktopBackendDescriptor';
+import type { DesktopBackendFeatureOptions, InitializationPhase } from './DesktopBackendOptions';
+import type {
+  CreateTeamRegistryPayload,
+  TeamRegistryRecord,
+} from '@agent-teams/legacy-agent-host/team-registry/contracts';
+import type { TeamCreateRequest } from '@shared/types/team';
+
+export type { DesktopBackendFeatureOptions } from './DesktopBackendOptions';
+
+export class DesktopBackendFeature {
+  readonly facade: BackendOperationsFacade;
+  private readonly store: HandleBindingStore;
+  private router?: BackendOwnerRouter;
+  private descriptor?: DesktopBackendDescriptor;
+  private initializePromise?: Promise<void>;
+  private sealed = false;
+  private state: BackendConnectionSnapshot['state'] = 'unconfigured';
+  private readonly clients = new Map<string, CapturedBackendOwner>();
+  private readonly dynamicHandles = new Map<string, DesktopBackendDescriptor['handles'][number]>();
+  private readonly retiredHandles = new Set<string>();
+  private readonly registryReads = new Map<string, Promise<CapturedConnectionUnavailable[]>>();
+  private readonly creationChecks = new ForegroundModelChecks();
+  private readonly managementTargets: DesktopBackendManagementTargets;
+  private readonly hostClientOptions: ReturnType<typeof captureHostPromptSuggestions>;
+
+  constructor(private readonly options: DesktopBackendFeatureOptions) {
+    // Selection is captured before any asynchronous access; callers cannot swap its path/hash.
+    this.options = {
+      ...options,
+      descriptor: options.descriptor ? Object.freeze({ ...options.descriptor }) : null,
+    };
+    const promptOptions = captureHostPromptSuggestions({
+      definitions: () => this.handleDefinitions(),
+      currentClient: (key) => this.clients.get(key)?.client,
+      isCurrent: () => !this.sealed && this.state === 'ready',
+      publish: this.options.onNativePromptSuggestion,
+      enabled: this.options.nativeNextPromptEnabled === true,
+      providers: this.options.nativeNextPromptProviders,
+    });
+    this.hostClientOptions = (owner) => ({
+      ...promptOptions(owner),
+      ...(this.options.reviewFlowDefaultsDirectory
+        ? { reviewFlowDefaultsDirectory: this.options.reviewFlowDefaultsDirectory }
+        : {}),
+    });
+    this.store = options.bindings ?? new FileHandleBindingStore(options.bindingDirectory);
+    const readSealed = () => this.sealed;
+    const readState = () => this.state;
+    const readRouter = () => this.router;
+    const readDescriptor = () => this.descriptor;
+    const context = {
+      get sealed() {
+        return readSealed();
+      },
+      get state() {
+        return readState();
+      },
+      get router() {
+        return readRouter();
+      },
+      get descriptor() {
+        return readDescriptor();
+      },
+      clients: this.clients,
+      options: this.options,
+      hostClientOptions: this.hostClientOptions,
+      initialize: () => this.initialize(),
+      definitions: () => this.handleDefinitions(),
+      authorizeHandle: (contextId: string, handle: BackendHandle) =>
+        this.authorizeHandle(contextId, handle),
+    };
+    this.managementTargets = new DesktopBackendManagementTargets(context);
+    this.facade = createDesktopBackendFacade(context);
+  }
+
+  initialize(): Promise<void> {
+    if (this.sealed) return Promise.resolve();
+    this.initializePromise ??= this.load();
+    return this.initializePromise;
+  }
+
+  private async load(): Promise<void> {
+    const selection = this.options.descriptor;
+    if (!selection) return;
+    let phase: InitializationPhase = 'descriptor';
+    try {
+      const descriptor = await loadDesktopBackendDescriptor(selection);
+      if (this.sealed) return;
+      const router = new BackendOwnerRouter(this.store);
+      this.router = router;
+      phase = 'owner-registration';
+      for (const owner of descriptor.owners) {
+        const nativeCustody = captureMainWindowsCustody(
+          owner.profile,
+          (descriptor.management ?? [])
+            .filter((entry) => ownerKey(entry.owner) === ownerKey(owner))
+            .map((entry) => capturedRuntimeSourceGrant(descriptor, entry))
+        );
+        const captured = {
+          ownerId: owner.ownerId,
+          revision: owner.revision,
+          storageRoot: owner.storageRoot,
+          client: new CapturedHostClient(
+            owner.profile,
+            nativeCustody,
+            undefined,
+            this.hostClientOptions(owner)
+          ),
+          ...(nativeCustody ? { nativeCustody } : {}),
+        };
+        router.registerOwner(captured);
+        this.clients.set(ownerKey(owner), captured);
+      }
+      for (const handle of descriptor.handles) {
+        if (this.sealed) return;
+        phase = 'handle-read';
+        const existing = await this.store.read(handle.handleId);
+        if (this.sealed) return;
+        const selected = this.clients.get(ownerKey(handle.owner));
+        if (!selected) throw new BackendRoutingError('hold');
+        // A changed private descriptor cannot rebind a retained handle under the same public key.
+        if (
+          existing &&
+          (ownerKey(existing.owner) !== ownerKey(handle.owner) ||
+            existing.owner.storageRoot !== selected.storageRoot ||
+            existing.owner.profileId !== selected.client.profile.profileId ||
+            existing.owner.buildId !== selected.client.profile.expectedBuildId ||
+            existing.owner.nodeSha256 !== selected.client.profile.nodeSha256 ||
+            existing.owner.hostEntrySha256 !== selected.client.profile.hostEntrySha256)
+        )
+          throw new BackendRoutingError('hold');
+        router.setDefault(handle.owner);
+        phase = 'handle-publication';
+        await router.createHandle(handle.handleId, handle.scope);
+      }
+      if (this.sealed) return;
+      phase = 'default-owner';
+      router.setDefault(descriptor.defaultOwner);
+      this.descriptor = descriptor;
+      this.state = 'ready';
+    } catch (error) {
+      if (!this.sealed) this.state = 'hold';
+      try {
+        this.options.onInitializationFailure?.(
+          phase,
+          error instanceof BackendRoutingError ? error.code : 'unexpected'
+        );
+      } catch {
+        /* Diagnostics cannot alter the original failed admission. */
+      }
+      await this.router?.shutdown();
+      await this.closeNativeOwners();
+    }
+  }
+
+  private handleDefinitions(): readonly DesktopBackendDescriptor['handles'][number][] {
+    return [...(this.descriptor?.handles ?? []), ...this.dynamicHandles.values()];
+  }
+
+  private async registry(
+    contextId: string,
+    guard?: BackendRequestGuard
+  ): Promise<{ client: CapturedTeamRegistry; owner: BackendOwnerRef }> {
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const selected = this.descriptor?.creation,
+      router = this.router;
+    if (this.sealed || this.state !== 'ready' || !selected || !router)
+      throw new BackendRoutingError('unavailable');
+    if (!selected.contextIds.includes(contextId)) throw new BackendRoutingError('forbidden');
+    const captured = this.clients.get(ownerKey(selected.owner));
+    if (!captured) throw new BackendRoutingError('hold');
+    return {
+      owner: selected.owner,
+      client: new CapturedTeamRegistry({
+        owner: router.ownerBinding(selected.owner),
+        client: captured.client,
+        start: () => router.startOwner(selected.owner),
+        available: () =>
+          !this.sealed &&
+          this.state === 'ready' &&
+          this.clients.get(ownerKey(selected.owner)) === captured,
+      }),
+    };
+  }
+
+  private async registerDynamic(
+    record: TeamRegistryRecord,
+    owner: BackendOwnerRef,
+    contextId: string,
+    guard?: BackendRequestGuard
+  ): Promise<void> {
+    assertBackendRequestGuard(guard);
+    if (record.contextId !== contextId || !this.router || this.sealed)
+      throw new BackendRoutingError('forbidden');
+    const entry: DesktopBackendDescriptor['handles'][number] = {
+      handleId: record.binding.handleId,
+      owner,
+      contextId,
+      label: record.displayName || record.teamName,
+      ...(record.projectContextMode ? { projectContextMode: record.projectContextMode } : {}),
+      ...(record.projectContext
+        ? {
+            projectContext: {
+              logicalHandleId: record.projectContext.logicalHandleId,
+              projectPath: record.projectContext.projectPath,
+              workContextId: record.projectContext.workContextId,
+            },
+          }
+        : {}),
+      members: record.members,
+      scope: record.binding.scope,
+    };
+    const prior = this.handleDefinitions().find((row) => row.handleId === entry.handleId);
+    if (prior && JSON.stringify(prior) !== JSON.stringify(entry))
+      throw new BackendRoutingError('binding-conflict');
+    await this.router.createHandle(entry.handleId, entry.scope, owner);
+    assertBackendRequestGuard(guard, 'unknown');
+    if (this.sealed) throw new BackendRoutingError('shutting-down');
+    this.dynamicHandles.set(entry.handleId, entry);
+  }
+
+  /** Main-only transfer authority for this exact configured owner/profile/principal. */
+  async captureStoppedImport(contextId: string, guard: BackendRequestGuard) {
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const selected = this.descriptor?.creation,
+      router = this.router;
+    if (this.sealed || this.state !== 'ready' || !selected?.importAuthority || !router)
+      throw new BackendRoutingError('unavailable');
+    if (!selected.contextIds.includes(contextId)) throw new BackendRoutingError('forbidden');
+    const captured = this.clients.get(ownerKey(selected.owner));
+    if (!captured) throw new BackendRoutingError('hold');
+    const available = () =>
+      !this.sealed &&
+      this.state === 'ready' &&
+      this.clients.get(ownerKey(selected.owner)) === captured;
+    const owner = router.ownerBinding(selected.owner);
+    return {
+      client: new CapturedStoppedTeamImport({
+        owner,
+        client: captured.client,
+        start: () => router.startOwner(selected.owner),
+        available,
+      }),
+      authority: {
+        root: owner.storageRoot,
+        ownerId: owner.ownerId,
+        profileId: owner.profileId,
+        principalId: selected.importAuthority.principalId,
+        contextIds: [...selected.contextIds],
+        assertCurrent: () => {
+          assertBackendRequestGuard(guard);
+          if (!available()) throw new BackendRoutingError('unavailable');
+        },
+      },
+      registerPublished: (record: TeamRegistryRecord) =>
+        this.registerDynamic(record, selected.owner, contextId, guard),
+    };
+  }
+
+  /** Read creation metadata from its original Host; Main stores only immutable routing bindings. */
+  async discoverBindings(
+    contextId: string,
+    guard?: BackendRequestGuard
+  ): Promise<BackendConnectionSnapshot> {
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    if (!this.router || this.state !== 'ready') {
+      if (this.descriptor?.creation?.contextIds.includes(contextId))
+        await this.registry(contextId, guard);
+      return this.listBindings(contextId);
+    }
+    const router = this.router,
+      clients = new Map(this.clients);
+    const current = () => {
+      assertBackendRequestGuard(guard);
+      if (
+        this.sealed ||
+        this.state !== 'ready' ||
+        this.router !== router ||
+        [...clients].some(([key, captured]) => this.clients.get(key) !== captured)
+      )
+        throw new BackendRoutingError('unavailable');
+    };
+    const capturedGuard = {
+      isCurrent: () => {
+        current();
+        return true;
+      },
+    };
+    const unavailable = new Map<string, CapturedConnectionUnavailable>();
+    const retain = (rows: CapturedConnectionUnavailable[]) => {
+      current();
+      for (const row of rows)
+        if (!unavailable.has(row.ownerResourceRef)) unavailable.set(row.ownerResourceRef, row);
+    };
+    const creation = this.descriptor?.creation;
+    if (creation?.contextIds.includes(contextId)) {
+      let reading = this.registryReads.get(contextId);
+      if (!reading) {
+        reading = (async () => {
+          const result = await readCapturedOwnerAvailability({
+            router,
+            owner: creation.owner,
+            assertCurrent: current,
+            read: async () => {
+              const target = await this.registry(contextId, capturedGuard);
+              return target.client.list(contextId, capturedGuard);
+            },
+          });
+          if ('unavailable' in result) return [result.unavailable];
+          for (const record of result.value.teams) {
+            current();
+            await this.registerDynamic(record, creation.owner, contextId, capturedGuard);
+            current();
+          }
+          return [];
+        })();
+        this.registryReads.set(contextId, reading);
+        void reading
+          .finally(() => {
+            if (this.registryReads.get(contextId) === reading) this.registryReads.delete(contextId);
+          })
+          .catch(() => undefined);
+      }
+      retain(await reading);
+    }
+    const entries = this.handleDefinitions().filter((entry) => entry.contextId === contextId);
+    const retired = await readCapturedConnectionAvailability({
+      contextId,
+      router,
+      clients,
+      entries,
+      assertCurrent: current,
+      guard: capturedGuard,
+    });
+    retain(retired.unavailable);
+    for (const entry of entries)
+      if (retired.replaced.has(ownerKey(entry.owner))) this.retiredHandles.delete(entry.handleId);
+    for (const handle of retired.retired) this.retiredHandles.add(handle);
+    const snapshot = this.listBindings(contextId);
+    current();
+    return unavailable.size
+      ? { ...snapshot, unavailableOwners: [...unavailable.values()] }
+      : snapshot;
+  }
+
+  async createConfiguredTeam(
+    contextId: string,
+    commandId: string,
+    payload: CreateTeamRegistryPayload,
+    guard?: BackendRequestGuard
+  ): Promise<BackendHandle> {
+    const captured = structuredClone(payload);
+    if (captured.contextId !== contextId) throw new BackendRoutingError('forbidden');
+    const target = await this.registry(contextId, guard);
+    let receipt;
+    try {
+      receipt = await target.client.create(commandId, captured, guard);
+    } catch (originalError) {
+      // An uncertain response permits one original read, never a replacement create.
+      receipt = await target.client.lookup(commandId, captured, guard);
+      if (!receipt) throw originalError;
+    }
+    if (receipt.commandId !== commandId || receipt.phase !== 'published')
+      throw new BackendRoutingError('hold', 'unknown');
+    await this.registerDynamic(receipt.record, target.owner, contextId, guard);
+    return { handleId: receipt.record.binding.handleId };
+  }
+
+  /** Captures one creation owner for preparation, polling and original cleanup. */
+  async captureTeamCreation(contextId: string, guard: BackendRequestGuard) {
+    const target = await this.registry(contextId, guard);
+    const captured = this.clients.get(ownerKey(target.owner));
+    if (!this.router || !captured) throw new BackendRoutingError('unavailable');
+    return captureCreatedTeamConversation({
+      ...target,
+      router: this.router,
+      contextId,
+      guard,
+      requestTimeoutMs: captured.client.profile.requestTimeoutMs,
+      refreshSources: (cwd) => this.refreshLaunchConfiguration(contextId, cwd, guard),
+      register: (record) => this.registerDynamic(record, target.owner, contextId, guard),
+    });
+  }
+
+  prepareCapturedModels(
+    handle: BackendHandle,
+    request: CapturedTeamModelRequest,
+    guard: BackendRequestGuard
+  ) {
+    return prepareCapturedTeamModels({
+      handle,
+      request,
+      isCurrent: () => guard.isCurrent(),
+      intents: this.options.modelIntents,
+      backend: {
+        invoke: (input, readiness) =>
+          this.facade.invoke(
+            input,
+            input.operation === 'team.launch.probe.cancel' ? undefined : guard,
+            readiness
+          ),
+      },
+    });
+  }
+
+  prepareCreatedTeam(
+    contextId: string,
+    preparationId: string,
+    draft: TeamCreateRequest,
+    guard: BackendRequestGuard
+  ) {
+    const captured = structuredClone(draft);
+    const identity = JSON.stringify([
+      contextId,
+      preparationId,
+      createdTeamSelectionSignature(captured),
+    ]);
+    return this.creationChecks.run(identity, async (isLatest) => {
+      const current = { isCurrent: () => isLatest() && guard.isCurrent() };
+      const target = await this.captureTeamCreation(contextId, current);
+      return prepareCreatedHostTeam({
+        target,
+        contextId,
+        preparationId,
+        draft: captured,
+        guard: current,
+      });
+    });
+  }
+
+  /** Restored background schedules retain this exact owner/router independently of the visible tab. */
+  async captureScheduledRuns(
+    contextId: string,
+    handle: BackendHandle,
+    scheduleId: string,
+    guard: BackendRequestGuard
+  ) {
+    handle = Object.freeze({ ...handle });
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const router = this.router,
+      definition = this.handleDefinitions().find((row) => row.handleId === handle.handleId);
+    if (!router || !definition || this.sealed || !this.authorizeHandle(contextId, handle))
+      throw new BackendRoutingError('forbidden');
+    await router.startOwner(definition.owner);
+    const owned = {
+      isCurrent: () =>
+        !this.sealed && this.router === router && this.authorizeHandle(contextId, handle),
+    };
+    const current = { isCurrent: () => owned.isCurrent() && guard.isCurrent() };
+    assertBackendRequestGuard(current);
+    return new CapturedScheduledRuns(
+      (operation, runId, payload) =>
+        router.request(handle, {
+          commandId: operation === 'start' ? runId : `${runId}:${operation}`,
+          method: `schedule.run.${operation}`,
+          payload,
+          control: operation !== 'start',
+          guard: operation === 'cancel' ? owned : current,
+        }),
+      scheduleId
+    );
+  }
+
+  /** Existing backup scheduler captures one exact foreground owner set per invocation. */
+  async captureBackup(contextId: string, guard: BackendRequestGuard) {
+    const selected = await this.discoverBindings(contextId, guard);
+    assertBackendRequestGuard(guard);
+    const router = this.router;
+    if (selected.state !== 'ready' || selected.unavailableOwners?.length || !router)
+      throw new BackendRoutingError('hold');
+    const handles = selected.bindings.map((entry) => ({ ...entry.handle }));
+    return createCapturedHostBackup({
+      handles,
+      router,
+      guard: {
+        isCurrent: () =>
+          !this.sealed &&
+          this.router === router &&
+          guard.isCurrent() &&
+          handles.every((handle) => this.authorizeHandle(contextId, handle)),
+      },
+    });
+  }
+
+  listBindings(contextId: string): BackendConnectionSnapshot {
+    const router = this.router;
+    return {
+      state: this.sealed ? 'shutting-down' : this.state,
+      bindings:
+        this.state !== 'ready' || this.sealed || !router
+          ? []
+          : this.handleDefinitions()
+              .filter(
+                (entry) => entry.contextId === contextId && !this.retiredHandles.has(entry.handleId)
+              )
+              .map((entry) => ({
+                handle: { handleId: entry.handleId },
+                label: entry.label,
+                ...(entry.projectContextMode
+                  ? { projectContextMode: entry.projectContextMode }
+                  : {}),
+                ...(entry.projectContext
+                  ? { projectContext: structuredClone(entry.projectContext) }
+                  : {}),
+                ownerResourceRef: router.ownerDisplayRef(entry.owner),
+                teamResourceRef: crossTeamTeamResourceRef(
+                  router.ownerDisplayRef(entry.owner),
+                  entry.scope
+                ),
+                members: entry.members.map((member) => ({
+                  memberId: member.memberId,
+                  label: member.label,
+                })),
+              })),
+    };
+  }
+
+  authorizeHandle(contextId: string, handle: BackendHandle): boolean {
+    return (
+      !this.sealed &&
+      this.state === 'ready' &&
+      this.handleDefinitions().some(
+        (entry) => entry.contextId === contextId && entry.handleId === handle.handleId
+      )
+    );
+  }
+
+  /** Native Host health, independent of provider authentication and any fork installation. */
+  async readRuntimeHealth(
+    contextId: string,
+    guard?: BackendRequestGuard
+  ): Promise<{ buildId: string }> {
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const descriptor = this.descriptor,
+      router = this.router;
+    if (this.sealed || this.state !== 'ready' || !descriptor || !router)
+      throw new BackendRoutingError('unavailable');
+    const key = ownerKey(descriptor.defaultOwner);
+    const permitted = [...descriptor.handles, ...(descriptor.management ?? [])].some(
+      (entry) => entry.contextId === contextId && ownerKey(entry.owner) === key
+    );
+    if (!permitted) throw new BackendRoutingError('forbidden');
+    const handshake = await router.startOwner(descriptor.defaultOwner);
+    assertBackendRequestGuard(guard);
+    if (this.sealed) throw new BackendRoutingError('shutting-down');
+    return { buildId: handshake.buildId };
+  }
+
+  async captureProviderManagement(
+    contextId: string,
+    projectPath: string | null,
+    guard?: BackendRequestGuard,
+    runtimeId: 'opencode' | 'codex' | 'claude' = 'opencode'
+  ): Promise<CapturedProviderManagement> {
+    if (
+      projectPath !== null &&
+      (typeof projectPath !== 'string' || !isAbsolute(projectPath) || projectPath.includes('\0'))
+    )
+      throw new BackendRoutingError('invalid-binding');
+    const selectedPath = projectPath === null ? null : resolve(projectPath);
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    if (this.sealed) throw new BackendRoutingError('shutting-down');
+    const selected = this.descriptor?.management?.find(
+      (entry) =>
+        entry.runtimeId === runtimeId &&
+        entry.contextId === contextId &&
+        entry.projectPath === selectedPath
+    );
+    return this.managementTargets.captureCurrentManagementTarget(selected, guard);
+  }
+
+  /** Main-only installer/config publication; renderer input cannot supply a grant or owner. */
+  async captureRuntimeSources(
+    contextId: string,
+    projectPath: string | null,
+    runtimeId: 'opencode' | 'codex' | 'claude',
+    guard?: BackendRequestGuard
+  ) {
+    if (projectPath !== null && (!isAbsolute(projectPath) || projectPath.includes('\0')))
+      throw new BackendRoutingError('invalid-binding');
+    await this.initialize();
+    const selected = this.descriptor?.management?.find(
+      (entry) =>
+        entry.runtimeId === runtimeId &&
+        entry.contextId === contextId &&
+        entry.projectPath === (projectPath === null ? null : resolve(projectPath))
+    );
+    const target = await this.managementTargets.captureSourceTarget(selected, guard);
+    if (!target) throw new BackendRoutingError('unavailable');
+    return target;
+  }
+
+  /** New preflight only; retained read/cancel/submit keep their original source revision. */
+  async refreshLaunchConfiguration(
+    contextId: string,
+    projectPath: string,
+    guard: BackendRequestGuard,
+    handle?: BackendHandle
+  ): Promise<void> {
+    if (!isAbsolute(projectPath) || projectPath.includes('\0'))
+      throw new BackendRoutingError('invalid-binding');
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    const owner = handle
+      ? this.handleDefinitions().find(
+          (row) => row.handleId === handle.handleId && row.contextId === contextId
+        )?.owner
+      : this.descriptor?.creation?.owner;
+    if (!owner || (handle && !this.authorizeHandle(contextId, handle)))
+      throw new BackendRoutingError('forbidden');
+    const available =
+      this.descriptor?.management?.filter(
+        (row) =>
+          row.contextId === contextId &&
+          row.runtimeId === 'opencode' &&
+          ownerKey(row.owner) === ownerKey(owner)
+      ) ?? [];
+    const selected =
+      available.find((row) => row.projectPath === resolve(projectPath)) ??
+      available.find((row) => row.projectPath === null);
+    if (!selected) return;
+    const sources = await this.managementTargets.captureSourceTarget(selected, guard);
+    if (sources) await refreshCapturedRuntimeConfiguration(sources, selected);
+  }
+
+  /** Main Skills choices derive solely from the original authorized descriptor, including optional runtimes. */
+  async captureSkillsManagement(
+    contextId: string,
+    projectPath: string | null,
+    guard: BackendRequestGuard
+  ) {
+    assertBackendRequestGuard(guard);
+    await this.initialize();
+    assertBackendRequestGuard(guard);
+    if (this.sealed || this.state !== 'ready') throw new BackendRoutingError('unavailable');
+    const selected =
+      this.descriptor?.management?.filter(
+        (entry) => entry.contextId === contextId && entry.projectPath === projectPath
+      ) ?? [];
+    const byRuntime = (runtime: 'claude' | 'codex' | 'opencode') => {
+      const matches = selected.filter((entry) => entry.runtimeId === runtime);
+      if (matches.length > 1) throw new BackendRoutingError('invalid-binding');
+      return matches[0];
+    };
+    const claude = byRuntime('claude'),
+      codex = byRuntime('codex');
+    const common = claude ?? codex ?? byRuntime('opencode');
+    if (!common) throw new BackendRoutingError('unavailable');
+    const choices = [
+      ...(claude ? [{ rootKind: 'claude' as const, selected: claude }] : []),
+      ...(codex ? [{ rootKind: 'codex' as const, selected: codex }] : []),
+      { rootKind: 'agents' as const, selected: common },
+      { rootKind: 'cursor' as const, selected: common },
+    ];
+    return Promise.all(
+      choices.map(async ({ rootKind, selected }) => ({
+        rootKind,
+        owner: await this.managementTargets.captureCurrentManagementTarget(selected, guard),
+      }))
+    );
+  }
+
+  /** Restore an original private intent; a changed descriptor cannot silently retarget it. */
+  async restoreProviderManagement(
+    contextId: string,
+    targetId: string,
+    guard?: BackendRequestGuard
+  ): Promise<CapturedProviderManagement> {
+    await this.initialize();
+    if (!/^[a-f0-9]{64}$/.test(targetId)) throw new BackendRoutingError('invalid-binding');
+    const selected = this.descriptor?.management?.find(
+      (entry) => this.managementTargets.managementTargetId(entry) === targetId
+    );
+    if (!selected) {
+      for (const original of this.descriptor?.management ?? []) {
+        if (original.contextId !== contextId) continue;
+        const sources = await this.managementTargets.captureSourceTarget(original);
+        if (!sources) continue;
+        for (const retained of await sources.retained()) {
+          const capture = this.managementTargets.captureManagementTarget(original, guard, retained);
+          if (capture.targetId === targetId) return capture;
+        }
+      }
+    }
+    return this.managementTargets.captureManagementTarget(selected, {
+      isCurrent: () => selected?.contextId === contextId && (guard?.isCurrent() ?? true),
+    });
+  }
+
+  shutdown(): ReturnType<BackendOwnerRouter['shutdown']> {
+    this.sealed = true;
+    this.state = 'shutting-down';
+    return (this.router?.shutdown() ?? Promise.resolve([])).then(async (results) => {
+      await this.closeNativeOwners();
+      return results;
+    });
+  }
+
+  private async closeNativeOwners(): Promise<void> {
+    const outcomes = await Promise.all(
+      [...this.clients.values()].map(
+        (owner) => owner.nativeCustody?.close() ?? Promise.resolve(true)
+      )
+    );
+    if (outcomes.some((value) => !value)) throw new BackendRoutingError('hold');
+  }
+}

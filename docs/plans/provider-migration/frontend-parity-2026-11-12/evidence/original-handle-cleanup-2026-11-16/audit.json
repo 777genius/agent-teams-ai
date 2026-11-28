@@ -1,0 +1,366 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_3BE1_OPENCODE_SECONDARY_CLEANUP_SOURCE_AUDIT",
+  "disposition": "CONCRETE_PRE_WAIT_CONTROL_FLOW_DEFECT_CONFIRMED; INERT_ONE_PATH_CORRECTION_PREPARED",
+  "execution": "DATA_ONLY; no project imports/tests/compilers/lint/native runs, no Git/index/CI/ref or canonical writes",
+  "original": {
+    "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "jobId": 133531812580,
+    "provider": "opencode",
+    "rootStatus": "INCOMPLETE",
+    "rootCleanup": true,
+    "scenarioStatus": "INCOMPLETE",
+    "scenarioStage": "Team-A",
+    "scenarioCleanup": false,
+    "mainEpoch": "fb687f04-6980-4216-9345-991ba53cd280"
+  },
+  "evidence": [
+    {
+      "path": "/tmp/migration-evidence-20261116/native/3be1-process-win-x64-133531812580/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+      "bytes": 18988,
+      "lines": 431,
+      "gitBlob": "f546527c561dfc5cddbb194ae639a2cba0b48a4c",
+      "sha256": "ce5ae1f2d42a8d26cb63df038323ba201961d4b8277730df3e4116f16dcd13af"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/3be1-process-win-x64-133531812580/archive/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode.log",
+      "bytes": 12183,
+      "lines": 61,
+      "gitBlob": "569ec4760cd68d2b653916dc408ef35d24e1e27f",
+      "sha256": "93e9283e1a2d9562c4742193f7f933d9fa230e4b5df993307780be671e516c7b"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/plan49-actual-source-review/after/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59419,
+      "lines": 800,
+      "gitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/direct-i386-root-inert/preimages/tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "lines": 192,
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/a07-direct-i386-source-review/after/tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 19440,
+      "lines": 356,
+      "gitBlob": "8fc74b25d5334395b455ee189e333b53ec9e4d36",
+      "sha256": "45892c8dde062cbb34f09c5187614a1db237bbff8779edd03bf7b94f281247fc"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/native/current-consumer-regions-proposal/reference/tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "lines": 231,
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd"
+    }
+  ],
+  "sourceBinding": {
+    "map": "/tmp/migration-evidence-20261116/root/plan53-consumer-parent-3be1-selection.json",
+    "allSourcePinsMatchedSavedParentLeaves": true,
+    "nativeGateContextSingleRead": "Exact immutable blob27c6 fetched once; concurrently peer located identical retained body, which is independently rehashed and equal to full fetched text. Actor source reused from matching retained8fc74; no actor download."
+  },
+  "jobs": [
+    {
+      "logLine": 8,
+      "jobSlot": 0,
+      "root": {
+        "pid": 4468,
+        "birth": "01dd75fde406202e"
+      },
+      "capability": "60d07584-8002-4388-aa95-ed1e938e3d9d",
+      "rootCaptured": true,
+      "witnessCaptured": true,
+      "resumed": true,
+      "stopped": true,
+      "drained": true,
+      "released": true,
+      "loggedOriginalHandleAbsent": true,
+      "finalOriginalHandleAbsent": true,
+      "custodyTimings": {
+        "allocate": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.7684000000003834,
+          "firstStartMs": 1480.2904999999998,
+          "lastEndMs": 1481.0589000000002
+        },
+        "prepare": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 41.068199999999706,
+          "firstStartMs": 1489.7558000000001,
+          "lastEndMs": 1530.8239999999998
+        },
+        "resume": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 12.681700000000092,
+          "firstStartMs": 1555.8376,
+          "lastEndMs": 1568.5193000000002
+        },
+        "stop": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.9983999999999469,
+          "firstStartMs": 1831.8371,
+          "lastEndMs": 1832.8355
+        },
+        "drain": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.2622999999998683,
+          "firstStartMs": 1835.3119,
+          "lastEndMs": 1835.5741999999998
+        },
+        "release": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 1.9279999999998836,
+          "firstStartMs": 1836.6861000000001,
+          "lastEndMs": 1838.6141
+        }
+      },
+      "firstCloseEntryMs": 21398.299000000003,
+      "entryStart": 0,
+      "entryEnd": 1
+    },
+    {
+      "logLine": 9,
+      "jobSlot": 1,
+      "root": {
+        "pid": 964,
+        "birth": "01dd75fde515e6ad"
+      },
+      "capability": "8d3f8dab-66a3-4426-bef1-64f6c258140a",
+      "rootCaptured": true,
+      "witnessCaptured": true,
+      "resumed": true,
+      "stopped": true,
+      "drained": true,
+      "released": true,
+      "loggedOriginalHandleAbsent": false,
+      "finalOriginalHandleAbsent": true,
+      "custodyTimings": {
+        "allocate": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.2151000000003478,
+          "firstStartMs": 3241.9345999999996,
+          "lastEndMs": 3242.1497
+        },
+        "prepare": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 62.82369999999992,
+          "firstStartMs": 3248.549,
+          "lastEndMs": 3311.3727
+        },
+        "resume": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 29.327100000000428,
+          "firstStartMs": 3336.2210999999998,
+          "lastEndMs": 3365.5482
+        },
+        "stop": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 7.956100000000333,
+          "firstStartMs": 4371.4235,
+          "lastEndMs": 4379.3796
+        },
+        "drain": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.07229999999981374,
+          "firstStartMs": 4380.0389,
+          "lastEndMs": 4380.111199999999
+        },
+        "release": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 1.5652000000000044,
+          "firstStartMs": 4380.487,
+          "lastEndMs": 4382.0522
+        }
+      },
+      "firstCloseEntryMs": 21398.299000000003,
+      "entryStart": 1,
+      "entryEnd": 2
+    },
+    {
+      "logLine": 10,
+      "jobSlot": 2,
+      "root": {
+        "pid": 4004,
+        "birth": "01dd75fdebd127c7"
+      },
+      "capability": "00f02034-05ad-4687-b881-c5db777b9d27",
+      "rootCaptured": true,
+      "witnessCaptured": true,
+      "resumed": false,
+      "stopped": true,
+      "drained": true,
+      "released": true,
+      "loggedOriginalHandleAbsent": false,
+      "finalOriginalHandleAbsent": false,
+      "custodyTimings": {
+        "allocate": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.24029999999947904,
+          "firstStartMs": 11108.9459,
+          "lastEndMs": 11109.1862
+        },
+        "prepare": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 60.91609999999855,
+          "firstStartMs": 14543.9059,
+          "lastEndMs": 14604.821999999998
+        },
+        "resume": {
+          "calls": 0,
+          "settled": 0,
+          "returned": 0,
+          "totalMs": 0,
+          "firstStartMs": null,
+          "lastEndMs": null
+        },
+        "stop": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 14.331399999999121,
+          "firstStartMs": 17613.7544,
+          "lastEndMs": 17628.0858
+        },
+        "drain": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 0.06929999999920256,
+          "firstStartMs": 17637.625600000003,
+          "lastEndMs": 17637.694900000002
+        },
+        "release": {
+          "calls": 1,
+          "settled": 1,
+          "returned": 1,
+          "totalMs": 1.4796999999998661,
+          "firstStartMs": 17638.0606,
+          "lastEndMs": 17639.5403
+        }
+      },
+      "firstCloseEntryMs": 21398.299000000003,
+      "entryStart": 2,
+      "entryEnd": 2
+    }
+  ],
+  "firstFailure": {
+    "rawLines": [
+      22,
+      34
+    ],
+    "message": "Original source Team readiness",
+    "source": "poll:62 -> launch:489 -> Team-A:545",
+    "readCount": 77,
+    "lastCompletedReadElapsedMs": 14983.7021,
+    "qualification": "The original next-iteration deadline check failed. No deadline relaxation, no primary-cost cause claim here; native owns separate current() analysis."
+  },
+  "secondaryFailure": {
+    "rawLines": [
+      35,
+      56
+    ],
+    "source": "close:316 -> close AggregateError:323 -> finally:726 -> outer AggregateError:739",
+    "onlyNestedAssertion": "Every original physical Job retains confirmed Stop/drain/release",
+    "decisiveFalseOperand": "job.resumed",
+    "witnessWaitAttemptedForSlot2": false,
+    "interpretation": "rootCaptured and witnessCaptured true; resumed false with zero resume calls; stopped/drained/released true. The conjunction throws before witness.wait. handleAbsent starts false and was not updated; it does not report a failed native wait or prove a surviving process."
+  },
+  "chronology": {
+    "slot0": "publish-A waits its same witness at402 and sets true at403; cleanup log already true. wait() is memoized, so later call reuses the result.",
+    "slot1": "Cleanup log310-315 precedes wait318 and true assignment319. Final receipt records true; no separate late process-exit timing is retained.",
+    "slot2": "Stop17613.7544..17628.0858, drain17637.6256..17637.6949, release17638.0606..17639.5403; firstClose21398.299ms. Those completed acknowledgements precede close, but no original HANDLE wait ran for this slot."
+  },
+  "originalHandleOracle": {
+    "capture": "Scenario235-237 requests query-wait-gated on the original prepare root pid/birth, before preparation returns to Host/resume.",
+    "native": "nativeFixture.cpp154-186: same original outer Job, OpenProcess(SYNCHRONIZE|PROCESS_QUERY_LIMITED_INFORMATION), FILETIME birth equality, captured reply, optional Q at most4, W -> WaitForSingleObject on same HANDLE, CloseHandle; exit0 only WAIT_OBJECT_0, otherwise25. No PID reopen or signal.",
+    "javascript": "nativeGateContext85-150 retains the actor ChildProcess, validates captured, memoizes wait(). One W write then original exit promise; assert.equal(exit,0) qualifies the held original process object becoming signaled. Root target exit status is not asserted by this oracle.",
+    "timeouts": "Existing independent10000ms timeout around W write and actor exit; non-vendor actor WaitForSingleObject15000ms. No new timeout/counter, no per-read cancellation claim. Original outer controller bounds remain.",
+    "limit": "A successful future wait proves this original captured root process object terminated; it is not a proof of every descendant, all HANDLEs in the system, or target exit0."
+  },
+  "outerBoundary": {
+    "gateSourceLines": [
+      215,
+      227
+    ],
+    "rootCleanupMeaning": "Gate finally killed/awaited its sentinel; root cleanup=true records that timeout(exited) succeeded. Source scenario cleanup remains false and failure is thrown.",
+    "controllerRow": {
+      "gateController": "drained",
+      "rootExitCode": 1,
+      "activeProcesses": 0
+    },
+    "nonTransfer": "Outer controller drain and activeProcesses0 cannot retroactively substitute the skipped inner witness assertion."
+  },
+  "candidate": {
+    "sourcePath": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "before": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/before/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59419,
+      "lines": 800,
+      "gitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+    },
+    "after": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/after/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+      "bytes": 59461,
+      "lines": 800,
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436"
+    },
+    "patch": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/candidate.patch",
+      "bytes": 1166,
+      "lines": 16,
+      "gitBlob": "96da4bd5b4277e58629f2116be867ba801b8a296",
+      "sha256": "533e3ff2b76b4754b232218c1d2dd9ebf2fb3676887449ee48a1cfcdea5c8425"
+    },
+    "change": "Snapshot the byte-identical original root/witness/resumed/stopped/drained/released conjunction before waiting; await the same optional captured witness and assign handleAbsent only after strict exit0; then assert the captured conjunction with the original message.",
+    "acceptance": "No successful row passes without its original pre-wait root/witness/resumed/stopped/drained/released state. No handleAbsent=true without actual awaited actor exit0. Missing witness fails undefined!=0. Unresumed slot still fails the saved composite after physical absence is observed; primary readiness is retained.",
+    "cost": "Makes the one existing memoized original-witness wait reachable on a pre-composite-failure path. It adds no wait operation to the normal successful path and sends no extra W when wait already occurred. Failure-path real wait/event/timeout cost is now paid inside original limits.",
+    "errorOrdering": "If witness waiting fails, the later composite assertion is not reached. No claim that all old cleanup assertions execute after wait failure. The original primary readiness failure remains first in the existing outer AggregateError. Successful-wait cases still assert the original captured conjunction/message.",
+    "lineCap": 800,
+    "allOutsideFourLineWindowIdentical": true,
+    "inverseRestoresWholePreimage": true,
+    "selected": false,
+    "published": false,
+    "executed": false,
+    "observationPoint": "The custody conjunction is evaluated before the wait at its original position. Late custody acknowledgements during the wait cannot turn a previously false conjunction into acceptance."
+  },
+  "limits": [
+    "No newly observed physical absence for original slot2",
+    "No primary readiness repair/cause claim",
+    "No general cleanup or release qualification",
+    "No new test-only RED cycle proposed",
+    "Final current-parent documentary selection/publication/R2 and resulting-source original CI remain root-owned"
+  ]
+}

@@ -16,6 +16,7 @@ import { type PluginInstallationStateService } from './state/PluginInstallationS
 import type {
   EnrichedPlugin,
   InstalledMcpEntry,
+  InstalledPluginEntry,
   McpCatalogItem,
   McpSearchResult,
   PluginCatalogItem,
@@ -36,11 +37,15 @@ export class ExtensionFacadeService {
   /**
    * Get all plugins enriched with install status and counts.
    */
-  async getEnrichedPlugins(projectPath?: string, forceRefresh = false): Promise<EnrichedPlugin[]> {
+  async getEnrichedPlugins(
+    projectPath?: string,
+    forceRefresh = false,
+    captured?: { entries: InstalledPluginEntry[]; installCounts: [string, number][] }
+  ): Promise<EnrichedPlugin[]> {
     const [catalog, installed, counts] = await Promise.all([
       this.pluginCatalog.getPlugins(forceRefresh),
-      this.pluginState.getInstalledPlugins(projectPath),
-      this.pluginState.getInstallCounts(),
+      captured ? captured.entries : this.pluginState.getInstalledPlugins(projectPath),
+      captured ? new Map(captured.installCounts) : this.pluginState.getInstallCounts(),
     ]);
 
     // Build installed lookup: pluginId → entries[]

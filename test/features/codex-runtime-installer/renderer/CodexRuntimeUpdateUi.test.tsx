@@ -67,6 +67,60 @@ describe('Codex runtime update UI', () => {
     });
 
     expect(onInstall).toHaveBeenCalledTimes(2);
+    const pending: CodexRuntimeStatus = {
+      ...staleStatus,
+      binaryPath: undefined,
+      source: 'captured-host',
+      sourceRevision: 'a'.repeat(64),
+      state: 'installing',
+      progress: {
+        phase: 'installing',
+        percent: 100,
+        detail: 'Codex package verified; confirming the runtime selection.',
+      },
+    };
+    const render = async (status: CodexRuntimeStatus, loading = false) =>
+      act(async () => {
+        root.render(
+          <CodexRuntimeUpdateDialog
+            open
+            onOpenChange={() => undefined}
+            status={status}
+            loading={loading}
+            onInstall={onInstall}
+          />
+        );
+      });
+    await render(pending, true);
+    expect(document.body.textContent).toContain('confirming the runtime selection');
+    expect(document.body.textContent).not.toContain('Update Ready');
+    const waitingButton = Array.from(
+      document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')
+    ).find((button) => button.disabled && button.textContent?.includes('Updating'));
+    expect(waitingButton).toBeDefined();
+    await act(async () => {
+      waitingButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(onInstall).toHaveBeenCalledTimes(2);
+    await render({
+      ...pending,
+      state: 'failed',
+      error: 'TEST original source publication held',
+      progress: { phase: 'failed', detail: 'TEST original source publication held' },
+    });
+    expect(document.body.textContent).toContain('TEST original source publication held');
+    expect(document.body.textContent).not.toContain('Update Ready');
+    await render({
+      ...pending,
+      state: 'ready',
+      version: '0.144.1',
+      updateAvailable: false,
+      sourceRevision: 'b'.repeat(64),
+      progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
+    });
+    expect(document.body.textContent).toContain('Update Ready');
+    expect(document.body.textContent).toContain('Codex is ready for new launches.');
+    expect(onInstall).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());
   });
 
@@ -104,6 +158,41 @@ describe('Codex runtime update UI', () => {
     expect(progress?.getAttribute('aria-valuenow')).toBe('42');
     expect(document.body.textContent).toContain('Downloading Codex 42%');
     await act(async () => root.unmount());
+  });
+
+  it('shows a refresh error alongside completed installation without offering another install', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const onInstall = vi.fn();
+    try {
+      await act(async () => {
+        root.render(
+          <CodexRuntimeUpdateDialog
+            open
+            onOpenChange={() => undefined}
+            status={{
+              ...staleStatus, updateAvailable: false, state: 'ready',
+              progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
+            }}
+            loading={false}
+            error="TEST original status refresh unavailable"
+            onInstall={onInstall}
+          />
+        );
+      });
+      const dialog = document.body.querySelector('[role="dialog"]');
+      expect(dialog?.textContent).toContain('Update Ready');
+      expect(dialog?.textContent).toContain('Codex is ready for new launches.');
+      expect(dialog?.textContent).toContain('TEST original status refresh unavailable');
+      expect(Array.from(dialog?.querySelectorAll('button') ?? []).some(button =>
+        /install|retry|update/i.test(button.textContent ?? '')
+      )).toBe(false);
+      expect(onInstall).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('falls back safely for non-finite progress and missing completion detail', async () => {

@@ -77,6 +77,9 @@ describe('TeamProvisioningWorkspaceTrust', () => {
       const nested = path.join(repo, 'packages', 'app');
       const worktree = path.join(repo, 'teammate');
       await mkdir(path.join(repo, '.git', 'worktrees', 'teammate'), { recursive: true });
+      // Git rejects HEAD/config-only directories. Keep the fixture a real gitdir.
+      await mkdir(path.join(repo, '.git', 'refs'), { recursive: true });
+      await mkdir(path.join(repo, '.git', 'objects'), { recursive: true });
       await writeFile(path.join(repo, '.git', 'HEAD'), 'ref: refs/heads/main\n');
       await writeFile(path.join(repo, '.git', 'config'), '[core]\n');
       await mkdir(nested, { recursive: true });
@@ -102,9 +105,33 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     }
   });
 
+  it('resolves standalone Git directory metadata through managed Git from a nested checkout', async () => {
+    const temp = await mkdtemp(path.join(tmpdir(), 'agent-teams-separate-git-'));
+    const checkout = path.join(temp, 'checkout');
+    const nested = path.join(checkout, 'nested');
+    const gitDir = path.join(temp, 'metadata');
+    try {
+      await mkdir(nested, { recursive: true });
+      await mkdir(path.join(gitDir, 'objects'), { recursive: true });
+      await mkdir(path.join(gitDir, 'refs'), { recursive: true });
+      await writeFile(path.join(checkout, '.git'), `gitdir: ${gitDir}\n`);
+      await writeFile(path.join(gitDir, 'HEAD'), 'ref: refs/heads/main\n');
+      await writeFile(
+        path.join(gitDir, 'config'),
+        '[core]\n\trepositoryformatversion = 0\n\tbare = false\n'
+      );
+      const ports = createNodeWorkspaceTrustWorkspaceCollectionPorts();
+      await expect(ports.resolveGitRoot(nested)).resolves.toBe(await realpath(checkout));
+    } finally {
+      await rm(temp, { recursive: true, force: true });
+    }
+  });
+
   it('collects workspace trust candidates with injected path and git ports', async () => {
     const ports = createWorkspacePorts({
-      resolveGitRoot: vi.fn(async (cwd) => (cwd === '/repo/worktree' ? '/repo/.git/worktree' : '/repo')),
+      resolveGitRoot: vi.fn(async (cwd) =>
+        cwd === '/repo/worktree' ? '/repo/.git/worktree' : '/repo'
+      ),
     });
 
     const result = await collectWorkspaceTrustWorkspaces({
@@ -121,6 +148,23 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     expect(ports.realpath).toHaveBeenCalledWith('/repo');
     expect(ports.resolveCanonicalGitRoot).toHaveBeenCalledWith('/real/repo');
     expect(ports.resolveCanonicalGitRoot).toHaveBeenCalledWith('/real/repo/.git/worktree');
+  });
+
+  it('does not promote a stale Git root when its canonical path is unreadable', async () => {
+    const ports = createWorkspacePorts({
+      realpath: vi.fn(async (value) => (value === '/stale/git-root' ? null : `/real${value}`)),
+      resolveGitRoot: vi.fn(async () => '/stale/git-root'),
+    });
+
+    const workspaces = await collectWorkspaceTrustWorkspaces({
+      cwd: '/repo',
+      members: [],
+      ports,
+    });
+
+    expect(workspaces.some((workspace) => workspace.source === 'team-root')).toBe(true);
+    expect(workspaces.some((workspace) => workspace.source === 'git-root')).toBe(false);
+    expect(ports.resolveCanonicalGitRoot).not.toHaveBeenCalled();
   });
 
   it('falls back to empty args-only plan when coordinator planning fails', async () => {
@@ -172,10 +216,7 @@ describe('TeamProvisioningWorkspaceTrust', () => {
     const hookSettingsProvider = vi.fn(async () => ({ hooks: { Stop: [{ command: 'sync' }] } }));
 
     await expect(
-      buildRuntimeTurnSettledHookSettingsArgs(
-        { providerId: 'anthropic' },
-        { hookSettingsProvider }
-      )
+      buildRuntimeTurnSettledHookSettingsArgs({ providerId: 'anthropic' }, { hookSettingsProvider })
     ).resolves.toEqual(['--settings', JSON.stringify({ hooks: { Stop: [{ command: 'sync' }] } })]);
     await expect(
       buildRuntimeTurnSettledHookSettingsArgs({ providerId: 'codex' }, { hookSettingsProvider })

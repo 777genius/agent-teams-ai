@@ -1,0 +1,298 @@
+{
+  "kind": "INDEPENDENT_P10_B2_FIVE_SOURCE_AND_PROSPECTIVE_SECTION35_R2",
+  "decision": "APPROVE_EXACT_SOURCE_AND_PROSPECTIVE_R1_PROSE",
+  "scope": "Five existing source paths and the exact prospective P10 section35; current-parent/full-tree/lease and published-R1 binding remain root-owned, separately reviewable prerequisites.",
+  "reviewer": "/root/native_failures",
+  "mode": {
+    "pureDataAndSourceReadingOnly": true,
+    "projectExecution": false,
+    "testOrTypeOrLintExecution": false,
+    "nativeGuiVendorExecution": false,
+    "canonicalOrGitIndexRefWrites": false,
+    "newCiPollLogArchiveOrSourceDownload": false,
+    "actualCiPassClaim": false,
+    "priorPublicationChronologyClaim": false
+  },
+  "blockers": [],
+  "exactInputs": {
+    "reviewPackage": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/review-package.json",
+      "gitBlob": "56bc875e024b46e7fe1404ec610d843ddaca98a1",
+      "bytes": 764423,
+      "sha256": "200b51a00e94a2f0470f9d6094f2640df88723b07730c3ecb49a4f8d75e6ecf1"
+    },
+    "manifest": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/manifest.json",
+      "gitBlob": "33e812c165e45b6797409bc3f8fb52bb8a06882f",
+      "bytes": 8181,
+      "sha256": "4d91cd3d3b8ce1c2b8a88cf4c12249b6860c09794798be9ff313b5e34e794740"
+    },
+    "sourceManifest": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/source-manifest.json",
+      "gitBlob": "b50e84079f0a4bf352417eedf2196cb2437944eb",
+      "bytes": 6056,
+      "sha256": "24a0cb750b4dd2c1ee160a62aae51c9896574a889185dc0b03a5b34f7863c51a"
+    },
+    "sourceImages": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/source-images.json",
+      "gitBlob": "4516f663acdef933d8b8f8238888fb1c516cecf5",
+      "bytes": 643070,
+      "sha256": "56ea2ca335154ba978de90e541f8ba9ace6f332f1df3f383c9577046034bbdd4"
+    },
+    "patch": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/candidate.patch",
+      "gitBlob": "00113be820c82452468f40c43e18833aba9aab72",
+      "bytes": 63740,
+      "sha256": "f703b2b8aa75e0b4064d9c21024d72c45fe1c1d8130cba2fc45c374cf2042d6f"
+    },
+    "prospectiveR1": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/p10-section-35-r1.md",
+      "gitBlob": "a636d7f511e4f72a5e9354fc092ad25f49de15af",
+      "bytes": 18056,
+      "sha256": "d657ce15ec4fbf69a2f2ec420510d6d76eff220a83ce75fee261289ed8917113"
+    },
+    "validationProposal": {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/p10-b2-inert-proposal/validation-proposal.json",
+      "gitBlob": "7c5eb5f63ea90077df09a36062cbb7e7adbaaf57",
+      "bytes": 4761,
+      "sha256": "41bf745cdd4a8d732d96825e8a52fc7fbfd61de5bc001cc20bcfb55f0c25e5ec"
+    },
+    "independentByteProof": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/final-byte-preservation.json",
+      "gitBlob": "9be912d180682cc18362a624719b97b923894adf",
+      "bytes": 5301,
+      "sha256": "3f44bc270dea62c3dce93dc80cd0efdec450e449927ae62a6af36a4b38dea10d"
+    },
+    "independentReferenceHashProof": {
+      "path": "/tmp/migration-evidence-20261116/native/p10-b2-final-source-review/reference-body-hash-proof.json",
+      "gitBlob": "9d6a4748d9f987df0d9ca6505b22c6e98fb7d3ce",
+      "bytes": 21114,
+      "sha256": "5e202bb993f5c41e629bfdd4ce753a4eb024a340bbbfba349adf978bb451b024"
+    },
+    "sourceRows": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+        "before": {
+          "gitBlob": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+          "bytes": 12509,
+          "sha256": "c797fe0d8e9c9f9819a79dbcc638bd4d96d5e56f32f4101a85e4f2d7ff3ae917",
+          "lines": 200
+        },
+        "after": {
+          "gitBlob": "369505df3d6a37b5833550954f4ef2a1c501b342",
+          "bytes": 17743,
+          "sha256": "ba42719bae92fb4c5a6e6a307100e873b096a03594a2c6755b1fddd15ed695a8",
+          "lines": 269
+        },
+        "patchForwardExact": true,
+        "patchReverseExact": true,
+        "embeddedWholeBytesExact": true,
+        "published24dfPreimageMatch": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+        "before": {
+          "gitBlob": "507b2e4243e99a2285822ea8bce8103760c43022",
+          "bytes": 43481,
+          "sha256": "cf7f4fd9661ffaccac2b520bda40c455f0ec3954f4c5c1efbcaf74270f3c9fe7",
+          "lines": 600
+        },
+        "after": {
+          "gitBlob": "a910209438b29f04ea4a30f28e69620d98802183",
+          "bytes": 54340,
+          "sha256": "df5a4d103e63525991854ce8054588b2fcd9d56e21e90efd7ebd6d95414432bc",
+          "lines": 727
+        },
+        "patchForwardExact": true,
+        "patchReverseExact": true,
+        "embeddedWholeBytesExact": true,
+        "published24dfPreimageMatch": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+        "before": {
+          "gitBlob": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+          "bytes": 37580,
+          "sha256": "2930df9471446610ed3cf4a5642bc6d6314b8f946a5669e343ffee7058a205d9",
+          "lines": 577
+        },
+        "after": {
+          "gitBlob": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+          "bytes": 49147,
+          "sha256": "11e064039a9ff28261a2daf41c247d0f6a947e192af03541fc0974d49a0e15ef",
+          "lines": 727
+        },
+        "patchForwardExact": true,
+        "patchReverseExact": true,
+        "embeddedWholeBytesExact": true,
+        "published24dfPreimageMatch": true
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+        "before": {
+          "gitBlob": "053b6c09383aeae5186322b2e8b0b17fc8cd1021",
+          "bytes": 10565,
+          "sha256": "1eb5e8a3e14eee4babe9102074fc17b1c1dffee5e1a04ae4993319fefc6f3336",
+          "lines": 178
+        },
+        "after": {
+          "gitBlob": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+          "bytes": 14802,
+          "sha256": "4088858201c2ba46b2c6d2d0957340f7b313ec1a5cfb391240c1a759ada926d7",
+          "lines": 236
+        },
+        "patchForwardExact": true,
+        "patchReverseExact": true,
+        "embeddedWholeBytesExact": true,
+        "published24dfPreimageMatch": true
+      },
+      {
+        "path": ".github/workflows/ci.yml",
+        "before": {
+          "gitBlob": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+          "bytes": 189024,
+          "sha256": "b65900ed9394287e42c67d147fa15349f098c6fa074d74403789112c27f7f1b4",
+          "lines": 2818
+        },
+        "after": {
+          "gitBlob": "4e4554ec3330d0c06b0736e861348d7279511361",
+          "bytes": 199733,
+          "sha256": "76e4d2d8e21ba6d2fefdc7aa8c06eb24cc831caa0c2d08939a6a66ec378dc66b",
+          "lines": 2927
+        },
+        "patchForwardExact": true,
+        "patchReverseExact": true,
+        "embeddedWholeBytesExact": true,
+        "published24dfPreimageMatch": true
+      }
+    ]
+  },
+  "independentByteDisposition": [
+    "Recomputed all ten full source body Git hashes, UTF-8 byte counts, SHA256 and physical line counts. Embedded source-images bodies equal the standalone before/after files exactly.",
+    "Parsed the complete unified patch as inert text and applied every hunk in both directions in Python data memory. Each forward result is the complete named afterimage and each inverse is the complete named preimage. Exactly five paths occur.",
+    "The unchanged verified24df leaf map contains all five exact before blobs/modes. Root reports those preimages unchanged through incoming1ef2; this report does not independently turn that statement into a latest-parent Merkle proof. Fresh actual-parent/prefix/tree binding remains required before publication.",
+    "Preserved the entire original10565-byte/178-line model-test prefix, first518 native-runner lines and first366 shared app/helper lines. Whole General CI bytes before the retained job and from the following codex-login-desktop job onward are unchanged.",
+    "Final TypeScript sizes are269 model,727 runner,727 app,236 test lines. No source-size baseline, config, new module, job or project file is added. General CI remains outside the TypeScript source-file cap.",
+    "Verified the21 retained reference containers and all52 contained full source body identities; literal owner/source inspection is limited to the paths and boundaries described below. Hash completeness is not represented as an unrelated whole-codebase audit."
+  ],
+  "resolvedReviewFindings": [
+    {
+      "finding": "New read-only rev-parse calls initially inherited ambient environment.",
+      "resolution": "Runnera910 passes the closed donor environment, GIT_CONFIG_NOSYSTEM=1 and GIT_CONFIG_GLOBAL=/dev/null to both checks; initial Git fixture setup already uses the same closed input map plus fixed TEST author/committer fields. No extra Git operation or timeout was added by the correction.",
+      "anchors": [
+        "native runner491–514",
+        "native runner578–590",
+        "native runner668–673"
+      ]
+    },
+    {
+      "finding": "Task attachment header expansion cannot be assumed to persist over dialog/app remounts.",
+      "source": "Donor CollapsibleTeamSection44d3 initializes useState(defaultOpen) once; TaskDetailBodyd039 supplies attachmentCount>0. openTask proves task owner/id/subject but not its initial attachment count.",
+      "resolution": "App4f686 makes one fresh direct CDP header observation after the exact Task metadata and public PNG-byte join, checks app currentness before and after, and conditionally invokes one original Expand-target scroll/click. The selector still requires Expand during the unchanged control checks; it cannot intentionally toggle an already-open header shut. Missing/ambiguous/disabled/malformed header refuses. Existing exact visible PNG oracle follows unchanged.",
+      "anchors": [
+        "app440–501",
+        "donor44d3 lines54–75/125–141",
+        "donord039 lines199–219"
+      ]
+    },
+    {
+      "finding": "A legitimate nonterminal delivery row need not yet have deliveredUserMessageId; asserting it before the existing readiness branch defeats that branch.",
+      "source": "PromptDeliveryLedger1a66 records acceptance/status separately from optional response observation and deliveredUserMessageId.",
+      "resolution": "Runnera910 retains exact row/team/run/member/lane/session/taskRefs/source checks and the pending/accepted/responded set; pending or accepted returns null. Only responded must carry the nonempty deliveredUserMessageId before success. The later native event parentUserMessageId equality is unchanged. No new loop, Send, alternate lookup, deadline or final accepted state is introduced.",
+      "anchors": [
+        "native runner615–630",
+        "PromptDeliveryLedger1a66 lines319–400/404–505",
+        "native runner651–659"
+      ]
+    }
+  ],
+  "modelAndTests": {
+    "scope": "donorReview is an opt-in on the separate existing finite model instance, mutually exclusive with sourceSelection, and refuses a Host endpoint. Original default/source-selection branches and their tests remain.",
+    "protocol": "The selected native catalog must contain exactly one read and edit definition, compatible object schemas and the exact provided string/boolean fields. The oracle emits one Read ID, one Edit ID and final unchanged reply. The model itself imports no filesystem or process execution owner and performs neither the tool effect nor product-ledger writes.",
+    "continuations": "One HISTORY-bearing user content is retained exactly. Every prior tool call ID/type/name/JSON arguments and matching tool-result ID must agree. Native Read result content must contain the preexisting TEST text before Edit is issued. Replayed prompt/result, wrong result ID, extra call/result or fourth sequence turn refuses. Only the first Read stage records the business marker.",
+    "limits": "Existing32-observation and2000000-byte POST body limits, loopback server binding and first-failure sealing are unchanged. These are the existing source limits, not a new claim that all GETs/concurrent transport activity have an independently proven global request count.",
+    "actualNativeBoundary": "Tool-return payloads alone do not attest Edit success. The runner and CI independently require actual changed bytes, succeeded native Edit evidence, task attribution, original snapshot/blob evidence, visible Changes and stopped raw copies.",
+    "test": "The appended one actual HTTP contract test uses the real server, original3s fetch helper and controlled catalog/tool-result payloads. It checks SSE Read, JSON Edit, final reply, exact stage/marker/ID sequence, completed replay and three explicit negative mutations. Each server closes in finally. All prior test bytes remain. Native effects, UI, kernel custody and resulting-source test results are not exercised by this source review.",
+    "noExtraRedCycle": "The reviewed validation is one positive five-file cut using existing original commands. No test-only RED or absent-field CI cycle is imposed or credited."
+  },
+  "fixtureAndNativeProvenance": {
+    "fixture": "Future original CI prepares one private Git project and one tracked preexisting text file; initial commit/tree, fixed before/after content hashes and actual71-byte2x1 PNG are recorded. Initial Git commands use /usr/bin/git, empty template, disabled hooks/signing, fixed TEST author/date and closed environment with5s subprocess bounds. The configured project opencode.json is excluded. These are new explicitly declared fixture operations within the existing native test, not operations performed by the reviewer.",
+    "noSyntheticOwner": "The fixture writes the initial project text/PNG only. Model HTTP responses request the genuine selected engine to Read/Edit. No task message, delivery ledger, native session, snapshot, change event, task blob or release record is synthesized.",
+    "sameRowReadiness": "The one nominal30s existing waitFor repeatedly reads the same exact delivery file and row. Envelope schema1, at-most200 records, unique message match and every owner/task/session/source join precede terminal acceptance. Errors propagate; malformed/missing/ambiguous identity is not retried into authority. responded plus nonempty deliveredUserMessageId is required.",
+    "strictFileRead": "Selected provenance reads require private-root realpath equality, regular nonsymlink single-link same-uid file,8MiB bound and matching before/after device/inode/size/mtimeNs/ctimeNs. These observations are not an atomic lock or general filesystem custody proof.",
+    "eventJoin": "Exactly one matching journal among bounded128 project entries; at most128 nonempty events with unique IDs, all for the selected task/Edit/file/runtime. Superseded references must exist; one nonsuppressed nonsuperseded event must remain. Canonical task/work phase, exact session/member/relative path, native opencode_toolpart_edit source/runtime/provider, selected parent user-message ID, delivery-ledger-taskrefs, succeeded/modify/high confidence and actual source-part/message/import/snapshot IDs are required.",
+    "contentAndSnapshots": "Only opencode-snapshot or inverse-edit-chain proof with native snapshot source qualifies. Before/after content-addressed blob refs, SHA/size and actual content must equal the selected fixture. Actual current project bytes must be the after text and its original HEAD/tree must remain. Native managed-profile snapshot files and selected journal/attachment content must be retained in the stopped corpus.",
+    "oldSourceReasoning": "Reconstructor076822 strict lookup checks member/lane/session and the requested single taskRef; its parent-message join can use deliveredUserMessageId or inboxMessageId (or a separately verified structured retry context). Thus successful actual Task Changes is stronger evidence than matching visible text, but does not alone guarantee deliveredUserMessageId persistence. The new collector deliberately requires the stronger explicit final field and exact parent equality. Runtime acceptance remains required.",
+    "deliveryPersistence": "ManifestEvidenceReader7ed52 explicitly includes prompt-delivery-ledger.json and its lock in the durable allowlist. LaneStorageClear2a66 filters those out of removal. The stale dispatch comment about ledger deletion is not treated as controlling source.",
+    "readerCompatibility": "Native snapshot owner21a300 resolves profile data/opencode/snapshot/projectId/sha1(worktree). TeamTaskAttachmentStore96a71 writes the selected filename as attachmentId--safeName under app-data task-attachments/team/task. Candidate/CI paths agree with those real owners."
+  },
+  "actualUiAndEpochs": {
+    "owner": "The unchanged captured-app/control owners remain. Original Task detail identification checks the actual mounted model team/task/subject. No mutation API or React store setter is used to create the task, attachment, message or Review evidence.",
+    "attachment": "One real file-input upload in donor epoch; exact attachment ID/filename/mime/size and public API bytes/SHA plus rendered PNG data/2x1 dimensions in each original epoch. The corrected header observation operates on the original unique section, with at most one conditional expansion per existing attachment observation. It introduces no new declared wait helper or timeout value; existing scroll/click controls still consume their own original observation and geometry budgets.",
+    "taskReference": "The original # picker supplies actual displayId and hidden metadata; saved message must have exact plain HISTORY plus displayId and a single actual taskRef. There is one physical business Send. No manual task-context wrapper is injected.",
+    "review": "Original Task Changes opens the selected file and renders exact before/after text. Donor TaskDetailDialog003228 closes its Task detail on accepted openTaskDetailReview; candidate therefore only closes Changes and passively requires both surfaces absent. Full task equality is taken after each Review because TeamDataService81a816 derives changePresence there. No field is stripped to force equality.",
+    "sameHistory": "Same selected native reply tuple, saved message/task/attachment and stable provenance across donor/current/cold. Warm/current and cold epochs do not submit another business input; full inference count and model failures are rechecked through final model closure.",
+    "ordinaryCleanup": "Original donor Stop, ordinary Quit, original wrapper/Electron/native PID-birth absence, group release, empty namespace and cleanup error aggregation remain unchanged. No new process signal, cleanup owner or success fallback is added. Wrapper exit0 is not promoted to separately observed natural native termination or release.",
+    "corpus": "The stopped donor raw corpus is captured before the first current read. Existing4096-file/64MiB-per-file/256MiB-total limits and exclusions remain. New selected project file and task attachment directory are included; project.git is not broadly copied. Every raw copy is hashed and the CI verifier independently joins the selected delivery, journal, content blobs, PNG and after-file bytes.",
+    "stableVsWholeFile": "Stable selected provenance fields are compared across epochs and again against stopped raw copies. Whole live file hashes are retained per epoch but not falsely asserted equal to later stopped envelope bytes that may contain incidental product bookkeeping."
+  },
+  "existingCiAndLimits": {
+    "strictTypes": {
+      "package": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "project": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "command": "pnpm typecheck:legacy-host-scripts",
+      "coverage": "Existing strict NodeNext project directly includes scripts/legacy-agent-host/**/*.ts, covering all four touched TypeScript files including model.test. Full retained config body was read/hashed from immutable-reference.json."
+    },
+    "lint": {
+      "config": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "invocation": "Existing retained job pnpm lint:fast:files --; unchanged prepare/runner/app operands remain ordered; exactly model and model.test append. All4 changed TS paths covered by this actual configured invocation. No rule/config/job/command owner changes."
+    },
+    "executionCommands": [
+      "node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts"
+    ],
+    "routing": "The existing original retained job predicate, paired required-outcome gate, Node24.21.0/toolchain, existing source-selection commands/validators and all other jobs are unchanged. This is source verification of routing, not proof those commands have executed on the candidate.",
+    "caps": "Original900000ms whole native test and30-minute job unchanged. Existing2e6 body/32 observations,4096 files,64MiB per file/256MiB total, selected128 journal events/200 delivery records remain. No source baseline or timeout expansion.",
+    "nominalWait": "Existing waitFor1e257 serially awaits each read, sleeps100ms, checks Date.now before the next iteration, has no per-read cancellation and no post-read cutoff check. A read can overrun nominal30s; no clock-independent hard read count is claimed. Costs remain subject to the unchanged enclosing native test/job controls.",
+    "artifactScope": "Exactly six Task/Review PNG allowlist entries append; all old artifact rows remain, including the bounded nonhidden stopped corpus. No blanket hidden-file or whole-profile upload is introduced."
+  },
+  "prospectiveR1": {
+    "exactPrefix": {
+      "gitBlob": "509311af179416e647f8571126746ab09333f5c0",
+      "bytes": 156904,
+      "sha256": "fc432aa050e41e27387e08fcc176880a0da86f7a475c20354d93b5988046bae0",
+      "lines": 1617
+    },
+    "exactAppendix": {
+      "gitBlob": "a636d7f511e4f72a5e9354fc092ad25f49de15af",
+      "bytes": 18056,
+      "sha256": "d657ce15ec4fbf69a2f2ec420510d6d76eff220a83ce75fee261289ed8917113",
+      "lines": 61
+    },
+    "unpublishedExactPrefixPlusAppendix": {
+      "gitBlob": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+      "bytes": 174960,
+      "sha256": "0910ded3d5fc864d9b05a4dea4a7ddd4849e730aab5de22341d45f8d52801e03",
+      "lines": 1678
+    },
+    "planBasis": "Published P10 lines367–390 expressly leaves actual donor tool-change/Review and raw attachment B2 evidence pending after the prior task/message/native-history cut. Section35 implements that pending path; it does not treat current0.0.158 retained history as old4a/runtime0.0.160 evidence.",
+    "acceptedDisclosure": "The R1 accurately states the opt-in finite oracle, absence of verified full native read.ts/edit.ts source, actual advertised-schema/effect requirement, private Git/PNG setup, original delivery/Changes ownership, real added reads/actions/overhead, nominal wait, ordinary termination limits, intact old source-selection/Stop checks and positive-only existing CI validation.",
+    "completionLimits": "No native/runtime/GUI/type/lint/test PASS is claimed. No donor release is synthesized; retained history is not import qualification. Separate actual stopped solo-Claude release/import, historical Darwin captures, P08/P09, real-vendor, full-native/release and remaining acceptance gates retain their own obligations.",
+    "publicationLimits": "No current parent/ref is inferred from this source review. Root must preserve incoming work, bind the exact current five preimages/full P10 prefix/trees, publish and fully read back R1, obtain independent published binding R2, then apply only reviewed source images. Useful started original CI jobs and current ref/PR/base/Draft guard remain. This report is not authorization to skip those steps."
+  },
+  "remainingActualEvidence": [
+    "Original resulting-source strict types and scoped lint",
+    "Entire unchanged model-test file plus appended actual HTTP case",
+    "Entire original retained native program including0.0.158, genuine old4a donor Read/Edit/attachment/Changes, both retained current/cold reads and complete cleanup",
+    "Original V1/V2 source-selection invocations and receipt validators",
+    "Full raw log, source/toolchain identities, receipts, stopped corpus and screenshots, then independent source/effect/cleanup audit"
+  ],
+  "notPerformed": [
+    "No project source import or execution",
+    "No test/compiler/lint/build/native/UI run",
+    "No provider binary or donor release executed",
+    "No API/status/log/archive/source fetch in this review",
+    "No canonical/index/ref/workflow action mutation",
+    "No relaxation or extra mandatory RED CI cycle"
+  ]
+}

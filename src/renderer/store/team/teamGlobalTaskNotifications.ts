@@ -1,5 +1,6 @@
 import { api } from '@renderer/api';
 import { stripAgentBlocks } from '@shared/constants/agentBlocks';
+import { isTeamReadUnavailable } from '@shared/utils/normalizeTeamAggregateRead';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import {
   getTeamTaskWorkflowColumn,
@@ -17,6 +18,7 @@ import type {
   GlobalTask,
   TaskComment,
   TeamMessageNotificationData,
+  TeamReadUnavailable,
   TeamSummary,
 } from '@shared/types';
 
@@ -44,6 +46,7 @@ export interface ProcessGlobalTaskNotificationsParams {
   appConfig: AppConfig | null;
   teamByName: Record<string, TeamSummary>;
   isInitialFetch: boolean;
+  previouslyUnavailable?: readonly TeamReadUnavailable[];
 }
 
 export function resetGlobalTaskNotificationTrackerForTests(): void {
@@ -93,6 +96,20 @@ export function processGlobalTaskNotifications(params: ProcessGlobalTaskNotifica
 
   const notifyOnClarifications = appConfig?.notifications?.notifyOnClarifications ?? true;
   const oldTaskIndexes = buildTaskNotificationIndexes(oldTasks);
+  const recovered = newTasks.filter(
+    (task) =>
+      !oldTaskIndexes.oldTasksByTeam.has(task.teamName) &&
+      isTeamReadUnavailable(params.previouslyUnavailable ?? [], task)
+  );
+  if (recovered.length) {
+    // A resource's first accepted rows are history; new comments retain the context cutoff.
+    detectTaskCommentNotifications(
+      oldTaskIndexes,
+      recovered,
+      appConfig?.notifications?.notifyOnTaskComments ?? true
+    );
+    seedGlobalTaskNotificationState(recovered);
+  }
 
   detectClarificationNotifications(oldTaskIndexes, newTasks, notifyOnClarifications);
   detectBlockedTaskNotifications(oldTaskIndexes, newTasks, notifyOnClarifications);
@@ -115,7 +132,7 @@ function seedGlobalTaskNotificationState(tasks: readonly GlobalTask[]): void {
     }
     if ((task.blockedBy?.length ?? 0) > 0) {
       notifiedBlockedTaskKeys.add(
-        `${task.teamName}:${task.id}:${(task.blockedBy ?? []).join(',')}`
+        `${task.teamName}:${task.id}:${[...new Set(task.blockedBy?.filter(Boolean) ?? [])].sort().join(',')}`
       );
     }
     notifiedStatusChangeKeys.add(`${task.teamName}:${task.id}:${task.status}`);

@@ -278,12 +278,14 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { OpenCodeDefaultMaterializationContext } from '@renderer/components/team/dialogs/openCodeDefaultMaterialization';
-import { OpenCodeSourceDirectoryContext } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
+import { OpenCodeSourceDirectoryContext, OpenCodeSourceDirectoryProvider, useOpenCodeSourceDirectory } from '@renderer/components/team/dialogs/OpenCodeSourceDirectoryProvider';
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { LeadModelRow } from '@renderer/components/team/members/LeadModelRow';
 import {
   getCliProviderStatusScopeKey,
   MULTIMODEL_PROVIDER_IDS,
 } from '@renderer/store/slices/cliInstallerSlice';
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 
 /** Renders inside the Create/Launch roster, where OpenCode Default names its route. */
 const inMaterializingRoster = (element: React.ReactElement): React.ReactElement =>
@@ -294,6 +296,133 @@ const inMaterializingRoster = (element: React.ReactElement): React.ReactElement 
   );
 
 describe('TeamModelSelector disabled Codex models', () => {
+  it('defers display-only OpenCode discovery until the original lead model picker opens', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] };
+    storeState.openCodeRuntimeStatus = {
+      installed: true, state: 'ready', source: 'path', version: '1.17.18', binaryPath: '/TEST/opencode',
+    };
+    const loadModels = vi.fn(async (input: RuntimeProviderManagementLoadModelsInput) =>
+      providerModelsResponse(input.providerId, [input.providerId + '/TEST-model']));
+    installLoadModelsApi(loadModels);
+    const loadProviderDirectory = vi.fn(async () => ({
+      schemaVersion: 1, runtimeId: 'opencode', directory: {
+        runtimeId: 'opencode', entries: [], totalCount: 0, returnedCount: 0,
+        filter: 'all', query: null, limit: 100, cursor: null, nextCursor: null,
+        diagnostics: [], fetchedAt: new Date().toISOString(),
+      },
+    }));
+    Object.assign(window.electronAPI!.runtimeProviderManagement, { loadProviderDirectory });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(OpenCodeSourceDirectoryProvider, {
+        enabled: true, deferDiscovery: true, projectPath: '/TEST/original-project',
+        children: React.createElement(LeadModelRow, {
+          providerId: 'opencode', model: 'test-local/TEST-model', limitContext: false,
+          projectPath: '/TEST/original-project', syncModelsWithTeammates: false,
+          onProviderChange: vi.fn(), onModelChange: vi.fn(), onEffortChange: vi.fn(),
+          onLimitContextChange: vi.fn(), onSyncModelsWithTeammatesChange: vi.fn(),
+        }),
+      }));
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).toBeNull();
+    const picker = host.querySelector<HTMLButtonElement>('button[aria-label="OpenCode provider, TEST-model"]');
+    expect(picker).not.toBeNull();
+    await act(async () => { picker!.click(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).not.toBeNull();
+    expect(loadProviderDirectory).toHaveBeenCalledExactlyOnceWith({
+      runtimeId: 'opencode', summary: true, projectPath: '/TEST/original-project',
+      query: null, filter: 'all', limit: 100, cursor: null, refresh: false,
+    });
+    await act(async () => { picker!.click(); });
+    expect(host.querySelector('[data-testid="team-model-selector-refresh-providers"]')).toBeNull();
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+  });
+
+  it('binds deferred discovery refresh to the current project and owner epoch and ignores late old replies', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.openCodeRuntimeStatus = {
+      installed: true, state: 'ready', source: 'path', version: '1.17.18', binaryPath: '/TEST/opencode',
+    };
+    installLoadModelsApi(async input => providerModelsResponse(input.providerId));
+    const first = createDeferred<unknown>();
+    const second = createDeferred<unknown>();
+    const loadProviderDirectory = vi.fn()
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise)
+      .mockResolvedValue({ schemaVersion: 1, runtimeId: 'opencode', directory: {
+        runtimeId: 'opencode', entries: [], totalCount: 0, returnedCount: 0,
+        filter: 'all', query: null, limit: 100, cursor: null, nextCursor: null,
+        diagnostics: [], fetchedAt: new Date().toISOString(),
+      } });
+    Object.assign(window.electronAPI!.runtimeProviderManagement, { loadProviderDirectory });
+    let observed!: NonNullable<ReturnType<typeof useOpenCodeSourceDirectory>>;
+    const Observe = ({ path }: { path: string }) => {
+      const directory = useOpenCodeSourceDirectory(path);
+      if (directory) observed = directory;
+      return null;
+    };
+    const root = createRoot(document.createElement('div'));
+    const render = (path: string, enabled = true) => root.render(
+      React.createElement(OpenCodeSourceDirectoryProvider, {
+        enabled, deferDiscovery: true, projectPath: path,
+        children: React.createElement(Observe, { path }),
+      })
+    );
+    await act(async () => { render('/TEST/project-A'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).not.toHaveBeenCalled();
+    const oldProject = observed;
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      projectPath: '/TEST/project-A', summary: true, refresh: true,
+    }));
+    await act(async () => { render('/TEST/project-B'); });
+    await act(async () => {
+      oldProject.refresh();
+      oldProject.retainDiscovery?.()();
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenLastCalledWith(expect.objectContaining({
+      projectPath: '/TEST/project-B', summary: true, refresh: true,
+    }));
+    const oldOwner = observed;
+    await act(async () => { invalidateContextScopedRequestEpoch(); });
+    await act(async () => {
+      oldOwner.refresh();
+      oldOwner.retainDiscovery?.()();
+      await vi.advanceTimersByTimeAsync(200);
+    });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
+    const oldFailure = { schemaVersion: 1, runtimeId: 'opencode',
+      error: { code: 'runtime-unhealthy', message: 'TEST old owner reply', recoverable: true } };
+    await resolveDeferred(first, oldFailure);
+    await resolveDeferred(second, oldFailure);
+    expect(observed.error).toBeNull();
+    await act(async () => { observed.refresh(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+    expect(observed.loaded).toBe(true);
+    expect(observed.error).toBeNull();
+    await act(async () => { render('/TEST/project-B', false); });
+    await act(async () => { render('/TEST/project-B'); });
+    await act(async () => { render('/TEST/project-A'); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
+  });
+
   it('invalidates the selected Create Team preflight before opening provider Settings', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
@@ -564,6 +693,19 @@ describe('TeamModelSelector disabled Codex models', () => {
           statusCheckOutcome: 'authoritative',
           models: ['sonnet'],
           capabilities: { teamLaunch: true, oneShot: true },
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'anthropic',
+            source: 'static-fallback',
+            status: 'degraded',
+            fetchedAt: '2026-10-20T00:00:00.000Z',
+            staleAt: '2099-10-20T00:00:00.000Z',
+            defaultModelId: 'sonnet',
+            defaultLaunchModel: 'sonnet',
+            models: [{ id: 'sonnet', launchModel: 'sonnet', displayName: 'Sonnet' }],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
         },
       ],
     };
@@ -588,6 +730,11 @@ describe('TeamModelSelector disabled Codex models', () => {
         ([providerId, options]) => providerId === 'anthropic' && options?.projectPath
       )
     ).toEqual([]);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
+      silent: false,
+      checkReason: 'launch_preflight',
+    });
     expect(
       host.querySelector('[data-testid="team-model-selector-model-option"][aria-pressed="true"]')
         ?.textContent
@@ -679,6 +826,35 @@ describe('TeamModelSelector disabled Codex models', () => {
       });
       expect(host.textContent).toContain('Defaultproject-b/model');
       expect(host.textContent).not.toContain('project-a/model');
+      expect(onValueChange).not.toHaveBeenCalled();
+
+      const scopedFallback = status('project-b/model');
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-b')
+      ] = { ...scopedFallback, modelCatalog: {
+        ...scopedFallback.modelCatalog, source: 'static-fallback', status: 'degraded',
+      } };
+      storeState.cliProviderStatusScopeRevision++;
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(storeState.fetchCliProviderStatus.mock.calls.map(([requestedProvider, options]) =>
+        [requestedProvider, options?.projectPath ?? null])).toEqual([
+        ['anthropic', '/tmp/project-a'],
+        ['anthropic', '/tmp/project-b'],
+        ['anthropic', '/tmp/project-b'],
+      ]);
+      expect(requests.has('')).toBe(false);
+      storeState.cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('anthropic', '/tmp/project-b')
+      ] = status('project-b/model');
+      await resolveDeferred(requests.get('/tmp/project-b')!, undefined);
+      await act(async () => {
+        render('/tmp/project-b');
+        await Promise.resolve();
+      });
+      expect(host.textContent).toContain('Defaultproject-b/model');
       expect(onValueChange).not.toHaveBeenCalled();
       await act(async () => root.unmount());
     }
@@ -2434,20 +2610,32 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('keeps catalog Ollama visible after an empty authoritative local overlay lookup', async () => {
+  it.each([
+    { sourceId: 'ollama', model: 'qwen', catalogScope: undefined, routeTag: 'local', projectPath: undefined },
+    { sourceId: 'test-local', model: 'TEST-model', catalogScope: 'TEST-captured-host', routeTag: 'configured', projectPath: undefined },
+    { sourceId: 'test-local', model: 'TEST-model', catalogScope: 'TEST-captured-project', routeTag: 'configured', projectPath: '/tmp/TEST-captured-project' },
+  ])('keeps $sourceId catalog models visible after an empty app-local overlay lookup ($catalogScope)', async ({ sourceId, model, catalogScope, routeTag, projectPath }) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const loadModels = vi.fn(async () => providerModelsResponse('ollama'));
+    const loadModels = vi.fn(async () => {
+      const response = providerModelsResponse(sourceId, [`${sourceId}/${model}`]);
+      response.models!.models.forEach((entry) => {
+        entry.routeKind = 'configured_local';
+        entry.accessKind = 'configured_authless';
+      });
+      return response;
+    });
     installLoadModelsApi(loadModels);
-    const localModelId = 'ollama/qwen';
+    const localModelId = `${sourceId}/${model}`;
     const provider = {
       providerId: 'opencode',
-      authenticated: true,
+      catalogScope,
+      authenticated: !catalogScope,
       supported: true,
-      verificationState: 'verified',
-      statusCheckOutcome: 'authoritative',
+      verificationState: catalogScope ? 'unknown' : 'verified',
+      statusCheckOutcome: catalogScope ? 'model_only' : 'authoritative',
       detailMessage: null,
       statusMessage: null,
-      capabilities: { teamLaunch: true },
+      capabilities: { teamLaunch: !catalogScope },
       models: [localModelId],
       modelCatalogRefreshState: 'ready',
       modelCatalog: {
@@ -2463,7 +2651,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           {
             id: localModelId,
             launchModel: localModelId,
-            displayName: 'qwen',
+            displayName: model,
             hidden: false,
             supportedReasoningEfforts: [],
             defaultReasoningEffort: null,
@@ -2474,9 +2662,9 @@ describe('TeamModelSelector disabled Codex models', () => {
             source: 'app-server',
             metadata: {
               opencode: {
-                providerId: 'ollama',
-                modelId: 'qwen',
-                sourceLabel: 'Ollama',
+                providerId: sourceId,
+                modelId: model,
+                sourceLabel: sourceId,
                 accessKind: 'configured_authless',
                 routeKind: 'configured_local',
                 proofState: 'needs_probe',
@@ -2495,6 +2683,11 @@ describe('TeamModelSelector disabled Codex models', () => {
       flavor: 'agent_teams_orchestrator',
       providers: [provider],
     };
+    if (projectPath) {
+      storeState.cliProviderStatusByScope = {
+        [getCliProviderStatusScopeKey('opencode', projectPath)]: provider,
+      };
+    }
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -2505,8 +2698,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         React.createElement(TeamModelSelector, {
           providerId: 'opencode',
           onProviderChange: () => undefined,
-          value: '',
+          value: catalogScope ? localModelId : '',
           onValueChange: () => undefined,
+          projectPath,
         })
       );
       await Promise.resolve();
@@ -2514,15 +2708,22 @@ describe('TeamModelSelector disabled Codex models', () => {
     await flushFailClosedAuthorityClocks();
 
     await vi.waitFor(() => {
-      expect(host.textContent).toContain('qwen');
+      expect(host.querySelector(`[data-testid="team-model-selector-model-option"][aria-label^="${model}"]`)).not.toBeNull();
     });
     expect(
-      host.querySelector('[data-testid="team-model-selector-provider-nav-ollama"]')
+      host.querySelector(`[data-testid="team-model-selector-provider-nav-${sourceId}"]`)
     ).toBeNull();
     expect(
-      host.querySelector('[data-testid="team-model-selector-opencode-route-tag-local"]')
+      host.querySelector(`[data-testid="team-model-selector-opencode-route-tag-${routeTag}"]`)
     ).not.toBeNull();
-    expect(loadModels).not.toHaveBeenCalled();
+    if (catalogScope) {
+      expect(loadModels).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        runtimeId: 'opencode', providerId: sourceId, projectPath: projectPath ?? null,
+      }));
+      expect(provider).toMatchObject({
+        authenticated: false, statusCheckOutcome: 'model_only', capabilities: { teamLaunch: false },
+      });
+    } else expect(loadModels).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

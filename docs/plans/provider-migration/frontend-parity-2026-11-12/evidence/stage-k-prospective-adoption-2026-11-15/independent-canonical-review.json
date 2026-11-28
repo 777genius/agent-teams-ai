@@ -1,0 +1,42 @@
+{
+  "kind": "Independent canonical-only prospective Stage K R1 review",
+  "result": "APPROVE exact final canonical prose; execution package and publication approval withheld pending their exact independent review",
+  "canonical": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/canonical-R1.md",
+    "bytes": 14216,
+    "blob": "fafc04e3a13dcc7b29756e196141ac148875ac30",
+    "sha256": "724d7e5787d53ddb3e0ca7b308b53256db21f8bd7bb00d28e6dfd509e5be2d8c"
+  },
+  "previousReadInFull": {
+    "blob": "c6283465c427e9a5eaa0af6f87f3152c2559f922",
+    "bytes": 14212
+  },
+  "onlyRequestedCorrection": {
+    "from": "The three new stderr suites had no other workflow invocation",
+    "to": "The three stderr-related suites had no other workflow invocation",
+    "inverseWholeDocumentExact": true
+  },
+  "sourceContract": "6902dec99e572a2070ebf6257cccfb4fe3f30af6",
+  "sourceReview": "f4f5766ca088eaa4a6a55fc93e1ce624ab2972f5",
+  "acceptedBoundaries": [
+    "Exact J plus43incoming and3corrected leaves; Plans32/33 append history and ordered future docs/27 parents.",
+    "Permanent Team test coverage is explicit prospective amendment, preserving38 lint operands, original command operands, runtime, matrix and job deadline.",
+    "Common52-pin move preserves Windows membership and old-pin order, explicitly changing new-pin positions.",
+    "Both Task tabs use actual rich-fact helper; changed UI observation/disclosure count is disclosed, business and negative/cleanup oracles retained.",
+    "No fabricated RED or transfer of author92/62/40 reports or priorI results.",
+    "Fresh618 Host closure build is required; old1446 output archive preserves historical evidence; only216 unchanged ledger outputs may be reused under exact ledger identity checks.",
+    "No third local full/dedicated backend-test compiler retry, no substitute/narrowedconfig, no project-type equivalence or historical137 reclassification.",
+    "Existing source caps and current provider/Session archives remain; producerThinking and eventual checked archive pair adoption remain separate.",
+    "P08/P09 and original resulting-source Desktop/native/completeCI remain unqualified until actual receipts; no broaderauthority, deadlines, native vendor launch or ref waiver."
+  ],
+  "DArchiveCountsReadFromOriginalInventory": {
+    "packages/legacy-agent-host": 1230,
+    "packages/task-change-ledger": 216
+  },
+  "executionApproval": {
+    "validationManifestFinalBytesReviewed": false,
+    "recorderFinalBytesReviewed": false,
+    "canonicalAloneAuthorizesExecution": false
+  },
+  "projectExecutionOrSourceRefMutation": false
+}

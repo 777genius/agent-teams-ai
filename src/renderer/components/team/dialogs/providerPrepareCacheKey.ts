@@ -1,4 +1,4 @@
-import type { TeamProviderId } from '@shared/types';
+import type { TeamProviderId, TeamProvisioningPrepareContext } from '@shared/types';
 
 export function buildProviderPrepareModelCacheKey({
   cwd,
@@ -7,6 +7,8 @@ export function buildProviderPrepareModelCacheKey({
   limitContext,
   runtimeStatusSignature,
   modelChecksSignature,
+  context,
+  invalidationEpoch,
 }: {
   cwd: string;
   providerId: TeamProviderId;
@@ -14,15 +16,21 @@ export function buildProviderPrepareModelCacheKey({
   limitContext: boolean;
   runtimeStatusSignature?: string | null;
   modelChecksSignature?: string | null;
+  context?: TeamProvisioningPrepareContext;
+  invalidationEpoch?: number;
 }): string {
-  return [
-    cwd,
-    providerId,
-    backendSummary ?? '',
-    limitContext ? 'limit-context:on' : 'limit-context:off',
-    runtimeStatusSignature ?? '',
-    modelChecksSignature ?? '',
-  ].join('::');
+  const baseKey = appendProviderPrepareInvalidationEpoch(
+    [
+      cwd,
+      providerId,
+      backendSummary ?? '',
+      limitContext ? 'limit-context:on' : 'limit-context:off',
+      runtimeStatusSignature ?? '',
+      modelChecksSignature ?? '',
+    ].join('::'),
+    invalidationEpoch
+  );
+  return context ? JSON.stringify([context, baseKey]) : baseKey;
 }
 
 /** Explicit settings changes invalidate model evidence without invalidating unrelated selections. */

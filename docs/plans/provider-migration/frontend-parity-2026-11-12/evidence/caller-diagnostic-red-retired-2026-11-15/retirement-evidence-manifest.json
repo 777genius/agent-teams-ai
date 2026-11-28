@@ -1,0 +1,132 @@
+{
+  "kind": "actual-caller-test-only-RED-retirement-evidence",
+  "sourceHead": "924fbd1d8a28ca845d7c6c2c35aa88e084d089d2",
+  "sourceTree": "2a15debbadbea50a9a44b59b54ad48b399bb78cb",
+  "files": [
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-ledger-build.log",
+      "name": "red-ledger-build.log",
+      "bytes": 0,
+      "lines": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-ledger-build-metadata.json",
+      "name": "red-ledger-build-metadata.json",
+      "bytes": 3299,
+      "lines": 69,
+      "blob": "dcdf2af08f10b3b8b9c3eb81bcd76b49f18bef6f",
+      "sha256": "612d6cd951136718d0c7ae507ed15c8008d3742cdb6a990143f241f5929b9961"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-ledger-build-preflight.json",
+      "name": "red-ledger-build-preflight.json",
+      "bytes": 10464,
+      "lines": 220,
+      "blob": "5d134b0f08e2014057e732bbbe64c63636ee7d19",
+      "sha256": "bbad07f93145ca3f529afcb2b5a656b369636128822d1ebe7986eca42cafe9ce"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-host-build.log",
+      "name": "red-host-build.log",
+      "bytes": 0,
+      "lines": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-host-build-metadata.json",
+      "name": "red-host-build-metadata.json",
+      "bytes": 3294,
+      "lines": 69,
+      "blob": "8f066ab7889b9cc142ead8cb52bf335f9dbae67d",
+      "sha256": "680ad7a36d14a5fd8ecebe056e75c132b2349798119288ad44d74c361ff99fc8"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-host-build-preflight.json",
+      "name": "red-host-build-preflight.json",
+      "bytes": 10464,
+      "lines": 220,
+      "blob": "7b59014ac8fe153becbbfe72255a84686227dc75",
+      "sha256": "8193b5fb683f352df77fa0b55cd3a92882a9079ec4d5107b141f91a754a3cb5b"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-test-types.log",
+      "name": "red-test-types.log",
+      "bytes": 0,
+      "lines": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-test-types-metadata.json",
+      "name": "red-test-types-metadata.json",
+      "bytes": 3298,
+      "lines": 69,
+      "blob": "3e1e294a2711e6c492e5e95796a58138c576c1fb",
+      "sha256": "aabbde0bf7bb416bea63a6ea9c346499b1c30e165a7eeeaf06410eb309f3c1cf"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-test-types-preflight.json",
+      "name": "red-test-types-preflight.json",
+      "bytes": 10464,
+      "lines": 220,
+      "blob": "0d21dc8d0e6f4fcbc5839f86a9a5c0291fe09ee7",
+      "sha256": "4ed679a8443009540e5411e9281687f9eed68da83335e6df0b9d63e21d469e8b"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-test.log",
+      "name": "red-test.log",
+      "bytes": 7007,
+      "lines": 101,
+      "blob": "cc34552c5404b1a72eda37d9f1d3b73c7224aaff",
+      "sha256": "d4fb83d34195fce0e5a426dd08385b6342a223d59c86d7babc83c67f1b38c152"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-test-metadata.json",
+      "name": "red-test-metadata.json",
+      "bytes": 3299,
+      "lines": 69,
+      "blob": "24239eceece2c295fdf49279e7375666f3595d55",
+      "sha256": "298800ad6dc570ab6118022944ac6e73060c2aba7471fdec92d038f4efd753e8"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/red-test-preflight.json",
+      "name": "red-test-preflight.json",
+      "bytes": 10464,
+      "lines": 220,
+      "blob": "0d21dc8d0e6f4fcbc5839f86a9a5c0291fe09ee7",
+      "sha256": "4ed679a8443009540e5411e9281687f9eed68da83335e6df0b9d63e21d469e8b"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/run_check.py",
+      "name": "run_check.py",
+      "bytes": 9267,
+      "lines": 147,
+      "blob": "e1570bdbfe07243b13b2539f33fa87520fe873a3",
+      "sha256": "ad32440ed841a2b65b2a83cafadb42a77819ed33f7341473348e7ec84e1bccf6"
+    },
+    {
+      "sourcePath": "/workspace/scratch/82d3f9ba6b85/caller-diagnostic-local/selected-dependency-baseline.json",
+      "name": "selected-dependency-baseline.json",
+      "bytes": 4318,
+      "lines": 86,
+      "blob": "af9c5789dab1ff56dd15bfa7427f465a1596347d",
+      "sha256": "04631004c98789fc7e50f88e406014ddc244d4b2e043f2c0f244cb45785f5785"
+    }
+  ],
+  "count": 14,
+  "tests": {
+    "total": 31,
+    "pass": 29,
+    "fail": 2,
+    "skip": 0,
+    "cancel": 0,
+    "exit": 1
+  },
+  "greenExecuted": false,
+  "sourceCandidatesApplied": false,
+  "historicalWindowsFailureRequalified": false,
+  "reviewerExecutedTests": false
+}

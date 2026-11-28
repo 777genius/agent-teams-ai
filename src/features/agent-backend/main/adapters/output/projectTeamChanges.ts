@@ -1,0 +1,88 @@
+import { backendTeamConversationGaps } from '../../../contracts/teamChanges';
+
+import type {
+  BackendTeamChanges,
+  BackendTeamConversation,
+  BackendTeamPosition,
+} from '../../../contracts/teamChanges';
+const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
+function row(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid product feed');
+  return value as Record<string, unknown>;
+}
+function sequence(value: unknown): number {
+  if (!Number.isSafeInteger(value) || Number(value) < 0)
+    throw new Error('Invalid product sequence');
+  return Number(value);
+}
+export function projectTeamPosition(value: unknown): BackendTeamPosition {
+  const source = row(value);
+  if (
+    typeof source.streamId !== 'string' ||
+    !uuid.test(source.streamId) ||
+    typeof source.cursor !== 'string' ||
+    !uuid.test(source.cursor)
+  )
+    throw new Error('Invalid product position');
+  return { streamId: source.streamId, cursor: source.cursor, sequence: sequence(source.sequence) };
+}
+export function projectTeamConversation(value: unknown): BackendTeamConversation {
+  const source = row(value);
+  if (
+    Object.keys(source).length !== 2 ||
+    typeof source.revision !== 'string' ||
+    !/^[a-f0-9]{64}$/.test(source.revision) ||
+    !Array.isArray(source.gaps) ||
+    source.gaps.length > backendTeamConversationGaps.length ||
+    new Set(source.gaps).size !== source.gaps.length ||
+    Array.from(source.gaps).some(
+      (gap) => !backendTeamConversationGaps.some((allowed) => allowed === gap)
+    )
+  )
+    throw new Error('Invalid Host conversation metadata');
+  const gaps = source.gaps;
+  return {
+    revision: source.revision,
+    gaps: backendTeamConversationGaps.filter((gap) => gaps.includes(gap)),
+  };
+}
+export function projectTeamChanges(value: unknown): BackendTeamChanges {
+  const source = row(value);
+  if (
+    Buffer.byteLength(JSON.stringify(source)) > 64 * 1024 ||
+    !Array.isArray(source.events) ||
+    source.events.length > 128
+  )
+    throw new Error('Oversized product feed');
+  const position = projectTeamPosition(source);
+  const conversation =
+    source.conversation === undefined
+      ? {}
+      : {
+          conversation: projectTeamConversation(source.conversation),
+        };
+  let previous: number | undefined;
+  const events = source.events.map((value) => {
+    const event = row(value),
+      index = sequence(event.sequence);
+    if (
+      event.kind !== 'invalidate' ||
+      index < 1 ||
+      (previous !== undefined && index !== previous + 1) ||
+      index > position.sequence ||
+      event.eventId !== `${position.streamId}:${index}`
+    )
+      throw new Error('Invalid product event');
+    previous = index;
+    return { sequence: index, eventId: event.eventId, kind: 'invalidate' as const };
+  });
+  if (events.length && previous !== position.sequence) throw new Error('Incomplete product feed');
+  if (source.gap !== undefined) {
+    const reason = row(source.gap).reason;
+    if (events.length || (reason !== 'initial' && reason !== 'cursor' && reason !== 'retention'))
+      throw new Error('Invalid product gap');
+    return { ...position, events, gap: { reason }, ...conversation };
+  }
+  return { ...position, events, ...conversation };
+}

@@ -1,0 +1,54 @@
+{
+  "status": "PASS",
+  "scope": "Pristine existing desktop Launch dialog, native task/message/file effect, Stop, and settings retained after renderer reload.",
+  "testIsolation": "Fresh TEST-only HOME, config, workspace and app data; actual pinned Claude SDK/native CLI against deterministic localhost model; no vendor credentials or real project.",
+  "launch": {
+    "originalControls": true,
+    "freshCapturedSession": true,
+    "model": "claude-opus-4-6",
+    "effort": "medium",
+    "contextEffective": true,
+    "oneInputTerminalSucceeded": true,
+    "modelSteps": 8,
+    "readOnlyModelChecks": 2,
+    "modelFailures": []
+  },
+  "effects": {
+    "taskCompleted": true,
+    "nativeBashNonzeroExitObserved": true,
+    "sandboxFileProducedOnce": true,
+    "canonicalReplyVisible": true
+  },
+  "stopAndReload": {
+    "nativeCustodyReleasedBeforeAppCleanup": true,
+    "savedSettingsRetainedAfterRendererReload": true
+  },
+  "cleanup": {
+    "originalJobExitCode": 0,
+    "originalAppExitCode": 0,
+    "originalAppSignal": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "originalRemainingCount": 0,
+    "lateRemainingCount": 0,
+    "writerReleased": true
+  },
+  "retention": {
+    "complete": true,
+    "originalStartupBundlePins": true,
+    "pinnedFiles": 2404,
+    "durableCopyVerified": true
+  },
+  "limits": [
+    "Create, Resume and Relaunch controls are not qualified by this run.",
+    "No real vendor authentication or remote inference was exercised.",
+    "All advanced settings, pending-input Quit, application relaunch, process orphan adoption and full Stage1 are outside this pass.",
+    "App exit0 and physical cleanup are retained observations; this run does not claim natural application Quit acceptance.",
+    "Host/dependency trees are frozen retention snapshots; only the original Host entry and startup bundle/source pins have original execution witnesses."
+  ],
+  "originalJobId": "952c67110eac281af4d400e9d6140550",
+  "retentionJobId": "6c039f834d86f7c09962cb35c7e485ef",
+  "retentionSha256": "314aee79295948002ae75a5d8941b73dd80155621b86041b0d7656222ee661bd",
+  "ignoredEvidenceRoot": ".artifacts/provider-migration/claude-pristine-launch-ui-20261024-attempt2",
+  "providerArchiveSha256": "066ab48bef0704f9e90e4aa2f12ddd86b607b4aedb70d98a29e4a26cfc0be36a"
+}

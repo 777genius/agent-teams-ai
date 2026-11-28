@@ -1,0 +1,649 @@
+// TEST-only negative E2E for publicly downloadable native Host receipts.
+// Deliberately fail before process allocation; never open user configuration.
+import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import { spawnSync } from 'node:child_process';
+import { createHash, randomBytes } from 'node:crypto';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import process from 'node:process';
+import { test } from 'node:test';
+import { fileURLToPath, URL } from 'node:url';
+import { pinnedLinuxX64Avx2Digest } from './opencode-v2-native-test-pin.mjs';
+import { isCompleteNativeHostReceipt, REQUIRED_NATIVE_HOST_STEPS } from './opencode-v2-native-receipt-verify.mjs';
+import { parseOwnedDurableLog, retainsOwnedDurablePrefix } from './opencode-v2-native-log-parse.mjs';
+import { isOwnedNativeSessionSnapshot, nativeSessionModelVariant } from './opencode-v2-native-session-guard.mjs';
+import { matchesOpenCodeV2ModelVariant } from '../dist/adapters/providers/OpenCodeV2ModelVariant.js';
+
+test('a failed native Host proof publishes only sanitized diagnostics and no raw paths', () => {
+  const root = mkdtempSync(join(tmpdir(), 'TEST-v2-host-failure-receipt-'));
+  const path = join(root, 'receipt.json');
+  const secret = 'TEST_PRIVATE_SECRET_' + randomBytes(12).toString('hex');
+  try {
+    const result = spawnSync(process.execPath, [
+      fileURLToPath(new URL('./opencode-v2-native-instructions.mjs', import.meta.url)),
+    ], {
+      env: { ...process.env, OPENCODE_V2_TEST_NPM_ROOT: '/' + secret,
+        OPENCODE_V2_HOST_NATIVE_RECEIPT: path },
+      encoding: 'utf8',
+      timeout: 10000,
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 1, 'unsupported native root must fail closed');
+    const receipt = JSON.parse(readFileSync(path, 'utf8'));
+    assert.equal(receipt.error, 'native_host_test_failed');
+    assert.equal(receipt.qualified, false);
+    assert.equal(receipt.productQualified, false);
+    assert.equal(receipt.packagedElectronQualified, false);
+    assert.equal(receipt.cleanup, true, 'no native process was allocated');
+    assert.equal(receipt.pid, undefined);
+    assert.equal(receipt.processStartTicks, undefined);
+    assert.doesNotMatch(JSON.stringify(receipt) + result.stderr, /TEST_PRIVATE_SECRET_|\bat\s+file:\/\//);
+    assert.match(result.stderr, /native_host_test_failed/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+function completeReceiptFixture() {
+  return {
+    kind: 'TEST_NATIVE_HOST_SPI_INSTRUCTIONS', version: '2.0.21',
+    cleanup: true, qualified: false, productQualified: false,
+    packagedElectronQualified: false, sourceHead: 'a'.repeat(40), binarySha256: pinnedLinuxX64Avx2Digest,
+    pid: 1101, processStartTicks: '123456', nativeCustodyReadbacks: 4,
+    nativePermissionReadbacks: 4, steps: [...REQUIRED_NATIVE_HOST_STEPS],
+    directShellProbe: { attempted: true, outcome: 'hold', status: 404,
+      responseUncertain: false, modelTurnProven: false,
+      toolPermissionEnforcementProven: false },
+    nativePolicyDecisions: { capturedDeny: 'deny', laterAllow: 'allow',
+      laterAsk: 'ask', askRejected: true, pendingAfterReject: 0,
+      resolverOnly: true, toolEnforcementProven: false },
+    unregisteredPermissionProbe: { unregisteredReferenceStale: true,
+      nativeWrongSessionReplyRejected: true, foreignPendingUnchanged: true,
+      nativeCleanupRejected: true,
+      sessionAuthorityProven: false, toolEnforcementProven: false },
+    nativeLogReadback: { readOnly: true, synced: true, watermark: 0,
+      eventCount: 0, modelTurnProven: false },
+    restartLogReadback: { readOnly: true, synced: true, watermark: 0,
+      eventCount: 0, modelTurnProven: false },
+    restart: { priorPid: 1101, priorStartTicks: '123456', pid: 1102,
+      startTicks: '123489', readOnly: true, actualBinarySha256: pinnedLinuxX64Avx2Digest },
+  };
+}
+
+test('native receipt gate rejects forged digest, incomplete stages and cold restart uncertainty', () => {
+  assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture()), true);
+  const mutations = [
+    r => { r.steps.pop(); },
+    r => { r.steps[r.steps.indexOf('source_preflight_classified_later_allow_as_hold')] = 'real_native_later_allow_override_refused_by_Host'; },
+    r => { r.steps[r.steps.indexOf('real_native_later_allow_resolver_observed_preflight_hold')] = 'real_native_later_allow_resolver_observed_and_Host_refused'; },
+    r => { r.steps.splice(r.steps.indexOf('real_native_ordered_ask_readback_without_tool_execution'), 1); },
+    r => { r.steps.splice(r.steps.indexOf('native_TEST_session_workspace_and_permissions_attested'), 1); },
+    r => { r.steps.splice(r.steps.indexOf('real_native_fresh_session_durable_log_cursor_read_only'), 1); },
+    r => { delete r.nativeLogReadback; },
+    r => { r.nativeLogReadback.synced = false; },
+    r => { r.nativeLogReadback.readOnly = false; },
+    r => { r.nativeLogReadback.modelTurnProven = true; },
+    r => { r.nativeLogReadback.watermark = -1; },
+    r => { r.nativeLogReadback.eventCount = 4097; },
+    r => { r.nativeLogReadback.eventCount = 2; r.restartLogReadback.eventCount = 2; }, // two events cannot fit below watermark zero
+    r => { r.steps.splice(r.steps.indexOf('native_cold_restart_durable_log_cursor_read_only'), 1); },
+    r => { delete r.restartLogReadback; },
+    r => { r.restartLogReadback.synced = false; },
+    r => { r.restartLogReadback.readOnly = false; },
+    r => { r.restartLogReadback.modelTurnProven = true; },
+    r => { r.nativeLogReadback.watermark = 1; r.restartLogReadback.watermark = 0; },
+    r => { r.nativeLogReadback.eventCount = 1; r.restartLogReadback.eventCount = 0; },
+    r => { r.restartLogReadback.eventCount = 4097; },
+    r => { r.restartLogReadback.eventCount = 1; }, // no watermark advance: impossible append
+    r => { r.restartLogReadback.watermark = 1; r.restartLogReadback.eventCount = 2; },
+    r => { r.restartLogReadback.watermark = 1; r.restartLogReadback.eventCount = 1; }, // cannot backfill session.created after empty synced history
+    r => { r.steps[0] = 'npm_wrapper_hashed'; },
+    r => { r.steps.reverse(); },
+    r => { r.steps[r.steps.indexOf('Host_unregistered_permission_reference_stale_no_native_change')] = 'Host_live_foreign_native_permission_stale_no_grant'; },
+    r => { r.sourceHead = 'unverified'; },
+    r => { r.sourceHead = 'A'.repeat(40); },
+    r => { delete r.sourceHead; },
+    r => { r.binarySha256 = 'unverified'; },
+    r => { r.binarySha256 = 'F'.repeat(64); },
+    r => { r.binarySha256 = 'f'.repeat(64); r.restart.actualBinarySha256 = 'f'.repeat(64); },
+    r => { r.nativeCustodyReadbacks = 3; },
+    r => { r.nativePermissionReadbacks = 3; },
+    r => { delete r.directShellProbe; },
+    r => { r.directShellProbe.attempted = false; },
+    r => { r.directShellProbe.outcome = 'effect-confirmed'; },
+    r => { r.directShellProbe.responseUncertain = true; },
+    r => { r.directShellProbe.status = 900; },
+    r => { r.directShellProbe.modelTurnProven = true; },
+    r => { r.directShellProbe.toolPermissionEnforcementProven = true; },
+    r => { delete r.nativePolicyDecisions; },
+    r => { r.nativePolicyDecisions.capturedDeny = 'allow'; },
+    r => { r.nativePolicyDecisions.laterAllow = 'deny'; },
+    r => { r.nativePolicyDecisions.laterAsk = 'allow'; },
+    r => { r.nativePolicyDecisions.askRejected = false; },
+    r => { r.nativePolicyDecisions.pendingAfterReject = 1; },
+    r => { delete r.nativePolicyDecisions.resolverOnly; },
+    r => { r.nativePolicyDecisions.resolverOnly = false; },
+    r => { delete r.nativePolicyDecisions.toolEnforcementProven; },
+    r => { r.nativePolicyDecisions.toolEnforcementProven = true; },
+    r => { delete r.unregisteredPermissionProbe; },
+    r => { r.unregisteredPermissionProbe.unregisteredReferenceStale = false; },
+    r => { delete r.unregisteredPermissionProbe.nativeWrongSessionReplyRejected; },
+    r => { r.unregisteredPermissionProbe.nativeWrongSessionReplyRejected = false; },
+    r => { r.unregisteredPermissionProbe.foreignPendingUnchanged = false; },
+    r => { r.unregisteredPermissionProbe.nativeCleanupRejected = false; },
+    r => { r.unregisteredPermissionProbe.sessionAuthorityProven = true; },
+    r => { r.unregisteredPermissionProbe.toolEnforcementProven = true; },
+    r => { r.pid = 0; },
+    r => { r.processStartTicks = 'not-a-start'; },
+    r => { r.restart.priorPid++; },
+    r => { r.restart.priorStartTicks = '1'; },
+    r => { r.restart.pid = r.pid; r.restart.startTicks = r.processStartTicks; },
+    r => { r.restart.actualBinarySha256 = 'a'.repeat(64); },
+    r => { r.restart.readOnly = false; },
+    r => { r.cleanup = false; },
+    r => { r.cleanupError = 'native_process_cleanup_unconfirmed'; },
+    r => { r.qualified = true; },
+    r => { r.error = 'native_host_test_failed'; },
+  ];
+  for (const mutate of mutations) {
+    const candidate = completeReceiptFixture();
+    mutate(candidate);
+    assert.equal(isCompleteNativeHostReceipt(candidate), false);
+  }
+  const oneEventAtSyncZero = completeReceiptFixture();
+  oneEventAtSyncZero.nativeLogReadback.eventCount = 1;
+  oneEventAtSyncZero.restartLogReadback.eventCount = 1;
+  assert.equal(isCompleteNativeHostReceipt(oneEventAtSyncZero), true,
+    'one native event may occupy the position at watermark zero');
+  assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture(), 'a'.repeat(40)), true);
+  assert.equal(isCompleteNativeHostReceipt(completeReceiptFixture(), 'b'.repeat(40)), false,
+    'an otherwise valid native receipt cannot authorize another PR HEAD');
+  assert.equal(isCompleteNativeHostReceipt(undefined), false);
+});
+
+test('receipt verifier CLI refuses lockfile-only artifacts with sanitized diagnostics', () => {
+  const root = mkdtempSync(join(tmpdir(), 'TEST-v2-native-proof-'));
+  const path = join(root, 'receipt.json');
+  try {
+    for (const [payload, exitCode] of [
+      [completeReceiptFixture(), 0],
+      [{ lockfileVersion: 3, packages: { 'node_modules/@opencode/cli': { version: '2.0.21' } } }, 1],
+      [{ ...completeReceiptFixture(), cleanup: false }, 1],
+    ]) {
+      writeFileSync(path, JSON.stringify(payload));
+      const result = spawnSync(process.execPath, [
+        fileURLToPath(new URL('./opencode-v2-native-receipt-verify.mjs', import.meta.url)), path,
+      ], { encoding: 'utf8',
+        env: { ...process.env, OPENCODE_V2_TEST_SOURCE_HEAD: 'a'.repeat(40) } });
+      assert.equal(result.status, exitCode);
+      assert.equal(result.stdout, '');
+      assert.equal(result.stderr, exitCode ? 'native_host_receipt_missing_or_incomplete\n' : '');
+    }
+    writeFileSync(path, JSON.stringify(completeReceiptFixture()));
+    for (const sourceHead of ['', 'b'.repeat(40)]) {
+      const result = spawnSync(process.execPath, [
+        fileURLToPath(new URL('./opencode-v2-native-receipt-verify.mjs', import.meta.url)), path,
+      ], { encoding: 'utf8',
+        env: { ...process.env, OPENCODE_V2_TEST_SOURCE_HEAD: sourceHead } });
+      assert.equal(result.status, 1, 'missing or different workflow HEAD must reject artifact');
+      assert.equal(result.stderr, 'native_host_receipt_missing_or_incomplete\n');
+    }
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('native V2 captured session readback cannot drift workspace or ordered permissions', () => {
+  const session = 'ses_TEST123', workspace = '/TEST/workspace';
+  const rules = [
+    { action: 'external_directory', resource: '*', effect: 'deny' },
+    { action: 'shell', resource: '*', effect: 'ask' },
+  ];
+  const valid = { status: 200, data: { data: {
+    id: session, location: { directory: workspace }, permissions: rules,
+  } } };
+  assert.equal(isOwnedNativeSessionSnapshot(valid, session, workspace, rules), true);
+  const invalid = [
+    { ...valid, status: 401 },
+    { ...valid, data: { data: { ...valid.data.data, id: 'ses_FOREIGN' } } },
+    { ...valid, data: { data: { ...valid.data.data, location: undefined } } },
+    { ...valid, data: { data: { ...valid.data.data,
+      location: { directory: '/OTHER/workspace' } } } },
+    { ...valid, data: { data: { ...valid.data.data, permissions: [...rules].reverse() } } },
+    { ...valid, data: { data: { ...valid.data.data,
+      permissions: [{ ...rules[0], effect: 'allow' }, rules[1]] } } },
+    { ...valid, data: { data: { ...valid.data.data, permissions: undefined } } },
+  ];
+  for (const reply of invalid)
+    assert.equal(isOwnedNativeSessionSnapshot(reply, session, workspace, rules), false);
+  assert.equal(isOwnedNativeSessionSnapshot(valid, session, '/OTHER/workspace', rules), false);
+});
+
+test('native durable SSE proof accepts a bounded, owned and ordered history prefix', () => {
+  const id = 'ses_TEST123', dir = '/TEST/workspace';
+  const frame = value => 'data: '+JSON.stringify(value)+'\n\n';
+  const sync = seq => ({type:'log.synced',aggregateID:id,seq});
+  const event = (seq, type = 'session.created') => ({
+    id:'evt'+seq, type, durable:{aggregateID:id,seq},
+    data:{sessionID:id},location:{directory:dir},
+  });
+  assert.deepEqual(parseOwnedDurableLog(frame(sync(0)),id,dir),
+    {watermark:0,eventCount:0}, 'stock V2 fresh log is sync-only, never a model turn');
+  assert.deepEqual(parseOwnedDurableLog(frame(event(0))+frame(sync(0)),id,dir),
+    {watermark:0,eventCount:1}, 'nonempty native prefix may end at the exact sync watermark');
+  assert.deepEqual(parseOwnedDurableLog(': heartbeat\n\n'+frame(event(0))+
+    frame(event(2,'session.updated'))+frame(sync(3)),id,dir),
+    {watermark:3,eventCount:2}, 'filtered native bus positions may have gaps');
+  assert.deepEqual(parseOwnedDurableLog(frame(sync(0)).replaceAll('\n','\r\n'),id,dir),
+    {watermark:0,eventCount:0});
+});
+
+test('native durable SSE proof enforces frame-count budget with a distinct error', () => {
+  const id = 'ses_TEST123', dir = '/TEST/workspace';
+  const sync = 'data: '+JSON.stringify({type:'log.synced',aggregateID:id,seq:0})+'\n\n';
+  const keepAlive = ': keepalive\n\n';
+  assert.deepEqual(parseOwnedDurableLog(keepAlive.repeat(4096)+sync,id,dir),
+    {watermark:0,eventCount:0}, 'the 4098-frame upper boundary is accepted');
+  assert.throws(() => parseOwnedDurableLog(keepAlive.repeat(4097)+sync,id,dir),
+    /native_durable_log_limit_exceeded/, 'overflow cannot masquerade as wrong identity');
+});
+
+test('native durable SSE proof rejects foreign, incomplete and reordered events', () => {
+  const id = 'ses_TEST123', dir = '/TEST/workspace';
+  const frame = value => 'data: '+JSON.stringify(value)+'\n\n';
+  const sync = (seq = 0, aggregateID = id) => ({type:'log.synced',aggregateID,seq});
+  const event = (seq = 0, overrides = {}) => ({
+    id:'evt'+seq,type:'session.created',durable:{aggregateID:id,seq},
+    data:{sessionID:id},location:{directory:dir},...overrides,
+  });
+  const bad = [
+    frame(sync()).trimEnd(), // truncated final SSE frame
+    'data: {\n\n', // malformed JSON
+    'data:\n\n'+frame(sync()), // empty data before sync is not a keep-alive
+    'event: session.created\n\n'+frame(sync()), // only comment keep-alives may be skipped
+    frame(sync())+'id: orphaned\n\n', // no hidden directives after sync
+    'data: '+JSON.stringify(sync())+'\nretry: 0\n\n', // no unsupported mixed fields
+    frame(sync())+'data: \n\n', // empty data after sync must not be ignored
+    frame(sync(0,'ses_FOREIGN')),
+    frame(sync(-1)),
+    frame(event(0,{data:{sessionID:'ses_FOREIGN'}}))+frame(sync()),
+    frame(event(0,{durable:{aggregateID:'ses_FOREIGN',seq:0}}))+frame(sync()),
+    frame(event(0,{location:{directory:'/foreign'}}))+frame(sync()),
+    frame(event(0,{id:'duplicate'}))+frame(event(0,{id:'duplicate'}))+frame(sync(1)),
+    frame(event(0))+frame({...event(0),id:'evt_new',type:'session.updated'})+frame(sync(1)),
+    frame(event(0))+frame(sync(0))+frame(event(1)),
+    frame({...event(1),type:'session.updated'})+frame(sync(1)),
+    frame({...event(0),type:'session.updated'})+frame(sync(1)),
+    frame(event(0))+frame(sync(-1)),
+    frame(event(0)), // no log.synced terminal
+  ];
+  for (const stream of bad)
+    assert.throws(() => parseOwnedDurableLog(stream,id,dir),
+      /native_durable_log_identity_or_cursor_mismatch/);
+});
+
+
+test('cold native log proof compares retained event content, not only counts and watermark', () => {
+  const sessionId = 'ses_TEST123', directory = '/TEST/workspace';
+  const frame = value => 'data: ' + JSON.stringify(value) + '\n\n';
+  const event = (seq, id, content) => ({
+    id, type: seq === 0 ? 'session.created' : 'session.updated',
+    durable: { aggregateID: sessionId, seq },
+    data: { sessionID: sessionId, content },
+    location: { directory },
+  });
+  const sync = seq => ({ type: 'log.synced', aggregateID: sessionId, seq });
+  const read = (events, watermark) => {
+    const fingerprints = [], positions = [];
+    const body = events.map(frame).join('') + frame(sync(watermark));
+    const cursor = parseOwnedDurableLog(body, sessionId, directory, value => {
+      fingerprints.push(createHash('sha256').update(JSON.stringify(value)).digest('hex'));
+      positions.push(value.durable.seq);
+    });
+    return { ...cursor, fingerprints, positions };
+  };
+  const original = read([event(0, 'evt-0', 'TEST-A')], 2);
+  const unchanged = read([event(0, 'evt-0', 'TEST-A')], 2);
+  const appended = read([event(0, 'evt-0', 'TEST-A'), event(3, 'evt-3', 'TEST-B')], 3);
+  const replacedId = read([event(0, 'evt-foreign', 'TEST-A')], 2);
+  const alteredContent = read([event(0, 'evt-0', 'TEST-CHANGED')], 2);
+  const regressed = read([event(0, 'evt-0', 'TEST-A')], 1);
+  const backfilled = read([event(0, 'evt-0', 'TEST-A'), event(1, 'evt-1', 'TEST-LATE')], 3);
+  const empty = read([], 0);
+  const lateCreated = read([event(0, 'evt-0', 'TEST-A')], 0);
+  assert.equal(retainsOwnedDurablePrefix(original, unchanged), true);
+  assert.equal(retainsOwnedDurablePrefix(original, appended), true);
+  assert.equal(retainsOwnedDurablePrefix(original, replacedId), false,
+    'same watermark/count must not certify a different event');
+  assert.equal(retainsOwnedDurablePrefix(original, alteredContent), false,
+    'same event ID with changed payload must not certify the old durable prefix');
+  assert.equal(retainsOwnedDurablePrefix(original, regressed), false);
+  assert.equal(retainsOwnedDurablePrefix(original, backfilled), false,
+    'new events from at/before the previous sync watermark are not an append');
+  assert.equal(retainsOwnedDurablePrefix(empty, lateCreated), false,
+    'a newly visible event at an already synced position is not durable append proof');
+  assert.equal(retainsOwnedDurablePrefix(original, { ...unchanged, positions: undefined }), false);
+  assert.equal(retainsOwnedDurablePrefix(original, { watermark: 2, eventCount: 1 }), false);
+});
+
+test('raw native V2 variant readback cannot attest a missing or inherited default', () => {
+  const inherited = Object.create({ variant: 'default' });
+  const fixtures = [
+    ['default', { variant: 'default' }, 'default', true],
+    ['null', { variant: null }, null, true],
+    ['named', { variant: 'high' }, 'high', false],
+    ['missing', {}, undefined, false],
+    ['undefined', { variant: undefined }, undefined, false],
+    ['inherited', inherited, undefined, false],
+    ['absent model', null, undefined, false],
+    ['malformed', { variant: new String('default') }, 'object', false],
+  ];
+  for (const [label, model, expected, accepted] of fixtures) {
+    const variant = nativeSessionModelVariant(model);
+    if (label === 'malformed') assert.equal(typeof variant, expected, label);
+    else assert.equal(variant, expected, label);
+    assert.equal(matchesOpenCodeV2ModelVariant(undefined, variant), accepted, label);
+  }
+});
+
+
+// Actual producer fragments and the original passive projections, with finite TEST peers only.
+const { channel: diagnosticChannel } = await import('node:diagnostics_channel');
+const { stripTypeScriptTypes } = await import('node:module');
+const { createPassiveNativeDiagnosticCapture } = await import('./fixtures/native-opencode-team/passive-diagnostics.ts');
+const diagnosticPrefix = 'TEST_OPENCODE_V2_DIAGNOSTIC ';
+const diagnosticRunCodes = ['ABORT_ERR', 'ECONNRESET', 'ECONNREFUSED', 'EPIPE', 'ETIMEDOUT',
+  'UND_ERR_ABORTED', 'UND_ERR_SOCKET', 'UND_ERR_HEADERS_TIMEOUT', 'UND_ERR_BODY_TIMEOUT'];
+
+function modelProbeDiagnosticFragments(compiled) {
+  const unique = (pattern, start = 0) => {
+    const matches = [...compiled.matchAll(pattern)].filter(match => match.index >= start);
+    assert.equal(matches.length, 1, 'one actual compiled diagnostic boundary: ' + pattern);
+    return matches[0].index;
+  };
+  const state = unique(/^[ \t]*let runState\s*=\s*['"]not-started['"];\r?$/gm);
+  const stateEnd = unique(/^[ \t]*let coordinationResult(?:\s*=\s*undefined)?;\r?$/gm);
+  const run = unique(/^[ \t]*run:\s*\(signal,\s*originalDeadline\)\s*=>\s*\{\r?$/gm);
+  const runEnd = unique(/^[ \t]*close:\s*(?:originalDeadline|\(originalDeadline\))\s*=>\s*\{\r?$/gm);
+  const publish = unique(/^[ \t]*closing\s*=\s*\(purposeBound\s*\?\s*closeCoordinationByDeadline\([^\n]+$/gm);
+  const publishEnd = unique(/^[ \t]*return closing;\r?$/gm, publish);
+  assert.ok(state < stateEnd && stateEnd < run && run < runEnd && runEnd < publish && publish < publishEnd);
+  return { state: compiled.slice(state, stateEnd), run: compiled.slice(run, runEnd),
+    publish: compiled.slice(publish, publishEnd) };
+}
+
+function modelProbeDiagnosticHarness(fragments, channel, runner, coordination = false) {
+  // Only the real declarations, run wrapper and failed-close continuation are evaluated.
+  // No constructor, Host, provider, request, server or actual cleanup operation is invoked.
+  const body = fragments.state + '\nlet running, closing, released;\n' +
+    'const methods = {' + fragments.run + '};\n' +
+    'return { run: methods.run, finish(stage, reason) {\n' +
+    'noteCloseFailure(stage, reason);\n' +
+    'const work = Promise.resolve(false), purposeBound = false, originalDeadline = 0, deadline = 0;\n' +
+    fragments.publish + '\nreturn closing;\n} };';
+  return new Function('channel', 'run', 'coordination', 'captured', body)(
+    channel, runner, coordination, 'a'.repeat(64));
+}
+
+function actualModelProbeDiagnosticFragments() {
+  return modelProbeDiagnosticFragments(readFileSync(
+    new URL('../dist/adapters/providers/OpenCodeV2ModelProbe.js', import.meta.url), 'utf8'));
+}
+
+async function observeOriginalRunRejection(fragments, error, errorClass = 'unknown') {
+  const rows = [], diagnostic = diagnosticChannel('agent-teams:opencode-v2:host-probe-close-failed');
+  const observe = value => rows.push(value);
+  diagnostic.subscribe(observe);
+  try {
+    const harness = modelProbeDiagnosticHarness(fragments, diagnosticChannel, async () => { throw error; });
+    let caught, rejected = false;
+    try { await harness.run(undefined, 123); } catch (value) { caught = value; rejected = true; }
+    assert.equal(rejected, true);
+    assert.equal(caught, error, 'the exact original rejection object/value is preserved');
+    assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);
+    assert.equal(rows.length, 1);
+    assert.deepEqual({ probeDigest: rows[0].probeDigest, runState: rows[0].runState, outcome: rows[0].outcome,
+      errorClass: rows[0].errorClass, stage: rows[0].stage, reason: rows[0].reason },
+      { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
+        errorClass,
+        stage: 'driver-close', reason: 'unconfirmed' });
+    return rows[0];
+  } finally { diagnostic.unsubscribe(observe); }
+}
+
+const originalRunWrapperSource = "    run: (signal, originalDeadline) => {\n      if (running) return running;\n      if (coordination) return (running = run(signal, originalDeadline));\n      runState = 'pending';\n      return (running = run(signal, originalDeadline).then(result => {\n        runState = result ? 'true' : 'false'; return result;\n      }, (error: unknown) => {\n        runState = 'threw'; errorClass = 'unknown';\n        try {\n          if (error && (typeof error === 'object' || typeof error === 'function')) {\n            const field = Object.getOwnPropertyDescriptor(error, 'code');\n            const code: unknown = field && 'value' in field ? field.value : undefined;\n            if (code === 'held' || code === 'invalid' || code === 'conflict' || code === 'busy') errorClass = code;\n          }\n        } catch { /* An opaque diagnostic cannot replace the original exception. */ }\n        throw error;\n      }));\n    },\n";
+const originalFailedClosePublisher = "      closing = (purposeBound ? closeCoordinationByDeadline(work, originalDeadline ?? deadline) : work)\n        .then(clean => {\n          released = clean;\n          if (!clean && !coordination) {\n            noteCloseFailure('close-result', 'unconfirmed');\n            try {\n              const diagnostic = channel('agent-teams:opencode-v2:host-probe-close-failed');\n              if (diagnostic.hasSubscribers) diagnostic.publish({ probeDigest: captured, runState, outcome,\n                errorClass, ...firstCloseFailure });\n            } catch { /* Failure-only observation cannot change the original cleanup result. */ }\n          }\n          return clean;\n        });\n";
+
+test('actual ModelProbe run rejection keeps original identity and close classification with bounded own error codes', async () => {
+  const fragments = actualModelProbeDiagnosticFragments();
+  let getterCalls = 0;
+  const getter = () => { getterCalls++; throw new Error('TEST_PRIVATE_GETTER'); };
+  const codeGetter = Object.defineProperty({ cause: { code: 'UND_ERR_SOCKET' } }, 'code', { get: getter });
+  const causeGetter = Object.defineProperty({ code: 'ECONNRESET' }, 'cause', { get: getter });
+  const nestedGetter = { cause: Object.defineProperty({}, 'code', { get: getter }) };
+  const inherited = Object.create({ code: 'EPIPE', cause: { code: 'UND_ERR_SOCKET' } });
+  const cases = [
+    ...diagnosticRunCodes.map(code => ({ error: { code, message: 'TEST_PRIVATE_MESSAGE', name: 'TEST_PRIVATE_NAME' },
+      runErrorCode: code, runCauseCode: null, errorClass: 'unknown' })),
+    { error: { code: 'conflict', cause: { code: 'UND_ERR_BODY_TIMEOUT', message: 'TEST_PRIVATE_CAUSE' } },
+      runErrorCode: null, runCauseCode: 'UND_ERR_BODY_TIMEOUT', errorClass: 'conflict' },
+    ...['held', 'invalid', 'busy'].map(errorClass => ({
+      error: { code: errorClass, cause: { code: 'UND_ERR_HEADERS_TIMEOUT' } },
+      runErrorCode: null, runCauseCode: 'UND_ERR_HEADERS_TIMEOUT', errorClass,
+    })),
+    { error: { code: 'EPIPE', cause: { cause: { code: 'UND_ERR_SOCKET' } } },
+      runErrorCode: 'EPIPE', runCauseCode: null, errorClass: 'unknown' },
+    { error: Object.assign(function originalError() {}, {
+      code: 'ABORT_ERR', cause: Object.assign(function originalCause() {}, { code: 'UND_ERR_ABORTED' }),
+    }), runErrorCode: 'ABORT_ERR', runCauseCode: 'UND_ERR_ABORTED', errorClass: 'unknown' },
+    { error: { code: 'TEST_PRIVATE_CODE', cause: { code: 'TEST_PRIVATE_CAUSE' } },
+      runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    { error: { code: new String('EPIPE'), cause: { code: { toString: getter } } },
+      runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    { error: codeGetter, runErrorCode: null, runCauseCode: 'UND_ERR_SOCKET', errorClass: 'unknown' },
+    { error: causeGetter, runErrorCode: 'ECONNRESET', runCauseCode: null, errorClass: 'unknown' },
+    { error: nestedGetter, runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    { error: inherited, runErrorCode: null, runCauseCode: null, errorClass: 'unknown' },
+    ...[null, undefined, 7, 'TEST_PRIVATE_THROWN', Symbol('TEST_PRIVATE_SYMBOL')].map(error =>
+      ({ error, runErrorCode: null, runCauseCode: null, errorClass: 'unknown' })),
+  ];
+  for (const fixture of cases) {
+    const observed = await observeOriginalRunRejection(fragments, fixture.error, fixture.errorClass);
+    assert.equal(observed.runErrorCode, fixture.runErrorCode);
+    assert.equal(observed.runCauseCode, fixture.runCauseCode);
+    assert.equal(observed.errorClass, fixture.errorClass);
+    assert.doesNotMatch(JSON.stringify(observed), /TEST_PRIVATE_|toString|message|stack/);
+  }
+  assert.equal(getterCalls, 0);
+  // These reflection traps are intentionally opaque. Observation must keep the original rejection.
+  for (const field of ['code', 'cause']) {
+    const target = { code: 'ECONNRESET', cause: { code: 'UND_ERR_SOCKET' } };
+    const opaque = new Proxy(target, { getOwnPropertyDescriptor(row, key) {
+      if (key === field) throw new Error('TEST_PRIVATE_DESCRIPTOR');
+      return Reflect.getOwnPropertyDescriptor(row, key);
+    } });
+    const rows = [], diagnostic = diagnosticChannel('agent-teams:opencode-v2:host-probe-close-failed');
+    const observe = value => rows.push(value);
+    diagnostic.subscribe(observe);
+    try {
+      const harness = modelProbeDiagnosticHarness(fragments, diagnosticChannel, async () => { throw opaque; });
+      let rejected = false;
+      try { await harness.run(); } catch (caught) { rejected = true; assert.equal(caught, opaque); }
+      assert.equal(rejected, true);
+      assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].stage, 'driver-close'); assert.equal(rows[0].reason, 'unconfirmed');
+      assert.equal(rows[0].errorClass, 'unknown');
+      assert.equal(rows[0].runErrorCode, field === 'code' ? null : 'ECONNRESET');
+      assert.equal(rows[0].runCauseCode, null);
+    } finally { diagnostic.unsubscribe(observe); }
+  }
+  for (const result of [true, false]) {
+    const rows = [], diagnostic = diagnosticChannel('agent-teams:opencode-v2:host-probe-close-failed');
+    const observe = value => rows.push(value);
+    diagnostic.subscribe(observe);
+    try {
+      const harness = modelProbeDiagnosticHarness(fragments, diagnosticChannel, async () => result);
+      assert.equal(await harness.run(), result);
+      assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].runState, String(result));
+      assert.equal('runErrorCode' in rows[0], false); assert.equal('runCauseCode' in rows[0], false);
+    } finally { diagnostic.unsubscribe(observe); }
+  }
+  assert.equal(createHash('sha256').update(originalRunWrapperSource).digest('hex'),
+    'c225fad7432f205e57fb1a086c1d84213f30ba900705e11e15c6a5ca0763b13e');
+  assert.equal(createHash('sha256').update(originalFailedClosePublisher).digest('hex'),
+    '339d052a0a4d205dd1f7c57130386635bf5d04d61c9cd542703f125650dfcc91');
+  const wrapped = stripTypeScriptTypes('({' + originalRunWrapperSource + '})');
+  assert.ok(wrapped.startsWith('({') && wrapped.endsWith('})'));
+  const old = { ...fragments, run: wrapped.slice(2, -2), publish: originalFailedClosePublisher };
+  const counterfactual = await observeOriginalRunRejection(old, { code: 'ECONNRESET', cause: { code: 'UND_ERR_SOCKET' } });
+  assert.equal('runErrorCode' in counterfactual, false);
+  assert.equal('runCauseCode' in counterfactual, false, 'the exact old catch/publisher loses the selected diagnostic information');
+});
+
+test('actual finite Node observer and parent retain producer error codes in the reserved close slot after trace exhaustion', () => {
+  assert.equal(process.version, 'v24.21.0', 'the existing passive observer has this exact runtime admission');
+  assert.ok(process.platform === 'linux' && process.arch === 'x64' ||
+    (process.platform === 'darwin' || process.platform === 'win32') && (process.arch === 'x64' || process.arch === 'arm64'),
+  'an unsupported observer tuple is unqualified, never a passive-observation PASS');
+  const root = mkdtempSync(join(tmpdir(), 'TEST-v2-original-error-diagnostic-'));
+  const entry = join(root, 'finite-diagnostic-peer.mjs');
+  const observer = new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url).href;
+  const compiled = new URL('../dist/adapters/providers/OpenCodeV2ModelProbe.js', import.meta.url).href;
+  const secret = 'TEST_PRIVATE_NATIVE_' + randomBytes(12).toString('hex');
+  const source = [
+    "import assert from 'node:assert/strict';",
+    "import { channel } from 'node:diagnostics_channel';",
+    "import { readFileSync } from 'node:fs';",
+    modelProbeDiagnosticFragments.toString(),
+    modelProbeDiagnosticHarness.toString(),
+    'const fragments = modelProbeDiagnosticFragments(readFileSync(new URL(' + JSON.stringify(compiled) + "), 'utf8'));",
+    'const secret = ' + JSON.stringify(secret) + ';',
+    "for (let index = 0; index < 300; index++) channel('undici:request:create').publish({ request: {",
+    "  origin: 'http://127.0.0.1:65530', path: '/api/info?private=' + secret, method: 'GET' } });",
+    "const error = { code: 'ECONNRESET', message: secret, stack: secret, cause: { code: 'UND_ERR_SOCKET', message: secret } };",
+    'const harness = modelProbeDiagnosticHarness(fragments, channel, async () => { throw error; });',
+    'let rejected = false;',
+    'try { await harness.run(); } catch (caught) { assert.equal(caught, error); rejected = true; }',
+    'assert.equal(rejected, true);',
+    "assert.equal(await harness.finish('driver-close', 'unconfirmed'), false);",
+    "await new Promise(resolve => process.stderr.write('', resolve));",
+    "process.stdout.write('finite-diagnostic-peer-finished\\n');",
+  ].join('\n') + '\n';
+  try {
+    writeFileSync(entry, source, { mode: 0o600 });
+    const result = spawnSync(process.execPath, ['--import', observer, entry], {
+      encoding: 'utf8', timeout: 10000, maxBuffer: 256 * 1024,
+    });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 0); assert.equal(result.signal, null);
+    assert.equal(result.stdout, 'finite-diagnostic-peer-finished\n');
+    assert.doesNotMatch(result.stderr, /TEST_PRIVATE_NATIVE_|private=|ECONNRESET.*message/);
+    const lines = result.stderr.split('\n').filter(line => line.startsWith(diagnosticPrefix));
+    assert.ok(lines.length > 250 && lines.length <= 257);
+    assert.ok(lines.every(line => Buffer.byteLength(line) <= 512));
+    assert.ok(lines.reduce((sum, line) => sum + Buffer.byteLength(line) + 1, 0) <= 64 * 1024);
+    assert.equal(lines.filter(line => JSON.parse(line.slice(diagnosticPrefix.length)).event === 'trace-limit').length, 1);
+    const capture = createPassiveNativeDiagnosticCapture();
+    capture.accept(Buffer.from(result.stderr), 1);
+    const closes = capture.entries.filter(row => row.event === 'host-probe-close-failed');
+    assert.equal(closes.length, 1);
+    assert.deepEqual({ stage: closes[0].stage, code: closes[0].code, runState: closes[0].runState,
+      outcome: closes[0].outcome, errorClass: closes[0].errorClass,
+      runErrorCode: closes[0].runErrorCode, runCauseCode: closes[0].runCauseCode },
+      { stage: 'driver-close', code: 'unconfirmed', runState: 'threw', outcome: 'unobserved',
+        errorClass: 'unknown', runErrorCode: 'ECONNRESET', runCauseCode: 'UND_ERR_SOCKET' });
+    assert.equal(capture.limited, true);
+    assert.ok(capture.entries.length <= 257);
+    assert.ok(capture.entries.every(row => Buffer.byteLength(JSON.stringify(row)) + 1 <= 513));
+    assert.ok(capture.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0) <= 64 * 1024);
+    assert.doesNotMatch(JSON.stringify(capture.entries), /TEST_PRIVATE_NATIVE_|private=|message|stack/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('actual close projection preserves legacy rows and opaque optional fields within original reservation and byte limits', () => {
+  const source = readFileSync(new URL('./fixtures/native-opencode-team/passive-diagnostics.ts', import.meta.url), 'utf8');
+  const between = (start, end) => {
+    assert.equal(source.split(start).length, 2); assert.equal(source.split(end).length, 2);
+    const from = source.indexOf(start), until = source.indexOf(end, from);
+    assert.ok(until > from); return source.slice(from, until);
+  };
+  const helpers = between('const codes = ', 'const readCutStages = ');
+  const project = between('function projectHostProbeCloseFailure(value: unknown) {',
+    '/** Project again at the receipt boundary; native text/IDs/credentials are never retained. */');
+  const actualProject = new Function(stripTypeScriptTypes(helpers + '\n' + project) +
+    '\nreturn projectHostProbeCloseFailure;')();
+  const legacy = { probeDigest: 'a'.repeat(64), runState: 'threw', outcome: 'unobserved',
+    errorClass: 'unknown', stage: 'driver-close', reason: 'unconfirmed' };
+  assert.deepEqual(actualProject(legacy), legacy, 'absent optional fields preserve the original legacy shape');
+  let getters = 0;
+  const opaque = () => { getters++; throw new Error('TEST_PRIVATE_OPTIONAL'); };
+  const accessor = Object.defineProperties({ ...legacy }, { runErrorCode: { get: opaque }, runCauseCode: { get: opaque } });
+  assert.deepEqual(actualProject(accessor), { ...legacy, runErrorCode: null, runCauseCode: null });
+  const proxy = new Proxy({ ...legacy }, { getOwnPropertyDescriptor(row, key) {
+    if (key === 'runErrorCode' || key === 'runCauseCode') throw new Error('TEST_PRIVATE_OPTIONAL');
+    return Reflect.getOwnPropertyDescriptor(row, key);
+  } });
+  assert.deepEqual(actualProject(proxy), { ...legacy, runErrorCode: null, runCauseCode: null },
+    'optional reflection failure cannot discard a valid original close row');
+  assert.equal(getters, 0);
+  assert.deepEqual(actualProject(Object.assign(Object.create({ runErrorCode: 'EPIPE' }), legacy)), legacy);
+  for (const value of [undefined, null, 'unknown', 'TEST_PRIVATE_CODE', 7, false, [], { toString: opaque }])
+    assert.deepEqual(actualProject({ ...legacy, runErrorCode: value, runCauseCode: value }),
+      { ...legacy, runErrorCode: null, runCauseCode: null });
+  assert.equal(getters, 0);
+  assert.equal(actualProject({ ...legacy, stage: 'TEST_PRIVATE_STAGE', runErrorCode: 'EPIPE' }), undefined);
+
+  const frame = (value, atMs = 3_600_000) => diagnosticPrefix + JSON.stringify({ atMs, event: 'host-probe-close-failed', ...value }) + '\n';
+  const epoch = -0.0000010000000000000002;
+  let maxLine = 0, maxRecord = 0;
+  for (const runErrorCode of [...diagnosticRunCodes, null]) for (const runCauseCode of [...diagnosticRunCodes, null]) {
+    const selected = { ...legacy, stage: 'request-drain', errorClass: 'conflict', runErrorCode, runCauseCode };
+    const text = frame(selected), capture = createPassiveNativeDiagnosticCapture();
+    capture.accept(Buffer.from(text), epoch);
+    assert.equal(capture.entries.length, 1);
+    const row = capture.entries[0];
+    assert.equal(row.stage, 'request-drain'); assert.equal(row.code, 'unconfirmed');
+    assert.equal(row.errorClass, 'conflict'); assert.equal(row.runState, 'threw'); assert.equal(row.outcome, 'unobserved');
+    assert.equal(row.runErrorCode, runErrorCode); assert.equal(row.runCauseCode, runCauseCode);
+    maxLine = Math.max(maxLine, Buffer.byteLength(text));
+    maxRecord = Math.max(maxRecord, Buffer.byteLength(JSON.stringify(row)) + 1);
+    assert.ok(Buffer.byteLength(text) - 1 <= 512);
+    assert.ok(Buffer.byteLength(JSON.stringify(row)) + 1 <= 513);
+  }
+  assert.equal(maxLine, 355); assert.equal(maxRecord, 499);
+  const legacyCapture = createPassiveNativeDiagnosticCapture();
+  legacyCapture.accept(Buffer.from(frame(legacy)), 1);
+  assert.equal(legacyCapture.entries.length, 1);
+  assert.equal('runErrorCode' in legacyCapture.entries[0], false);
+  assert.equal('runCauseCode' in legacyCapture.entries[0], false);
+  const malformed = createPassiveNativeDiagnosticCapture();
+  malformed.accept(Buffer.from(frame({ ...legacy, runErrorCode: { private: 'TEST_PRIVATE_CODE' }, runCauseCode: 'unknown' })), 1);
+  assert.equal(malformed.entries.length, 1);
+  assert.equal(malformed.entries[0].runErrorCode, null); assert.equal(malformed.entries[0].runCauseCode, null);
+  assert.doesNotMatch(JSON.stringify(malformed.entries), /TEST_PRIVATE_|private/);
+
+  const saturated = createPassiveNativeDiagnosticCapture();
+  for (let index = 0; index < 300; index++)
+    saturated.accept(Buffer.from(diagnosticPrefix + JSON.stringify({ event: 'request', atMs: 0, request: index + 1 }) + '\n'), 1);
+  assert.equal(saturated.limited, true);
+  saturated.accept(Buffer.from(frame({ ...legacy, runErrorCode: 'EPIPE', runCauseCode: null })), 2);
+  saturated.accept(Buffer.from(frame({ ...legacy, stage: 'server-stop', runErrorCode: 'ETIMEDOUT' })), 3);
+  const closes = saturated.entries.filter(row => row.event === 'host-probe-close-failed');
+  assert.equal(closes.length, 1); assert.equal(closes[0].epoch, 2);
+  assert.equal(closes[0].stage, 'driver-close'); assert.equal(closes[0].runErrorCode, 'EPIPE');
+  assert.ok(saturated.entries.length <= 257);
+  assert.ok(saturated.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0) <= 64 * 1024);
+  const bounded = createPassiveNativeDiagnosticCapture();
+  bounded.accept(Buffer.from(frame({ ...legacy, ignored: 'x'.repeat(600) })), 1);
+  bounded.accept(Buffer.alloc(64 * 1024 + 1, 120), 1);
+  assert.equal(bounded.entries.length, 0);
+  assert.equal(bounded.limited, true);
+  bounded.accept(Buffer.from(frame({ ...legacy, runErrorCode: null, runCauseCode: null })), 2);
+  assert.equal(bounded.entries.length, 1, 'rejected oversized input does not consume the reserved valid close observation');
+});
+
+// Whole existing platform suite: preserve every original case and its original platform skip.
+await import('../../../scripts/e2e/opencode-diagnostics/platform.test.mjs');

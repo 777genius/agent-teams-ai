@@ -10,9 +10,17 @@ const memberLogStreamMockState = vi.hoisted(() => ({
   uiEnabled: true,
 }));
 
+const statsMockState = vi.hoisted(() => ({
+  stats: null as {
+    inputTokens: number | null;
+    outputTokens: number | null;
+    computedAt: string;
+  } | null,
+}));
+
 vi.mock('@renderer/hooks/useMemberStats', () => ({
   useMemberStats: () => ({
-    stats: null,
+    stats: statsMockState.stats,
     loading: false,
     error: null,
   }),
@@ -104,10 +112,19 @@ vi.mock('@renderer/components/team/members/MemberDetailHeader', () => ({
 }));
 
 vi.mock('@renderer/components/team/members/MemberDetailStats', () => ({
-  MemberDetailStats: ({ activityCount }: { activityCount: number }) =>
+  MemberDetailStats: ({
+    activityCount,
+    totalTokens,
+  }: {
+    activityCount: number;
+    totalTokens: number | null;
+  }) =>
     React.createElement(
       'div',
-      { 'data-testid': 'member-detail-stats' },
+      {
+        'data-testid': 'member-detail-stats',
+        'data-total-tokens': totalTokens === null ? 'unknown' : String(totalTokens),
+      },
       `activity-count:${activityCount}`
     ),
 }));
@@ -154,6 +171,7 @@ describe('MemberDetailDialog activity count', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     memberLogStreamMockState.uiEnabled = true;
+    statsMockState.stats = null;
     useStore.setState({
       teamMessagesByName: {
         'demo-team': {
@@ -218,46 +236,57 @@ describe('MemberDetailDialog activity count', () => {
     });
   });
 
-  it('renders legacy member logs directly when the member log stream UI gate is off', async () => {
-    memberLogStreamMockState.uiEnabled = false;
-    const member: ResolvedTeamMember = {
-      name: 'jack',
-      status: 'active',
-      currentTaskId: null,
-      taskCount: 0,
-      lastActiveAt: null,
-      messageCount: 0,
-    };
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
+  it.each([
+    [null, 7, 'unknown'],
+    [7, null, 'unknown'],
+    [7, 7, '14'],
+  ] as const)(
+    'renders existing logs with honest token total (%s, %s)',
+    async (inputTokens, outputTokens, expected) => {
+      statsMockState.stats = { inputTokens, outputTokens, computedAt: '2026-10-23T00:00:00Z' };
+      memberLogStreamMockState.uiEnabled = false;
+      const member: ResolvedTeamMember = {
+        name: 'jack',
+        status: 'active',
+        currentTaskId: null,
+        taskCount: 0,
+        lastActiveAt: null,
+        messageCount: 0,
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
 
-    await act(async () => {
-      root.render(
-        React.createElement(MemberDetailDialog, {
-          open: true,
-          member,
-          teamName: 'demo-team',
-          members: [member],
-          tasks: [],
-          initialTab: 'logs',
-          onClose: () => undefined,
-          onSendMessage: () => undefined,
-          onAssignTask: () => undefined,
-          onTaskClick: () => undefined,
-        })
-      );
-      await Promise.resolve();
-    });
+      await act(async () => {
+        root.render(
+          React.createElement(MemberDetailDialog, {
+            open: true,
+            member,
+            teamName: 'demo-team',
+            members: [member],
+            tasks: [],
+            initialTab: 'logs',
+            onClose: () => undefined,
+            onSendMessage: () => undefined,
+            onAssignTask: () => undefined,
+            onTaskClick: () => undefined,
+          })
+        );
+        await Promise.resolve();
+      });
 
-    expect(host.textContent).toContain('logs-tab');
-    expect(host.textContent).not.toContain('member-log-stream');
+      expect(
+        host.querySelector('[data-testid="member-detail-stats"]')?.getAttribute('data-total-tokens')
+      ).toBe(expected);
+      expect(host.textContent).toContain('logs-tab');
+      expect(host.textContent).not.toContain('member-log-stream');
 
-    await act(async () => {
-      root.unmount();
-      await Promise.resolve();
-    });
-  });
+      await act(async () => {
+        root.unmount();
+        await Promise.resolve();
+      });
+    }
+  );
 
   it('keeps the stream visible and renders legacy fallback after an initial stream error', async () => {
     const member: ResolvedTeamMember = {
@@ -838,6 +867,9 @@ describe('MemberDetailDialog activity count', () => {
         if (!button) throw new Error('Expected member Restart button');
         return button;
       },
+      hide: async () => {
+        await act(async () => root.render(null));
+      },
       close: async () => {
         await act(async () => {
           root.unmount();
@@ -930,6 +962,43 @@ describe('MemberDetailDialog activity count', () => {
       expect(view.host.textContent).toContain('current context failure');
       expect(view.restartButton().disabled).toBe(false);
       await view.close();
+    }
+  );
+
+  it.each(['resolve', 'reject'] as const)(
+    'ignores an old %s after actual unmount and reopen',
+    async (outcome) => {
+      const old = deferredRestart();
+      const current = deferredRestart();
+      const restart = vi.fn().mockReturnValueOnce(old.promise).mockReturnValueOnce(current.promise);
+      const view = restartHarness(restart);
+      try {
+        await view.render();
+        await act(async () => view.restartButton().click());
+        expect(view.restartButton().disabled).toBe(true);
+        await view.hide();
+        await view.render({ open: true, initialTab: 'logs' });
+        expect(view.host.querySelector('[data-tabs-value="logs"]')).not.toBeNull();
+        expect(view.restartButton().disabled).toBe(false);
+        await act(async () => view.restartButton().click());
+        expect(restart).toHaveBeenCalledTimes(2);
+        await act(async () => {
+          if (outcome === 'resolve') old.resolve();
+          else old.reject(new Error('old unmounted failure'));
+        });
+        expect(view.host.textContent).not.toContain('old unmounted failure');
+        expect(view.restartButton().disabled).toBe(true);
+        expect(view.host.querySelector('[data-tabs-value="logs"]')).not.toBeNull();
+        await act(async () => current.reject(new Error('current reopened failure')));
+        expect(view.host.textContent).toContain('current reopened failure');
+        expect(view.restartButton().disabled).toBe(false);
+      } finally {
+        await act(async () => {
+          old.resolve();
+          current.resolve();
+        });
+        await view.close();
+      }
     }
   );
 });

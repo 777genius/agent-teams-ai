@@ -1,0 +1,25 @@
+{
+  "schema": "root-M0660-Windows-arm64-original-response-byte-join/v1",
+  "reviewedAtUTC": "2026-11-16T03:02:11.982911+00:00",
+  "verdict": "APPROVE exact original retained job-log tool response UTF-8 byte join",
+  "baseIndependentReview": {
+    "bytes": 184983,
+    "blob": "62a33431b247d50f6f9c4f8594d4454d494abfe2",
+    "sha256": "c3cc149110609a1a722e4f0ae33b0341b479c33561fea0b3d94b6323834b2b8b"
+  },
+  "originalRetainedToolResponse": {
+    "bytes": 314779,
+    "blob": "f59af584ef7aba4a20f6a172210f530e93e64b24",
+    "sha256": "4d797099601e5eacd5838294e219cf6554cee817289f43db203ae561c443e87f"
+  },
+  "decodedRawLog": {
+    "bytes": 280157,
+    "blob": "5b6c4650d4350fa0359c9cfd3c1e53913bae5e93",
+    "sha256": "b3af777830444f6f766c21fc4d9b03e21c2f364bdbe956434cf22b780425efeb"
+  },
+  "all280157DecodedUtf8BytesEqualFrozenRawLog": true,
+  "provenance": "Author retained the original completed job-log response in tool store and serialized that existing object without a second request. This supplement verifies actual saved structuredContent content against the original frozen raw bytes.",
+  "wireResponseClaim": false,
+  "qualificationChanges": false,
+  "supersededLimit": "The initial base R2 accurately recorded that its original seven-file packet lacked a separately saved response; this subsequent original-response preservation closes that one provenance join. All P08 failures and native scope limits remain."
+}

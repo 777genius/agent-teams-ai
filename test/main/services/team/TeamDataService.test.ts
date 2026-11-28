@@ -7,6 +7,7 @@ import * as path from 'path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { gitIdentityResolver } from '../../../../src/main/services/parsing/GitIdentityResolver';
+import { TeamDraftPreflightCollisionError } from '../../../../src/main/services/team/createDraftTeamConfig';
 import { getEffectiveInboxMessageId } from '../../../../src/main/services/team/inboxMessageIdentity';
 import { buildTaskChangePresenceDescriptor } from '../../../../src/main/services/team/taskChangePresenceUtils';
 import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigReader';
@@ -457,9 +458,10 @@ describe('TeamDataService task projection cache invalidation', () => {
   });
 
   it.each([
-    { scenario: 'completed', change: { status: 'completed' as const } },
-    { scenario: 'reassigned', change: { owner: 'bob' } },
-  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change }) => {
+    { scenario: 'completed', change: { status: 'completed' as const }, stillCurrent: true },
+    { scenario: 'reassigned', change: { owner: 'bob' }, stillCurrent: true },
+    { scenario: 'whose runtime was replaced', change: {}, stillCurrent: false },
+  ])('does not start a task $scenario during asynchronous scheduled admission', async ({ change, stillCurrent }) => {
     const task: TeamTask = {
       id: 'task-1',
       subject: 'Scheduled assignment',
@@ -468,6 +470,7 @@ describe('TeamDataService task projection cache invalidation', () => {
     };
     const taskBoard = {
       getTask: vi.fn(() => task),
+      listTasks: vi.fn(() => [task]),
       startTask: vi.fn(),
     };
     const service = new TeamDataService(
@@ -483,16 +486,23 @@ describe('TeamDataService task projection cache invalidation', () => {
       {} as never,
       (() => ({ taskBoard })) as never
     );
+    const send = vi.spyOn(service, 'sendMessage');
+    let current = true;
     await expect(
       service.startTaskByUser('my-team', task.id, {
         expectedOwner: 'alice',
+        expectedRunId: 'original-run',
+        isCurrent: () => current,
         canStart: async () => {
           Object.assign(task, change);
+          current = stillCurrent;
           return true;
         },
       })
     ).rejects.toThrow('Scheduled task start superseded');
     expect(taskBoard.startTask).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    if (!stillCurrent) expect(task.status).toBe('pending');
   });
 
   it.each([true, false])(
@@ -525,6 +535,8 @@ describe('TeamDataService task projection cache invalidation', () => {
       });
       const result = await service.startTaskByUser('my-team', original.id, {
         expectedOwner: 'alice',
+        expectedRunId: 'original-run',
+        isCurrent: () => true,
         canStart: async () => {
           currentTask = { ...original, subject: 'Current instruction' };
           return true;
@@ -561,6 +573,8 @@ describe('TeamDataService task projection cache invalidation', () => {
     expect(service.hasActiveOwnedTask('my-team', 'bob')).toBe(false);
     await expect(service.startTaskByUser('my-team', pending.id, {
       expectedOwner: 'alice',
+      expectedRunId: 'original-run',
+      isCurrent: () => true,
       canStart: async () => true,
     })).rejects.toThrow('Scheduled recipient is already working');
     expect(taskBoard.startTask).not.toHaveBeenCalled();
@@ -773,8 +787,10 @@ describe('TeamDataService draft metadata', () => {
 
     await expect(
       new TeamDataService().createTeamConfig({ teamName: 'draft-team', members: [] })
-    ).rejects.toThrow('Team already exists');
+    ).rejects.toBeInstanceOf(TeamDraftPreflightCollisionError);
+    // Collision is detected before this team receives any directory or metadata.
     await expect(fs.access(path.join(claudeRoot, 'teams', 'draft-team'))).rejects.toThrow();
+    await expect(fs.access(path.join(claudeRoot, 'tasks', 'draft-team'))).resolves.toBeUndefined();
   });
 
   it('allows exactly one of two concurrent creates for the same team name', async () => {
@@ -4187,8 +4203,24 @@ describe('TeamDataService', () => {
     });
   });
 
-  it('propagates leadSessionId for kanban-driven review transitions', async () => {
+  it('routes legacy Disapprove once through its existing trusted controller and leaves generic remove guarded', async () => {
+    const disapproveReview = vi.fn(), clearKanban = vi.fn(() => { throw new Error('approved guard'); });
+    const controllerFactory = vi.fn(() => ({ taskBoard: { disapproveReview, clearKanban } }) as never);
+    const service = new TeamDataService({} as never, {} as never, {} as never, {} as never,
+      {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, controllerFactory);
+    await service.updateKanban('TEST-team', 'TEST-task', { op: 'disapprove' });
+    expect(controllerFactory).toHaveBeenCalledExactlyOnceWith('TEST-team');
+    expect(disapproveReview).toHaveBeenCalledExactlyOnceWith('TEST-task', { from: 'user' });
+    expect(clearKanban).not.toHaveBeenCalled();
+    await expect(service.updateKanban('TEST-team', 'TEST-task', { op: 'remove' })).rejects.toThrow('approved guard');
+    expect(controllerFactory).toHaveBeenLastCalledWith('TEST-team');
+    expect(disapproveReview).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates leadSessionId and options through trusted controller review actions', async () => {
     const requestReviewMock = vi.fn();
+    const approveReviewFromUserMock = vi.fn();
+    const requestChangesFromUserMock = vi.fn();
     const approveReviewMock = vi.fn();
     const requestChangesMock = vi.fn();
 
@@ -4229,6 +4261,8 @@ describe('TeamDataService', () => {
               },
             })),
             requestReview: requestReviewMock,
+            approveReviewFromUser: approveReviewFromUserMock,
+            requestChangesFromUser: requestChangesFromUserMock,
             approveReview: approveReviewMock,
             requestChanges: requestChangesMock,
           },
@@ -4246,20 +4280,23 @@ describe('TeamDataService', () => {
       from: 'team-lead',
       leadSessionId: 'lead-2',
     });
-    expect(approveReviewMock).toHaveBeenCalledWith('task-1', {
+    expect(approveReviewFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
       from: 'team-lead',
       suppressTaskComment: true,
       'notify-owner': true,
       leadSessionId: 'lead-2',
     });
-    expect(requestChangesMock).toHaveBeenCalledWith('task-1', {
+    expect(requestChangesFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
       from: 'team-lead',
       comment: 'Needs fixes',
       leadSessionId: 'lead-2',
     });
+    expect(approveReviewMock).not.toHaveBeenCalled();
+    expect(requestChangesMock).not.toHaveBeenCalled();
   });
 
-  it('routes an interrupted human rejection back to the trusted retry path after disabling the policy', async () => {
+  it('delegates an interrupted human rejection retry to the trusted controller after disabling the policy', async () => {
+    const requestChangesFromUser = vi.fn();
     const requestChangesAsHuman = vi.fn();
     const requestChanges = vi.fn();
     const taskBoard = {
@@ -4282,6 +4319,7 @@ describe('TeamDataService', () => {
       getKanbanState: vi.fn(() => ({
         teamName: 'my-team', reviewers: [], tasks: {}, reviewFlow: 'agent_approval', reviewFlowSource: 'default',
       })),
+      requestChangesFromUser,
       requestChangesAsHuman,
       requestChanges,
     };
@@ -4305,13 +4343,16 @@ describe('TeamDataService', () => {
     await service.updateKanban('my-team', 'task-1', {
       op: 'request_changes', comment: 'Retry with retained original feedback',
     });
-    expect(requestChangesAsHuman).toHaveBeenCalledWith('task-1', {
+    expect(requestChangesFromUser).toHaveBeenCalledExactlyOnceWith('task-1', {
+      from: 'team-lead',
       comment: 'Retry with retained original feedback',
     });
+    expect(requestChangesAsHuman).not.toHaveBeenCalled();
     expect(requestChanges).not.toHaveBeenCalled();
   });
 
-  it('uses direct kanban approval for completed tasks that are not in review', async () => {
+  it('delegates approval of completed tasks outside review to the trusted controller', async () => {
+    const approveReviewFromUserMock = vi.fn();
     const approveReviewMock = vi.fn();
     const setKanbanColumnMock = vi.fn();
 
@@ -4347,6 +4388,7 @@ describe('TeamDataService', () => {
               reviewers: [],
               tasks: {},
             })),
+            approveReviewFromUser: approveReviewFromUserMock,
             setKanbanColumn: setKanbanColumnMock,
             approveReview: approveReviewMock,
           },
@@ -4355,9 +4397,13 @@ describe('TeamDataService', () => {
 
     await service.updateKanban('my-team', 'task-1', { op: 'set_column', column: 'approved' });
 
-    expect(setKanbanColumnMock).toHaveBeenCalledWith('task-1', 'approved', {
-      transition: 'manual_approve',
+    expect(approveReviewFromUserMock).toHaveBeenCalledExactlyOnceWith('task-1', {
+      from: 'team-lead',
+      suppressTaskComment: true,
+      'notify-owner': true,
+      leadSessionId: 'lead-2',
     });
+    expect(setKanbanColumnMock).not.toHaveBeenCalled();
     expect(approveReviewMock).not.toHaveBeenCalled();
   });
 
@@ -4617,6 +4663,11 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      const forwarding = (
+        inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls[0]?.[2] as { shouldStillWrite: () => boolean };
+      expect(forwarding).toEqual({ shouldStillWrite: expect.any(Function) });
+      expect(forwarding.shouldStillWrite()).toBe(true);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
         'my-team',
         expect.objectContaining({
@@ -4628,7 +4679,8 @@ describe('TeamDataService', () => {
           leadSessionId: 'lead-1',
           taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' }],
           messageId: 'task-comment-forward:my-team:task-1:comment-1',
-        })
+        }),
+        forwarding
       );
       const firstSendRequest = (
         inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
@@ -5558,6 +5610,11 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'task-1');
 
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      const forwarding = (
+        inboxWriter.sendMessage as unknown as { mock: { calls: unknown[][] } }
+      ).mock.calls[0]?.[2] as { shouldStillWrite: () => boolean };
+      expect(forwarding).toEqual({ shouldStillWrite: expect.any(Function) });
+      expect(forwarding.shouldStillWrite()).toBe(true);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith(
         'my-team',
         expect.objectContaining({
@@ -5565,8 +5622,43 @@ describe('TeamDataService', () => {
           summary: 'Comment on #abcd1234',
           messageKind: 'task_comment_notification',
           messageId: 'task-comment-forward:my-team:task-1:comment-2',
-        })
+        }),
+        forwarding
       );
+    } finally {
+      if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
+      else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
+    }
+  });
+
+  it('persists the complete initial baseline before an answer delivery fails', async () => {
+    const previous = process.env[TASK_COMMENT_FORWARDING_ENV];
+    process.env[TASK_COMMENT_FORWARDING_ENV] = 'on';
+    try {
+      const { journalEntries, journal } = createForwardingJournalStore();
+      journal.exists.mockResolvedValueOnce(false).mockResolvedValue(true);
+      const answerId = 'clarification-answer-9641e725-41aa-4e14-bec5-9b3d7d084a76';
+      const inboxWriter = { sendMessage: vi.fn().mockRejectedValueOnce(new Error('TEST offline'))
+        .mockResolvedValue({ deliveredToInbox: true, messageId: 'TEST persisted' }) };
+      const { service } = createTaskCommentForwardingService({ journal, inboxWriter, tasks: [
+        { id: 'answer-first', subject: 'Choose', status: 'pending', owner: 'alice', comments: [
+          { id: answerId, author: 'user', text: 'Use SQLite', type: 'regular', createdAt: '2026-11-24T16:02:00Z' },
+        ] },
+        { id: 'historic-second', subject: 'Old work', status: 'pending', owner: 'alice', comments: [
+          { id: 'historic-comment', author: 'bob', text: 'An earlier substantial finding about the implementation.',
+            type: 'regular', createdAt: '2026-11-23T16:02:00Z' },
+        ] },
+      ] });
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-first');
+      expect(journalEntries).toEqual(expect.arrayContaining([
+        expect.objectContaining({ key: 'historic-second:historic-comment', state: 'seeded' }),
+        expect.objectContaining({ commentId: answerId, state: 'pending_send' }),
+      ]));
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'historic-second');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
+      await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-first');
+      expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
+      expect(journalEntries.find(entry => entry.commentId === answerId)?.state).toBe('sent');
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];
       else process.env[TASK_COMMENT_FORWARDING_ENV] = previous;
@@ -5587,7 +5679,7 @@ describe('TeamDataService', () => {
     });
     await service.notifyLeadOnTeammateTaskComment('my-team', 'lead-answer');
     expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
-      expect.objectContaining({ member: 'renamed-lead', from: 'user' }));
+      expect.objectContaining({ member: 'renamed-lead', from: 'user' }), expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
     const notice = (inboxWriter.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][1];
     expect(notice.text).toContain('Re-read the task');
     expect(notice.text).toContain('If a newer user clarification is pending');
@@ -5645,7 +5737,7 @@ describe('TeamDataService', () => {
             { teamName: 'other-team', taskId: 'different-canonical-id', displayId: 'same-label' },
             { teamName: 'second-other-team', taskId: 'different-canonical-id', displayId: 'same-label' },
           ],
-        }));
+        }), expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
       expect(journal.journalEntries).toHaveLength(1);
       expect(journal.journalEntries[0]).toMatchObject({ state: 'pending_send', commentId: id });
 
@@ -5697,7 +5789,7 @@ describe('TeamDataService', () => {
       expect(journalEntries.map((entry) => entry.state)).toEqual(['sent', 'sent']);
       expect(inboxWriter.sendMessage).toHaveBeenNthCalledWith(
         3, 'my-team', expect.objectContaining({ commentId: ids[1] })
-      );
+      , expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
 
       await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(3);
@@ -5726,7 +5818,7 @@ describe('TeamDataService', () => {
       await service.notifyLeadOnTeammateTaskComment('my-team', 'answer-task');
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
-        expect.objectContaining({ member: 'team-lead', commentId: id }));
+        expect.objectContaining({ member: 'team-lead', commentId: id }), expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
       expect(journalEntries).toHaveLength(1);
       expect(journalEntries[0]).toMatchObject({ state: 'sent' });
     } finally {
@@ -5794,7 +5886,7 @@ describe('TeamDataService', () => {
       expect(journal.withEntries).toHaveBeenCalled();
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
-        expect.objectContaining({ member: 'bob', from: 'user', commentId: answer.id }));
+        expect.objectContaining({ member: 'bob', from: 'user', commentId: answer.id }), expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
       expect(journalEntries).toHaveLength(3);
       expect(journalEntries).toEqual(expect.arrayContaining([
         expect.objectContaining({ key: 'answer-task:historical-target', state: 'seeded' }),
@@ -5813,7 +5905,8 @@ describe('TeamDataService', () => {
         expect(inboxWriter.sendMessage).toHaveBeenNthCalledWith(
           2,
           'my-team',
-          expect.objectContaining({ member: 'bob', commentId: answer.id })
+          expect.objectContaining({ member: 'bob', commentId: answer.id }),
+          expect.objectContaining({ shouldStillWrite: expect.any(Function) })
         );
       }
     } finally {
@@ -5871,14 +5964,14 @@ describe('TeamDataService', () => {
       ]));
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(1);
       expect(inboxWriter.sendMessage).toHaveBeenCalledWith('my-team',
-        expect.objectContaining({ member: 'bob', commentId: bobAnswer }));
+        expect.objectContaining({ member: 'bob', commentId: bobAnswer }), expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
 
       unreadable = false;
       await service.notifyLeadOnTeammateTaskComment('my-team', 'alice-task');
       await service.notifyLeadOnTeammateTaskComment('my-team', 'bob-task');
       expect(inboxWriter.sendMessage).toHaveBeenCalledTimes(2);
       expect(inboxWriter.sendMessage).toHaveBeenLastCalledWith('my-team',
-        expect.objectContaining({ member: 'alice', commentId: aliceAnswer }));
+        expect.objectContaining({ member: 'alice', commentId: aliceAnswer }), expect.objectContaining({ shouldStillWrite: expect.any(Function) }));
       expect(journalEntries.find((entry) => entry.commentId === aliceAnswer)?.state).toBe('sent');
     } finally {
       if (previous === undefined) delete process.env[TASK_COMMENT_FORWARDING_ENV];

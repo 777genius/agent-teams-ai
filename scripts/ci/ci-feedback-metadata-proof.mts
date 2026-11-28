@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 import { object, REPOSITORY, rootTestShards, sha, WORKFLOW, withoutSkippedScopeJobs } from './ci-feedback-reuse.mts';
 import type { GitHubRead, JsonObject } from './ci-feedback-reuse.mts';
+import { NATIVE_QUALIFICATION_GATE_STEPS, withoutProvenNativeJobs } from './ci-feedback-native-jobs.mts';
 
 const lifecycle = ['opened', 'synchronize', 'reopened', 'ready_for_review', 'converted_to_draft'];
 // Exact unevaluated jobs API names, also used by the postmerge provenance proof.
@@ -127,6 +128,7 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
     (['Full qualification', 'Metadata qualification'].includes(String(job.name)) && successfulStep(job, 'Verify completed current-code qualification after metadata edits')));
   if (metadata) {
     requireProof(action === 'edited' || action === undefined, 'Lifecycle producer claimed metadata');
+    jobs = withoutProvenNativeJobs(jobs, run, pr, REPOSITORY, 'metadata', true);
     const metadataStep = metadata.name === 'Metadata CI result' ? 'Preserve existing current-code checks after metadata edits' : 'Verify completed current-code qualification after metadata edits';
     exactJobs(jobs, ['Metadata CI plan', String(metadata.name), ...skippedHeavy, feedbackSkip]);
     skipped(jobs, [...skippedHeavy, feedbackSkip]);
@@ -142,16 +144,18 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
         ? [...infrastructure, 'Plan feedback and verify reusable evidence',
             `CI source proof: PR=${pr.number} | base=${object(pr.base).sha} | head=${object(pr.head).sha}`]
         : [...infrastructure, metadataStep,
-            'Require complete current-code qualification'];
+            'Require complete current-code qualification', ...NATIVE_QUALIFICATION_GATE_STEPS];
       const steps = array(job.steps);
       requireProof(new Set(steps.map((step) => step.name)).size === steps.length &&
         steps.every((step) => allowed.includes(String(step.name)) && step.status === 'completed' &&
-          step.conclusion === (step.name === 'Require complete current-code qualification' ? 'skipped' : 'success')),
+          step.conclusion === (step.name === 'Require complete current-code qualification' ||
+            NATIVE_QUALIFICATION_GATE_STEPS.some((name) => name === step.name) ? 'skipped' : 'success')),
         'Unknown or unsafe metadata decision step');
     }
     return false; // Metadata continuity must still reach a canonical producer.
   }
   if (pr.draft && action && action !== 'edited') {
+    jobs = withoutProvenNativeJobs(jobs, run, pr, REPOSITORY, 'draft', true);
     exactJobs(jobs, ['plan', 'Fast feedback', 'Full qualification', ...skippedHeavy]);
     skipped(jobs, skippedHeavy);
     const feedback = jobs.find((job) => job.name === 'Fast feedback')!;
@@ -167,12 +171,13 @@ function proveCompleted(jobs: JsonObject[], run: JsonObject, pr: JsonObject, sha
       array(gate.steps).every((step) => step.status === 'completed' &&
         (step.conclusion === 'success' ||
           (step.name === 'Require complete current-code qualification' && step.conclusion === 'failure') ||
-          (['Preserve existing current-code checks after metadata edits', 'Verify completed current-code qualification after metadata edits'].includes(String(step.name)) && step.conclusion === 'skipped') ||
+          (['Preserve existing current-code checks after metadata edits', 'Verify completed current-code qualification after metadata edits', ...NATIVE_QUALIFICATION_GATE_STEPS].includes(String(step.name)) && step.conclusion === 'skipped') ||
           skippedDraftNodeCleanup(gate, step))),
       'Draft producer failed outside its deliberate qualification gate');
     return true;
   }
   requireProof(!pr.draft, 'Legacy or edited draft producer lacks draft lifecycle proof');
+  jobs = withoutProvenNativeJobs(jobs, run, pr, REPOSITORY, 'full', true);
   const feedback = jobs.find((job) => job.name === 'Fast feedback' || job.name === feedbackSkip);
   requireProof(feedback, 'Missing skipped feedback');
   exactJobs(jobs, [String(plan.name), String(feedback.name), ...fullJobs(shards)]);

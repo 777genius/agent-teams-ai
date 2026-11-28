@@ -129,6 +129,7 @@ function createLeadSignoff({
         from: event.actor,
         text: buildReviewRequestMessage({
           teamName: context.teamName, task, reviewRequestId: event.id, humanApproval: true,
+          boundTaskTools: context.boundTaskTools,
           reviewFlowPrompt: reviewPolicy.reviewFlowPrompt, stage: 'lead_signoff',
           note: event.note, reviewerName: event.actor,
         }),

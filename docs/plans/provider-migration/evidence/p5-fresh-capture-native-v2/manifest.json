@@ -1,0 +1,47 @@
+{
+  "status": "PASS scoped native model-probe and fresh-capture flow; Electron acceptance remains incomplete",
+  "jobId": "118192083a5802b558ee87c150031a91",
+  "artifacts": {
+    "node": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+      "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b"
+    },
+    "provider": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/vendor/provider-migration/claude-probe-v3/agent-teams-provider-implementations-0.0.0.tgz",
+      "sha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59"
+    },
+    "host": {
+      "entry": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/packages/legacy-agent-host/dist/cli.js",
+      "entrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "sourceSha256": "4c72076353898389b67a9b4e0c640babc2f8c4406c422f019d8273917a367979",
+      "distSha256": "8464ae4f1287b9cb3f1a647085b68a9e4ef6ce1be632e21a5a2a92d3e5a2f944"
+    },
+    "native": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-darwin-arm64@0.3.305/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+      "sha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f"
+    }
+  },
+  "files": [
+    {
+      "path": "receipt.json",
+      "sha256": "214498cf4c328cf449e110de05d546c55c011a7697feb618ffe8434bfdaf4b9a"
+    },
+    {
+      "path": "checks.stdout.log",
+      "sha256": "add185d8986f0afdd16d386d8c652616e6afee3e55919928ff40148ad31eff65"
+    },
+    {
+      "path": "checks.stderr.log",
+      "sha256": "f453e976d298e4c9c8a5ee0134f19a02d2d39c2c100e3aed187705880615d150"
+    }
+  ],
+  "scope": "One actual SDK no-tool Team model probe, then saved roster/capture/prompt, eight localhost inference requests executing real native MCP task/message/Bash, hot/cold original replay without duplicate input and confirmed cleanup.",
+  "checks": "Host test types and three oracle boundary tests passed; native proof1/1 in57.4s. No production changes in this job.",
+  "sourceBoundary": "Receipt pins Host source/dist and provider/native artifacts at execution. Retained local evidence, not a complete immutable Desktop/dependency closure or release proof.",
+  "excluded": [
+    "Electron original Launch/Create/Resume controls",
+    "real vendor authentication/inference",
+    "full Stage1 P0-P8/M01-M19",
+    "Stage2"
+  ]
+}

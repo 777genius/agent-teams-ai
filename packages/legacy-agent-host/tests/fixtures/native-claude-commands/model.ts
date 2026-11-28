@@ -1,0 +1,160 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import {
+  assertCapturedCommandSystem,
+  assertLegacyInlineReviewExpansion,
+  COMMAND_ARGS,
+  COMPACT_AUTHORIZATION,
+  PROJECT_COMMAND_BODY,
+  REVIEW_ARGS,
+} from '../native-claude-compaction/model.ts';
+
+type Row = Record<string, unknown>;
+const record = (value: unknown): Row =>
+  value && typeof value === 'object' && !Array.isArray(value) ? (value as Row) : {};
+export type NativeCommandUiPhase = 'idle' | 'compact' | 'project-command' | 'review';
+export interface NativeCommandUiScenario {
+  phase(): NativeCommandUiPhase;
+}
+export const NATIVE_COMMAND_UI_REPLY = 'TEST_P03_UI_PROJECT_COMMAND_NATIVE_REPLY';
+export const NATIVE_COMMAND_UI_REPLY_ID = 'TEST-p03-ui-project-native-reply';
+export const NATIVE_REVIEW_UI_REPLY = 'TEST_P03_UI_BUILTIN_REVIEW_NATIVE_REPLY';
+export const NATIVE_REVIEW_UI_REPLY_ID = 'TEST-p03-ui-review-native-reply';
+
+/** Existing Launch keeps its own oracle. Only the five subsequent native command requests are scripted. */
+export function nativeCommandUiScript(
+  options: NativeCommandUiScenario,
+  readReceipt: (value: unknown) => Row
+) {
+  const requests: {
+    phase: Exclude<NativeCommandUiPhase, 'idle'>;
+    bodySha256: string;
+    requestedModel: string;
+    commandExecution?: 'legacy-inline-review-v1';
+  }[] = [];
+  let compact = 0,
+    project = 0,
+    review = 0;
+  return {
+    requests,
+    respond(body: Row, tools: string[]): Row | undefined {
+      const phase = options.phase();
+      if (phase === 'idle') return;
+      assert.ok(
+        requests.length < 5,
+        'one compact summary and two native command/tool-result pairs'
+      );
+      const serialized = JSON.stringify(body);
+      assert.ok(Buffer.byteLength(serialized) <= 2_000_000);
+      assert.equal(
+        body.model,
+        'claude-opus-4-6',
+        'native commands retain the model selected by the real Launch dialog'
+      );
+      const contents = (role: 'user' | 'assistant') =>
+        (Array.isArray(body.messages) ? body.messages : []).map(record)
+          .filter((message) => message.role === role)
+          .flatMap((message) => typeof message.content === 'string'
+            ? [{ type: 'text', text: message.content }]
+            : (Array.isArray(message.content) ? message.content : []).map(record));
+      let block: Row;
+      if (phase === 'compact') {
+        assert.equal(compact++, 0, 'one original native compact request');
+        assert.ok(
+          serialized.includes(COMPACT_AUTHORIZATION),
+          'native summary receives exact Composer args'
+        );
+        const users = contents('user');
+        assert.equal(
+          users.filter((value) => value.type === 'text' && value.text === 'NATIVE_TEAM_ONE').length,
+          1,
+          'native summary receives the original Launch input'
+        );
+        const calls = contents('assistant').filter(
+          (value) => value.type === 'tool_use' && value.id === 'native_NATIVE_TEAM_ONE_6'
+        );
+        assert.equal(calls.length, 1, 'one original Launch reply tool in the summarized prefix');
+        assert.equal(calls[0]!.name, 'mcp__team__message_send');
+        assert.deepEqual(record(calls[0]!.input), {
+          commandId: 'native-reply-one', to: 'user', text: 'REPLY_NATIVE_ONE',
+        });
+        const results = users.filter(
+          (value) => value.type === 'tool_result' && value.tool_use_id === calls[0]!.id
+        );
+        assert.equal(results.length, 1, 'one original successful Launch reply result');
+        assert.notEqual(results[0]!.is_error, true);
+        const receipt = readReceipt(results[0]!.content);
+        assert.equal(receipt.commandId, 'native-reply-one');
+        assert.equal(receipt.phase, 'completed');
+        assert.equal(record(record(receipt.result).message).text, 'REPLY_NATIVE_ONE');
+        block = {
+          type: 'text',
+          text: 'TEST_P03_UI_NATIVE_SUMMARY: The original Launch completed its task and visible reply. Preserve the captured Team instructions for the next explicit command.',
+        };
+      } else {
+        assert.equal(compact, 1);
+        const count = phase === 'review' ? review++ : project++;
+        assert.ok(count < 2, 'no duplicate native command request');
+        if (phase === 'project-command' && count === 0)
+          assert.equal(
+            contents('assistant').filter(
+              (value) => value.type === 'text' && value.text === 'DONE_NATIVE_TEAM_ONE'
+            ).length,
+            1,
+            'native post-compact request retains the original last assistant reply'
+          );
+        if (phase === 'review') {
+          assert.equal(project, 2);
+          assertLegacyInlineReviewExpansion(body);
+        } else assert.ok(serialized.includes(PROJECT_COMMAND_BODY));
+        assert.ok(
+          serialized.includes(phase === 'review' ? REVIEW_ARGS : COMMAND_ARGS),
+          'actual native command expands its original Composer arguments'
+        );
+        assertCapturedCommandSystem(body, phase);
+        assert.ok(
+          tools.includes('mcp__team__message_send'),
+          'the native command retains its captured Team tool'
+        );
+        const reply = phase === 'review' ? NATIVE_REVIEW_UI_REPLY : NATIVE_COMMAND_UI_REPLY;
+        const replyId = phase === 'review' ? NATIVE_REVIEW_UI_REPLY_ID : NATIVE_COMMAND_UI_REPLY_ID;
+        const toolId =
+          phase === 'review' ? 'TEST-p03-ui-review-native-tool' : 'TEST-p03-ui-project-native-tool';
+        if (count === 0)
+          block = {
+            type: 'tool_use',
+            id: toolId,
+            name: 'mcp__team__message_send',
+            input: {
+              commandId: replyId,
+              to: 'user',
+              text: reply,
+            },
+          };
+        else {
+          const latest = (Array.isArray(body.messages) ? body.messages : [])
+            .map(record)
+            .findLast((row) => row.role === 'user');
+          const result = (Array.isArray(latest?.content) ? latest.content : [])
+            .map(record)
+            .find((row) => row.type === 'tool_result');
+          assert.ok(result);
+          assert.equal(result.tool_use_id, toolId);
+          assert.notEqual(result.is_error, true);
+          const receipt = readReceipt(result.content);
+          assert.equal(receipt.commandId, replyId);
+          assert.equal(receipt.phase, 'completed');
+          assert.equal(record(record(receipt.result).message).text, reply);
+          block = { type: 'text', text: `TEST_P03_UI_${phase}_DONE` };
+        }
+      }
+      requests.push({
+        phase,
+        bodySha256: createHash('sha256').update(serialized).digest('hex'),
+        requestedModel: String(body.model),
+        ...(phase === 'review' ? { commandExecution: 'legacy-inline-review-v1' as const } : {}),
+      });
+      return block;
+    },
+  };
+}

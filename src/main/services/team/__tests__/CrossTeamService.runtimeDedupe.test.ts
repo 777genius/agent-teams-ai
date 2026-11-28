@@ -19,16 +19,14 @@ const controllerMocks = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock('agent-teams-controller', () => ({
+vi.mock('agent-teams-controller', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('agent-teams-controller')>()),
   createController: vi.fn(() => ({
     messages: {
       appendSentMessage: controllerMocks.appendSentMessage,
       lookupMessage: controllerMocks.lookupMessage,
     },
   })),
-  protocols: {
-    buildActionModeProtocolText: vi.fn(() => ''),
-  },
 }));
 
 function teamConfig(name: string): TeamConfig {

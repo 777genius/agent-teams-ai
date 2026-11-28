@@ -51,6 +51,6 @@ export interface CreateTeamDialogProps {
   onCreate: (
     request: TeamCreateRequest,
     placement?: OrganizationPlacementSelection
-  ) => Promise<void>;
+  ) => Promise<string | void>;
   onOpenTeam: (teamName: string, projectPath?: string) => void;
 }

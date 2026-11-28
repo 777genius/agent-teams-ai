@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "kind": "read-only source and verification plan; all execution pending",
+  "source": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "dependencies": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "lines": 392,
+      "gitBlob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "lines": 27,
+      "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410",
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "bytes": 3476,
+      "lines": 58,
+      "gitBlob": "90499776e145f9ffaba230b280d5d9da9e15a8e0",
+      "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "bytes": 7278,
+      "lines": 192,
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateEvents.ts",
+      "bytes": 1367,
+      "lines": 39,
+      "gitBlob": "1dbbf60801213f80f97cb9b0b0031acdf41d738a",
+      "sha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/ownedJob.h",
+      "bytes": 554,
+      "lines": 16,
+      "gitBlob": "b940d7c72932c7f7466d8aa72e2190be85abff59",
+      "sha256": "f1865ac01ff84885f10ae05a2f3a34615ac8a144e8f9a6447f381074f9a8450d",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/protocol.h",
+      "bytes": 11700,
+      "lines": 234,
+      "gitBlob": "8301cd73299220be2c5c9d95d87745f2937dc715",
+      "sha256": "f33e5f48373336dee460a5829c38f51ae0238f92477b7c26c528ab1e91598289",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/gateController.cpp",
+      "bytes": 5935,
+      "lines": 108,
+      "gitBlob": "ebc96f50b2a901aae4b97b3b4dcb484f449170a5",
+      "sha256": "45d1ce375fbbcce05bc37f885071f8331387bd87c6b9c5fce1b075be56a32532",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "lines": 13,
+      "gitBlob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "lines": 6,
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "lines": 6,
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "lines": 231,
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "lines": 146,
+      "gitBlob": "e827bccf455235b1ff7871e7b93450cdaa53eb54",
+      "sha256": "82080bdf23e0fae3ea087e8aea8c3622fa63a734fa9874e7d07e9d568087f072",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "bytes": 7268,
+      "lines": 258,
+      "gitBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-management-sources.ts",
+      "bytes": 21211,
+      "lines": 309,
+      "gitBlob": "762570da8b4fc492065b217303a3da169bf627cf",
+      "sha256": "7b89bab88022f53fbc8470f0cbcd4acd93f8ee5412059144e3a676c0fb7466f8",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "bytes": 17208,
+      "lines": 262,
+      "gitBlob": "5c8d6a2ee1555257a4f83fa074a4e0de6549b14c",
+      "sha256": "1b42dba0f093e95ca716dda19ec8416cf59a964c35b388618a77886726e04aff",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "bytes": 646,
+      "lines": 20,
+      "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+      "unchangedC28To76": true,
+      "unchanged76ToA02": "a02 exact three-path commit excludes this path"
+    }
+  ],
+  "commands": [
+    {
+      "scope": "static",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tsconfig.legacy-agent-host-scripts.json"
+      ],
+      "origin": "existing complete legacy-host scripts project; no source execution"
+    },
+    {
+      "scope": "static",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.json"
+      ],
+      "origin": ".github/workflows/host-process-acceptance.yml Build existing controller and Host"
+    },
+    {
+      "scope": "static",
+      "argv": [
+        "node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--noEmit",
+        "-p",
+        "tools/owned-process-broker/tsconfig.retained-host.json"
+      ],
+      "origin": ".github/workflows/host-process-acceptance.yml Build existing controller and Host"
+    },
+    {
+      "scope": "finite Node protocol tests",
+      "argv": [
+        "node",
+        "node_modules/vitest/vitest.mjs",
+        "run",
+        "--maxWorkers=1",
+        "--config",
+        "tools/owned-process-broker/vitest.config.ts"
+      ],
+      "origin": ".github/workflows/host-process-acceptance.yml Verify process contracts and retained Main Host transport",
+      "files": [
+        "tools/owned-process-broker/protocol.test.ts",
+        "tools/owned-process-broker/nativeGateEvents.test.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts"
+      ],
+      "claimedExecuted": false
+    },
+    {
+      "scope": "scoped static lint proposal",
+      "argv": [
+        "pnpm",
+        "lint:fast:files",
+        "--",
+        "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "tools/owned-process-broker/nativeVendorGate.ts"
+      ],
+      "origin": "prospective explicit seven-file command; not a claim that the existing Team permanent lint list includes these leaves"
+    },
+    {
+      "scope": "existing static guard",
+      "argv": [
+        "node",
+        "scripts/ci/check-source-file-size.mjs"
+      ],
+      "origin": "unchanged package guard"
+    },
+    {
+      "scope": "existing architecture guard",
+      "argv": [
+        "node",
+        "scripts/ci/check-team-provisioning-architecture.mjs"
+      ],
+      "origin": "unchanged package guard"
+    },
+    {
+      "scope": "exact-cut whitespace check",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "<canonical-preimage>",
+        "<published-selected-source>",
+        "--",
+        "scripts/legacy-agent-host/qualify-linux-process-sdk.ts",
+        "tools/owned-process-broker/debugServiceTest.h",
+        "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+        "tools/owned-process-broker/nativeFixture.cpp",
+        "tools/owned-process-broker/nativeGate.ts",
+        "tools/owned-process-broker/nativeGateContext.test.ts",
+        "tools/owned-process-broker/nativeGateDiagnostics.ts",
+        "tools/owned-process-broker/nativeRetainedHostGate.ts",
+        "tools/owned-process-broker/nativeVendorGate.ts",
+        "tools/owned-process-broker/serviceDebugLoop.h",
+        "tools/owned-process-broker/serviceScopes.h"
+      ],
+      "origin": "reviewed eleven-path cut; bindings require actual publication readback"
+    }
+  ],
+  "originalWindowsWorkflowSteps": [
+    {
+      "name": "Build original Windows product broker and C++ fixtures",
+      "exactSourceBlock": "      - name: Build original Windows product broker and C++ fixtures\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = Join-Path $env:RUNNER_TEMP 'TEST-process-build-${{ matrix.arch }}'\n          $stage = Join-Path $env:RUNNER_TEMP 'TEST-process-stage-${{ matrix.arch }}'\n          $scoped = Join-Path $env:RUNNER_TEMP 'TEST-process-scoped-stage-${{ matrix.arch }}'\n          $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source\n          node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $stage $cmake\n          if ($LASTEXITCODE -ne 0) { throw 'Native fixture build or product staging failed' }\n          $staged = @(Get-ChildItem -File $stage | Select-Object -ExpandProperty Name)\n          if ((($staged | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected staged fixture' }\n          \"HOST_PROCESS_NATIVE_BUILD=$build\" >> $env:GITHUB_ENV\n          \"HOST_PROCESS_NATIVE_STAGE=$stage\" >> $env:GITHUB_ENV\n          Copy-Item \"$stage\\manifest.json\" process-acceptance-evidence/windows-manifest.json\n          node node_modules/tsx/dist/cli.mjs scripts/build/buildOwnedProcessBroker.ts '${{ matrix.arch }}' $build $scoped $cmake service-scopes-v1\n          if ($LASTEXITCODE -ne 0) { throw 'Scoped native fixture build or product staging failed' }\n          $scopedFiles = @(Get-ChildItem -File $scoped | Select-Object -ExpandProperty Name)\n          if ((($scopedFiles | Sort-Object) -join ',') -ne 'manifest.json,owned-process-broker.exe') { throw 'Unexpected scoped stage fixture' }\n          \"HOST_PROCESS_SCOPED_STAGE=$scoped\" >> $env:GITHUB_ENV\n          Copy-Item \"$scoped\\manifest.json\" process-acceptance-evidence/windows-scoped-manifest.json\n          Get-ChildItem -File \"$build\\Release\\*.exe\" | Get-FileHash -Algorithm SHA256 | Format-List | Out-File process-acceptance-evidence/windows-binary-sha256.txt\n          New-Item -ItemType Directory -Path native-evidence | Out-Null\n          Copy-Item process-acceptance-evidence/windows-binary-sha256.txt native-evidence/binary-sha256.txt",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    },
+    {
+      "name": "Qualify original Windows Job and control under Host Node",
+      "exactSourceBlock": "      - name: Qualify original Windows Job and control under Host Node\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeGate.ts'\n          & $controller $node $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-node24.log\n          if ($LASTEXITCODE -ne 0) { throw 'Original Node fixture controller did not confirm cleanup' }",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    },
+    {
+      "name": "Qualify original Windows Job and control under Electron Node",
+      "exactSourceBlock": "      - name: Qualify original Windows Job and control under Electron Node\n        if: runner.os == 'Windows'\n        shell: pwsh\n        env:\n          ELECTRON_RUN_AS_NODE: '1'\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $electron = Join-Path $PWD 'node_modules\\electron\\dist\\electron.exe'\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeGate.ts'\n          & $controller $electron $runner $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$build\\Release\\owned-process-broker-debug-service.exe\" 2>&1 | Tee-Object process-acceptance-evidence/windows-electron.log\n          if ($LASTEXITCODE -ne 0) { throw 'Original Electron fixture controller did not confirm cleanup' }",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    },
+    {
+      "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+      "exactSourceBlock": "      - name: Qualify Windows wrappers and actual Main Host provider routes with TEST peers\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $tsconfig = Join-Path $PWD 'tsconfig.json'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeEmulatedProviderGate.ts'\n          $receipt = Join-Path $PWD 'process-acceptance-evidence\\windows-emulated-provider-receipt.json'\n          & $controller $node $runner --tsconfig $tsconfig $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$env:HOST_PROCESS_SCOPED_STAGE\\owned-process-broker.exe\" $receipt 2>&1 | Tee-Object process-acceptance-evidence/windows-emulated-provider.log\n          if ($LASTEXITCODE -ne 0) { throw 'Original emulated-provider controller did not confirm cleanup' }",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    },
+    {
+      "name": "Qualify original codex source A B with TEST peer",
+      "exactSourceBlock": "      - name: Qualify original codex source A B with TEST peer\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $tsconfig = Join-Path $PWD 'tsconfig.json'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeEmulatedProviderGate.ts'\n          $receipt = Join-Path $PWD 'process-acceptance-evidence\\windows-source-codex-receipt.json'\n          & $controller $node $runner --tsconfig $tsconfig $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$env:HOST_PROCESS_SCOPED_STAGE\\owned-process-broker.exe\" $receipt --test-source-provider codex 2>&1 | Tee-Object process-acceptance-evidence/windows-source-codex.log\n          $controllerExitCode = $LASTEXITCODE\n          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'codex'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress\n          if ($controllerExitCode -ne 0) { throw 'Original codex source controller did not confirm cleanup' }",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    },
+    {
+      "name": "Qualify original claude source A B with TEST peer",
+      "exactSourceBlock": "      - name: Qualify original claude source A B with TEST peer\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $tsconfig = Join-Path $PWD 'tsconfig.json'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeEmulatedProviderGate.ts'\n          $receipt = Join-Path $PWD 'process-acceptance-evidence\\windows-source-claude-receipt.json'\n          & $controller $node $runner --tsconfig $tsconfig $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$env:HOST_PROCESS_SCOPED_STAGE\\owned-process-broker.exe\" $receipt --test-source-provider claude 2>&1 | Tee-Object process-acceptance-evidence/windows-source-claude.log\n          $controllerExitCode = $LASTEXITCODE\n          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'claude'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress\n          if ($controllerExitCode -ne 0) { throw 'Original claude source controller did not confirm cleanup' }",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    },
+    {
+      "name": "Qualify original opencode source A B with TEST peer",
+      "exactSourceBlock": "      - name: Qualify original opencode source A B with TEST peer\n        if: runner.os == 'Windows'\n        shell: pwsh\n        run: |\n          $build = $env:HOST_PROCESS_NATIVE_BUILD\n          $controller = \"$build\\Release\\owned-process-gate-controller.exe\"\n          $node = (Get-Command node.exe -ErrorAction Stop).Source\n          $runner = Join-Path $PWD 'node_modules\\tsx\\dist\\cli.mjs'\n          $tsconfig = Join-Path $PWD 'tsconfig.json'\n          $gate = Join-Path $PWD 'tools\\owned-process-broker\\nativeEmulatedProviderGate.ts'\n          $receipt = Join-Path $PWD 'process-acceptance-evidence\\windows-source-opencode-receipt.json'\n          & $controller $node $runner --tsconfig $tsconfig $gate \"$env:HOST_PROCESS_NATIVE_STAGE\\owned-process-broker.exe\" \"$build\\Release\\owned-process-fixture.exe\" \"$build\\Release\\owned-process-broker-birth-failure.exe\" \"$build\\Release\\owned-process-broker-accounting-failure.exe\" \"$build\\Release\\owned-process-broker-release-delay.exe\" \"$env:HOST_PROCESS_SCOPED_STAGE\\owned-process-broker.exe\" $receipt --test-source-provider opencode 2>&1 | Tee-Object process-acceptance-evidence/windows-source-opencode.log\n          $controllerExitCode = $LASTEXITCODE\n          [ordered]@{ kind = 'TEST_SOURCE_CONTROLLER_EXIT'; provider = 'opencode'; exitCode = [int]$controllerExitCode } | ConvertTo-Json -Compress\n          if ($controllerExitCode -ne 0) { throw 'Original opencode source controller did not confirm cleanup' }",
+      "sourceWorkflow": ".github/workflows/host-process-acceptance.yml",
+      "executeHere": false
+    }
+  ],
+  "notAuthorizedToExecute": [
+    "tools/owned-process-broker/nativeVendorGate.ts",
+    "tools/owned-process-broker/nativeRetainedHostGate.ts",
+    "scripts/legacy-agent-host/qualify-linux-process-sdk.ts"
+  ],
+  "roster": {
+    "existingCommonDesktopPin": [
+      "scripts/legacy-agent-host/qualify-linux-process-sdk.ts"
+    ],
+    "existingUnchangedWitnessDependencyPin": [
+      "tools/owned-process-broker/nativeGateContext.ts"
+    ],
+    "closure": "No new file is introduced in this eleven-path native cut. The existing CMake targets include the changed headers and nativeFixture.cpp; the existing native tsconfigs and original Vitest three-file config include their changed TS/test leaves. This does not claim that all private C++ headers are individual Desktop receipt pins."
+  },
+  "helperInventory": {
+    "originalSuccessfulFullGate": 56,
+    "newWow64Root": 2,
+    "newServiceRace": 6,
+    "a02SuccessfulPathTotal": 64,
+    "intermediate76ExtraProbe": 1,
+    "intermediate76SuccessfulPathWouldRequire": 65,
+    "unchangedCap": 64,
+    "kind": "source arithmetic backed by original successful c28 helperCount; not executed a02 result"
+  },
+  "nativeQualification": "Current-source Windows x64 and ARM64 original C++/Node/Electron finite gates remain required. Neither static review nor authored reported tests qualify those gates or any vendor execution."
+}

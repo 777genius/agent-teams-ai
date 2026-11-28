@@ -134,6 +134,10 @@ jobs:
           - platform: win32-x64
             runner: windows-2022
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
@@ -166,6 +170,8 @@ jobs:
         run: node scripts/e2e/provider-real-runtime-e2e.ts
       - name: Install desktop Electron test dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build isolated Host before Electron startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       # Keep the Windows desktop preflight identical to the passing 3-OS
       # native Teams Create harness. Do not make CDP readiness wait for a
       # cold Electron install or terminal-platform runtime publication.
@@ -213,6 +219,7 @@ jobs:
           retention-days: 14
           if-no-files-found: warn
           path: |
+            ${{ runner.temp }}/opencode-diagnostics-e2e-*/desktop.log
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.json
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/real-connection.png
             ${{ runner.temp }}/opencode-diagnostics-e2e-*/cold-dashboard.json

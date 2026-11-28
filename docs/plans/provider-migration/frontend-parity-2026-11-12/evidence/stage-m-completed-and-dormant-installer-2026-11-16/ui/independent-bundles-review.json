@@ -1,0 +1,1700 @@
+{
+  "schema": "independent-current-M-completed-UI-bundles-review/v1",
+  "reviewer": "ui_failures",
+  "reviewedAtUTC": "2026-11-16T01:23:29.526258+00:00",
+  "verdict": "APPROVE exact two recoverable source-bound completed UI evidence bundles",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "method": "Read-only exact raw/scratch/outer ZIP roundtrip and nested original ZIP CRC/safe-path/member audit; no project, provider, CI, ref or source execution/action. Frozen bundle files unchanged.",
+  "totals": {
+    "bundles": 2,
+    "outerEnvelopeEntries": 41,
+    "outerPayloads": 37,
+    "uniquePayloadSourceFiles": 36,
+    "outerPayloadBytes": 9253836,
+    "compressedBundleBytes": 8217734,
+    "originalOfficialZIPs": 4,
+    "originalMembers": 152,
+    "originalPNGBytesVerified": 129,
+    "previouslyViewedImagesInIncludedReviews": 13,
+    "textPayloadsScannedForSignedTransportPatterns": 60
+  },
+  "exactDuplicateOriginal": [
+    "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/initial-api-runs-jobs-0038.json"
+  ],
+  "bundles": [
+    {
+      "name": "M0660-Creation-Ubuntu",
+      "metadata": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/bundle-metadata.json",
+        "bytes": 1229,
+        "blob": "19bcce308866648164f15d97a97e2d363c330f21",
+        "sha256": "b2b63fd9be6e5e64707f9bad167572813e172b65f871c5d799c56a5f4b92bf28"
+      },
+      "inventory": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/inventory.json",
+        "bytes": 4128,
+        "blob": "a17934ed64fcccc02050205f3da97153d6d78009",
+        "sha256": "06fc715ba73e4ae2c00ea8a19bcd769ebad0bf512ae9492fb97a7a5b90631be2"
+      },
+      "readme": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/README.md",
+        "bytes": 656,
+        "blob": "09674f7509c43935be085c3a876aa24d27bcd5df",
+        "sha256": "e7231032e4b30b26ec09fdb0dc054c74bc129ce0edefd7f5314fbf44a13eb3db"
+      },
+      "bundle": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-Ubuntu/M0660-Creation-Ubuntu.zip",
+        "bytes": 2895943,
+        "blob": "2ded5e0e20ec60084e99adee5926dfeeb35eaa70",
+        "sha256": "ab4dad326c916d0e9f2a94d494da2ad9e977fe61db918f6372e811b35287a667"
+      },
+      "outerEnvelopeEntries": 11,
+      "selfInventoryAndREADMEByteExact": true,
+      "payloadCount": 9,
+      "payloadBytes": 3078474,
+      "payloads": [
+        {
+          "bundlePath": "ci-desktop-m0660/creation-official-artifacts-0115.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-official-artifacts-0115.json",
+          "bytes": 2709,
+          "blob": "1a8af8a454c09029dd8f1aa59df48a68f23a3b91",
+          "sha256": "d8b1ee39fb817f27055216871330d778671334eebe9d01d42e0807e64a728506",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-ubuntu/Plan29-creation-ubuntu-appendix.md",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/Plan29-creation-ubuntu-appendix.md",
+          "bytes": 3955,
+          "blob": "4fba3738842ae7c34a76ddcc99bcf1b5623a2646",
+          "sha256": "e28b8b12d9b503a90efb80d168dfe901b74563743a05af7d0e9d5566725ff2a5",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-ubuntu/archive-integrity.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/archive-integrity.json",
+          "bytes": 10959,
+          "blob": "0ff6a84b70717eb8751d3f3c41d92923445cbeb1",
+          "sha256": "1a695a7a066523d279b496f40bf581093fb0cd0131c433958f9c7607ea65ecd9",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-ubuntu/creation-audit.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/creation-audit.json",
+          "bytes": 18543,
+          "blob": "43ca926c3ac3ede9eb9ddd8c027a7acc425b590c",
+          "sha256": "722ba43d892f4b542db7b8d73138159bee4081d6ecd08fb4aca4304b25772168",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-ubuntu/independent-creation-ubuntu-review.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/independent-creation-ubuntu-review.json",
+          "bytes": 31396,
+          "blob": "b407f6a5c3046b229838bedcdb588ca62894fe5e",
+          "sha256": "8940c8726ba1d00a36f057ffeb0181e1b8a50c643367d1b3cdda896e82cd6067",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-ubuntu/job-133017913708.log",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/job-133017913708.log",
+          "bytes": 75500,
+          "blob": "112b4cd66389e4e607e214c15818c3c10f99f983",
+          "sha256": "55a4144418e17dbd7081def329ea536d3e35b5a47dfbb8938cbaff4ab847565a",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-ubuntu/original-artifact-14189723419.zip",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-ubuntu/original-artifact-14189723419.zip",
+          "bytes": 2846798,
+          "blob": "291d985889293a45afd014a5782075153bac5de6",
+          "sha256": "7461958f913bae4fd3c40c32d24d4785facde4a1bd5f1e28b4c14a6cd2cf0026",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/full-api-jobs-0114.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0114.json",
+          "bytes": 29861,
+          "blob": "23655b2566ab6a7ae529dc365852771fd8336ae3",
+          "sha256": "d6423ed27b1c04c14ab85d5736108de254e0ab126b359a44f3d7153badbc14ec",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+          "bytes": 58753,
+          "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+          "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a",
+          "roundtripOriginalBytes": true
+        }
+      ],
+      "originalArchives": [
+        {
+          "artifactId": 14189723419,
+          "officialAPIHeadJoined": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+          "officialAPIRun": 43780997243,
+          "zipIdentity": {
+            "bytes": 2846798,
+            "blob": "291d985889293a45afd014a5782075153bac5de6",
+            "sha256": "7461958f913bae4fd3c40c32d24d4785facde4a1bd5f1e28b4c14a6cd2cf0026"
+          },
+          "safeUniqueCRC": true,
+          "memberCount": 41,
+          "pngCount": 40,
+          "members": [
+            {
+              "member": "teams-create-config-only-created.png",
+              "crc": 1878993005,
+              "bytes": 44722,
+              "blob": "ed6beb3545d5f934127471ffec293508c14cb875",
+              "sha256": "41a5769dc7f6a7892cf25754aadecaa73497ead0dc6c8ad83eee25ef5a37c7d4",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-copy-resumed-edits.png",
+              "crc": 3577468343,
+              "bytes": 73541,
+              "blob": "21d435e2839296051f92b3b407ad5538a48a402c",
+              "sha256": "9423cb949b726d3ab5def397e8ecc256ccfc3a9fe234c632a7794fddf7364ab2",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-css-zoom-200.png",
+              "crc": 3059850089,
+              "bytes": 64410,
+              "blob": "40e916334f2a439180beb9911393475f98863088",
+              "sha256": "6dcb0f349e13730055d3a788cb5c3b389233ccb7e179fd1eac5c26610c181538",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-edited.png",
+              "crc": 332756956,
+              "bytes": 81075,
+              "blob": "7e3be69a578798a1fd59e111f6c83ba6ca06e468",
+              "sha256": "5e2e8ac287201d638f28a0464b8bb88e5f9e1ee89b92cc3bd726d2253068a68c",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-launch-controls-loaded.png",
+              "crc": 1413430669,
+              "bytes": 87294,
+              "blob": "d0b552579091cdf67481ee89526ba78a092d5234",
+              "sha256": "18d73d805158b7c0c3c2754986f561fbebf4a4a8c45949d0ad6017e8a5821968",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-launch-still-modal.png",
+              "crc": 3884453343,
+              "bytes": 87295,
+              "blob": "1b58a2bdf029bf9ac6609be98f84064147e0dc74",
+              "sha256": "d1a0035d0c35613ebfdea61615444b04b1869d5cecbc9caff1f07a867b902b57",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-missing-cli-value-validated.png",
+              "crc": 2892133973,
+              "bytes": 91131,
+              "blob": "49332e15edc0d9737e3a6715bf11912fe5668b51",
+              "sha256": "d9b0bb43ba88564d20e016faf8057e58da8157eabeb276b530fee2cd7270c742",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-native-electron-zoom-200.png",
+              "crc": 2885000710,
+              "bytes": 76584,
+              "blob": "d35b41770766e96dc321abcbd67bdd2af87ecac7",
+              "sha256": "119c5025616c880cbef474bc3c92e889a123a509fb8076ffd59df57f7273a8a8",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-opened.png",
+              "crc": 3161406460,
+              "bytes": 68054,
+              "blob": "44358d9a0876025fab9873cfeb676ef936d2b3a7",
+              "sha256": "5c96f5f2a20b7a81a8b6e29170a998e9e124b98c7e0916ab619372d903d5d4c3",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-organization-created.png",
+              "crc": 848604748,
+              "bytes": 41249,
+              "blob": "1e40400e717dbc23c9d1968a700fec29c7d4995b",
+              "sha256": "adb0349c34a96ce95115a198330b4e6a2d3f86c3c5d42783706a08d383c5aef0",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-organization-entry.png",
+              "crc": 1132439703,
+              "bytes": 75951,
+              "blob": "3db8198894c7b8f2b460cdb8807c4704f6eaf228",
+              "sha256": "3e4b6b7914e23a52beffda577b16b04035802ee4877834a8e3302f86a46617d3",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-page-result.json",
+              "crc": 106477911,
+              "bytes": 2207,
+              "blob": "012f27e4cc32a8908d3db56d84024b89b4a105e2",
+              "sha256": "ab9b49157fd30fd590a28bd04e6efc646e0b785392154597189a1159c348963c",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-provider-refreshed.png",
+              "crc": 1446804562,
+              "bytes": 92638,
+              "blob": "15a896d63d731be74bf478afa359c124a7099364",
+              "sha256": "95ac491a30ac82ac76d0bf596cde021fb849190a0ad5ab368979d7af0688fed8",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-restarted.png",
+              "crc": 1700899677,
+              "bytes": 69517,
+              "blob": "9835fa27213af649f5028ac543a4db6b577eb03f",
+              "sha256": "b94c0b93387b9113f4c22a09ed9093c3298a0f547e3897462fa38a0f2fd9b9ce",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-resumed.png",
+              "crc": 61525694,
+              "bytes": 96426,
+              "blob": "83f2316156182b74d2edb9c60f47a524707ea1bc",
+              "sha256": "8b70cc03698109d2ba368aa0c38afbffe813b6bf2e54cc11e873ef1fb3508bd5",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-save-rejected.png",
+              "crc": 1965937468,
+              "bytes": 54627,
+              "blob": "bc3cad08085cd003aa8b20adf06c30948301e7aa",
+              "sha256": "6776e77e81cb22d5c82c922193e53719654dbf213290cac4c6b8fb895926bc99",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-delete-confirm.png",
+              "crc": 3853311233,
+              "bytes": 61514,
+              "blob": "78c562fb34df90e12494dc0240e2b6d02377ffd3",
+              "sha256": "a061ae980d49067b4dcd72aa94515ccd007770e5825bc93f648bccc72a5fce3f",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-deleted.png",
+              "crc": 3058273775,
+              "bytes": 42893,
+              "blob": "0de08052c262e0ff5e4967d49d9f6499978e1005",
+              "sha256": "4b61cf3eef77139a7e6212d525233aabd11132e6dcd3370b568d8fa8d2528f8a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-edit.png",
+              "crc": 2103128242,
+              "bytes": 93426,
+              "blob": "51e3caf64767ba0f5bbe890dfac3963045a5ade4",
+              "sha256": "afdeb4978ec8a40443ebb713fbe68019319926762d8c3f39cb27c4ffeed3db41",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-editor-opened.png",
+              "crc": 233960612,
+              "bytes": 81575,
+              "blob": "16f210a060b96586c83519af2f6970c79b453baf",
+              "sha256": "b97ffab6eda560ac4af9c449d85e33ca85e885eaa36ca9c43090f9461b9e24ff",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-invalid-cron.png",
+              "crc": 722982665,
+              "bytes": 91580,
+              "blob": "d03064482e53f95bfbd2547a18fdacc466257bc3",
+              "sha256": "d3c3bb66f09763bf6c2915a680b2ea4ce825ffc2bc7a6557e2f1eef4647e382d",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-dark.png",
+              "crc": 1852298168,
+              "bytes": 48119,
+              "blob": "de3bb7b3d9324ec0f9ff3aaff800758494cd9e99",
+              "sha256": "18966624158533889042c88eaad954e3d874d60a35491bd08b747052bffd038b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-light.png",
+              "crc": 2622541764,
+              "bytes": 48154,
+              "blob": "1bf0669b0daf30055345954853b58cd6f8dc0c30",
+              "sha256": "74999d027344fe4653c9f58909579467e96410b183d844a3f3ce4ad7b19e0f66",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-narrow-700.png",
+              "crc": 3097010392,
+              "bytes": 40074,
+              "blob": "ecac996930ca082f737c288d02afe9e750ae068c",
+              "sha256": "20bd9a39138e70fddfa36ba5a2d4e30cd8da2caa32877f17ecf7134fed1abcfe",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-native-electron-zoom-200.png",
+              "crc": 4221015495,
+              "bytes": 88908,
+              "blob": "62c4ebf938929c3f4ddada039baa8c9d320a5521",
+              "sha256": "ec96f6e8be9e7685fbc2a51125947684e276c22b7e40840fc6398a89605b3d64",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-old-prompt-review.png",
+              "crc": 1585901646,
+              "bytes": 94894,
+              "blob": "5ba6daea13852edcc3e13bdceb3b1bb67fd537c2",
+              "sha256": "a939480ee265fbe387880407b9e04ce4409220091835629711b071cbd7aa38a1",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-paused.png",
+              "crc": 2077505133,
+              "bytes": 51016,
+              "blob": "6e06114602e11a892abc2d815134c516e0ed05f7",
+              "sha256": "036e9388fb4aebc9aa9c64e7357d5725eb0b8b4f09956a3c78e32c999dc0916e",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-pristine-submit-validation.png",
+              "crc": 2837332796,
+              "bytes": 75603,
+              "blob": "f562789f3d464b173a62f4e34d9f46a5c959ea90",
+              "sha256": "aa732b1df1779adf3ba287d2ae8d0c28c61dd519c802c3510f3282f200c3b3ba",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-ready-to-create.png",
+              "crc": 1462272698,
+              "bytes": 87475,
+              "blob": "ec4d17a9771a16f87a2e7baf06fed3bda06a3a69",
+              "sha256": "b454160d1d033cc1937219e5c5bea5b6ace7203191fd34a417682d2a50ed43c8",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-resumed.png",
+              "crc": 3551194984,
+              "bytes": 49175,
+              "blob": "6b112a024424f4784b587b5682e337897b869a26",
+              "sha256": "60a57ddb1a2fa4dba8892080da2aa82843ed70c3808964f81b8e7369084460a1",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-run-history.png",
+              "crc": 987257413,
+              "bytes": 55006,
+              "blob": "7de7f877b40343b45922712226d6b187e4924edd",
+              "sha256": "06efec735c9929d567128d5af96bbe34a4e8bf54054e527df8c3bbac3b7f4774",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-run-log.png",
+              "crc": 2082532497,
+              "bytes": 61954,
+              "blob": "3d940c63c60e02160e78220ea3d91deb2ae391a9",
+              "sha256": "9fa58a0bea29d4a069c029d7b8e5098c6cfe5846f03f3560aa8f9530c729c0cb",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-split-pane.png",
+              "crc": 214027717,
+              "bytes": 137487,
+              "blob": "1a080e8a5876ae3ff72db0aa9075bb837fa9ee2f",
+              "sha256": "ac231e0b747fc1397b3ab8bb84db6e622db33d496bc98ab7bb4bd7230210b374",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-teammate-mode-override.png",
+              "crc": 3370021179,
+              "bytes": 91394,
+              "blob": "ccad9ecb3d3243a8c25abfc394fa92d29a8799a4",
+              "sha256": "06594849a89b81613de4e64a0c6124e5283e84e4a7e9ad1ace62d42892d3a039",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-teammate-mode-validated.png",
+              "crc": 536511019,
+              "bytes": 93091,
+              "blob": "ebf896d151fd62812c96a572f14eedf34839826f",
+              "sha256": "6077860cc0547c4b26d079620ed900f4954e84f426299b31b8cfe8dc39771ee3",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-template-confirmed.png",
+              "crc": 1575748107,
+              "bytes": 99767,
+              "blob": "832b01520d4185e1a0885ece933832196bc0cb43",
+              "sha256": "7e5696623d3b28923cd66456de4ce546519985a50d49880811f99f19a759698d",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-theme-dark.png",
+              "crc": 1136594416,
+              "bytes": 83198,
+              "blob": "10022304970074ae54660e0ef310d9f8a04d6d6f",
+              "sha256": "2644afd5d007f3d3812d6136545721b29ab4e108187c7890007c4f95966d80f5",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-theme-light.png",
+              "crc": 2777247550,
+              "bytes": 82530,
+              "blob": "202151d4fdb95a77de1728f053da2ade195a2a89",
+              "sha256": "44a376c58f035c0162604c4efbd575184e2bb8cfb23252c98abdbc5ab969e4b4",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+              "crc": 289523885,
+              "bytes": 100135,
+              "blob": "91042ee2a0e9b0b1c1173da955ad8bf2ef92125b",
+              "sha256": "d78110c0caffd3a5159223128aa863637712c2a31628bfd1f82210de4198a6ee",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-task-detail-dialog.png",
+              "crc": 2631816149,
+              "bytes": 94482,
+              "blob": "0861418eec4a5af115543627970acf09904edb59",
+              "sha256": "99fdd14fde732bf776b1f6e8ba17b8dba8611b3bba7176824d7fda41eb21ec70",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-task-detail-tab.png",
+              "crc": 3972270248,
+              "bytes": 60035,
+              "blob": "d05fecf24f6db2633b341b5c3a7bb840e4eb495b",
+              "sha256": "df7e27ce0d2baaab6b45913ea41fdd9991e3dbf9b41435ea085b3170f4b28ee3",
+              "originalExtractedBytesEqual": true
+            }
+          ]
+        }
+      ],
+      "actuallyViewedPNGAttributedToIncludedPriorReviews": 3,
+      "limits": [
+        "Original source-bound evidence only; Installer remains FAILURE where included.",
+        "No transfer to privacy Team10 RED/GREEN, other UI/native lanes, full workspace/backend types, release or a later source.",
+        "Frozen earlier checkpoints remain unchanged; new independent reviews are separately retained payloads.",
+        "Original raw ZIPs recover all derivative members; extracted duplicates are not separately bundled."
+      ]
+    },
+    {
+      "name": "M0660-Creation-win-mac-and-Installer",
+      "metadata": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/bundle-metadata.json",
+        "bytes": 1308,
+        "blob": "a788ddc4a06d02f154845a04e8f5889909069380",
+        "sha256": "0f4020e8d2eeda57b67e314a319bf3c3e4a6ce207c14f8861bea0414cb61fa24"
+      },
+      "inventory": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/inventory.json",
+        "bytes": 11140,
+        "blob": "1fb62127d67bd0b6bbb4f2de040887197d48b41d",
+        "sha256": "0219c5833a925cb117789cf048c264f34673e2bb1c916b4ac4ce68113666ae4a"
+      },
+      "readme": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/README.md",
+        "bytes": 674,
+        "blob": "de12e8b273bf2de110193908deed4cccd40918ea",
+        "sha256": "2cac9e73e0723587c57440b170d2fae7b59683b6e7eae603d8de110406b8fa37"
+      },
+      "bundle": {
+        "path": "ui-M0660-completed-evidence-bundles/M0660-Creation-win-mac-and-Installer/M0660-Creation-win-mac-and-Installer.zip",
+        "bytes": 5321791,
+        "blob": "a7dba022626f8afb3d4204efca0e9d4ef120b24b",
+        "sha256": "74f140ea0a6e0e492dd3b996ec865309f1a96e2edc8a092a6e973005bb212e1d"
+      },
+      "outerEnvelopeEntries": 30,
+      "selfInventoryAndREADMEByteExact": true,
+      "payloadCount": 28,
+      "payloadBytes": 6175362,
+      "payloads": [
+        {
+          "bundlePath": "ci-desktop-m0660/creation-completed-checkpoint.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-completed-checkpoint.json",
+          "bytes": 5317,
+          "blob": "c54f407e1ff4f6a5e83d1f98bd7ca1e652eb7ae9",
+          "sha256": "9b39cd6ff9bf8b4922fc6687a367067852d953185277e979214ee0349a57f410",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-macos/Plan29-creation-macos-appendix.md",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/Plan29-creation-macos-appendix.md",
+          "bytes": 3819,
+          "blob": "174bd6bfa667eceeda26c8e02cab2fc2f74de996",
+          "sha256": "3192cefe953fefa54d9ab7a19a09c67389153116de0de69750866277fe1d09b7",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-macos/archive-integrity.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/archive-integrity.json",
+          "bytes": 11050,
+          "blob": "9c3cb26d866ea279a0b6ac73cfa374c12455799a",
+          "sha256": "cb6f8b1bb2089288062ca108151f67ad092542606fe1d971d756ea6e755fb9a6",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-macos/creation-audit.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/creation-audit.json",
+          "bytes": 15019,
+          "blob": "d8950b5b7fa4798797f342e69eac89fd1fab76f9",
+          "sha256": "eb7ce7edbd4875f34e57dc64e9945a86ca0be0e661645d68ab11fe448e22fdda",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-macos/job-133017913998.log",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/job-133017913998.log",
+          "bytes": 61194,
+          "blob": "39922912a4ba7bae9727f28924768b3d67ac0a78",
+          "sha256": "4dab25766a995e8f1a00d47c4398a59770ab56a4f27d29f86a9f3a427c73519d",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-macos/original-artifact-14188985298.zip",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-macos/original-artifact-14188985298.zip",
+          "bytes": 2266179,
+          "blob": "d74a297481345d51cafd319e7632612e37180778",
+          "sha256": "9683bc89237ede7a81795627dc3928cf125317acb03fbbeb267f3524ca65efa5",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-windows/Plan29-creation-windows-appendix.md",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/Plan29-creation-windows-appendix.md",
+          "bytes": 3503,
+          "blob": "4a032d9650e6478b2acef5e309d820e5af3c11ab",
+          "sha256": "35144b4c4e98ee16dfa79899f13e53c7f5a15d5e0c73824b7c854cec2f15fafe",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-windows/archive-integrity.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/archive-integrity.json",
+          "bytes": 11052,
+          "blob": "49528e550091c31cb759d4ff5b1c42588e73d134",
+          "sha256": "09dc686c2499705615d6d770504ab748b38bb9f8c7fbaa852fa1342e7e3caacd",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-windows/creation-audit.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/creation-audit.json",
+          "bytes": 15977,
+          "blob": "d60ccf11f515196f9582fe69e69c206faebfc3f1",
+          "sha256": "09d21eac5a7b626e51c9d542b74d88a4e6e7394158bc843984ee728c871af123",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-windows/job-133017914037.log",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/job-133017914037.log",
+          "bytes": 90785,
+          "blob": "8f9f8ca0c33ba2b1c5394d790ead710b0b274324",
+          "sha256": "44caee2efb13f3fbd9a76fd907c3f1bd30315314dfa61377ccffd257feb485f7",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/creation-windows/original-artifact-14188273363.zip",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/creation-windows/original-artifact-14188273363.zip",
+          "bytes": 1810102,
+          "blob": "6984350411327031149dfb0087bdc22cb3e35ee8",
+          "sha256": "16071f3a69ff6da4d587f1483d75ef4f6b48cc197c0d91be22796ddc8ab34295",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/full-api-jobs-0045.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0045.json",
+          "bytes": 22016,
+          "blob": "6e51c4058b32b3ee5d9ef799fea82b37f18e7664",
+          "sha256": "4c487cfbb927ee6ab3a5a58bdddb773fe9699fbf9c2154d78fcf28785597695b",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/full-api-jobs-0050.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0050.json",
+          "bytes": 22361,
+          "blob": "714fbe2a02b6889b343e9868149148879c0e1fbb",
+          "sha256": "c9700d9ae9b5f8141bbcb25e7b2e1fdfe3113ca055deff347cc9768c1bc01ef7",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/full-api-jobs-0102.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0102.json",
+          "bytes": 26002,
+          "blob": "55228c64f23eb20ab1f2e3f44478b696525fa8c6",
+          "sha256": "69792bf428011f74dd1216aa309737a10208808462f0b6197a561d58b7de28e4",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/host-official-artifacts-0057.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/host-official-artifacts-0057.json",
+          "bytes": 923,
+          "blob": "3bf2e25e9b803cd2923e2bffff084a73ea37b371",
+          "sha256": "f7e628dc0f2cdc20f5ed2b43538cdb78ab590bc54ec2c322c697fb782b714ede",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/initial-api-runs-jobs-0038.json",
+          "bytes": 58753,
+          "blob": "8689e935e0ae5041a5bdc3c2d4e6b2169b529f5b",
+          "sha256": "6ed2698023541fec692ef81f93ee4bd4cd12a44f3decdde234284c4a1b4e6d4a",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/Plan29-installer-failure-appendix.md",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/Plan29-installer-failure-appendix.md",
+          "bytes": 8427,
+          "blob": "8b82c7acf00b9642438d3dbf7e9a8c481c463fef",
+          "sha256": "0508a64db94abb5268bc2b34b26b0e08151fbd8a3ab12b40e2fd90e418560e2c",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/archive-integrity.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/archive-integrity.json",
+          "bytes": 8976,
+          "blob": "b360a9e5ed9024e8ee96ef6d59b2c622e86c0df2",
+          "sha256": "5740dd6ad7fa98ebc35717f4e2cea7ba1abe7c2bdc77aeccb5d3c9229aa0c21a",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/checkpoint-installer-failure.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/checkpoint-installer-failure.json",
+          "bytes": 5965,
+          "blob": "76ea101e182cd9c6f723429d347286fd501d1c70",
+          "sha256": "452feac8ebe1043dd40d624f9c72d8b3faa2f6e0bd3f2bd715da87aabaf94b42",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/installer-audit.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/installer-audit.json",
+          "bytes": 47644,
+          "blob": "6609839430af4d14b17b7c9a39657d6977754831",
+          "sha256": "bd5b7b5a0b03d4f4c2ddc104c5312be235a3e810c950f2d6c6d63fe563e434f7",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/job-133017916038.log",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/job-133017916038.log",
+          "bytes": 182452,
+          "blob": "e60b871a82cc8cfc1757da368b2c29c3acfc13e6",
+          "sha256": "7138725a1afcbae1635fc375c630615cee185f174c5693cec16a2e6e36c93e26",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/original-artifact-14189036908.zip",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/original-artifact-14189036908.zip",
+          "bytes": 945509,
+          "blob": "9196aa2aa6cd118f9e295ec2f1783a922b0cad98",
+          "sha256": "9198d782ed088ad61e6f2b45e7ea7b0091617a89d93f1d851f91afb362b37e76",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/installer-macos/source-pin-audit.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/installer-macos/source-pin-audit.json",
+          "bytes": 456818,
+          "blob": "858df222cc0c164d09830bf76ff24884be487d4c",
+          "sha256": "d8ea8db687ba64c898b46cf6e6705647360291727099a98efe84dc195e6716b7",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/root-independent-creation-win-mac-review.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/root-independent-creation-win-mac-review.json",
+          "bytes": 27473,
+          "blob": "d93caa199521edba316396d55fbfb35bb11e0c85",
+          "sha256": "34afb98eb9ede2e4c29d6150c3938e7202221fe2e8adceb526c86c4cfe9c1621",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/root-independent-installer-failure-review.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/root-independent-installer-failure-review.json",
+          "bytes": 47470,
+          "blob": "7287e405ad796acbcb6a25ab413072faafbcb71d",
+          "sha256": "b0f389306781d3828ac71047edbec004edd724599b4d6267b8997d054737fbac",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/teams-official-artifacts-0046.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/teams-official-artifacts-0046.json",
+          "bytes": 918,
+          "blob": "9a73d01580b87d66e61d19e9ba06d7c271054d8e",
+          "sha256": "e7ac29d896e065be523583cfa0869568fa9ac68074c3a899db2b32fd4d2a931f",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "ci-desktop-m0660/teams-official-artifacts-0051.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/teams-official-artifacts-0051.json",
+          "bytes": 1814,
+          "blob": "68c066788d30558dcb9198c04efca815e55a3c1d",
+          "sha256": "271d5a27cb39f5e4cb482961b6e4ec14ce02f78677bfbd4c7fcaac88df164283",
+          "roundtripOriginalBytes": true
+        },
+        {
+          "bundlePath": "native-audit-M0660/installer-navigation-source-review.json",
+          "sourcePath": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/installer-navigation-source-review.json",
+          "bytes": 17844,
+          "blob": "f0aa903a02cf7f8090749589597d420f17bfd7c8",
+          "sha256": "048dfbe9de4ea8a9a91f94c59f28f473ca98570e00a59f96d52f7457e6ca851a",
+          "roundtripOriginalBytes": true
+        }
+      ],
+      "originalArchives": [
+        {
+          "artifactId": 14188985298,
+          "officialAPIHeadJoined": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+          "officialAPIRun": 43780997243,
+          "zipIdentity": {
+            "bytes": 2266179,
+            "blob": "d74a297481345d51cafd319e7632612e37180778",
+            "sha256": "9683bc89237ede7a81795627dc3928cf125317acb03fbbeb267f3524ca65efa5"
+          },
+          "safeUniqueCRC": true,
+          "memberCount": 41,
+          "pngCount": 40,
+          "members": [
+            {
+              "member": "teams-create-config-only-created.png",
+              "crc": 3400320596,
+              "bytes": 31702,
+              "blob": "a0d35bdbee0138e20b05421ad71e6dd684336dc4",
+              "sha256": "cb8bfe39904152a8fbce371a679cfb5a379c329ff833cabcaee071ac7b568f9d",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-copy-resumed-edits.png",
+              "crc": 2743680178,
+              "bytes": 62273,
+              "blob": "841f8ba8301754ce59bc09ac67eefb034b042541",
+              "sha256": "3ccddfad0b8f25e35aff3735b0112ef3e84a49529ac57178ca7995b09f5aad68",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-css-zoom-200.png",
+              "crc": 2773424935,
+              "bytes": 51889,
+              "blob": "d7d8a3ebeda5c53af8e11a46d5b0efeb1c634e09",
+              "sha256": "e32f7bb648adbdc5a787830885604e1869bc8be27f472dba4ee672bf7f4666be",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-edited.png",
+              "crc": 1641500227,
+              "bytes": 62032,
+              "blob": "cb7e2d94f9b351d63368c8ada4e29b71101274ab",
+              "sha256": "430eda257b92d649a64477b51cc297beb554ca780272ced2d57175fd5072749f",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-launch-controls-loaded.png",
+              "crc": 3214248223,
+              "bytes": 76314,
+              "blob": "cdc68396ad8b20e2f4ea96c0b19127deb3e6c954",
+              "sha256": "fb48a1002b75ad695b7b617663293649a987f24ee40568c1d5ba18ea7b58d93a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-launch-still-modal.png",
+              "crc": 3976030532,
+              "bytes": 75222,
+              "blob": "98adf49b7738e559a2664904df0ef05cd6a97869",
+              "sha256": "82e323610de9487def9f03ad0ba6c07e4e9fcf00170db3b998d9bb1532ddbf0b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-missing-cli-value-validated.png",
+              "crc": 1276852039,
+              "bytes": 70641,
+              "blob": "69561e9e54290a130f0487dfaaa62c0d3dfc99c7",
+              "sha256": "d33b844530d67565e368b390da70ae5f529d076a78e362aef35686d93749ddea",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-native-electron-zoom-200.png",
+              "crc": 3934141918,
+              "bytes": 52869,
+              "blob": "12d13b0815cb1988a341ea40c4aaf0e243506f2f",
+              "sha256": "b78a564cc093a4de95251407d3c4fbeb2d5bd6f7a130ccaba780dab502ec16c3",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-opened.png",
+              "crc": 1233872644,
+              "bytes": 57060,
+              "blob": "04f5aab3fc63379fa9b12849b6f9840ca2ed763c",
+              "sha256": "ff8bb90d826d81dcace7b94c15889327a79ba66983bea859846936e1b1619d14",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-organization-created.png",
+              "crc": 1677891199,
+              "bytes": 36279,
+              "blob": "2153e075a8e4302fcfa77eaaaaf001d93883fb9d",
+              "sha256": "fc8209f0b19b5c886e70678bf339b6dd879f804c5a8e33465b0746cf958313cc",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-organization-entry.png",
+              "crc": 3758957661,
+              "bytes": 64332,
+              "blob": "60612192d1ed4c226ef99ca0fd24e367cd3bfb20",
+              "sha256": "f889cfb453c227fe74439196bd6195fff3769b0b38a30ae7a77867ee027f505a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-page-result.json",
+              "crc": 1214768972,
+              "bytes": 2259,
+              "blob": "60bd0db03bf61c4dc381017cf3adf25a3fcf021a",
+              "sha256": "7813d480ebc7f25cb1229f3a9b65cd8157149d386eba577b7c48f542f8ea59a2",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-provider-refreshed.png",
+              "crc": 4103340290,
+              "bytes": 59475,
+              "blob": "7a9a5e851a4e33c9913cd3e52a4a3d978d6e02d2",
+              "sha256": "ebc90278e2ed099073fd5c9ff5b834bf3a48e983abf7cde9e747d885e41c2332",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-restarted.png",
+              "crc": 2416435997,
+              "bytes": 58386,
+              "blob": "473a182e77e2a2d9802f86bf99bb572a6b91103f",
+              "sha256": "1e37fba15b7b2a232b79f8713944a31f7bbc70a612290326081793c64fd0efce",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-resumed.png",
+              "crc": 1737782716,
+              "bytes": 79081,
+              "blob": "a5f0abb0cbb941c852dd16d6ef40f0209746b2d5",
+              "sha256": "57c5d9d9e9ee67a4d57e5da941944bbc9ce8953119721d1e9983b83a74ad5908",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-save-rejected.png",
+              "crc": 2767297840,
+              "bytes": 49192,
+              "blob": "7bfa80fce8b3aa00986bfb97da86a4ac56cdc3de",
+              "sha256": "feaf59e20065708e4bf381d1ef226c626fc588b59888fa76c3596cb049e52134",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-delete-confirm.png",
+              "crc": 1109390245,
+              "bytes": 55091,
+              "blob": "a3ff15e16488713725a0886cf69422ce93960082",
+              "sha256": "1eb6841a56f810d9036e20c0cf81cfbdb104909539421da99cd3181db362cc3a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-deleted.png",
+              "crc": 3882557204,
+              "bytes": 40198,
+              "blob": "d7121f1811acbb5ddf855d43abdcfef7d402c851",
+              "sha256": "4a0319566358ec95a97a0a0f169800f3b9b401f752912b4deb7be9c721bafcaa",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-edit.png",
+              "crc": 2990616036,
+              "bytes": 63117,
+              "blob": "76a09058d0a9dcc2a411de48984a537a21626220",
+              "sha256": "e8c1007c0b5273b5cd403c20ee14a0c47c5e08af77429519e9ed887b90a0a452",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-editor-opened.png",
+              "crc": 1494997309,
+              "bytes": 61166,
+              "blob": "154526331443fb9aa785889eb3b1807a4e40db33",
+              "sha256": "a3119fe418c9d518832845b9563c05455cb2467cd6f0e454cdb1e9dc74408b7c",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-invalid-cron.png",
+              "crc": 3161233189,
+              "bytes": 72760,
+              "blob": "0c9d751b51eaf4e4f1d8ab804a07ca733a1fc8dd",
+              "sha256": "2ed2ebde79f7fbd05730611b4544e42afe4274cb69b721275ad2e7af2971b7ab",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-dark.png",
+              "crc": 3255839251,
+              "bytes": 42179,
+              "blob": "30efb2ef9f174b5db4d809ff36a88e3f06a1a8bc",
+              "sha256": "9ae18088e49ae19b49fe2404bc292d945ed9cd1bf8cfaac85b37ca4d4951d85b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-light.png",
+              "crc": 3659113610,
+              "bytes": 42922,
+              "blob": "c04ef0356a45170ca4be9b42ac4f519ebc8bb0c5",
+              "sha256": "f756305c606592e20bfe55ad35ea2bd0f54dd58f6f43ef687b46c2f87709b387",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-narrow-700.png",
+              "crc": 3037659070,
+              "bytes": 37914,
+              "blob": "39cf2a784ea987de1c3b39925853c9e82fda827b",
+              "sha256": "df2cb226c55264558e1c9930ac7dd9b9ed62eccf069e7d77862cf80f3696b32b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-native-electron-zoom-200.png",
+              "crc": 3490774097,
+              "bytes": 54934,
+              "blob": "cb5f60a775a0eb6fa8707c2163aa52de0545915c",
+              "sha256": "3c080846100be91c100e0ffc9aa9a7c4065606a6d08f527aa59cbdbb6801dd61",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-old-prompt-review.png",
+              "crc": 760615464,
+              "bytes": 69264,
+              "blob": "4327489f118a90b06d51033e61752212a399745b",
+              "sha256": "5a1f833572d30e11503d74e7a9ebf4267b691643894c06b7c0032445751de1d8",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-paused.png",
+              "crc": 2459949507,
+              "bytes": 43676,
+              "blob": "2ca83f5db7e2b2e80b125ba0c812a0eb1abfac99",
+              "sha256": "47d6a13169ac281c90ecb1b6f0a95f57cdade7b233ccc93c063a8a60830a4c81",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-pristine-submit-validation.png",
+              "crc": 2292923384,
+              "bytes": 56172,
+              "blob": "33b11939a742c4641c0d2da27c9982cd01df71fc",
+              "sha256": "e0a3f19bee5f0acea8ff82f5b5066529bf21444de5623ae21b1114112f774545",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-ready-to-create.png",
+              "crc": 3254441438,
+              "bytes": 61021,
+              "blob": "6eddb86fe2e42429fdedd5eb2ef537475c6fbda4",
+              "sha256": "57e49217da4b8a8ff8ff286700cd40ea1446afc79f99ac273b2e0a5726d2f4a6",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-resumed.png",
+              "crc": 219502299,
+              "bytes": 42272,
+              "blob": "9b289a63cb77b21fdc03ef1b8fc1bd1f4afc2cba",
+              "sha256": "47348569be5744260f084bcab18b2026a6b981510ac2ae1974b436637e4dfaaf",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-run-history.png",
+              "crc": 136221896,
+              "bytes": 48043,
+              "blob": "07b6cae7b19bceca096ea9c57973e6e70545f982",
+              "sha256": "56e331a4e0b863ab3de381debfb452a41ea1339934f30e328d8cbf5efb1ce94b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-run-log.png",
+              "crc": 3901069308,
+              "bytes": 49817,
+              "blob": "d908f8dac4f5d8e19f34a4e64b4bea585c449b3a",
+              "sha256": "7ac14d2975b6b27b65e7e60eceb838a3617a7c6186ae6133340dc41c4de1e480",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-split-pane.png",
+              "crc": 389865986,
+              "bytes": 97962,
+              "blob": "82cf2c2e93834520d50d97a02807b13dd1cf9c3f",
+              "sha256": "09ba6a21068bd7f8a9c006bb728303764bd82bd46d4cd997f2c97d6cd5ca333f",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-teammate-mode-validated.png",
+              "crc": 3870179884,
+              "bytes": 72364,
+              "blob": "faa5e2526aa67b70cd55a154fa3de0c7cd0b18bd",
+              "sha256": "47c0be359c668bea0ec42fb1e4d6423a599895973362f89622109edc9992f60d",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-template-confirmed.png",
+              "crc": 2202199571,
+              "bytes": 75171,
+              "blob": "cf2522bd52369b25067238bb7402c3ed34c97924",
+              "sha256": "81542e5bfdca9a596f64fee494e79f70774b3cf75a9e9f5701181bcdb89f85cf",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-teammate-mode-override.png",
+              "crc": 2595717230,
+              "bytes": 71129,
+              "blob": "78f2e881d5d74e75ecd56347881ac0d637a41f63",
+              "sha256": "b817406eb73fc4c5d87ec972f9fab6b85879df20d5743696087d7bb8a06900e1",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-theme-dark.png",
+              "crc": 207107126,
+              "bytes": 60914,
+              "blob": "47bb81efcaa5297376a396246c21e667a10c4c40",
+              "sha256": "aec83424b86b0384523f9e1856cd136a9b01ae009c1cb823c9ab2f08231174eb",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+              "crc": 2629159280,
+              "bytes": 89189,
+              "blob": "c44f2b3e140e5a558fd07d4f745cf868337dc2ef",
+              "sha256": "903970e50bfb38f9904c6d71a6c37afdfbea5595f5c9e228cbf587bd540e5134",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-task-detail-dialog.png",
+              "crc": 1742133676,
+              "bytes": 61306,
+              "blob": "0d6b46a25c2c3f7ad30ffd428739f5cc3f7266ac",
+              "sha256": "cc543ae0b64d9ecd740fb7e22a172e35856cab88e8e60f577355c692b2809dcf",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-theme-light.png",
+              "crc": 609497583,
+              "bytes": 61955,
+              "blob": "7dba906460e98322cde135f15300932295a9404b",
+              "sha256": "dd0e26266c129afdc7bd5de80c76ad2c62be4f5ee6974ac2319bd52467d0c4cb",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-task-detail-tab.png",
+              "crc": 3917971061,
+              "bytes": 53261,
+              "blob": "4cacefb2f9ef809b7443dd4b973ae625d7b55e3d",
+              "sha256": "5311b8117291807605b0ee99b0f67d417c4dd1bfa15644948e333ff4c4a75032",
+              "originalExtractedBytesEqual": true
+            }
+          ]
+        },
+        {
+          "artifactId": 14188273363,
+          "officialAPIHeadJoined": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+          "officialAPIRun": 43780997243,
+          "zipIdentity": {
+            "bytes": 1810102,
+            "blob": "6984350411327031149dfb0087bdc22cb3e35ee8",
+            "sha256": "16071f3a69ff6da4d587f1483d75ef4f6b48cc197c0d91be22796ddc8ab34295"
+          },
+          "safeUniqueCRC": true,
+          "memberCount": 41,
+          "pngCount": 40,
+          "members": [
+            {
+              "member": "teams-create-config-only-created.png",
+              "crc": 1115019662,
+              "bytes": 35517,
+              "blob": "a3ea0ba3337315f4cb72110190d7e59e23937caf",
+              "sha256": "682d49f7affbf003ed127b044973805592c473651413581063eb850570a923fc",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-copy-resumed-edits.png",
+              "crc": 1198148236,
+              "bytes": 52461,
+              "blob": "cc5742db59b3fe14f5d6c20fbc0ade67f6469414",
+              "sha256": "f4534afc2240edd0d6cf48ee66c124211370fa066ed252470518d806dd85cdae",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-css-zoom-200.png",
+              "crc": 1473157295,
+              "bytes": 45872,
+              "blob": "bf520dad6a55ff80a3425ef66604480c1becfe64",
+              "sha256": "579c470f629cf1897d1a6827c34d93503533dff54c0190ec078d76dca02c43b2",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-edited.png",
+              "crc": 1128550387,
+              "bytes": 53066,
+              "blob": "552b5384d1251abfe1803697583a2d6033c1ab9c",
+              "sha256": "8027d843ad7025de52e45334a3d29f971c67109685786df39dc508203827c7cc",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-launch-controls-loaded.png",
+              "crc": 1640858288,
+              "bytes": 54883,
+              "blob": "72c384f7e2b0acf39bf813ea8abebdc16108c05e",
+              "sha256": "d030a0439f9eb569ef2960c9fd8de0598a1490363de163e0fb9d4d7a6def6c51",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-launch-still-modal.png",
+              "crc": 513450219,
+              "bytes": 54847,
+              "blob": "3d690ede777e8d2154b823074988ca4c3266b740",
+              "sha256": "751977236e9dab9cb256e335467b8bfdcccea2e93c789854caea2669f6c853c3",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-missing-cli-value-validated.png",
+              "crc": 1247500518,
+              "bytes": 52777,
+              "blob": "6cfa289812f39ba1bbf18e396b0994200183d75c",
+              "sha256": "c53d29dcd673ec0aa265b617a6a9be31d33a840baafea14dd832c6079411f6f9",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-native-electron-zoom-200.png",
+              "crc": 2351288082,
+              "bytes": 50788,
+              "blob": "30ba4305ebb711c89d578a7f4a287e139716cfb4",
+              "sha256": "3599d8a3b9bd16c6905084fdc02a6f8d64c53235749c0870712affe1d9a77ae5",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-opened.png",
+              "crc": 3894417643,
+              "bytes": 49032,
+              "blob": "d71cce2fa7942cfb4bdd035fdfc7b3335febd7f9",
+              "sha256": "3cf24039bb4586db6197377061feacecb5accd921fb57730ae53a806fbdbc759",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-organization-created.png",
+              "crc": 428591513,
+              "bytes": 28203,
+              "blob": "a8ebcb5e8b6917380fd7263a42d3c0ab754235ec",
+              "sha256": "6ea7f0a2d1f8675d5b12a1a5b53d4629ac36777141bc29da4719235669631494",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-organization-entry.png",
+              "crc": 4032587288,
+              "bytes": 52308,
+              "blob": "bda91d6d6374b7922c58a2021e780df6ea63e355",
+              "sha256": "98dcb2f64753e8501fd415dd2097ca8cc9e52f1803c117c7435117c7b75c9385",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-page-result.json",
+              "crc": 1939375661,
+              "bytes": 2916,
+              "blob": "0e582f2c7079a2b6b865b6e51b192cccb013a3ca",
+              "sha256": "a11e54be883882c5bd9a2621f69ec14b1cedaa7fa9455b064405f763ba10565f",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-provider-refreshed.png",
+              "crc": 129636497,
+              "bytes": 54370,
+              "blob": "57e391ace288537221f16bd4940a21f86af93586",
+              "sha256": "73f49fba9d0d85f90afe1901415ebc3470605a17844d482bc00dec1bc0efcf6d",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-restarted.png",
+              "crc": 3776521999,
+              "bytes": 49805,
+              "blob": "da1a093501d3d3bf48013c1e669e14ea9f81d06f",
+              "sha256": "ab475a4d5e07cd7af3989507190af37e3922eea6c44f8d86f8aa1da23285ef43",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-resumed.png",
+              "crc": 2792806728,
+              "bytes": 56075,
+              "blob": "de9af0e583495bc28295ef4d72e63b1ef6a343c7",
+              "sha256": "f1818bb7706ce6db4c459aa95f0370619cfda07ea0d3758ef39aed142d71b15d",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-save-rejected.png",
+              "crc": 2360854175,
+              "bytes": 42135,
+              "blob": "b803ec1a2739dddd719fb1b13da03ae179f2e434",
+              "sha256": "5bcddc83a4658ce2a9157ef61bc423b6a4de80d5c134dd9423c130340d1ff429",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-delete-confirm.png",
+              "crc": 4278689857,
+              "bytes": 45520,
+              "blob": "d505327f51b7867a019024edbbf3971e2f6598d7",
+              "sha256": "94b1dea6161cdd93319d9ae1aecbe1ffa0b57201150ef7e28658dc2b97de33fc",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-deleted.png",
+              "crc": 3011697721,
+              "bytes": 32859,
+              "blob": "6f6cd5debbe6e8f0c701b5fc7826450f5f74e0ff",
+              "sha256": "32fb322cdefa720bd2a2a85f5d00f450ed99bddd75f69f101f15799b113d1e78",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-edit.png",
+              "crc": 3067274132,
+              "bytes": 47828,
+              "blob": "65b970a85b2626fe271264eca861d266d42f1096",
+              "sha256": "8e150c3514549707f61c6c1d1a7e1625eb7da02c31eb321452cb362bd858e09f",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-editor-opened.png",
+              "crc": 60492190,
+              "bytes": 45956,
+              "blob": "9f8a874a07ecd8ecf5ef252157dab21a8b560d89",
+              "sha256": "6dfbbaf221118beb52896e95fb484bb62b7821f81abd8e3046cdbcc2c31013db",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-invalid-cron.png",
+              "crc": 2174691624,
+              "bytes": 49938,
+              "blob": "700f7dc7e0c36ea9baa3a04bcd694b3aad9df4de",
+              "sha256": "e3f2828bea6172501c47c31bcce13cc3cabca322b30549c8e22be88ec8c933ef",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-dark.png",
+              "crc": 1772662706,
+              "bytes": 34905,
+              "blob": "537355fdfc03581247ed57deccee601115e704b3",
+              "sha256": "b35e1dd6b6e540dfb6899950362c416e5345bb970d55fe404b4795df523baf0a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-light.png",
+              "crc": 982632402,
+              "bytes": 35037,
+              "blob": "7473a4f1dd2c3a8befef72ff66a57f5aff2c9d41",
+              "sha256": "8eaf9fc9a8b8bb0ea9e084764c7821c4cbcb877810d84a6294e0629031be4896",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-narrow-700.png",
+              "crc": 2355250981,
+              "bytes": 31763,
+              "blob": "22e8f5b2f6c2b195bf69a3cedd954284117d5ab1",
+              "sha256": "743ef4ec0cac47fc8b0fe02e185fc794938298bf31e9d5e01b46c7e5f5a3d873",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-list-native-electron-zoom-200.png",
+              "crc": 279666724,
+              "bytes": 54619,
+              "blob": "79f474cbfe1dd2eba2a731482ca38676ae6dc1b2",
+              "sha256": "0c9eab6e0fb6e873b5ae7ac41fdc20a7dbf21a44585bf5881cd94abf4071b47c",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-old-prompt-review.png",
+              "crc": 3665322292,
+              "bytes": 49454,
+              "blob": "7d66289222c6ea128a1cc89f5b706cf0b99f4f87",
+              "sha256": "ecee78f9a5964ee3446d4213e65678dd428316fed10b36e7f3f4e98e9b1c833e",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-paused.png",
+              "crc": 640443325,
+              "bytes": 36076,
+              "blob": "d876bf71150092f67eaccd4271ebdce1056efeae",
+              "sha256": "e45f5e55b8ca478c62bb1c28b8360c0618d672048c09f1327a7a3adc6559a878",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-pristine-submit-validation.png",
+              "crc": 661804243,
+              "bytes": 42051,
+              "blob": "cda8a703ba8d7f16a10c4e724f6e119fedc5e39c",
+              "sha256": "13f25d2ac5a12321757c0d7934f773609c81ed32d760723257fd46f8974107bb",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-ready-to-create.png",
+              "crc": 279902779,
+              "bytes": 41485,
+              "blob": "83bf2eb0a96bd0d4b71418a180cfbe296ab31700",
+              "sha256": "c8c84125e594f10e2e6dff1b1a16cf3da1c4126226b1965290c5b2b2ff55109a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-resumed.png",
+              "crc": 919126831,
+              "bytes": 34518,
+              "blob": "cfedbbe47836e6c486c5388a3d2ae0bd9af4c46d",
+              "sha256": "f0b50911bea94091362264f1b8ebde63f09b5c213717d429f28d67c35aed704c",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-run-history.png",
+              "crc": 3989800145,
+              "bytes": 38993,
+              "blob": "fc9f60f17507ad0627a4db79945ceb91fb0b7402",
+              "sha256": "757297c15ba22c245ff85fcb644c48cdf979bf4e7e0cdba0b87dc1aa176e2ffa",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-schedules-run-log.png",
+              "crc": 1881717514,
+              "bytes": 43869,
+              "blob": "c847eb1e9014a964a30d8d07bb4529d3902ed9a9",
+              "sha256": "6901dbbefb504c521113bf700243037f45d26f61b54fd27ac73b416f5338f9d2",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-split-pane.png",
+              "crc": 2725370705,
+              "bytes": 78816,
+              "blob": "aac831a3741762cf7eada09a28b847677a34a5fa",
+              "sha256": "445bc1f2617231eeeb50592f925fbcb6bc5f5c1cca6f16be57aba01124abd908",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-teammate-mode-override.png",
+              "crc": 601691252,
+              "bytes": 53679,
+              "blob": "0a0f7e1e3044599f6b7e83b4bf56682ef4254016",
+              "sha256": "6d6d08cbd4878a13aa0d55bda1fe27dc437428a5518c4df3610d6948512eac22",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-teammate-mode-validated.png",
+              "crc": 3440177551,
+              "bytes": 53795,
+              "blob": "1fbb694ed55b064f8a354a409d989a1627cd5ed9",
+              "sha256": "574ec1f251aec968c3b1e7738cb4085388cb03d7178492763610c129354aeb8e",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-template-confirmed.png",
+              "crc": 1954901435,
+              "bytes": 61762,
+              "blob": "7f532b51470299d1341ac95b56f8fd1ae30c8eac",
+              "sha256": "df971c31c148ffc2fff2a507d0005e6924f03bc5bb135ffccd0a6ef34935a7e9",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-theme-dark.png",
+              "crc": 2075225451,
+              "bytes": 53928,
+              "blob": "43e2d6c9debfa5f858ca629c377f924f919fbdeb",
+              "sha256": "663ca5f57dfa7d4706171a202bb661d54a79a49238fc01f3e855a882ebd74062",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-theme-light.png",
+              "crc": 4003449962,
+              "bytes": 53741,
+              "blob": "947ebb1633ac667a4fd17d691d0f915535f1b432",
+              "sha256": "34947ef938a25ebeb124179cc7c54e048f92adc411509384e8212421b572d726",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+              "crc": 2601978195,
+              "bytes": 66923,
+              "blob": "bffc11716e846bc0175b3d9aae229c8c7fc5fdfd",
+              "sha256": "d5069e6fbdb1c2c911b38a562c528a794446717c98e03e46b8dc405b74b26113",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-task-detail-dialog.png",
+              "crc": 4223550934,
+              "bytes": 52440,
+              "blob": "aa467d49d1e348a96f932d2c48d0ac9e33d66b4b",
+              "sha256": "685023cc00dd57bdabdf0bcb9ce339af6fc8686c8042a9c0106904b6a5467f1a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "teams-create-zh-tw-task-detail-tab.png",
+              "crc": 2303299021,
+              "bytes": 45114,
+              "blob": "88f10a85ecf63f0a8bf4b89f21ded177128f1b76",
+              "sha256": "e67e4549c03b589a7649a43f158b610dfc59191ded0c99e8dabc301f40fcf98c",
+              "originalExtractedBytesEqual": true
+            }
+          ]
+        },
+        {
+          "artifactId": 14189036908,
+          "officialAPIHeadJoined": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+          "officialAPIRun": 43780997237,
+          "zipIdentity": {
+            "bytes": 945509,
+            "blob": "9196aa2aa6cd118f9e295ec2f1783a922b0cad98",
+            "sha256": "9198d782ed088ad61e6f2b45e7ea7b0091617a89d93f1d851f91afb362b37e76"
+          },
+          "safeUniqueCRC": true,
+          "memberCount": 29,
+          "pngCount": 9,
+          "members": [
+            {
+              "member": "TEST-desktop-backend-oILXLv/TEST-codex-install/invocations.ndjson",
+              "crc": 3739980528,
+              "bytes": 16096,
+              "blob": "f8905941ff58c1f5e35764fde944c3f84f0ef3af",
+              "sha256": "b549cbaf202d9fadf1481bd36a7ead8048891621a12ce5eef7192df1d37a2d0b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/TEST-peer-codex-scope/effects.ndjson",
+              "crc": 3508794517,
+              "bytes": 16418,
+              "blob": "27d63aa8ed760363773b1e96baf64c61acfbb824",
+              "sha256": "285e9f134f3113d9363230f82b55c7d310fd80797d3e669a2e31950abc8ad7a8",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/desktop-app.log",
+              "crc": 2430119698,
+              "bytes": 25348,
+              "blob": "86ef5fac5abef5bed65f6043dfab7c4b732301c9",
+              "sha256": "67661381ec8b73a87d50d95bdd162d8f4ceeb8a644987371ee7bd126a13c454b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/TEST-codex-install/registry.ndjson",
+              "crc": 3644879715,
+              "bytes": 1512,
+              "blob": "5d89987872c8501fa625e07c0bb559090e6e9ffa",
+              "sha256": "56adf91fe19d76768cf927d7623a67d45d370068c5cc2488495b687abc784a93",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/desktop-backend-receipt.json",
+              "crc": 605627916,
+              "bytes": 1005304,
+              "blob": "9e05e1b7e71a7012b4f169efbd94c81038095ee1",
+              "sha256": "d980f1d1e7384e1b6b0b6099a821f0254647b317c768597e02f1d96158590827",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/desktop-descriptor.json",
+              "crc": 3615907526,
+              "bytes": 2664,
+              "blob": "704f40e7a65b0d0da8c658fc34affdd3739c0a24",
+              "sha256": "aa4263c2e0a03a636494c9678d0912f7dd48c6aec97451d8055d54073183bc17",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/host-profile.json",
+              "crc": 3102041606,
+              "bytes": 7471,
+              "blob": "a5adb9af4b2850824bbfb9d2689a1b673be8630d",
+              "sha256": "7c4458fc53fb47a8f5f27d258350e0db6693245ed7917819adcfb11d82f2d549",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/management-commands/2b39493f6f719a4f647dee4c793e6905d89b98c2b34d588883d40efc2ce6771d.json",
+              "crc": 1775553162,
+              "bytes": 2297,
+              "blob": "3b1eef436895b49792dc4a8d5206fdbb9a313ce2",
+              "sha256": "c06979913da55ad07397d118b4302e67c07e01002202c3f6b037eeea5a11e867",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/management-commands/6fa3d05641c7c1fba829f6190af3ce3568c00c3083e6661d22c2b79aaec350bb.json",
+              "crc": 3910417586,
+              "bytes": 929,
+              "blob": "2fcb7d81a0f3eefcd86ff6503bb52d08d7f3dba2",
+              "sha256": "32b1232b63e8c6c95f78303b6fe12281367048e32ed6b64c9672846893ef2505",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/management-commands/891eeb40fc8112bf7dfa400549f8e5ad4405d208b10a909eb8e975ce56ea55ed.json",
+              "crc": 106237074,
+              "bytes": 923,
+              "blob": "02a43f39bd7f934076a0772f49dc5e941d6b471b",
+              "sha256": "269fa599fdf415af5b98836223540b26c16d93a99e1d27197b21467cd7079ab9",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/management-commands/dab36102037ae7f7ee3022c9ed25e9585d8ae3f8fbcaf174b0d516a597c75129.json",
+              "crc": 1949714169,
+              "bytes": 904,
+              "blob": "a926ff12bc5bc38abcb82eaf8de4f714f847c50a",
+              "sha256": "98a7f726548c06e65fbe772e722509608d0d44b328de87a1d9387de19988da67",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/runtime-checkpoints/cp1-4b0802f649988765dcdacc7ed318587755bf59902b9d54c4f610666daca818f9.json",
+              "crc": 3302950864,
+              "bytes": 1895,
+              "blob": "0579ce7ac511c32a04109a58e3501250a3caabe8",
+              "sha256": "ed1d79b5876e48d412dda817f9cad1ef8282872d159a5074b053e462bc19943b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/runtime-sources/index.json",
+              "crc": 712151071,
+              "bytes": 1687,
+              "blob": "5f745034117b32252e0e07e873546f1e5f357604",
+              "sha256": "2153a1fa90bfbcc5d83124e81f5ac97658a00e505d0483b6f45b8e79d922458b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+              "crc": 893481427,
+              "bytes": 453,
+              "blob": "1184a4af7d398a2e12b5a17131f2b75fd5386525",
+              "sha256": "90411cf19e7f46238591c015b8ff86b849666f7444369b71ca37b60d29b5a454",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+              "crc": 2530548090,
+              "bytes": 202,
+              "blob": "8a0345ed662f9942126341b307e2908cf626f15e",
+              "sha256": "c15ce32bd8d31801e6b4d0b9ab50375c9908293a1645e171d019436374b49034",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/sentinel-invocations.ndjson",
+              "crc": 2680405428,
+              "bytes": 96,
+              "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+              "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-a-launch.png",
+              "crc": 862028641,
+              "bytes": 88488,
+              "blob": "ad4ef841d09d529fa1a5b41fcba48fad5b6796aa",
+              "sha256": "7a3086f1b818f36e36db86cd624046ba36270c2cb00afe0a3ae9b08b1b9a8d8e",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-b-launch.png",
+              "crc": 724405862,
+              "bytes": 84213,
+              "blob": "60f63ce329d5ce43d49bc6975a1aed963dbdb538",
+              "sha256": "f4b563d58ad5b4da38e88d6b6de168aa172519f6f91b5220fd0e13045af37e11",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-before.png",
+              "crc": 1041896940,
+              "bytes": 73930,
+              "blob": "d862e4ae78e934d16b15810c4e14566351aca7b3",
+              "sha256": "780a104647528a420c9023ca54ccc588236c403d5af15e710ff5dcd925a960b4",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-ready.png",
+              "crc": 1140450102,
+              "bytes": 67565,
+              "blob": "646c4e4836662d58e9c1a43ac3bfbd4cca056b63",
+              "sha256": "a60b4f35cc1766253b77991ba130ec3aef78fefda0e8a072c0ab8319fb855056",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-settings-dialog.png",
+              "crc": 1856422959,
+              "bytes": 91573,
+              "blob": "0c7e564902de201ec889d930c7c2ac74c00b3963",
+              "sha256": "009a3f1009dfec6e80ab38a8c9f0f062e617612445f9059d29f4b882ae5c4a58",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-installer-settings-page.png",
+              "crc": 2398943383,
+              "bytes": 87002,
+              "blob": "bb5a9fa6c46dbc7aa0d7f130aa3e0e295e1f8f86",
+              "sha256": "7203e25117733987712109d90fb0a68e3eeb22e8ecaaaead97176b7ac22cfe6a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-reloaded.png",
+              "crc": 1734887887,
+              "bytes": 76076,
+              "blob": "057631010378bf8c1a9667c15cc9fc9143dfd749",
+              "sha256": "b274516d12708ac6b3b08d59c81ad370b3a6f3aa8f63e60b0c1c180aef83b53a",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-emulated-selection-selected.png",
+              "crc": 2371090621,
+              "bytes": 70767,
+              "blob": "c76a46f778662c521edda038e72dbb73236ab137",
+              "sha256": "811f59d46b45bd0bff4b3108d81b7cbd7d540e0531b3008115e13dbea06ad86e",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-seed-receipt.json",
+              "crc": 1335827488,
+              "bytes": 2335,
+              "blob": "abc2f0e9d986e1cefe53b106bd94044bb2c5d132",
+              "sha256": "74ed77057a51d3bb9557e244c4086d2ea56b8ae1b48729b5513f2c250f70b4ed",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/ui-failure.png",
+              "crc": 4218467095,
+              "bytes": 100172,
+              "blob": "b132a2e5f496284ce25004cca7a8fda222485393",
+              "sha256": "172e22eb34d64bc2b82ab8ed01fee41ba2228fb4e0bdfbb3ce9a95f2b0a7e91b",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "TEST-desktop-backend-oILXLv/userData/data/runtimes/codex/current.json",
+              "crc": 2387469231,
+              "bytes": 502,
+              "blob": "10aca52f50801cd99fabd0147f76b849a9d24c6e",
+              "sha256": "1681e36f093eff7bfc2aab5a4f43c5ef0c3a6264765f973d58b351b241436d6f",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "host-emulated-emulated-installer-ui.log",
+              "crc": 1790189784,
+              "bytes": 2960,
+              "blob": "c51b196cce71f65d587909e0a00dad1f316d7844",
+              "sha256": "2b7495e9a5eb15fbc7d6aed64a5719ff238dba8d6ffb46dc5dafd0857a8166e2",
+              "originalExtractedBytesEqual": true
+            },
+            {
+              "member": "host-emulated-inputs.json",
+              "crc": 737028762,
+              "bytes": 1055,
+              "blob": "967efd2d5fd3a9a244851bb5efc166344fc9a267",
+              "sha256": "05b8ee9e602515dd565ec350f5039b4ba4a94a7e3bb170d8c3bc1686f4259ec0",
+              "originalExtractedBytesEqual": true
+            }
+          ]
+        }
+      ],
+      "actuallyViewedPNGAttributedToIncludedPriorReviews": 10,
+      "limits": [
+        "Original source-bound evidence only; Installer remains FAILURE where included.",
+        "No transfer to privacy Team10 RED/GREEN, other UI/native lanes, full workspace/backend types, release or a later source.",
+        "Frozen earlier checkpoints remain unchanged; new independent reviews are separately retained payloads.",
+        "Original raw ZIPs recover all derivative members; extracted duplicates are not separately bundled."
+      ]
+    }
+  ],
+  "scopeReview": {
+    "creationThreeOriginalJobs": "SUCCESS on0660; deny-all/config-only behavior and forced group/profile cleanup only. Windows Checking frame distinct from macOS/Ubuntu Needs attention. Node26.12.1 execution not relabelled Node24.",
+    "installerOriginalJob": "FAILURE/INCOMPLETE on0660; original Update/Settings PASS earlier, selected-Team timeout before either Stop. No privacy RED or repair authority. Node24.21.0 distinct.",
+    "sourceJoins": "Installer1757 original selected Git byte/pre-post joins retained separately; Creation only4 declared Git/head/source joins, no invented1757 census.",
+    "visualScope": "First bundle6 Creation+4 Installer images were previously actually viewed and reviewed; Ubuntu3 images are attributed to root/native frozen reviews. This package review does not claim a new13-image visual inspection.",
+    "reviewPreservation": "Earlier immutable checkpoints and their hashes preserved. Root Installer7287, root Creationd93c and independent Ubuntu review are separately retained.",
+    "privacy": "No known signed cloud transport URL pattern in all UTF8 text payloads and nested text members. Stable official GitHub artifact endpoints retained; original ZIP bytes unmodified. No universal unknown-secret guarantee.",
+    "duplicates": "One initial run/API snapshot deliberately appears byte-identically in both self-contained bundles; no other duplicate source payload.",
+    "envelope": "Each outer ZIP includes two additional byte-exact self-envelope members README.md and inventory.json beyond its stated original-payload count; both are verified and intentionally separate from28/9 originalpayload counts. Initial reader assumption omitting these two was corrected before this complete successful review."
+  },
+  "notQualified": [
+    "Team24-case held-value semantic RED/GREEN and its full10command",
+    "Unreached original B/A Stop or stream completion",
+    "Other currentDesktop/packaged/native/vendor lanes",
+    "A later source or a reproducible build/fullpayload census",
+    "Release/merge/fullapplication qualification"
+  ],
+  "noFrozenPayloadMutated": true
+}

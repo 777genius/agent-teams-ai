@@ -1514,6 +1514,7 @@
       "labelPlaceholder": "ex., Revizuire zilnică de cod, Teste nocturne...",
       "maxBudgetUsd": "Buget maxim (USD)",
       "maxTurns": "Tururi maxime",
+      "executionLimitsNote": "Aceste limite se aplică doar rulărilor independente, o singură dată. Nu se aplică sarcinilor atribuite unei echipe care rulează deja.",
       "noLimit": "Fără limită",
       "noMatches": "Nicio echipă nu corespunde căutării tale.",
       "noTeams": "Nicio echipă disponibilă. Creează mai întâi o echipă.",
@@ -2149,7 +2150,9 @@
     "status": {
       "active": "Activă",
       "paused": "Întreruptă",
-      "disabled": "Dezactivată"
+      "disabled": "Dezactivată",
+      "hostUnsupported": "Programarea Host nu este disponibilă",
+      "saved": "Salvat"
     },
     "runStatus": {
       "pending": "În așteptare",

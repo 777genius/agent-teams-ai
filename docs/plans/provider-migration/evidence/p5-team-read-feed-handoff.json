@@ -1,0 +1,41 @@
+{
+  "status": "PASS scoped correlated Team product snapshot/feed and ordinary native UI regression; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p5-team-read-feed-native-v3.tar.gz",
+  "archiveSha256": "80451274796720523f646c07889e9967a45b48b115f900639f7f826fa88e91bd",
+  "nativeJobId": "98849c58c136f2cb6f3ff3dde3040dac",
+  "receiptSha256": "2a6a7d5824050c79fa8bad6580d214450beb3028029be8839786858ae9275b7e",
+  "source": "5d60239b90e10d6275715813b523541c207882901a3baa62140c0590030c76ad",
+  "dist": "ec661ee4bef638edb2594e0d0361f3107998fec2982db1c0fe5fecfa9e9bd53b",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "implementation": {
+    "owner": "TeamOwner supplies product state and its stream/sequence/cursor inside the same current-grant filesystem fence. Both readSnapshot/readChanges use one product projection. Composition no longer compares an independent snapshot cursor outside that fence.",
+    "events": "Up to128 volatile invalidations, monotonic source sequence and stable event IDs. Replay starts strictly after the supplied actor-bound cursor. Initial/unknown cursor and expired retention produce explicit gaps; a new owner instance has a new opaque read stream. No second durable business log/state store is added.",
+    "publication": "Authorized applying attempts publish an invalidation even after partial/held effects. Completed receipt replay returns before publishing a new invalidation. Snapshot revision observation also covers a recovery publication before its callback completes. Read-side exhaustion never throws into a business command after committed effects.",
+    "renderer": "Metadata-only read order rejects lower sequences, retired streams and inconsistent same-position revisions. Final delivery checks also cover getData awaiting Runtime, merged lists and local mutations/Stop crossing an in-flight read. A lost response invalidates old reads without replaying its mutation.",
+    "subscribers": "Existing source cursor is retained. New ordinary UI subscribers receive an initial rehydrate, repeated source events are deduplicated, pending responses are fenced by subscription/context and independent captured teams continue after an outage.",
+    "validation": "Existing strict command validation moved unchanged to a cohesive helper, leaving TeamOwner under800 physical lines. Only the moved obsolete compiled composition/TeamProductChanges module was removed; active references point to the Team-owned feed."
+  },
+  "evidence": {
+    "actualCli": "team-host test captures snapshot cursor, mutates canonical Task, replays only later source events, verifies stable IDs/no new event on completed command replay, then checks a new stream/gap after real Host restart. Forged run binding refuses before reading feed.",
+    "authority": "Existing filesystem grant-revocation test now includes readSnapshot/readChanges using a previously issued cursor across owner instances. Revoked actors cannot bypass current grants.",
+    "raceTests": "Real renderer adapter tests delay getData Runtime continuation until a newer snapshot is accepted and delay a Task read across an actual adapter mutation. Both late reads reject. Pure order tests also cover retired streams and same-position corruption; subscription tests cover duplicate events and late subscribers.",
+    "native": "Actual isolated Electron/CDP -> ordinary Composer -> preload/Main/standalone Host/D -> actual Claude SDK0.3.305/CLI/MCP/Bash. Two inputs, eleven local scripted model requests, no oracle failures, exact command/delivery identities, canonical Task lifecycle, two fully visible replies and automatic Kanban/sidebar update.",
+    "stop": "Ordinary Stop physically retires captured Native child before Quit with closed/released Runtime. App exit0, captured Host absent and TEST process group empty. Strict final sentinel census has zero refusals; allowed version discovery remains.",
+    "cleanup": {
+      "processGroup": 83006,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; native custody and captured child absence verified separately"
+    }
+  },
+  "checks": {
+    "focused": "f5b92f34ddfaebee7d08ff15c3021d10 PASS4 Host/actual-CLI and26 frontend tests; counts overlap later full suites.",
+    "full": "99dea991c0c3e640181e5fe7278d6aa4: Host228/228 and frontend103/103, root pinned TS7/strict Host/script checks PASS on Node24.21. Aggregate exit1 from later4 import-sort errors; retained without relabeling the aggregate green.",
+    "followup": "The4 import groups were sorted manually. Affected lint and both size/provisioning guards then passed. Final root pinned TS7 + strict maintained harness types passed after Native run. No successful Native mutation was replayed merely to repair observation.",
+    "nativeSourceFreeze": "All selected source hashes matched before/after actual app flow. Archive includes exact source/dist, tests/harness, original receipts/native TEST state and managed job logs; no full packaged-binary provenance claim."
+  },
+  "scopeLimits": "This qualifies the Team product resource/read conversation. Runtime/session/log/background notification UI cutover and all other resources are not inferred from it. Ordinary Launch/Resume/config, complete10 MCP groups, group/cross-Team/dynamic Team, M13 review/evidence, saved-team lifecycle, remaining auth/config/attachments/subagents, partial-owner global lists and P7/P8 remain mandatory. Host CMS adoption and unresolved provider owning gates remain open. No vendor authentication/model or packaged Quit/Relaunch qualification."
+}

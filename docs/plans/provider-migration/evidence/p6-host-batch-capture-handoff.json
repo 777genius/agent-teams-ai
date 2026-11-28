@@ -1,0 +1,110 @@
+{
+  "status": "scoped-host-batch-consumer-complete",
+  "scope": "Host observeBatch selected-path evidence with existing immutable Task binding, portable V1 journal and Changes READ; foreground single-tool interval only",
+  "producer": {
+    "sha256": "6c57a7bb69a5213b75b9d0393c4d2aec0b75096ae147fc65ccae0fc37d190d1a",
+    "nativeProducerBoundary": "mapped post-tool-use hooks only",
+    "hostNativeIntegrationQualified": false
+  },
+  "source": [
+    {
+      "path": "packages/legacy-agent-host/src/evidence/ClaudeToolEvidenceWriter.ts",
+      "sha256": "7ffd1c118ca3e90501671c0bbdf21e45d43df8d14b120583f2af231cf74bee68",
+      "bytes": 12205
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/WorkspaceSnapshot.ts",
+      "sha256": "3f2356e95a99a41f4ddf653202568be4123a23633505636dbd2237862cc9e558",
+      "bytes": 5940
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/ToolEvidenceWindows.ts",
+      "sha256": "5f7d3012285c25a597ea51cb2ffa301fa226ce96a767e55ec0a08e03da94f7a4",
+      "bytes": 1081
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/captureContracts.ts",
+      "sha256": "0bf8f2ad738ada0d9b2e4a4e5dd8cb9e16526ceedcf3a1f332b303e0b085d22a",
+      "bytes": 1835
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/task-tool-evidence-writer.test.ts",
+      "sha256": "68f394ec81df5ded9a12f45dd73da5bbbb29b2ecad2ae78be244635af7a2ffd9",
+      "bytes": 19950
+    }
+  ],
+  "sourceReceiptSha256": "b65146468b8af646b414a51f7a8cc158520af060fce7b074cf879046f180acdd",
+  "archive": {
+    "path": "docs/plans/provider-migration/evidence/p6-host-batch-capture-evidence.tar.gz",
+    "sha256": "8e464a4f18711111072e5ccbb5adcf8d5d330643e015d0df0ffdd7c1dd7e8508"
+  },
+  "checks": {
+    "sourceNoEmit": {
+      "jobId": "78c1a283e60da514db57bed3bddd42d5",
+      "exitCode": 0
+    },
+    "testNoEmit": {
+      "jobId": "78c1a283e60da514db57bed3bddd42d5",
+      "exitCode": 0
+    },
+    "focused": {
+      "jobId": "258a459fff5a041299181a0529cd81a4",
+      "exitCode": 0,
+      "tests": 16,
+      "passed": 16
+    },
+    "red": {
+      "jobId": "01abf18b4f61987046c68185cccdfb5c",
+      "exitCode": 1,
+      "test": "overlap during awaited before capture emits original-owner gap notices for both windows",
+      "failure": "first original owner gap notice absent; no attributed events were emitted"
+    },
+    "rootCanonicalBuild": {
+      "jobId": "c66a30ac00ef57d5155731edfa3241f5",
+      "passed": true,
+      "reportedBy": "Root",
+      "checks": [
+        "Host build",
+        "Host test types",
+        "root TypeScript",
+        "source size guard",
+        "architecture guard"
+      ]
+    }
+  },
+  "behavior": [
+    "Native after is provisional: no final event or window release before a matching batch.",
+    "Batch must match exact original session/input/operation/tool identity, copied arguments and provisional outcome.",
+    "Bounded Git tracked/untracked census plus direct target and retained before paths discovers relevant mapped post-hook side files without crawling ignored technical trees.",
+    "Git omission is never absence proof; final-only side-file preimages remain unavailable. An explicit direct absent target can prove create preimage.",
+    "Same-workspace overlap is sticky; multi-tool batches, background/missing batch, selected census failure/caps and detected nested/symlink paths gap without final attributed events.",
+    "Original durable Task/generation/config/custody is revalidated after snapshot awaits and under the existing synchronous write fence.",
+    "All rows retain low/partial evidence, reviewableComplete:false and executionSeq:0; no Apply/Reject policy change."
+  ],
+  "limits": [
+    "Ignored secondary hook paths not directly named are outside selected coverage.",
+    "Independent native PostToolBatch hooks and detached/background completion remain unqualified.",
+    "Global workspace coverage, external writer exclusivity and multi-tool attribution are not qualified.",
+    "Host native-to-ledger-to-existing-UI integration has not been run for this slice; full M13 remains GAP."
+  ],
+  "redToGreen": {
+    "red": {
+      "jobId": "01abf18b4f61987046c68185cccdfb5c",
+      "exitCode": 1,
+      "test": "overlap during awaited before capture emits original-owner gap notices for both windows",
+      "failure": "first original owner gap notice absent; no attributed events were emitted"
+    },
+    "green": {
+      "jobId": "258a459fff5a041299181a0529cd81a4",
+      "exitCode": 0,
+      "tests": 16,
+      "passed": 16
+    },
+    "sourcePatch": "host-observe-batch-v1/overlap-catch-fix.patch",
+    "patchSha256": "5dfc280da41a3a01f5651a5663bea2699a392371a3800da062a63c3218a84087",
+    "preCatchSourceOrigin": "docs/plans/provider-migration/evidence/p6-existing-review-ui-v1/executed-source (Root retained frozen production source)"
+  },
+  "noNativeOrBuildByWorker": true,
+  "noHostCoreOrReaderEdits": true,
+  "noCommits": true
+}

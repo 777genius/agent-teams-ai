@@ -1,0 +1,19 @@
+--- a/tools/owned-process-broker/nativeWindowsAppFixture.ts
++++ b/tools/owned-process-broker/nativeWindowsAppFixture.ts
+@@ -422,8 +422,14 @@
+           assert.ok(found.length <= 1, 'One original UI command for this exact processRef');
+           const candidate = found[0];
+           if (candidate?.phase === 'completed' && candidate.state.phase === 'completed' &&
+-            candidate.state.native === 'observed-absent') { receipt = candidate; break; }
+-          assert.ok(!candidate || candidate.phase === 'prepared' || candidate.phase === 'held');
++            candidate.state.native === 'observed-absent') {
++            // Original Stop absence is durable before its settlement finishes.
++            assert.equal(candidate.nativeSettlementNotDispatched, undefined);
++            if (candidate.nativeSettlement?.command.operation === 'settle' &&
++              candidate.nativeSettlementConfirmed === true) { receipt = candidate; break; }
++          } else {
++            assert.ok(!candidate || candidate.phase === 'prepared' || candidate.phase === 'held');
++          }
+           await delay(Math.min(25, remaining(stop.deadline)));
+         }
+         assert.equal(receipt.principalId, 'human'); assert.deepEqual(receipt.capture, selected.capture);

@@ -2,18 +2,32 @@
 
 This process-limited slice owns generation selection and the native npm package
 boundary. The legacy installer coordinates download, atomic activation, status and
-resolver invalidation through the public main entrypoint. V2 versions come only
-from the pinned runtime qualification contract; native metadata stays beside bin/.
+resolver invalidation through the public main entrypoint. V2 CLI releases stay in
+the supported stable range; their execution engine comes from the pinned runtime
+qualification contract. Native metadata stays beside bin/.
 The existing IPC/preload/store transports accept an optional generation choice.
 Focused tests cover package identity, archive safety and managed activation.
 
 Fresh installs select V1 by default, including platforms with qualified V2 support.
-A first-time implicit install requests the fixed V1 baseline `1.19.5`, not the mutable
-npm `latest` tag; explicit V1 updates still choose stable V1 `latest`. Platform
-package identity and sha512 transport integrity are verified before activation.
+A first-time implicit V1 install and explicit V1 updates resolve the latest supported
+stable release within that generation. Captured Host V2 acquisition and updates
+also resolve the latest stable CLI within the Host qualification contract. If the global npm `latest` tag
+moves outside that range or its native platform package is unavailable, a root
+registry snapshot and at most one snapshot per platform package select the highest
+compatible, installable release. The selected exact version is retained through native package lookup and
+download; update discovery verifies the same platform package availability.
+Package identity and sha512 transport integrity are verified before activation.
 Existing V1/V2 installs remain in their selected generation on update; explicit
 V2 requests and support-only repair are preserved. The dashboard does not promote
 V2 during first-time installation.
+
+Bundled legacy V2 acquisition and update discovery use the exact native CLI from
+the bundled runtime qualification. Main captures this policy from the original
+runtime owner; renderer options cannot select it. The legacy runtime retains its
+256 MiB native acquisition bound. A previously installed CLI exceeding that bound
+is reported as incompatible for legacy use, with its selected path, version,
+manifest and bytes preserved. Captured Host selection retains its existing
+verification and publication contract independently.
 
 External V2 support is an optional ZIP delivery pinned by the runtime lock. The
 main support installer streams verified archive records into immutable UUID
@@ -26,3 +40,14 @@ An absent external descriptor retains the old bundled runtime mode; malformed
 or incomplete new metadata fails closed. Focused coverage is in
 `test/features/opencode-runtime-installer/v2Support.test.ts` and the existing
 installer, quick-connect, environment, and packaged-runtime suites.
+
+When the desktop Host is selected, the existing Install and Refresh actions use
+`CapturedOpenCodeRuntimeInstaller`. Native acquisition is followed by publication
+through the original private source grant. The Host retains the exact candidate
+in its existing command receipt and verifies native identity before new launches
+can capture it. A restarted installer recovers that original receipt before a new
+acquisition; an unknown native outcome never starts a replacement check.
+CLI version, engine version and source revision are distinct status fields.
+Running captures keep their original selection. This route retains the selected
+V1/V2 generation; transitions and provider versions outside the Host qualification
+contract fail explicitly.

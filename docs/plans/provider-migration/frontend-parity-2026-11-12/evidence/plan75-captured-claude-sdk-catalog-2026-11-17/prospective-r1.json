@@ -1,0 +1,964 @@
+{
+  "schemaVersion": 1,
+  "status": "REBOUND PROSPECTIVE R1 — exact amended five-path scope; final independent R2 pending",
+  "date": "2026-11-17",
+  "author": "/root/qualification_audit",
+  "repository": "777genius/agent-teams-ai",
+  "scope": "Plan75 renderer consumption of the existing captured Claude SDK model catalogue, including exactly two finite membership expectations required to select and persist that offered model",
+  "reviewAnchor": {
+    "commit": "15853ce6f67c5afd3cc3f7c75585dfb7f981be89",
+    "tree": "487d5e5c85c2cc616b148b7ea720abf8cd930024",
+    "fullPacketPath": "/workspace/scratch/b87c90489dab/e2e-recovery/plan73/actual-source/official-packet.json",
+    "fullPacketIdentity": {
+      "bytes": 4075341,
+      "physicalLines": 1,
+      "gitBlob": "f32a288e67cf1e9da3268e07f53827609b1dae38",
+      "sha256": "cf4da5a8954b4595db39ecfcc9dcdae9522e7eb2b680009cb5dd192b2b15a2c6"
+    },
+    "truncated": false,
+    "entries": 12877,
+    "leaves": 11166,
+    "recomputedGitTrees": 1712,
+    "allRecordedGitTreesMatch": true
+  },
+  "notPublicationParent": false,
+  "document": {
+    "packetPath": "plan.md",
+    "repositoryPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/75-captured-claude-sdk-model-catalog-2026-11-17.md",
+    "identity": {
+      "bytes": 17692,
+      "physicalLines": 82,
+      "gitBlob": "3326448953cd5f163facc87fa82e6a9b73ee7856",
+      "sha256": "e1a86a2b4d59dd4ff44ea62008be3a529d8bd3d8633d107995de9927c4874897"
+    }
+  },
+  "evidenceDirectory": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan75-captured-claude-sdk-catalog-2026-11-17",
+  "bindings": {
+    "packetPath": "preimage-bindings.json",
+    "identity": {
+      "bytes": 26928,
+      "physicalLines": 666,
+      "gitBlob": "5fc44157ab782aaf5fdca444810c69a2a46671af",
+      "sha256": "a41ed243694ccc317e2f50cc250eb4f3acac1b8e9303302a5857c9f6ea2f6568"
+    }
+  },
+  "dataProof": {
+    "packetPath": "data-proof.json",
+    "identity": {
+      "bytes": 13847,
+      "physicalLines": 352,
+      "gitBlob": "b59f37b2a5b6be0680c23abe5b1d45af53b86a21",
+      "sha256": "742363d7ce4c4f776341c3082ee68fc73164eabdfc3abe9189cc9fae43182513"
+    }
+  },
+  "sourceFinding": {
+    "producer": {
+      "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "blob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+      "fullyRead": true,
+      "metadataDecodeAndCapturedChecks": [
+        89,
+        104
+      ],
+      "resolvedLaunchRows": [
+        105,
+        126
+      ],
+      "independentAuthenticationAndCapabilities": [
+        135,
+        167
+      ],
+      "sdkCatalogue": [
+        168,
+        185
+      ],
+      "finalCurrentness": [
+        184,
+        185
+      ]
+    },
+    "client": {
+      "path": "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts",
+      "blob": "500b04c5a0b9e15bc8f4401d5f7bdc0d4267e2a6",
+      "readScope": [
+        231,
+        248
+      ],
+      "boundary": "Existing captured Anthropic route calls readCapturedClaudeStatus and preserves captured scope; no change selected."
+    },
+    "consumer": {
+      "path": "src/renderer/utils/teamModelAvailability.ts",
+      "blob": "167751c56f74c2869b8b3d9b128002d5bd642bcb",
+      "fullyRead": true,
+      "sourcePredicate": [
+        322,
+        330
+      ],
+      "visibleNonemptyApiRemovedFilter": [
+        375,
+        408
+      ],
+      "deduplicatedCatalogueOptions": [
+        410,
+        447
+      ],
+      "runtimeAvailability": [
+        613,
+        655
+      ],
+      "availableListAndOptions": [
+        680,
+        790
+      ],
+      "normalizationAndSelection": [
+        886,
+        954
+      ]
+    },
+    "selector": {
+      "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+      "blob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+      "scopedReads": [
+        [
+          582,
+          610
+        ],
+        [
+          920,
+          990
+        ],
+        [
+          1340,
+          1415
+        ],
+        [
+          1525,
+          1605
+        ],
+        [
+          2600,
+          2710
+        ]
+      ],
+      "sdkHydrationAlreadyAdmitted": true,
+      "scopeHook": "src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "scopeHookFullyRead": true
+    },
+    "typedSourceAlreadyExists": {
+      "path": "src/shared/types/cliInstaller.ts",
+      "blob": "af81c3af93ae2a0e53a635daf16530a604c0fe39",
+      "readScopes": [
+        [
+          149,
+          155
+        ],
+        [
+          190,
+          249
+        ],
+        [
+          287,
+          330
+        ]
+      ],
+      "noDtoChange": true
+    },
+    "independentSourceMismatch": "Valid anthropic/claude-sdk catalogue currently misses only the existing first-party source membership check; downstream first-party choices, availability and normalization already have the required behavior.",
+    "historicalEvidenceLimit": "Earlier original75 membership failed before the finite initial Sonnet click, but its retained receipt does not contain the completed renderer catalogue DTO. This proposal does not establish the sole historical cause or actual completion of a repaired run.",
+    "finitePeerReference": {
+      "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+      "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+      "readScopes": [
+        [
+          72,
+          93
+        ],
+        [
+          170,
+          171
+        ],
+        [
+          343,
+          351
+        ]
+      ],
+      "id": "sonnet",
+      "launchModel": "TEST-claude-sonnet",
+      "displayName": "TEST Claude Sonnet",
+      "execution": false,
+      "supportedEfforts": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "finiteIntegrationBlocker": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "blob": "05f976179d30af3dac75c2fc00f68554e6ef200c",
+      "fullyRead": true,
+      "sourceStatement": "Admitting the existing SDK catalogue offers label TEST Claude Sonnet and launch value TEST-claude-sonnet. Leaving the finite runner at Sonnet 4.6 and sonnet would reject that offered path even if the product predicate were repaired.",
+      "historicalLimit": "This is a deterministic current-source integration mismatch, not proof of the earlier failure cause, real catalogue arrival or resulting-head runtime completion."
+    }
+  },
+  "selectedChange": {
+    "pathCount": 5,
+    "paths": [
+      ".github/workflows/host-emulated-acceptance.yml",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "src/renderer/utils/teamModelAvailability.ts",
+      "test/renderer/utils/teamModelAvailability.test.ts"
+    ],
+    "productOwner": "Existing hasAnthropicFirstPartyRuntimeCatalog only",
+    "existingClause": "providerStatus.modelCatalog.source === 'anthropic-models-api' &&",
+    "prospectiveClause": "['anthropic-models-api', 'claude-sdk'].includes(providerStatus.modelCatalog.source) &&",
+    "wholeSourceAfterimageAuthored": false,
+    "clauseUniqueInExactPreimage": true,
+    "samePhysicalLinePossible": true,
+    "preservePredicateGuards": [
+      "modelCatalog.providerId === 'anthropic'",
+      "modelCatalog.status !== 'unavailable'"
+    ],
+    "sourceOrApiEnumChanges": 0,
+    "newModulesOrPublicApis": 0,
+    "newRequestsInputsProbesCachesTimersRetries": 0,
+    "functionsReused": [
+      "getVisibleRuntimeCatalogModels",
+      "getAnthropicFirstPartyRuntimeModels",
+      "getAnthropicFirstPartySelectorModels",
+      "getRuntimeModelAvailability",
+      "getRuntimeCatalogModelOption",
+      "getAvailableTeamProviderModels",
+      "getAvailableTeamProviderModelOptions",
+      "isTeamModelAvailableForUi",
+      "normalizeTeamModelForUi",
+      "getTeamModelSelectionError"
+    ],
+    "otherExistingConsumer": "Anthropic getTeamProviderModelVerificationCounts will naturally count the offered catalogue list under its unchanged existing rule; neither its name nor checkedCount is new model-execution proof.",
+    "unchangedOwners": [
+      "capturedClaudeMetadata producer and decoder",
+      "CapturedRuntimeProviderStatusClient routing/currentness",
+      "authentication and credential writes",
+      "provider readiness and launch authority",
+      "TeamModelSelector hydration and action order",
+      "runtime scope/freshness",
+      "native custody and cleanup",
+      "all compatible/Codex/OpenCode branches"
+    ],
+    "prospectiveIndentedClauseCharacters": 90,
+    "finiteRunnerChange": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 47581,
+        "physicalLines": 585,
+        "gitBlob": "05f976179d30af3dac75c2fc00f68554e6ef200c",
+        "sha256": "4925bfc3295100e46981642e15d1873289d81a58d883019b39082fc5ebac97a7"
+      },
+      "selectedLiteralChanges": [
+        {
+          "line": 268,
+          "originalExpression": "finite ? 'Sonnet 4.6' : 'Opus 4.6'",
+          "selectedExpression": "finite ? 'TEST Claude Sonnet' : 'Opus 4.6'",
+          "uniqueOriginalOccurrence": true,
+          "physicalLineGrowth": 0
+        },
+        {
+          "line": 297,
+          "originalExpression": "finite ? 'sonnet' : 'claude-opus-4-6'",
+          "selectedExpression": "finite ? 'TEST-claude-sonnet' : 'claude-opus-4-6'",
+          "uniqueOriginalOccurrence": true,
+          "physicalLineGrowth": 0
+        }
+      ],
+      "onlyTheseTwoFiniteLiterals": true,
+      "protectedGenuineAlternatives": [
+        "Opus 4.6",
+        "claude-opus-4-6"
+      ],
+      "preserveExactly": [
+        "const opus variable and existing step labels",
+        "exact model-option aria-label selector structure",
+        "original scroll and single click sequence",
+        "Medium/medium choice and callback",
+        "save-only action and exact equality assertion",
+        "all other runtime/auth/readiness assertions",
+        "all timeouts, actions, requests, inputs, guards and cleanup",
+        "original finite peer and all genuine branches"
+      ],
+      "noOrFallbackOrAlternativeSelector": true,
+      "noRuntimeSourcePinOrFastOperandNeeded": true,
+      "wholeSourceAfterimageAuthored": false
+    }
+  },
+  "preservationMatrix": [
+    {
+      "case": "visible nonempty offered SDK launch value",
+      "result": "Shared first-party options use exact launch value and existing retained label; list/normalization/availability/selection agree."
+    },
+    {
+      "case": "native alias with distinct resolved launch value",
+      "result": "Use resolved launch value; do not add the alias or unrelated curated entries."
+    },
+    {
+      "case": "hidden SDK row",
+      "result": "Hidden from options and rejected as a selection."
+    },
+    {
+      "case": "explicit unavailable visible row",
+      "result": "Keep visible disabled option/reason; exclude from available list and reject normalization/selection."
+    },
+    {
+      "case": "all visible rows unavailable",
+      "result": "Retain disabled catalogue options and available=[]; do not switch to curated fallback."
+    },
+    {
+      "case": "missing/unavailable/zero-visible-nonempty catalogue",
+      "result": "Original static fallback retained; unoffered SDK value refused."
+    },
+    {
+      "case": "stale/degraded nonempty catalogue",
+      "result": "Original not-unavailable first-party display rule retained; no freshness/authentication/launch promotion."
+    },
+    {
+      "case": "API removed-model and alias-label safety",
+      "result": "Existing API-only filtering and label protection byte-preserved."
+    },
+    {
+      "case": "compatible endpoint/custom models and other providers",
+      "result": "Existing branches, runtime gates and tests unchanged."
+    }
+  ],
+  "testPlan": {
+    "path": "test/renderer/utils/teamModelAvailability.test.ts",
+    "originalIdentity": {
+      "bytes": 49687,
+      "physicalLines": 1429,
+      "gitBlob": "1a58c9c686010d5b5ded00f8e2b5064e4ab78c32",
+      "sha256": "0e37baae735529c11d2ed43432b132b516d252af8bb3084714c7082d7d4c4db8"
+    },
+    "allOriginalCasesAndOraclesPreserved": true,
+    "actualImportedFunctions": [
+      "getAvailableTeamProviderModelOptions",
+      "getAvailableTeamProviderModels",
+      "isTeamModelAvailableForUi",
+      "normalizeTeamModelForUi",
+      "getTeamModelSelectionError"
+    ],
+    "fixtureType": "TeamModelRuntimeProviderStatus; existing required fields and complete typed catalogue rows; no wider capabilities field, any, casts, mock of selected utility or copied predicate",
+    "cases": [
+      {
+        "family": "Captured SDK offer",
+        "assertions": [
+          "Exact Default plus TEST-claude-sonnet option values and TEST Claude Sonnet label",
+          "available-model list contains only offered launch values",
+          "availability true, exact normalization and null selection error for offered launch value",
+          "unoffered curated aliases absent/refused; id sonnet does not substitute for resolved value",
+          "authenticated=false and verificationState=unknown remain unchanged"
+        ]
+      },
+      {
+        "family": "Refusal and nonempty-unavailable",
+        "assertions": [
+          "visible valid/hidden/explicitly unavailable rows distinguished",
+          "unavailable reason retained with disabled option",
+          "hidden/unavailable/nonmember selection refuses and normalization clears",
+          "all-visible-unavailable still produces disabled catalogue choices and available=[] without fallback"
+        ]
+      },
+      {
+        "family": "Fallback",
+        "assertions": [
+          "explicit unavailable SDK catalogue containing an otherwise offered visible row preserves static fallback; tests the status guard separately from empty-row fallback",
+          "ready catalogue with no visible nonempty rows preserves fallback",
+          "unoffered finite SDK value still rejected",
+          "existing known curated/no-status fallback remains unchanged"
+        ]
+      }
+    ],
+    "expectedOldFailure": "Source-derived expectation only: old predicate skips SDK catalogue; not an executed RED result.",
+    "testExecution": 0,
+    "compilerExecution": 0,
+    "noAdditionalTestFrameworkOrLiveProvider": true,
+    "originalCaseDeclarationCount": 38,
+    "originalCaseDeclarationSitesOrderedSha256": "0378d1d2f79b6390547fd1b0fd4ceeb37fa65838fcf42b34dba82db7423e135b",
+    "originalTestCountLimit": "38 literal it/it.each declaration sites, not a runtime test count; all original bytes retained as the exact preimage.",
+    "finiteIntegrationRegression": "Existing membership runner remains the resulting-head GUI integration oracle; only two finite expected literals are selected. No extra action/test framework or runtime execution is claimed."
+  },
+  "sourceClosure": {
+    "fourSourceRostersParsedAsLiteralDataNotExecuted": true,
+    "productUtilityAbsentFromAllCurrentMainInputs": true,
+    "unitTestNotARuntimeSourceDependency": true,
+    "currentCounts": {
+      "common": 265,
+      "main": 1787,
+      "fast": 140
+    },
+    "afterPending74": {
+      "common": 265,
+      "main": 1787
+    },
+    "after75": {
+      "common": 266,
+      "main": 1788,
+      "fast": 141
+    },
+    "appendCommonExactly": [
+      "src/renderer/utils/teamModelAvailability.ts"
+    ],
+    "appendFastExactly": [
+      "test/renderer/utils/teamModelAvailability.test.ts"
+    ],
+    "fullOrderAndPreservationProof": "data-proof.json",
+    "unchangedProcessAndWindowsRetryBlocks": true,
+    "mainRoster800LinesUnchanged": true,
+    "futurePreimageHashesUnknownUntilActualReadback": false,
+    "externalCommon257AndFast142NotAdopted": true,
+    "published72ColdAlreadyIncluded": true,
+    "afterPending73": {
+      "fast": 140
+    },
+    "finiteRunnerAlreadyCapturedAndLinted": {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "mainOccurrences": 1,
+      "mainIndexZeroBased": 923,
+      "rawArrayOccurrences": {
+        "base": 0,
+        "supplementary": 1,
+        "integrated": 0,
+        "management": 0
+      },
+      "fastOccurrences": 1,
+      "fastOperandIndexZeroBased": 113,
+      "noAdditionalRosterEntry": true,
+      "noAdditionalFastOperand": true
+    },
+    "historicalCurrentCounts": {
+      "common": 261,
+      "main": 1783,
+      "fast": 137
+    },
+    "actualSource73And74Preserved": true
+  },
+  "caps": {
+    "utilityPhysicalLines": 982,
+    "guardPhysicalCount": 982,
+    "rawSplitCount": 983,
+    "frozenLegacyCap": 983,
+    "selectedPhysicalLineGrowth": 0,
+    "baselineEditSelected": false,
+    "testExcludedByExistingTestPathRules": true,
+    "finiteRunnerPhysicalLines": 585,
+    "finiteRunnerSelectedPhysicalLineGrowth": 0
+  },
+  "validation": {
+    "workspaceTypes": "Existing pnpm typecheck:workspace, unchanged root tsconfig includes src and test.",
+    "typedRendererLint": "Existing pnpm lint:ci:files src/renderer command, unchanged.",
+    "fastTestLint": "One operand appended to existing Team fast-lint command after exact current predecessor additions.",
+    "safeTests": "Existing four complete safe frontend shards; test path included by Vitest and does not match original live/live-e2e/native exclusions.",
+    "existingCommandsWorkersMatricesBudgetsAndArtifactsUnchanged": true,
+    "actualMembershipStillRequired": "Original resulting-head source freeze, GUI choice, later business steps, receipts and cleanup; no new warmup/retry or timeout.",
+    "historicalOrUnitPassTransferForbidden": [
+      "whole workflow",
+      "all frontend capabilities",
+      "GUI membership completion",
+      "genuine vendor model execution",
+      "authentication",
+      "native custody",
+      "P08",
+      "P09",
+      "M16"
+    ],
+    "finiteRunnerLint": "Existing Team fast-lint operand at index113 covers the entire runner; no additional operand or job is selected.",
+    "finiteRunnerSourceFreeze": "Existing common supplementary entry appears once in deduplicated main at index923; it already freezes this exact source and must retain the future two-literal afterimage in original resulting-head proof."
+  },
+  "readLedger": {
+    "fullSelectedSemanticBodies": [
+      "src/renderer/utils/teamModelAvailability.ts",
+      "test/renderer/utils/teamModelAvailability.test.ts",
+      "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts"
+    ],
+    "fullReferenceBodies": [
+      "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+      "src/renderer/components/team/dialogs/useTeamModelProviderStatus.ts",
+      "vitest.config.ts",
+      "tsconfig.json",
+      "src/renderer/utils/teamModelContext.ts",
+      "src/renderer/utils/teamModelLaunchSupport.ts",
+      "src/features/anthropic-runtime-profile/core/domain/resolveAnthropicRuntimeProfile.ts",
+      "src/renderer/utils/anthropicRuntimeSelection.ts",
+      "src/renderer/utils/teamEffortOptions.ts",
+      "src/renderer/components/team/dialogs/EffortLevelSelector.tsx",
+      "src/renderer/components/team/dialogs/persistedTeamModel.ts",
+      "src/renderer/components/team/dialogs/retainedCreateSubmission.ts",
+      "src/renderer/components/team/dialogs/useCreateTeamSubmission.ts",
+      "src/renderer/components/team/dialogs/useCreateTeamLaunchModel.ts",
+      "src/renderer/components/team/dialogs/teamModelSummary.ts",
+      "src/shared/utils/anthropicLaunchModel.ts",
+      "src/shared/utils/providerModelSelection.ts"
+    ],
+    "scopedReferenceBodies": {
+      "src/renderer/utils/teamModelCatalog.ts": [
+        [
+          320,
+          645
+        ],
+        [
+          755,
+          863
+        ]
+      ],
+      "src/features/runtime-provider-management/main/adapters/output/CapturedRuntimeProviderStatusClient.ts": [
+        [
+          190,
+          270
+        ]
+      ],
+      "src/shared/types/cliInstaller.ts": [
+        [
+          140,
+          255
+        ],
+        [
+          287,
+          330
+        ]
+      ],
+      "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs": [
+        [
+          72,
+          93
+        ],
+        [
+          155,
+          180
+        ],
+        [
+          333,
+          358
+        ]
+      ],
+      ".github/workflows/host-emulated-acceptance.yml": [
+        [
+          110,
+          295
+        ],
+        [
+          1700,
+          1772
+        ]
+      ],
+      "scripts/ci/check-source-file-size.mjs": [
+        [
+          1,
+          144
+        ]
+      ],
+      "src/renderer/components/team/dialogs/CreateTeamDialog.tsx": [
+        [
+          700,
+          740
+        ],
+        [
+          1435,
+          1485
+        ],
+        [
+          2155,
+          2210
+        ]
+      ],
+      "src/renderer/components/team/dialogs/TeamModelSelector.tsx": [
+        [
+          582,
+          610
+        ],
+        [
+          920,
+          990
+        ],
+        [
+          1340,
+          1415
+        ],
+        [
+          1525,
+          1605
+        ],
+        [
+          2600,
+          2710
+        ]
+      ]
+    },
+    "rosterReview": "Complete literal-array extraction and order/hash proof; semantics and full original common roster previously independently reviewed for Plan74. This packet does not claim a new full textual review of all unrelated workflow jobs or selector body.",
+    "treeObjectsRecomputed": 1711,
+    "callbackReferenceBodiesChecked": [
+      "src/renderer/components/team/members/LeadModelRow.tsx",
+      "src/renderer/components/team/members/TeamRosterEditorSection.tsx"
+    ],
+    "independentSourceReview": {
+      "reviewer": "/root/p09_review",
+      "status": "Final current-c94 Medium and save forwarding source-only audit closed; exact two finite literals sufficient; root acknowledged. Full ref bodies were retained and rejoined here; no runtime PASS.",
+      "fullReferenceDirectory": "../independent-reference",
+      "latestLineCorrection": "TeamModelSelector onValueChange(opt.value) is line2690; line2689 is the original selectability guard. EffortLevelSelector callback is line98.",
+      "noRepeatedFrontendSurvey": true
+    },
+    "historicalImmutableReads": [
+      "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "568952f5025a88c16b0568c7279d8e85a4288b43"
+    ],
+    "newImmutableReadsForAmendment": 0,
+    "allThirtyFiveBodyHashesJoinedToFullTree": true,
+    "originalFrozen24FilesUnchanged": true,
+    "runnerRecovery": {
+      "source": "Already-held official Plan69 actual-source packet",
+      "packetPath": "/tmp/e2e-original-artifacts/reviews/plan69-desktop-ui-boundaries/actual-source/official-packet.json",
+      "commit": "20441967f35c93a5b3ef368ac8d3d0c5ee8eef65",
+      "tree": "efd8410417d865adb4ae9b635955273776b6bb0a",
+      "recoveredBlob": "05f976179d30af3dac75c2fc00f68554e6ef200c",
+      "sameCurrentC94Blob": true,
+      "newApiRead": false
+    }
+  },
+  "risksAndLimits": [
+    "The source mismatch is proved independently; original renderer DTO arrival and the sole historical GUI failure cause remain unobserved.",
+    "SDK model choices do not establish authentication, freshness, model execution or launch authority.",
+    "The existing SDK/API first-party rule admits stale/degraded nonempty catalogues for display; this plan preserves it rather than broadening freshness rules.",
+    "Existing legacy utility cap stays983 with physical line count982; no new module or cap exception is selected.",
+    "Both closure preimages are bound to actual source73/74 bytes. A later ref movement still requires exact rebind.",
+    "Original source afterimages, tests, types, lint, GUI and native behavior have not executed under this plan.",
+    "The old finite label/alias must not remain an alternative: doing so could accidentally accept curated fallback instead of the intended exact SDK offer.",
+    "The current owner chain preserves Medium and the explicit saved model by source review only. Actual original membership completion remains required.",
+    "The original four-path packet remains byte-identical historical evidence; only this amendment supersedes its source-scope prohibition.",
+    "The historical c94 anchor is retained; this candidate uses the verified actual source73 parent and preserves actual source74."
+  ],
+  "publicationGates": [
+    "Root full prospective R1 and independent prospective R2 of this exact amended five-path document, required finite integration and source-bound value/effort proof.",
+    "Actual Plan73/74 source readbacks and this exact-parent data rebind are complete; final prospective R1/R2 and fresh root publication lease remain required.",
+    "Root publishes only reviewed docs/evidence; complete official documentary readback and independent actual-document R2 before source authoring.",
+    "Author exactly five selected source/test/closure bodies; full independent source R2 and root R1 before source child; official full-tree/unchanged-leaf actual source readback after publication.",
+    "Ordinary guarded primary integration by root only, preserving useful original jobs; resulting original CI required, no dispatch/rerun/cancel."
+  ],
+  "activity": {
+    "sourceAfterimages": 0,
+    "projectExecutions": 0,
+    "vmExecutions": 0,
+    "providerExecutions": 0,
+    "ciReads": 0,
+    "gitMutations": 0,
+    "newImmutableBlobReads": 0,
+    "historicalOriginalPacketImmutableReads": 2,
+    "inertDataInspection": true,
+    "runtimeQualified": false
+  },
+  "amendmentProvenance": {
+    "originalFourPathPacketUnmodified": true,
+    "originalFileCount": 24,
+    "originalDirectory": "/workspace/scratch/b87c90489dab/e2e-recovery/plan75",
+    "originalPlan": {
+      "packetPath": "../R1-plan75-provisional-on73d4.md",
+      "identity": {
+        "bytes": 13385,
+        "physicalLines": 64,
+        "gitBlob": "58f27d2a1f044fad6853ed4db8734ce777017750",
+        "sha256": "43681f70343a8d682ce3d279fd0dd9000121e2e47186db805da8dad2f127d369"
+      }
+    },
+    "originalR1": {
+      "packetPath": "../prospective-source-r1.json",
+      "identity": {
+        "bytes": 17984,
+        "physicalLines": 484,
+        "gitBlob": "2c662d7619f4ea0ef1cb126a5db6c74596e4b072",
+        "sha256": "32389dfaa12fdb49eb5759dfc176fef8208d0c4aa9b0442ac7b7a4ff9367e0a2"
+      }
+    },
+    "authority": "Root explicitly selected the fifth existing runner path after the source-bound integration mismatch was confirmed; original four-path source prohibitions are superseded only by this amended scope.",
+    "noExternalAfterimagesAdopted": true,
+    "requiredFutureRebind": "Exact actual-parent rebind completed here; repeat only if the root publication lease observes a later parent."
+  },
+  "finiteValueAndEffortChain": {
+    "conclusion": "The existing row/selector/Create/save chain forwards the explicit SDK launch value and preserves medium. No additional source owner or effort change is selected.",
+    "producerFinalCurrentness": [
+      184,
+      185
+    ],
+    "refs": [
+      {
+        "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+        "gitBlob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+        "sha256": "c443b410efbe4910839b02662fa1767b60e428936c012d729b26eeb82f182a87",
+        "readScopes": [
+          [
+            72,
+            93
+          ],
+          [
+            170,
+            171
+          ]
+        ],
+        "conclusion": "Finite peer advertises resolved TEST model and low/medium/high and accepts the original medium option; no peer modification.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/features/runtime-provider-management/main/adapters/output/capturedClaudeMetadata.ts",
+        "gitBlob": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+        "sha256": "c4d8333cc5b562b7eb8de8398bde8275d579fdb7775c59c3d1ae5123e88cfdc8",
+        "readScopes": [
+          [
+            105,
+            126
+          ],
+          [
+            168,
+            185
+          ]
+        ],
+        "conclusion": "Captured producer carries resolved model/label and supported efforts; final currentness retained.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/utils/anthropicRuntimeSelection.ts",
+        "gitBlob": "ca5377a99b9dce71899c17f7be02e68e90475ecf",
+        "sha256": "7caa7b78dc6fcd401b60c1b6c444bdc65331d4ea92eab69b73bd1f9c8fdc8945",
+        "readScopes": [
+          [
+            1,
+            21
+          ]
+        ],
+        "conclusion": "Existing wrapper delegates exact catalog-row selection to the domain resolver.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/features/anthropic-runtime-profile/core/domain/resolveAnthropicRuntimeProfile.ts",
+        "gitBlob": "a68835140bfe6458f34d3f1bca59fdcac19167aa",
+        "sha256": "b1b175b39249f7e7139a1ab9904b6167cc96e2383b11b4873cbfcc1f3300c050",
+        "readScopes": [
+          [
+            1,
+            309
+          ]
+        ],
+        "conclusion": "Existing resolver keeps the selected model and row-supported effort decisions.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/utils/teamEffortOptions.ts",
+        "gitBlob": "23f0cd7c81849408b37e2d7e3fb4c51980775d64",
+        "sha256": "408acb4474ecd5f6f6f32e7f5242af982e98615fed8f416f206c27dfd5b7258d",
+        "readScopes": [
+          [
+            1,
+            257
+          ]
+        ],
+        "conclusion": "Native supportedEfforts exposes medium/Medium as enabled.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/EffortLevelSelector.tsx",
+        "gitBlob": "5489d28e2f8f91e1484ebf962787d35a212bec98",
+        "sha256": "ceda46503dd3f7728c53470d363392b56aa37727ba936f7345c5c3a5146787cc",
+        "readScopes": [
+          [
+            1,
+            113
+          ]
+        ],
+        "conclusion": "Original enabled callback forwards value at line98.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/TeamModelSelector.tsx",
+        "gitBlob": "e54fd44a11644202b3c3d0c17a0c85b66e9f1520",
+        "sha256": "919572aefbd5b4f8f56eb0c6a0953e8ac1efff9868861ff32655e73b58994d38",
+        "readScopes": [
+          [
+            1525,
+            1605
+          ],
+          [
+            2600,
+            2710
+          ]
+        ],
+        "conclusion": "Offered label enters aria-label at2628; after selectability guard2689, opt.value is forwarded at2690.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/members/LeadModelRow.tsx",
+        "gitBlob": "6996f4ad0e9327f1ea4f3b7065d965cbde384d1d",
+        "sha256": "12474fb9a8e1843580e65c39ca6d16942114a335e2e89ed082b570a1034cf266",
+        "readScopes": [],
+        "conclusion": "Original direct model/effort callbacks retained; independently fully read by p09, local callback sites inspected.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/members/TeamRosterEditorSection.tsx",
+        "gitBlob": "70201ff571039eed85771a324187793396da542a",
+        "sha256": "e6a9d7f03ff275a243a4a468ac75a061e4479183026f43cd8074c975720a4dd1",
+        "readScopes": [],
+        "conclusion": "Original direct callbacks retained; independently fully read by p09, local callback sites inspected.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+        "gitBlob": "eff07b53a39c74ed80c0658c6e4a15de6fb18a0e",
+        "sha256": "b5ddff2a1f061dcaca00d5f989964cfc5954fe5e4b8f7367b82f8ecccf3a4ef3",
+        "readScopes": [
+          [
+            700,
+            740
+          ],
+          [
+            1435,
+            1485
+          ],
+          [
+            2155,
+            2210
+          ]
+        ],
+        "conclusion": "Setter717–727, request model1463 and save-only2184–2195 retain the explicit selection.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/teamModelSummary.ts",
+        "gitBlob": "48fabe8cb9acde2f312b76387d5ef3bc523d11d8",
+        "sha256": "1ccf5f34c6b35dd9e9dea88c1e7fcfa8c2b749ae49580795df0f72f167de611a",
+        "readScopes": [
+          [
+            1,
+            89
+          ]
+        ],
+        "conclusion": "Existing summary delegates to launch-model resolver.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/shared/utils/anthropicLaunchModel.ts",
+        "gitBlob": "cf50538e4accca256a02a14042c9da813fd3020f",
+        "sha256": "b490dee35c8a3cd8a6b48dc50f44f99df5535509cc36dfa0f9ad1bebbdc5c050",
+        "readScopes": [
+          [
+            1,
+            139
+          ]
+        ],
+        "conclusion": "TEST-claude-sonnet is neither default sentinel nor family alias and remains unchanged.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/shared/utils/providerModelSelection.ts",
+        "gitBlob": "bbc987dd4828f544c01f6f50b5c1519d0cb3dd34",
+        "sha256": "f28d09717fe3740ca4d0111a8530769a93299d1eb97001bd496362096fdb474f",
+        "readScopes": [
+          [
+            1,
+            5
+          ]
+        ],
+        "conclusion": "Existing default sentinel is distinct from finite explicit TEST model.",
+        "matchesCurrentC94Tree": true
+      },
+      {
+        "path": "src/renderer/components/team/dialogs/persistedTeamModel.ts",
+        "gitBlob": "1fd83e9d36ccac0700390204a510fccc89cd7bf1",
+        "sha256": "8397224cbb815f1a6068418e9f8e831db69f53fc89cb53b1d30f908f1ec9ed2e",
+        "readScopes": [
+          [
+            1,
+            46
+          ]
+        ],
+        "conclusion": "Explicit selected request model is returned unchanged by branch21–25.",
+        "matchesCurrentC94Tree": true
+      }
+    ],
+    "runtimeQualification": false,
+    "noAdditionalSelectedPath": true
+  },
+  "historicalReviewAnchor": {
+    "commit": "c94e63d68f43393bec42cbaa94826b12b2a9b6cd",
+    "tree": "7708e69be7b0242c851616e1f06a88b82868ffd0",
+    "fullPacketPath": "/tmp/e2e-original-artifacts/reviews/plan74-truthful-credential-copy/actual-document/official-packet.json",
+    "fullPacketIdentity": {
+      "bytes": 3826631,
+      "physicalLines": 1,
+      "gitBlob": "ac921e2739a26f1086a84e60e65c896a1957c568",
+      "sha256": "b6a4bb24379f1c5002e4f881a071cf4a25405dbeeb59ac8b209d66b0f1fb8dfe"
+    },
+    "truncated": false,
+    "entries": 12872,
+    "leaves": 11162,
+    "recomputedGitTrees": 1711,
+    "allRecordedGitTreesMatch": true
+  },
+  "rebind": {
+    "kind": "Inert documentary/current-preimage rebind; no new source selection or R2 decision",
+    "rootConfirmedActual73GateClosed": true,
+    "gate": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan73/actual-source/independent-actual-source-r2.json",
+      "identity": {
+        "bytes": 14877,
+        "physicalLines": 323,
+        "gitBlob": "3d0a61b1f46a03b9b349d66f084fd8641766209c",
+        "sha256": "cafe53da35d73ae615dc54224fba661baa3bea36ea135165409f5fb14cb8c245"
+      },
+      "headPointer": "/head",
+      "decisionPointer": "/decision",
+      "decision": "GO_EXACT_ACTUAL_SOURCE73_PUBLICATION"
+    },
+    "actual74": {
+      "commit": "4a2136c494ae012dda8b3dfaded893e16028e0c7",
+      "tree": "4dc7e4796784ad20976fab71c06e8fc291c99a89",
+      "packetIdentity": {
+        "bytes": 4265280,
+        "physicalLines": 1,
+        "gitBlob": "ff3d2a3843e3ef5a2edf8106137e482f7472fa56",
+        "sha256": "b5c88bb00bfd861347dbc4d0a50868f7d07d7fb1806d73c848d6e6c45c5a5049"
+      }
+    },
+    "actual73ChangedPaths": [
+      ".github/workflows/host-emulated-acceptance.yml",
+      ".github/workflows/host-process-acceptance.yml",
+      "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "tools/owned-process-broker/nativeEmulatedProfile.ts",
+      "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+      "tools/owned-process-broker/tsconfig.json"
+    ],
+    "unrelated74LeafTuplesPreserved": 11160,
+    "all35CurrentBodyJoins": true,
+    "unchanged33Joins": true,
+    "sourceAfterimages": 0,
+    "historicalAmendedInputs": {
+      "plan.md": {
+        "bytes": 18102,
+        "physicalLines": 82,
+        "gitBlob": "d9316e97bc5e6019a2998c3f9d6a383b1306f10f",
+        "sha256": "253b6197b9aea5fee09f611ef7f90b6b081e382429d6b01e9eb6fdcf4f290919"
+      },
+      "prospective-r1.json": {
+        "bytes": 34067,
+        "physicalLines": 877,
+        "gitBlob": "f5607775a376e72cf764baf691b88afaf49e507b",
+        "sha256": "a14c796bbb1371334f08bb381a4942ebfccd73c77cc2c8688da2dfda23bf1331"
+      },
+      "preimage-bindings.json": {
+        "bytes": 23727,
+        "physicalLines": 585,
+        "gitBlob": "f2b5c59c84fa4b2a204355c1e10d8b4b71b4f091",
+        "sha256": "033b3e71834f97973e9d13734f84f6a565bbd7adba277651e70daa55cc6d81ea"
+      },
+      "data-proof.json": {
+        "bytes": 5400,
+        "physicalLines": 144,
+        "gitBlob": "4977ae3141c0be5718edcbc73e7709a21851337c",
+        "sha256": "d9f0ff2ba5585a5b0322b9ae7f0ecd5b82dd52e5f2ee5be2f2bebf536a8bfdd8"
+      }
+    },
+    "finalProspectiveR1R2AndFreshPublicationLeaseStillRequired": true
+  }
+}

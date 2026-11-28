@@ -1,0 +1,4363 @@
+{
+  "schemaVersion": 1,
+  "kind": "CURRENT_SOURCE_INCREMENTAL_ACCEPTANCE_AND_PREVIOUS_SOURCE_TERMINAL_DELTA",
+  "sourceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+  "baseHead": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "eventMergeHead": "df4ff68bf93babb80c00dcca5f62344194e6de0e",
+  "observedAt": "2026-11-19 19:31:02 UTC",
+  "pr": 1192,
+  "draft": true,
+  "sourceRuns": [
+    {
+      "runId": 44596089663,
+      "observedAt": "2026-11-19 19:31:02 UTC",
+      "counts": {
+        "in_progress": 5,
+        "queued": 23,
+        "success": 1
+      },
+      "jobs": [
+        {
+          "id": 135814840191,
+          "name": "Offline frontend tests (4/4)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:28:20Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840191",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify source and capture the original Host test runtime",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Setup the original workspace test runtime",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Prepare original test prerequisites",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Run the complete safe frontend shard",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 9,
+              "name": "Preserve original test results, including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 15,
+              "name": "Post Setup the original workspace test runtime",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 16,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814840525,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840525",
+          "steps": []
+        },
+        {
+          "id": 135814840593,
+          "name": "Offline frontend tests (3/4)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840593",
+          "steps": []
+        },
+        {
+          "id": 135814840601,
+          "name": "Offline frontend tests (1/4)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840601",
+          "steps": []
+        },
+        {
+          "id": 135814840611,
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:43Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840611",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 5,
+              "name": "Verify original checkout and runner tuple",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 6,
+              "name": "Prepare private Linux display",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 7,
+              "name": "Install frozen workspace and Electron",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 8,
+              "name": "Build existing Desktop prerequisites and verify admission",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 9,
+              "name": "Verify finite legacy bootstrap ownership and refusal boundaries",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 10,
+              "name": "Verify finite retained archive ownership and refusal boundaries",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 11,
+              "name": "Verify original Runtime and Team conversation contracts",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 12,
+              "name": "Verify complete workspace types and original typed lint scopes",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 13,
+              "name": "Capture package-manager and Host inputs without vendor executables",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 14,
+              "name": "Capture original controlled Linux process input without a provider",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 15,
+              "name": "Exercise ordinary Team controls and renderer reload",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 16,
+              "name": "Exercise ordinary Taskboard controls and persistence",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Exercise original Skills and cross-Team controls",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Exercise original Review after a cold Host and app restart",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 25,
+              "name": "Exercise saved next-launch selection while the original Team remains live",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 26,
+              "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 27,
+              "name": "Exercise stock Codex Update while the original Team retains its captured source",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 28,
+              "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 29,
+              "name": "Prepare exact OpenCode V2 Bun and engine graph",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 30,
+              "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 31,
+              "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 32,
+              "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 33,
+              "name": "Verify original V2 membership receipts and physical cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 34,
+              "name": "Exercise original OpenCode V2 native Desktop journey",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 35,
+              "name": "Capture original successful V2 journey receipt and compiled epochs",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 36,
+              "name": "Read original V2 journey after cold app and Host restart",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 37,
+              "name": "Verify original V2 journey receipts, source binding and cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 38,
+              "name": "Verify exact source, original screenshots, receipts and cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 39,
+              "name": "Preserve original Desktop evidence, including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 77,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 78,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814840702,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:19:23Z",
+          "completed_at": "2026-11-19T19:24:12Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840702",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify original checkout and runner tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Prepare private Linux display",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Install frozen workspace and Electron",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Build existing Desktop prerequisites and verify admission",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Verify finite legacy bootstrap ownership and refusal boundaries",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 10,
+              "name": "Verify finite retained archive ownership and refusal boundaries",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 11,
+              "name": "Verify original Runtime and Team conversation contracts",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 12,
+              "name": "Verify complete workspace types and original typed lint scopes",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 13,
+              "name": "Capture package-manager and Host inputs without vendor executables",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Capture original controlled Linux process input without a provider",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 15,
+              "name": "Exercise ordinary Team controls and renderer reload",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 16,
+              "name": "Exercise ordinary Taskboard controls and persistence",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 17,
+              "name": "Exercise original Skills and cross-Team controls",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 18,
+              "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 19,
+              "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 20,
+              "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 21,
+              "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 22,
+              "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 23,
+              "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 24,
+              "name": "Exercise original Review after a cold Host and app restart",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 25,
+              "name": "Exercise saved next-launch selection while the original Team remains live",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 26,
+              "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 27,
+              "name": "Exercise stock Codex Update while the original Team retains its captured source",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 28,
+              "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 29,
+              "name": "Prepare exact OpenCode V2 Bun and engine graph",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 30,
+              "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 31,
+              "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 32,
+              "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 33,
+              "name": "Verify original V2 membership receipts and physical cleanup",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 34,
+              "name": "Exercise original OpenCode V2 native Desktop journey",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 35,
+              "name": "Capture original successful V2 journey receipt and compiled epochs",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 36,
+              "name": "Read original V2 journey after cold app and Host restart",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 37,
+              "name": "Verify original V2 journey receipts, source binding and cleanup",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 38,
+              "name": "Verify exact source, original screenshots, receipts and cleanup",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 39,
+              "name": "Preserve original Desktop evidence, including failures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 76,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 77,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 78,
+              "name": "Post Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 79,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 135814840710,
+          "name": "Offline frontend tests (2/4)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:17Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840710",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify source and capture the original Host test runtime",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Setup the original workspace test runtime",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Prepare original test prerequisites",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 8,
+              "name": "Run the complete safe frontend shard",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 9,
+              "name": "Preserve original test results, including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 15,
+              "name": "Post Setup the original workspace test runtime",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 16,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814840739,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840739",
+          "steps": []
+        },
+        {
+          "id": 135814840768,
+          "name": "Offline Host Desktop (linux-x64, review)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840768",
+          "steps": []
+        },
+        {
+          "id": 135814840817,
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:25Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840817",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify original checkout and runner tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Prepare private Linux display",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 7,
+              "name": "Install frozen workspace and Electron",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 8,
+              "name": "Build existing Desktop prerequisites and verify admission",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 9,
+              "name": "Verify finite legacy bootstrap ownership and refusal boundaries",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 10,
+              "name": "Verify finite retained archive ownership and refusal boundaries",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 11,
+              "name": "Verify original Runtime and Team conversation contracts",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 12,
+              "name": "Verify complete workspace types and original typed lint scopes",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 13,
+              "name": "Capture package-manager and Host inputs without vendor executables",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 14,
+              "name": "Capture original controlled Linux process input without a provider",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 15,
+              "name": "Exercise ordinary Team controls and renderer reload",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 16,
+              "name": "Exercise ordinary Taskboard controls and persistence",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Exercise original Skills and cross-Team controls",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Exercise original Review after a cold Host and app restart",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 25,
+              "name": "Exercise saved next-launch selection while the original Team remains live",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 26,
+              "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 27,
+              "name": "Exercise stock Codex Update while the original Team retains its captured source",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 28,
+              "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 29,
+              "name": "Prepare exact OpenCode V2 Bun and engine graph",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 30,
+              "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 31,
+              "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 32,
+              "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 33,
+              "name": "Verify original V2 membership receipts and physical cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 34,
+              "name": "Exercise original OpenCode V2 native Desktop journey",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 35,
+              "name": "Capture original successful V2 journey receipt and compiled epochs",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 36,
+              "name": "Read original V2 journey after cold app and Host restart",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 37,
+              "name": "Verify original V2 journey receipts, source binding and cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 38,
+              "name": "Verify exact source, original screenshots, receipts and cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 39,
+              "name": "Preserve original Desktop evidence, including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 76,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 77,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 78,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814840826,
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:25Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840826",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Verify original checkout and runner tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Prepare private Linux display",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 7,
+              "name": "Install frozen workspace and Electron",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 8,
+              "name": "Build existing Desktop prerequisites and verify admission",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 9,
+              "name": "Verify finite legacy bootstrap ownership and refusal boundaries",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 10,
+              "name": "Verify finite retained archive ownership and refusal boundaries",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 11,
+              "name": "Verify original Runtime and Team conversation contracts",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 12,
+              "name": "Verify complete workspace types and original typed lint scopes",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 13,
+              "name": "Capture package-manager and Host inputs without vendor executables",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 14,
+              "name": "Capture original controlled Linux process input without a provider",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 15,
+              "name": "Exercise ordinary Team controls and renderer reload",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 16,
+              "name": "Exercise ordinary Taskboard controls and persistence",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Exercise original Skills and cross-Team controls",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Exercise original Review after a cold Host and app restart",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 25,
+              "name": "Exercise saved next-launch selection while the original Team remains live",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 26,
+              "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 27,
+              "name": "Exercise stock Codex Update while the original Team retains its captured source",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 28,
+              "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 29,
+              "name": "Prepare exact OpenCode V2 Bun and engine graph",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 30,
+              "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 31,
+              "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 32,
+              "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 33,
+              "name": "Verify original V2 membership receipts and physical cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 34,
+              "name": "Exercise original OpenCode V2 native Desktop journey",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 35,
+              "name": "Capture original successful V2 journey receipt and compiled epochs",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 36,
+              "name": "Read original V2 journey after cold app and Host restart",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 37,
+              "name": "Verify original V2 journey receipts, source binding and cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 38,
+              "name": "Verify exact source, original screenshots, receipts and cleanup",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 39,
+              "name": "Preserve original Desktop evidence, including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 76,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 77,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 78,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814840875,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840875",
+          "steps": []
+        },
+        {
+          "id": 135814840894,
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840894",
+          "steps": []
+        },
+        {
+          "id": 135814840896,
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840896",
+          "steps": []
+        },
+        {
+          "id": 135814840900,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840900",
+          "steps": []
+        },
+        {
+          "id": 135814840906,
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840906",
+          "steps": []
+        },
+        {
+          "id": 135814840938,
+          "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840938",
+          "steps": []
+        },
+        {
+          "id": 135814840946,
+          "name": "Offline Host Desktop (darwin-arm64, installer)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840946",
+          "steps": []
+        },
+        {
+          "id": 135814840964,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840964",
+          "steps": []
+        },
+        {
+          "id": 135814840968,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840968",
+          "steps": []
+        },
+        {
+          "id": 135814840995,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814840995",
+          "steps": []
+        },
+        {
+          "id": 135814841004,
+          "name": "Offline Host Desktop (linux-x64, retained-original)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841004",
+          "steps": []
+        },
+        {
+          "id": 135814841390,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841390",
+          "steps": []
+        },
+        {
+          "id": 135814841455,
+          "name": "Offline Host Desktop (linux-x64, opencode)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841455",
+          "steps": []
+        },
+        {
+          "id": 135814841462,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841462",
+          "steps": []
+        },
+        {
+          "id": 135814841587,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841587",
+          "steps": []
+        },
+        {
+          "id": 135814841722,
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841722",
+          "steps": []
+        },
+        {
+          "id": 135814841725,
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841725",
+          "steps": []
+        },
+        {
+          "id": 135814841864,
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:52Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089663/job/135814841864",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "runId": 44596089349,
+      "observedAt": "2026-11-19 19:31:02 UTC",
+      "counts": {
+        "in_progress": 2,
+        "failure": 1,
+        "queued": 2
+      },
+      "jobs": [
+        {
+          "id": 135814631840,
+          "name": "Host process fixtures (win32-arm64)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:18:09Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089349/job/135814631840",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run actions/checkout@v7.0.1",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Select the pinned package manager with bundled Corepack",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Bind exact source and actual process tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Install frozen workspace without Desktop postinstall",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Build existing controller and Host",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Verify process contracts and retained Main Host transport",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Verify original POSIX Node and shell lifecycle fixtures",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 12,
+              "name": "Prepare pinned Electron for native process fixtures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Verify Linux Node exec descriptor closure under both original parents",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 14,
+              "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 15,
+              "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 16,
+              "name": "Build original Windows product broker and C++ fixtures",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Qualify original Windows Job and control under Host Node",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Qualify original Windows Job and control under Electron Node",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Qualify original codex source A B with TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Qualify original claude source A B with TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Qualify original opencode source A B with TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Require completed original platform receipts and unchanged source",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Preserve original process evidence including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 46,
+              "name": "Post Run actions/setup-node@v7.0.0",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 47,
+              "name": "Post Run actions/setup-node@v7.0.0",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 48,
+              "name": "Post Run actions/checkout@v7.0.1",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814632127,
+          "name": "Host process fixtures (win32-x64)",
+          "status": "completed",
+          "conclusion": "failure",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:15:19Z",
+          "completed_at": "2026-11-19T19:23:54Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089349/job/135814632127",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run actions/checkout@v7.0.1",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Select the pinned package manager with bundled Corepack",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Bind exact source and actual process tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Install frozen workspace without Desktop postinstall",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Build existing controller and Host",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Verify process contracts and retained Main Host transport",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Verify original POSIX Node and shell lifecycle fixtures",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 12,
+              "name": "Prepare pinned Electron for native process fixtures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Verify Linux Node exec descriptor closure under both original parents",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 14,
+              "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 15,
+              "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 16,
+              "name": "Build original Windows product broker and C++ fixtures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 17,
+              "name": "Qualify original Windows Job and control under Host Node",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 18,
+              "name": "Qualify original Windows Job and control under Electron Node",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 19,
+              "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 20,
+              "name": "Qualify original codex source A B with TEST peer",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 21,
+              "name": "Qualify original claude source A B with TEST peer",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 22,
+              "name": "Qualify original opencode source A B with TEST peer",
+              "status": "completed",
+              "conclusion": "failure"
+            },
+            {
+              "number": 23,
+              "name": "Require completed original platform receipts and unchanged source",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 24,
+              "name": "Preserve original process evidence including failures",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 46,
+              "name": "Post Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 47,
+              "name": "Post Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 48,
+              "name": "Post Run actions/checkout@v7.0.1",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 49,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 135814632210,
+          "name": "Host process fixtures (linux-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:32Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089349/job/135814632210",
+          "steps": []
+        },
+        {
+          "id": 135814632217,
+          "name": "Host process fixtures (darwin-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:32Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089349/job/135814632217",
+          "steps": []
+        },
+        {
+          "id": 135814632244,
+          "name": "Host process fixtures (darwin-x64)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:24:07Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089349/job/135814632244",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 3,
+              "name": "Run actions/checkout@v7.0.1",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Select the pinned package manager with bundled Corepack",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/setup-node@v7.0.0",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Bind exact source and actual process tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Install frozen workspace without Desktop postinstall",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Build existing controller and Host",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Verify process contracts and retained Main Host transport",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 11,
+              "name": "Verify original POSIX Node and shell lifecycle fixtures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 12,
+              "name": "Prepare pinned Electron for native process fixtures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 13,
+              "name": "Verify Linux Node exec descriptor closure under both original parents",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 14,
+              "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 15,
+              "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 16,
+              "name": "Build original Windows product broker and C++ fixtures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 17,
+              "name": "Qualify original Windows Job and control under Host Node",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Qualify original Windows Job and control under Electron Node",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Qualify original codex source A B with TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Qualify original claude source A B with TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Qualify original opencode source A B with TEST peer",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Require completed original platform receipts and unchanged source",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Preserve original process evidence including failures",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 46,
+              "name": "Post Run actions/setup-node@v7.0.0",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 47,
+              "name": "Post Run actions/setup-node@v7.0.0",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 48,
+              "name": "Post Run actions/checkout@v7.0.1",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "runId": 44596089551,
+      "observedAt": "2026-11-19 19:31:02 UTC",
+      "counts": {
+        "queued": 6,
+        "success": 1,
+        "in_progress": 2
+      },
+      "jobs": [
+        {
+          "id": 135814641361,
+          "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814641361",
+          "steps": []
+        },
+        {
+          "id": 135814641814,
+          "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814641814",
+          "steps": []
+        },
+        {
+          "id": 135814641846,
+          "name": "Static V01 source test (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:25:38Z",
+          "completed_at": "2026-11-19T19:28:17Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814641846",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Require immutable PR source HEAD",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Record exact current product commit",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Prove retry classification on the exact source HEAD",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Install pinned workspace dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Build Stage1 Host without launching providers",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Typecheck Host TEST contracts",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 13,
+              "name": "Verify captured and native model variants through Host SPI",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 14,
+              "name": "Verify generation-preserving install and update policy",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Execute V2 static preflight, current-main lock and FIFO negatives",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 16,
+              "name": "Native V1 baseline and latest Host compatibility (Linux TEST)",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 17,
+              "name": "Preserve native V1 version evidence",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 31,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 32,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 33,
+              "name": "Post Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 34,
+              "name": "Post Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 35,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 135814641912,
+          "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814641912",
+          "steps": []
+        },
+        {
+          "id": 135814641913,
+          "name": "Embedded V2.1.4 original Host (win32-x64)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:22:17Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814641913",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Require immutable source HEAD and record actual runner tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Install exact source workspace dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Build original Host and its pinned provider implementation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Check original graph and custody boundaries",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Prepare exact Bun, engine graph and original-process artifact",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Prove actual Darwin executable custody and adversarial cleanup",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 13,
+              "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 14,
+              "name": "Prove original Windows Job custody and surviving descendant cleanup",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Require exact Windows original-process evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 16,
+              "name": "Check original Desktop private recipe composition",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 17,
+              "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 18,
+              "name": "Exercise Windows automatic approval and cold Host Resume",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Exercise native catalog and model probe without tool allocation",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Exercise effective permissions and active Stop with a surviving sibling",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Exercise captured external MCP and app-only through the native Host",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Require complete native management and permission evidence",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Require product-path Host proof after exact candidate qualification",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 25,
+              "name": "Verify POSIX trusted-writer contract A and preserve strict mutation counterexamples",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 26,
+              "name": "Preserve exact native evidence or candidate HOLD",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 50,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 51,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 52,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814641992,
+          "name": "Embedded V2.1.4 original Host (linux-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814641992",
+          "steps": []
+        },
+        {
+          "id": 135814642064,
+          "name": "Static V01 source test (ubuntu-24.04)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814642064",
+          "steps": []
+        },
+        {
+          "id": 135814642146,
+          "name": "Embedded V2.1.4 original Host (win32-arm64)",
+          "status": "in_progress",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:48Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814642146",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Enable Windows long paths",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Run actions/checkout@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "Require immutable source HEAD and record actual runner tuple",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Run pnpm/action-setup@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 6,
+              "name": "Run actions/setup-node@v6",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 7,
+              "name": "Install exact source workspace dependencies",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 8,
+              "name": "Build original Host and its pinned provider implementation",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Check original graph and custody boundaries",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Prepare exact Bun, engine graph and original-process artifact",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 12,
+              "name": "Prove actual Darwin executable custody and adversarial cleanup",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 13,
+              "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 14,
+              "name": "Prove original Windows Job custody and surviving descendant cleanup",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 15,
+              "name": "Require exact Windows original-process evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 16,
+              "name": "Check original Desktop private recipe composition",
+              "status": "completed",
+              "conclusion": "skipped"
+            },
+            {
+              "number": 17,
+              "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+              "status": "in_progress",
+              "conclusion": null
+            },
+            {
+              "number": 18,
+              "name": "Exercise Windows automatic approval and cold Host Resume",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 19,
+              "name": "Exercise native catalog and model probe without tool allocation",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 20,
+              "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 21,
+              "name": "Exercise effective permissions and active Stop with a surviving sibling",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 22,
+              "name": "Exercise captured external MCP and app-only through the native Host",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 23,
+              "name": "Require complete native management and permission evidence",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 24,
+              "name": "Require product-path Host proof after exact candidate qualification",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 25,
+              "name": "Verify POSIX trusted-writer contract A and preserve strict mutation counterexamples",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 26,
+              "name": "Preserve exact native evidence or candidate HOLD",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 50,
+              "name": "Post Run actions/setup-node@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 51,
+              "name": "Post Run pnpm/action-setup@v6",
+              "status": "pending",
+              "conclusion": null
+            },
+            {
+              "number": 52,
+              "name": "Post Run actions/checkout@v6",
+              "status": "pending",
+              "conclusion": null
+            }
+          ]
+        },
+        {
+          "id": 135814642180,
+          "name": "Embedded V2.1.4 original Host (darwin-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089551/job/135814642180",
+          "steps": []
+        }
+      ]
+    },
+    {
+      "runId": 44596089318,
+      "observedAt": "2026-11-19 19:31:02 UTC",
+      "counts": {
+        "success": 1,
+        "skipped": 11,
+        "queued": 2
+      },
+      "jobs": [
+        {
+          "id": 135814642767,
+          "name": "plan",
+          "status": "completed",
+          "conclusion": "success",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:29:45Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135814642767",
+          "steps": [
+            {
+              "number": 1,
+              "name": "Set up job",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 2,
+              "name": "Checkout",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 3,
+              "name": "Setup Node.js",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 4,
+              "name": "CI source proof: PR=1192 | base=8d46f13fe87b4a25156b6be8331119eb8d0f790e | head=a81340ccc205946548b9e7da1cfefbabc37fb421",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 5,
+              "name": "Plan feedback and verify reusable evidence",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 9,
+              "name": "Post Setup Node.js",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 10,
+              "name": "Post Checkout",
+              "status": "completed",
+              "conclusion": "success"
+            },
+            {
+              "number": 11,
+              "name": "Complete job",
+              "status": "completed",
+              "conclusion": "success"
+            }
+          ]
+        },
+        {
+          "id": 135814644675,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": "2026-11-19T19:13:32Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135814644675",
+          "steps": []
+        },
+        {
+          "id": 135814644680,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": "2026-11-19T19:13:32Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135814644680",
+          "steps": []
+        },
+        {
+          "id": 135814644763,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:13:33Z",
+          "completed_at": "2026-11-19T19:13:32Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135814644763",
+          "steps": []
+        },
+        {
+          "id": 135824970720,
+          "name": "Retained OpenCode V1 and Host V2 original Desktop",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824970720",
+          "steps": []
+        },
+        {
+          "id": 135824970789,
+          "name": "Fast feedback",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824970789",
+          "steps": []
+        },
+        {
+          "id": 135824973339,
+          "name": "Codex login Desktop (Linux x64)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973339",
+          "steps": []
+        },
+        {
+          "id": 135824973368,
+          "name": "Focused documentation and asset validation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973368",
+          "steps": []
+        },
+        {
+          "id": 135824973482,
+          "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973482",
+          "steps": []
+        },
+        {
+          "id": 135824973646,
+          "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973646",
+          "steps": []
+        },
+        {
+          "id": 135824973707,
+          "name": "macOS DMG artwork end-to-end",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973707",
+          "steps": []
+        },
+        {
+          "id": 135824973721,
+          "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973721",
+          "steps": []
+        },
+        {
+          "id": 135824973810,
+          "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973810",
+          "steps": []
+        },
+        {
+          "id": 135824973833,
+          "name": "Renderer source validation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:30:23Z",
+          "completed_at": "2026-11-19T19:30:23Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596089318/job/135824973833",
+          "steps": []
+        }
+      ]
+    }
+  ],
+  "metadataOnlyRuns": [
+    {
+      "runId": 44596324911,
+      "observedAt": "2026-11-19 19:31:02 UTC",
+      "counts": {
+        "queued": 1,
+        "skipped": 3
+      },
+      "jobs": [
+        {
+          "id": 135815470223,
+          "name": "Metadata CI plan",
+          "status": "queued",
+          "conclusion": null,
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:14:54Z",
+          "completed_at": null,
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596324911/job/135815470223",
+          "steps": []
+        },
+        {
+          "id": 135815473132,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:14:54Z",
+          "completed_at": "2026-11-19T19:14:54Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596324911/job/135815473132",
+          "steps": []
+        },
+        {
+          "id": 135815473208,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:14:54Z",
+          "completed_at": "2026-11-19T19:14:54Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596324911/job/135815473208",
+          "steps": []
+        },
+        {
+          "id": 135815473537,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "head_sha": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "started_at": "2026-11-19T19:14:54Z",
+          "completed_at": "2026-11-19T19:14:54Z",
+          "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44596324911/job/135815473537",
+          "steps": []
+        }
+      ]
+    }
+  ],
+  "previousSourceTerminal": {
+    "sourceHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+    "observedAt": "2026-11-19 19:14:37 UTC",
+    "runs": [
+      {
+        "runId": 44584326295,
+        "observedAt": "2026-11-19 19:14:37 UTC",
+        "counts": {
+          "success": 13,
+          "cancelled": 14,
+          "failure": 3
+        },
+        "cancelledJobs": [
+          {
+            "id": 135773058663,
+            "name": "Offline Host Desktop (linux-x64, skills)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058663",
+            "steps": []
+          },
+          {
+            "id": 135773058677,
+            "name": "Offline Host Desktop (linux-x64, collaboration)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T19:10:29Z",
+            "completed_at": "2026-11-19T19:13:51Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058677",
+            "steps": [
+              {
+                "number": 1,
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 2,
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 3,
+                "name": "Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 4,
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 5,
+                "name": "Verify original checkout and runner tuple",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Prepare private Linux display",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 7,
+                "name": "Install frozen workspace and Electron",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 8,
+                "name": "Build existing Desktop prerequisites and verify admission",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 9,
+                "name": "Verify finite legacy bootstrap ownership and refusal boundaries",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 10,
+                "name": "Verify finite retained archive ownership and refusal boundaries",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 11,
+                "name": "Verify original Runtime and Team conversation contracts",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 12,
+                "name": "Verify complete workspace types and original typed lint scopes",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 13,
+                "name": "Capture package-manager and Host inputs without vendor executables",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 14,
+                "name": "Capture original controlled Linux process input without a provider",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 15,
+                "name": "Exercise ordinary Team controls and renderer reload",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 16,
+                "name": "Exercise ordinary Taskboard controls and persistence",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 17,
+                "name": "Exercise original Skills and cross-Team controls",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 18,
+                "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 19,
+                "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+                "status": "completed",
+                "conclusion": "cancelled"
+              },
+              {
+                "number": 20,
+                "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 21,
+                "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 22,
+                "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 23,
+                "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 24,
+                "name": "Exercise original Review after a cold Host and app restart",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 25,
+                "name": "Exercise saved next-launch selection while the original Team remains live",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 26,
+                "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 27,
+                "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 28,
+                "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 29,
+                "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 30,
+                "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 31,
+                "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 32,
+                "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 33,
+                "name": "Verify original V2 membership receipts and physical cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 34,
+                "name": "Exercise original OpenCode V2 native Desktop journey",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 35,
+                "name": "Capture original successful V2 journey receipt and compiled epochs",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 36,
+                "name": "Read original V2 journey after cold app and Host restart",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 37,
+                "name": "Verify original V2 journey receipts, source binding and cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 38,
+                "name": "Verify exact source, original screenshots, receipts and cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 39,
+                "name": "Preserve original Desktop evidence, including failures",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 76,
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 77,
+                "name": "Post Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 78,
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 79,
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ]
+          },
+          {
+            "id": 135773058790,
+            "name": "Offline Host Desktop (linux-x64, extensions)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058790",
+            "steps": []
+          },
+          {
+            "id": 135773058864,
+            "name": "Offline Host Desktop (linux-x64, cross-team)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058864",
+            "steps": []
+          },
+          {
+            "id": 135773058865,
+            "name": "Offline Host Desktop (linux-x64, codex-login)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058865",
+            "steps": []
+          },
+          {
+            "id": 135773058875,
+            "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058875",
+            "steps": []
+          },
+          {
+            "id": 135773058907,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T19:11:23Z",
+            "completed_at": "2026-11-19T19:13:46Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058907",
+            "steps": [
+              {
+                "number": 1,
+                "name": "Set up job",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 2,
+                "name": "Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 3,
+                "name": "Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 4,
+                "name": "Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 5,
+                "name": "Verify original checkout and runner tuple",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 6,
+                "name": "Prepare private Linux display",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 7,
+                "name": "Install frozen workspace and Electron",
+                "status": "completed",
+                "conclusion": "cancelled"
+              },
+              {
+                "number": 8,
+                "name": "Build existing Desktop prerequisites and verify admission",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 9,
+                "name": "Verify finite legacy bootstrap ownership and refusal boundaries",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 10,
+                "name": "Verify finite retained archive ownership and refusal boundaries",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 11,
+                "name": "Verify original Runtime and Team conversation contracts",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 12,
+                "name": "Verify complete workspace types and original typed lint scopes",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 13,
+                "name": "Capture package-manager and Host inputs without vendor executables",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 14,
+                "name": "Capture original controlled Linux process input without a provider",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 15,
+                "name": "Exercise ordinary Team controls and renderer reload",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 16,
+                "name": "Exercise ordinary Taskboard controls and persistence",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 17,
+                "name": "Exercise original Skills and cross-Team controls",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 18,
+                "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 19,
+                "name": "Exercise original collaboration, Extensions and import controls through finite peers",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 20,
+                "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 21,
+                "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 22,
+                "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 23,
+                "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 24,
+                "name": "Exercise original Review after a cold Host and app restart",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 25,
+                "name": "Exercise saved next-launch selection while the original Team remains live",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 26,
+                "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 27,
+                "name": "Exercise stock Codex Update while the original Team retains its captured source",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 28,
+                "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 29,
+                "name": "Prepare exact OpenCode V2 Bun and engine graph",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 30,
+                "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 31,
+                "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 32,
+                "name": "Exercise original V2 live Team Add Remove Restore Stop and cold history",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 33,
+                "name": "Verify original V2 membership receipts and physical cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 34,
+                "name": "Exercise original OpenCode V2 native Desktop journey",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 35,
+                "name": "Capture original successful V2 journey receipt and compiled epochs",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 36,
+                "name": "Read original V2 journey after cold app and Host restart",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 37,
+                "name": "Verify original V2 journey receipts, source binding and cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 38,
+                "name": "Verify exact source, original screenshots, receipts and cleanup",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 39,
+                "name": "Preserve original Desktop evidence, including failures",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 76,
+                "name": "Post Run actions/setup-node@v6",
+                "status": "completed",
+                "conclusion": "skipped"
+              },
+              {
+                "number": 77,
+                "name": "Post Run pnpm/action-setup@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 78,
+                "name": "Post Run actions/checkout@v6",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              {
+                "number": 79,
+                "name": "Complete job",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            ]
+          },
+          {
+            "id": 135773058908,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058908",
+            "steps": []
+          },
+          {
+            "id": 135773058946,
+            "name": "Offline Host Desktop (darwin-arm64, installer)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058946",
+            "steps": []
+          },
+          {
+            "id": 135773058958,
+            "name": "Offline Host Desktop (linux-x64, import)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058958",
+            "steps": []
+          },
+          {
+            "id": 135773058992,
+            "name": "Offline Host Desktop (linux-x64, selection)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773058992",
+            "steps": []
+          },
+          {
+            "id": 135773059130,
+            "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773059130",
+            "steps": []
+          },
+          {
+            "id": 135773059373,
+            "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:53Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135773059373",
+            "steps": []
+          },
+          {
+            "id": 135814836050,
+            "name": "Offline Host Desktop",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T19:13:52Z",
+            "completed_at": "2026-11-19T19:13:51Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326295/job/135814836050",
+            "steps": []
+          }
+        ]
+      },
+      {
+        "runId": 44584326495,
+        "observedAt": "2026-11-19 19:14:37 UTC",
+        "counts": {
+          "success": 8,
+          "cancelled": 1
+        },
+        "cancelledJobs": [
+          {
+            "id": 135773064921,
+            "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:06:54Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326495/job/135773064921",
+            "steps": []
+          }
+        ]
+      },
+      {
+        "runId": 44584326304,
+        "observedAt": "2026-11-19 19:14:37 UTC",
+        "counts": {
+          "success": 2,
+          "skipped": 11,
+          "failure": 1,
+          "cancelled": 1
+        },
+        "cancelledJobs": [
+          {
+            "id": 135802271007,
+            "name": "Full qualification",
+            "status": "completed",
+            "conclusion": "cancelled",
+            "head_sha": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+            "started_at": "2026-11-19T18:53:43Z",
+            "completed_at": "2026-11-19T19:13:32Z",
+            "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44584326304/job/135802271007",
+            "steps": []
+          }
+        ]
+      }
+    ],
+    "qualification": "Ordinary concurrency cancelled remaining oldsource jobs after reviewedsource publication. No manual cancellation. Unstarted DarwinARM P09 has no native receipt and is not PASS. Existing actual PASS/FAIL receipts remain scoped to fbc."
+  },
+  "originalBoundedAudits": [
+    {
+      "name": "windows-x64-a81340c-audit.json",
+      "bytes": 9154,
+      "sha256": "cda1e505511dc747e11675f8194f6e6a578cb7c2686a5cb4eb495be8a55b3041",
+      "record": {
+        "sourceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+        "run": 44596089349,
+        "job": 135814632127,
+        "artifact": {
+          "id": 14566347090,
+          "bytes": 70735,
+          "sha256": "e542493786ce0feca64a4340d171bba8b44bf39a845f8556375a40006dcc4931",
+          "hashMatchesGitHub": true
+        },
+        "receipt": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14566347090/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-opencode-receipt.json",
+        "receiptSha256": "8f6f9d4b9c69a1c5c0ed9d3d7822680a1e6a8576a081a26eb41be0509c6a69f5",
+        "log": "/workspace/scratch/f45fed8e9067/audit1192/job-135814632127.log",
+        "status": "INCOMPLETE",
+        "providerStatuses": [
+          {
+            "provider": "codex",
+            "status": "PASS",
+            "cleanup": true,
+            "scenarios": [
+              {
+                "stage": "complete",
+                "status": "PASS",
+                "cleanup": true,
+                "versions": {
+                  "A": "0.162.0",
+                  "B": "0.162.0"
+                }
+              }
+            ]
+          },
+          {
+            "provider": "claude",
+            "status": "PASS",
+            "cleanup": true,
+            "scenarios": [
+              {
+                "stage": "complete",
+                "status": "PASS",
+                "cleanup": true,
+                "versions": {
+                  "A": "2.1.34",
+                  "B": "2.1.34"
+                }
+              }
+            ]
+          },
+          {
+            "provider": "opencode",
+            "status": "INCOMPLETE",
+            "cleanup": true,
+            "scenarios": [
+              {
+                "stage": "Team-A",
+                "status": "INCOMPLETE",
+                "cleanup": true,
+                "versions": {
+                  "A": "1.19.4",
+                  "B": "1.19.4"
+                }
+              }
+            ]
+          }
+        ],
+        "lastLaunchReadiness": {
+          "source": {
+            "sourceId": "d77d949e2b1d8dd01e7334f37d54563e55c6bddc9d40c9c64aa9ffb6aa84de8e",
+            "revision": "74ffe9d2aaa3f4f7792bbebed898847824a85640f86e444d500cfd9330a8b4a0"
+          },
+          "image": "A",
+          "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+          "readCount": 70,
+          "elapsedMs": 14969.315800000002,
+          "lastRuntimeRead": {
+            "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+            "memberId": "alice-id",
+            "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+            "phase": "held",
+            "sealed": false,
+            "custody": "unknown",
+            "nativeReady": false,
+            "attached": false,
+            "diagnostic": "open-unknown"
+          }
+        },
+        "firstRefusal": {
+          "status": "observed",
+          "observations": [
+            {
+              "kind": "consumer",
+              "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+              "groupDigest": "0b9e49bd90af6e421c3451a38b5d6bbabc8bd30d2d996355b9568be53320733b",
+              "bindingDigest": "efa95e602ca838b10b4466c50dbf8c62a4b4f50531b3e2f9c5231268e2b877a1",
+              "consumerId": "644200c6f977659bc5f6d969c4d321ee402fdd80f3e0f93cf70f3c4be76907c1",
+              "phase": "cutoff",
+              "reason": "held",
+              "cutoff": 1795116223482,
+              "observedAt": 1795116223497,
+              "currentCalls": {
+                "count": 24,
+                "totalMs": 10257,
+                "maxMs": 544,
+                "lastMs": 21,
+                "truncated": false,
+                "regions": {
+                  "initialAuthorityCount": 24,
+                  "initialAuthorityMs": 383,
+                  "readConsumerCount": 24,
+                  "readConsumerMs": 120,
+                  "referenceCount": 23,
+                  "referenceMs": 9405,
+                  "finalAuthorityCount": 23,
+                  "finalAuthorityMs": 364,
+                  "referenceAccountCount": 23,
+                  "referenceAccountMs": 5316,
+                  "referenceAccountAuthorityCount": 23,
+                  "referenceAccountAuthorityMs": 4847,
+                  "referenceAccountProviderCount": 23,
+                  "referenceAccountProviderMs": 2128,
+                  "referenceAccountAllocationCount": 23,
+                  "referenceAccountAllocationMs": 2714
+                }
+              },
+              "ordinal": 1,
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "source": {
+                "sourceId": "d77d949e2b1d8dd01e7334f37d54563e55c6bddc9d40c9c64aa9ffb6aa84de8e",
+                "revision": "74ffe9d2aaa3f4f7792bbebed898847824a85640f86e444d500cfd9330a8b4a0"
+              }
+            },
+            {
+              "kind": "native",
+              "capability": "4685ce63-0596-4977-b335-ec3fd8f8ee1d",
+              "phase": "resume",
+              "reason": "current-false",
+              "dispatched": true,
+              "staged": true,
+              "rootCaptured": true,
+              "deadlineExpired": null,
+              "checkSite": "after-owner",
+              "ordinal": 2,
+              "mainEpoch": "682d18f4-7b32-4407-8bc1-59aebd6c190f",
+              "jobSlot": 2,
+              "source": {
+                "sourceId": "d77d949e2b1d8dd01e7334f37d54563e55c6bddc9d40c9c64aa9ffb6aa84de8e",
+                "revision": "74ffe9d2aaa3f4f7792bbebed898847824a85640f86e444d500cfd9330a8b4a0"
+              }
+            },
+            {
+              "kind": "opencode-open",
+              "bindingDigest": "efa95e602ca838b10b4466c50dbf8c62a4b4f50531b3e2f9c5231268e2b877a1",
+              "phase": "native-ready",
+              "reason": "threw",
+              "ordinal": 3,
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "source": {
+                "sourceId": "d77d949e2b1d8dd01e7334f37d54563e55c6bddc9d40c9c64aa9ffb6aa84de8e",
+                "revision": "74ffe9d2aaa3f4f7792bbebed898847824a85640f86e444d500cfd9330a8b4a0"
+              }
+            }
+          ]
+        },
+        "firstConsumerObservedAfterCutoffMs": 15,
+        "referenceAccountDiagnostics": {
+          "referenceAccountCount": 23,
+          "referenceAccountMs": 5316,
+          "referenceAccountAuthorityCount": 23,
+          "referenceAccountAuthorityMs": 4847,
+          "referenceAccountProviderCount": 23,
+          "referenceAccountProviderMs": 2128,
+          "referenceAccountAllocationCount": 23,
+          "referenceAccountAllocationMs": 2714
+        },
+        "cleanup": true,
+        "originalJobs": [
+          {
+            "capability": "0ee2de1b-228e-4220-b668-753b92f74161",
+            "root": {
+              "pid": 6784,
+              "birth": "01dd785b740c628e"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.07189999999991414,
+                "firstStartMs": 1885.9419,
+                "lastEndMs": 1886.0138
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.5178999999998268,
+                "firstStartMs": 1888.3488,
+                "lastEndMs": 1888.8666999999998
+              }
+            }
+          },
+          {
+            "capability": "459d2b69-0faa-4634-b96d-f98c6a5d74cb",
+            "root": {
+              "pid": 5764,
+              "birth": "01dd785b755c0164"
+            },
+            "resumed": true,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.06460000000060973,
+                "firstStartMs": 4044.7510999999995,
+                "lastEndMs": 4044.8157
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.19899999999961437,
+                "firstStartMs": 4046.3025,
+                "lastEndMs": 4046.5014999999994
+              }
+            }
+          },
+          {
+            "capability": "4685ce63-0596-4977-b335-ec3fd8f8ee1d",
+            "root": {
+              "pid": 5300,
+              "birth": "01dd785b7bc94d69"
+            },
+            "resumed": false,
+            "stopped": true,
+            "drained": true,
+            "released": true,
+            "originalHandleAbsent": true,
+            "stagingTimings": {
+              "launch-chunk": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.13540000000102737,
+                "firstStartMs": 12473.1355,
+                "lastEndMs": 12473.270900000001
+              },
+              "launch-commit": {
+                "calls": 1,
+                "settled": 1,
+                "returned": 1,
+                "totalMs": 0.3658000000013999,
+                "firstStartMs": 13446.6258,
+                "lastEndMs": 13446.991600000001
+              }
+            }
+          }
+        ],
+        "allOriginalHandlesAbsent": true,
+        "runtimeProjection": {
+          "status": "observed",
+          "atomicWithFailure": false,
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "bindingMatches": true,
+          "recordReady": false,
+          "providerReady": null,
+          "ownerCurrent": null,
+          "nativeReady": false
+        },
+        "diagnosticPins": [
+          {
+            "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\src\\diagnostics\\modelReadinessTiming.ts",
+            "sha256": "d792030f433318cd80151793c57559ae8a66b3128c228863804de0c779216c02"
+          },
+          {
+            "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\packages\\legacy-agent-host\\dist\\diagnostics\\modelReadinessTiming.js",
+            "sha256": "2244f5784876949e193ba3bce44c726800a42a9db0b0788ea15a064c9f095ceb"
+          }
+        ],
+        "realProviderExecuted": false,
+        "desktopQualified": false,
+        "releaseQualified": false,
+        "causalInterpretation": "Left to source owner. These counts preserve current intervals and nested timing totals; do not add nested totals as independent elapsed time or mix wall-clock cutoff with readiness elapsed anchor."
+      }
+    },
+    {
+      "name": "resume-fbc77ea-cleanup-boundary-audit.json",
+      "bytes": 3884,
+      "sha256": "782738dad35a4f84e2d15b30db29dd6bfd3681d6fd81b7eca5364f3ac6bc89d4",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "BOUNDED_READ_ONLY_ORIGINAL_CLEANUP_AUDIT",
+        "sourceHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "job": 135773058861,
+        "artifactId": 14562155307,
+        "receipt": {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14562155307/TEST-desktop-backend-Rgn8mq/desktop-backend-receipt.json",
+          "sha256": "56ab0b2c874758db7e11857f643686f01cd6122bdbcc6629c3acf082fca78961"
+        },
+        "startupSameNumericPid": {
+          "count": 58,
+          "first": {
+            "elapsedMs": 3181,
+            "pid": 10102,
+            "ppid": 10086,
+            "pgid": 10050,
+            "executable": "esbuild"
+          },
+          "last": {
+            "elapsedMs": 64810,
+            "pid": 10102,
+            "ppid": 10086,
+            "pgid": 10050,
+            "executable": "esbuild"
+          },
+          "qualification": "Startup labelled PID10102 esbuild. Final census has the same numeric PID and original PGID but no executable/start identity; exact process continuity is not independently proved."
+        },
+        "originalRequestedQuitExit": {
+          "initialExitCode": 0,
+          "initialSignalCode": null,
+          "exitCode": 0,
+          "signalCode": null
+        },
+        "failureQuit": {
+          "attempted": true,
+          "scope": "Close only the verified TEST window before stopping its dev wrapper",
+          "reply": "acknowledged",
+          "listenerAbsent": true
+        },
+        "beforeHarnessCleanup": [
+          {
+            "pid": 10102,
+            "ppid": 1,
+            "pgid": 10050
+          }
+        ],
+        "cleanup": {
+          "processGroup": 10050,
+          "remaining": [
+            {
+              "pid": 10102,
+              "ppid": 1,
+              "pgid": 10050
+            }
+          ],
+          "appExitCode": 0,
+          "appSignalCode": null,
+          "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+          "capturedHostObserved": false,
+          "capturedHostAbsent": null,
+          "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+        },
+        "sourceReason": [
+          "The original Host was not captured by the failed flow before Launch; a prior metadata PID is not automatically promoted to captured ownership.",
+          "cleanupCapturedDesktopApp retains its existing three-second observation cutoff and discovers a Host only from an original remaining command match.",
+          "No matching Host remains in final group; original leader is absent. The existing read-only observeExitedAppGroup requires a captured Host PID, so its admission remains false.",
+          "The final original signal guard refuses numeric PGID without the captured leader; no unauthorized signal or late successful cleanup is inferred."
+        ],
+        "unknowns": [
+          "Final PID10102 executable, process start identity and state are not recorded.",
+          "No later original census proving its absence exists in this receipt.",
+          "Whether natural dev-tool retirement completed after the original observation cutoff is unknown."
+        ],
+        "conclusion": "Retain original group cleanup debt and Host absence UNKNOWN. Source does not prove a safe product cleanup fix; no PID adoption, budget increase, signal workaround or bundler change is justified by this artifact.",
+        "sourceFiles": [
+          {
+            "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+            "sha256": "6ba21f2b357b0fbb3e6240cab8b9df9516868b38d80f0a83899b76801437bb7a"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+            "sha256": "82fdc9bffaa99a5c961d285aa1af491df112098bcfe8024a61bf19ffbb8ee4b9"
+          },
+          {
+            "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+            "sha256": "51d056aeff4ce159eab1533ca68838c768dc978f851a41687bb81e49a4863221"
+          },
+          {
+            "path": "scripts/dev-with-runtime.mjs",
+            "sha256": "738f0d939e269428f39b9c4f0d416158cb69616cc4d8df1158c12897daab296a"
+          }
+        ],
+        "actions": {
+          "sourceChange": false,
+          "nativeReplay": false,
+          "newRuntimeAction": false,
+          "signal": false,
+          "deadlineChange": false,
+          "testsRepeated": false
+        }
+      }
+    },
+    {
+      "name": "retained-v1-v2-source-boundary-audit.json",
+      "bytes": 2646,
+      "sha256": "636853c7c6141b92eb24cccc0dff70ef5963a01288c6516e545baff58489b5a3",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "TEST-retained-v1-v2-source-boundary-audit",
+        "recordedAt": "2026-11-19T19:12:24.617334+00:00",
+        "sourceHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "run": 44584326304,
+        "job": 135782182242,
+        "artifact": {
+          "id": 14564885568,
+          "bytes": 367848,
+          "sha256": "6d10c3a0eb56fbfd6ea834c8c7716af8b5ace5b8664457a2c42e120a8e63f917",
+          "downloadedAgain": false
+        },
+        "observed": {
+          "phase": "coordinator-admission",
+          "category": "source-unreadable",
+          "outcome": "not-dispatched",
+          "publicReason": "not-eligible",
+          "cleanup": true,
+          "cleanupFailures": [],
+          "modelFailures": [],
+          "stepsReached": [
+            "actual legacy V1 native history",
+            "original Stop",
+            "reopen original history",
+            "no replay",
+            "retained open refusal"
+          ],
+          "stepsNotReached": [
+            "original retained launch after reopen",
+            "new Host source owner coexistence",
+            "combined cold flow"
+          ]
+        },
+        "trace": [
+          "createDesktopStoppedTeamOperations.retained capture source/target/runtime",
+          "RetainedLegacyLaunchCoordinator.retainOpen: import absence checked",
+          "createRetainedLegacyLaunchScope.readEligibility: original.fenced(() => original.describe())",
+          "createLegacyStoppedTeamSource.describe: existing branch or wrapped error → LegacyStoppedImportHold(source-unreadable)",
+          "readEligibility catches and remembers original refusal, returns other",
+          "retainOpen maps other → not-eligible; no authority.run launch action"
+        ],
+        "conclusion": "Exact failing describe boundary remains unknown. Existing private observation is many-to-one; artifact has no raw saved config/meta/roster or nested boundary. No eligibility schema fix is proven by this run.",
+        "rejectedAttribution": {
+          "genericWriterMismatch": "Generic deterministic writer preserves runtimeSelectionVersion and launchIdentity while product-record allowlist rejects those keys.",
+          "whyNotThisRunProof": "Actual pure OpenCode Create metadata payload explicitly omits those two keys; no raw saved records prove later additions or native-empty classification.",
+          "action": "Do not broaden source eligibility based on this hypothesis."
+        },
+        "nextSlice": {
+          "kind": "passive finite source describe boundary",
+          "preserve": [
+            "original source reads",
+            "locks and awaits",
+            "source/currentness",
+            "reason and error precedence",
+            "coordinator admission",
+            "actions and deadlines",
+            "cleanup"
+          ],
+          "no": [
+            "raw records",
+            "new source rereads",
+            "retries",
+            "native execution",
+            "CI actions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "windows-x64-a81340c-callback-audit.json",
+      "bytes": 9966,
+      "sha256": "83e8c745662fbc36121acb26f3181c53675553f7d9e982ea32399674c5ed70d1",
+      "record": {
+        "schemaVersion": 1,
+        "kind": "bounded-readonly-original-readiness-callback-audit",
+        "recordedAt": "2026-11-19T19:33:10.739141+00:00",
+        "sourceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+        "run": 44596089349,
+        "job": 135814632127,
+        "originalAudit": "/workspace/scratch/f45fed8e9067/audit1192/windows-x64-a81340c-audit.json",
+        "originalAuditSha256": "cda1e505511dc747e11675f8194f6e6a578cb7c2686a5cb4eb495be8a55b3041",
+        "artifact": {
+          "id": 14566347090,
+          "bytes": 70735,
+          "sha256": "e542493786ce0feca64a4340d171bba8b44bf39a845f8556375a40006dcc4931",
+          "hashMatchesGitHub": true
+        },
+        "observed": {
+          "firstRefusalPhase": "consumer/cutoff",
+          "reason": "held",
+          "afterOriginalCutoffMs": 15,
+          "currentCalls": {
+            "count": 24,
+            "totalMs": 10257,
+            "maxMs": 544,
+            "lastMs": 21,
+            "truncated": false,
+            "regions": {
+              "initialAuthorityCount": 24,
+              "initialAuthorityMs": 383,
+              "readConsumerCount": 24,
+              "readConsumerMs": 120,
+              "referenceCount": 23,
+              "referenceMs": 9405,
+              "finalAuthorityCount": 23,
+              "finalAuthorityMs": 364,
+              "referenceAccountCount": 23,
+              "referenceAccountMs": 5316,
+              "referenceAccountAuthorityCount": 23,
+              "referenceAccountAuthorityMs": 4847,
+              "referenceAccountProviderCount": 23,
+              "referenceAccountProviderMs": 2128,
+              "referenceAccountAllocationCount": 23,
+              "referenceAccountAllocationMs": 2714
+            }
+          },
+          "nativeNextRefusal": "resume/current-false at after-owner",
+          "cleanup": true,
+          "allOriginalHandlesAbsent": true
+        },
+        "sourceDerivedCounts": {
+          "branch": "Original initial Team-A start; configured-key V1 member inspection with explicit TEST apiKey and no selected Restart/live-membership source.",
+          "perCompleteCurrentInspection": 11,
+          "perAccountInspection": 8,
+          "completeReferenceAndAccountIntervals": 23,
+          "accountCompositeCallbacks": 184,
+          "allCompositeCallbacks": 254,
+          "lastInspection": "One original initial-authority callback then read-consumer, refused by original cutoff before reference.",
+          "observedCountMeaning": "Provider/Allocation Count23 each count containing account intervals; they do not count nested callbacks.",
+          "averageAccountCompositeCallbackMs": 26.342391304347824,
+          "averageProviderCallbackMs": 11.565217391304348,
+          "averageAllocationCallbackMs": 14.75,
+          "qualification": "Counts derived from pinned original source branch and already-existing controlled regression; no new native measurement or test run."
+        },
+        "hierarchy": {
+          "referenceShareOfCurrent": 0.9169347762503656,
+          "accountShareOfReference": 0.5652312599681021,
+          "authorityShareOfAccount": 0.9117757712565839,
+          "allocationShareOfAccountAuthority": 0.559933979781308,
+          "providerShareOfAccountAuthority": 0.43903445430162985,
+          "authorityResidualMs": 5,
+          "referenceOutsideAccountMs": 4089,
+          "note": "Nested durations overlap; do not add them to derive elapsed time. Five milliseconds residual includes wrapper work and per-region rounding; it is not independently timed."
+        },
+        "comparison": {
+          "previousHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+          "previousCurrentCalls": {
+            "count": 22,
+            "totalMs": 9994,
+            "maxMs": 525,
+            "lastMs": 457,
+            "truncated": false,
+            "regions": {
+              "initialAuthorityCount": 22,
+              "initialAuthorityMs": 380,
+              "readConsumerCount": 22,
+              "readConsumerMs": 140,
+              "referenceCount": 22,
+              "referenceMs": 9146,
+              "finalAuthorityCount": 21,
+              "finalAuthorityMs": 330,
+              "referenceAccountCount": 22,
+              "referenceAccountMs": 5174,
+              "referenceAccountAuthorityCount": 22,
+              "referenceAccountAuthorityMs": 4705
+            }
+          },
+          "previousAccountCallbacks": 176,
+          "previousAverageAccountCompositeCallbackMs": 26.732954545454547,
+          "previousFirstRefusal": "probe-expiry after cutoff+214ms, inside final reference inspection",
+          "currentFirstRefusal": "consumer cutoff+15ms, before next reference inspection",
+          "verdict": "New split localizes allocation56.0%/provider43.9% within account-authority cost; no causal performance improvement or per-callback214ms claim follows from two independent runs."
+        },
+        "route": [
+          "nativeEmulatedSourceScenario publishesA, saves roster and captures new TEST-capture-A",
+          "Original Main BackendOwnerRouter team.launch.start with original readiness origin/budget",
+          "TeamLaunchOwner.startMember obtains default captureAuthority",
+          "createRuntimeTeamLaunch.open original readFreshMemberSource has no selected restart/live source for freshA",
+          "RuntimeOwner.openSession→allocate forwards original default authority unchanged",
+          "factory readiness order remains captured identity→provider authority→allocation authority→captured identity"
+        ],
+        "currentBoundaries": {
+          "provider": "Current captured-roster path already one physical Team fence; original writer/availability prelude remains outside. RuntimeTeamCaptures.assertAvailable is a map check, not a Runtime store read.",
+          "allocation": "Default createRuntimeTeamLaunch captureAuthority already shares original execution/control checks under one captured Team fence; six direct state reads/four namespace validations retained.",
+          "generic": "Factory signature also accepts Restart/live allocation callbacks that can read separate Launch-store. Currentness or Runtime callbacks must not be moved wholesale beneath Team lock."
+        },
+        "conclusion": "No additional small safe optimization proven. Allocation is larger but both leaves are material and already use one physical Team fence per callback on the original default path. Preserve upcoming publication; no blanket locking, cached facts, omitted checks, new deadlines or retry.",
+        "possibleSeparateDesign": "Reducing physical fence publications further would require an explicit trusted default-only Team-safe allocation contract with lock-order and original-observation proof. That is a separately reviewed architectural change, not justified as a local generic wrapper by these timing fields.",
+        "sourceLineEndingCheck": {
+          "timingWindowsCrLfSha256": "d792030f433318cd80151793c57559ae8a66b3128c228863804de0c779216c02",
+          "matchesOriginalArtifactSourcePin": true
+        },
+        "files": [
+          {
+            "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "5d619150e1bc507a65d2971084ea33776edb6f0944fd7d0abf7e252e2450e79e"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "51b2e2f1d685214c430b105dd777e74f8a185b1244c2acecb7b3262267fadc6b"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "98b2636d6d296cc05a7eb5eb46c966367425a0d12ff59b517fe0697dc73f7fd7"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/runtimeControlAuthority.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "89a5d0db706145a8300b49e54c9add7f17bca41579e3a65a55658a97c5e9ef53"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "9496e03c3b78466d84fa54a9854f2531cef733937c45ab174132def8f4faecf2"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "83040d2af471a9e886510cef4e1e896d8ada3009290f1cab8c648f683bf1863e"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "2e1751eeabd373b1b52432a662255d1c092f64a42a1a1eee7dcd581b8efe6c86"
+          },
+          {
+            "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "b62e758155cdbd20a4759e1d41c1e678b652d391f40185952317eccb7ebc2821"
+          },
+          {
+            "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf"
+          },
+          {
+            "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "e59a83c3f54699d2006254c52f59c7ec913ed8d450f58e866dacbf1d6105e70a"
+          },
+          {
+            "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+            "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+            "sha256": "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d"
+          }
+        ],
+        "actions": {
+          "sourceEdits": false,
+          "testsBuildsNative": false,
+          "ciQueriesDownloadsOrReruns": false,
+          "defaultMainReleaseChanges": false
+        }
+      }
+    }
+  ],
+  "qualification": "Current source ImportDesktop and nativeV2 staticWindows PASS. ActualWindowsx64 source OpenCodeA remains INCOMPLETE with final cleanuptrue; new optional timings are observations, not native readiness improvement. Queued/running/skipped/cancelled are not PASS; next source still requires original gates.",
+  "actions": {
+    "manualRerun": false,
+    "manualDispatch": false,
+    "manualCancel": false,
+    "nativeReplay": false,
+    "deadlineChange": false,
+    "testOracleRelaxation": false
+  },
+  "delivery": "SameDraft1192→1186→982 Stage1. LaterReady/parentmerge realprovider execution authorization conflict remains; currentDraftsafe work continues."
+}

@@ -9,7 +9,6 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as path from 'path';
 
 import type {
-  AppConfig,
   DisplayConfig,
   GeneralConfig,
   HttpServerConfig,
@@ -19,31 +18,14 @@ import type {
   RuntimeConfig,
   SshPersistConfig,
 } from '../services';
+import type {
+  ConfigSection,
+  ConfigUpdateValidationResult,
+  ValidationFailure,
+  ValidationSuccess,
+} from './configValidationTypes';
 import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
-
-type ConfigSection = keyof AppConfig;
-
-interface ValidationSuccess<K extends ConfigSection> {
-  valid: true;
-  section: K;
-  data: Partial<AppConfig[K]>;
-}
-
-interface ValidationFailure {
-  valid: false;
-  error: string;
-}
-
-export type ConfigUpdateValidationResult =
-  | ValidationSuccess<'notifications'>
-  | ValidationSuccess<'teamRuntimeRecovery'>
-  | ValidationSuccess<'general'>
-  | ValidationSuccess<'providerConnections'>
-  | ValidationSuccess<'runtime'>
-  | ValidationSuccess<'display'>
-  | ValidationSuccess<'httpServer'>
-  | ValidationSuccess<'ssh'>
-  | ValidationFailure;
+export type { ConfigUpdateValidationResult } from './configValidationTypes';
 
 const VALID_SECTIONS = new Set<ConfigSection>([
   'notifications',
@@ -244,11 +226,18 @@ function validateNotificationsSection(
         if (
           !isStringArray(value) ||
           value.length > NOTIFICATION_DESKTOP_ROUTABLE_EVENTS.length ||
-          value.some((event) => !(NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event))
+          value.some(
+            (event) => !(NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event)
+          )
         ) {
-          return { valid: false, error: 'notifications.desktopDisabledEvents contains unsupported events' };
+          return {
+            valid: false,
+            error: 'notifications.desktopDisabledEvents contains unsupported events',
+          };
         }
-        result.desktopDisabledEvents = [...new Set(value)] as NotificationConfig['desktopDisabledEvents'];
+        result.desktopDisabledEvents = [
+          ...new Set(value),
+        ] as NotificationConfig['desktopDisabledEvents'];
         break;
       case 'includeSubagentErrors':
         if (typeof value !== 'boolean')
@@ -474,7 +463,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
       return { valid: false, error: `general.${key} is not a valid setting` };
     }
 
-    switch (key as keyof GeneralConfig) {
+    switch (key) {
       case 'launchAtLogin':
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
@@ -501,12 +490,6 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
           };
         }
         result.defaultTab = value;
-        break;
-      case 'multimodelEnabled':
-        if (typeof value !== 'boolean') {
-          return { valid: false, error: 'general.multimodelEnabled must be a boolean' };
-        }
-        result.multimodelEnabled = value;
         break;
       case 'claudeRootPath':
         if (value === null) {
@@ -547,6 +530,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         }
         result.appLocale = value;
         break;
+      case 'multimodelEnabled':
       case 'autoExpandAIGroups':
       case 'useNativeTitleBar':
       case 'telemetryEnabled':
@@ -554,13 +538,7 @@ function validateGeneralSection(data: unknown): ValidationSuccess<'general'> | V
         if (typeof value !== 'boolean') {
           return { valid: false, error: `general.${key} must be a boolean` };
         }
-        result[
-          key as
-            | 'autoExpandAIGroups'
-            | 'useNativeTitleBar'
-            | 'telemetryEnabled'
-            | 'externalAgentCdpEnabled'
-        ] = value;
+        result[key] = value;
         break;
       default:
         return { valid: false, error: `Unsupported general key: ${key}` };
@@ -661,6 +639,7 @@ function validateProviderConnectionsSection(
         if (
           connectionKey !== 'authMode' &&
           connectionKey !== 'fastModeDefault' &&
+          connectionKey !== 'nativeNextPromptSuggestionsEnabled' &&
           connectionKey !== 'compatibleEndpoint'
         ) {
           return {
@@ -746,11 +725,11 @@ function validateProviderConnectionsSection(
         if (typeof connectionValue !== 'boolean') {
           return {
             valid: false,
-            error: 'providerConnections.anthropic.fastModeDefault must be a boolean',
+            error: `providerConnections.anthropic.${connectionKey} must be a boolean`,
           };
         }
 
-        anthropicUpdate.fastModeDefault = connectionValue;
+        anthropicUpdate[connectionKey] = connectionValue;
       }
 
       result.anthropic = anthropicUpdate as ProviderConnectionsConfig['anthropic'];
@@ -761,6 +740,17 @@ function validateProviderConnectionsSection(
 
     for (const [connectionKey, connectionValue] of Object.entries(value)) {
       if (connectionKey === 'apiKeyBetaEnabled' || connectionKey === 'authMode') {
+        continue;
+      }
+
+      if (connectionKey === 'nativeNextPromptSuggestionsEnabled') {
+        if (typeof connectionValue !== 'boolean') {
+          return {
+            valid: false,
+            error: 'providerConnections.codex.nativeNextPromptSuggestionsEnabled must be a boolean',
+          };
+        }
+        codexUpdate.nativeNextPromptSuggestionsEnabled = connectionValue;
         continue;
       }
 

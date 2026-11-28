@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "kind": "resume-numeric-observation-candidate-adoption",
+  "reviewer": "/root/pr_graph",
+  "observedAt": "2026-11-19T10:55:36.137227+00:00",
+  "sourceHead": "9ec6cb6f567af14233965a77c4c4a043adc29487",
+  "savedCandidateSourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "status": "READY_SCOPED_DIAGNOSTIC_ONLY",
+  "allCurrentPreimagesExact": true,
+  "allCandidatePostimagesExact": true,
+  "unchangedOriginalSupportInputsExact": true,
+  "publishExactlyTheseFivePaths": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "kind": "modified",
+      "production": true,
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 45897,
+        "sha256": "e84a189178a440aa57137ce2213a425d4b2231d78f708afe07501b9ba121d85d",
+        "gitBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+        "physicalLines": 782
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/candidate/scripts/legacy-agent-host/desktop-ui-controls.ts",
+        "bytes": 42988,
+        "sha256": "b14b8f86f144607cf75acc72eb6bed73874721b60fdee66245e296ddfdd83c0c",
+        "gitBlob": "ba0ef6adf0445a3a899b4ac4d2bce484c6c92475",
+        "physicalLines": 728
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+      "kind": "modified",
+      "production": true,
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/source/scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+        "bytes": 49152,
+        "sha256": "4c7104ea0b16cda7d634dfd54977d46bf683dd5f28756946e8d9ef464837e9ee",
+        "gitBlob": "6f780f9172fc9a6a96ca9e6ece2f068c41d17b32",
+        "physicalLines": 736
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/candidate/scripts/legacy-agent-host/desktop-launch-ui-smoke.ts",
+        "bytes": 49588,
+        "sha256": "046c4ab88d611679be141b205477f8ece83b1274c7b2541a2592176bc1439f74",
+        "gitBlob": "821682c100a2bd352f0814de7db12add6ff6ebfd",
+        "physicalLines": 740
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "kind": "modified",
+      "production": true,
+      "before": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/source/scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "bytes": 52174,
+        "sha256": "abc04da58e87a7ebc6e4f1a26925096ba2a4f54e299f0e549029627345d1d43c",
+        "gitBlob": "f5779600a7d38ae104b9ade8a261bf9342a634e7",
+        "physicalLines": 794
+      },
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/candidate/scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "bytes": 52236,
+        "sha256": "ddf65ed153d61237a81b06ad88ad111d3e7a632a4c7e53b07e91a84f0c028191",
+        "gitBlob": "c67235f1df8d65c5b50a9e2a3f9c2f7e87eb0143",
+        "physicalLines": 795
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-read-observation.ts",
+      "kind": "added",
+      "production": true,
+      "before": null,
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/candidate/scripts/legacy-agent-host/desktop-ui-read-observation.ts",
+        "bytes": 11058,
+        "sha256": "a0e398f94b67ed797172cedcfbe9016da6f005be65b3ed8da97aa6bf7ec99468",
+        "gitBlob": "0d946bb6e6014e19af0d2b71e9c5ff9b63eafbae",
+        "physicalLines": 236
+      }
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-read-observation.test.ts",
+      "kind": "added",
+      "production": false,
+      "before": null,
+      "after": {
+        "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/candidate/scripts/legacy-agent-host/desktop-ui-read-observation.test.ts",
+        "bytes": 12079,
+        "sha256": "05a768105ccbb31eb6e64acde5e7113c61b6d959bcb1e24937b8c539a3acf6f9",
+        "gitBlob": "8a9931bb246b7cdbbbcefe457c806b2777e90f78",
+        "physicalLines": 216
+      }
+    }
+  ],
+  "savedValidation": {
+    "existingControlsBefore": [
+      52,
+      52
+    ],
+    "existingControlsAfter": [
+      52,
+      52
+    ],
+    "optInTests": [
+      8,
+      8
+    ],
+    "focusedTypecheckExitCode": 0,
+    "rerun": false
+  },
+  "review": {
+    "readLoopAfterRemovingSynchronousNumericHooksByteIdentical": true,
+    "waitReadAwaitsBeforeAfter": [
+      3,
+      3
+    ],
+    "waitReadDateNowBeforeAfter": [
+      2,
+      2
+    ],
+    "noExtraOwnerDomInputAwaitRetryCutoff": true,
+    "collectorOnlyOriginalOpenCodeNativeResumeOpenTeamAndOpenLaunch": true,
+    "absentCollectorInert": true,
+    "noRawValuesLabelsSelectorsErrorsCaptured": true,
+    "fixedActions": 2,
+    "fixedReadPhases": 6,
+    "fixedSpans": 22,
+    "counterCap": 4096,
+    "maxCompactDtoBytes": 6071,
+    "maxPrettyDtoBytes": 9259,
+    "originalOperationErrorsPreserved": true,
+    "newHelperSourcePinned": true,
+    "nativeResumeAcceptance": "INCOMPLETE; no new E2E claim"
+  },
+  "evidence": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/r2-native-review.json",
+      "bytes": 7978,
+      "sha256": "663f305f49feea7af840b5ccdd4ca985ea3fe1cc711cd3b0cfe0c5bf30e83535"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/static-loop-audit.json",
+      "bytes": 348,
+      "sha256": "6cb1c35ec247d41fccb74c8e1d34f17ca10a14df04fe266c46823e00a0ce11f5"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/static-schema-audit.json",
+      "bytes": 1209,
+      "sha256": "21ab1f5b71e5b68a660717916a4d2c8441d1d3f4aed4d0ad923fdbd83debf25e"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/controls-invariants-before.log",
+      "bytes": 11794,
+      "sha256": "2cc38655493ebc39dca87475f7bee952644d595efa720b303db220c3c6c77fe4"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/controls-invariants-after.log",
+      "bytes": 11791,
+      "sha256": "ca376b589eea517febb9d022bc161054eed11bd40a077a1b6bd111a552c5c9eb"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/opt-in-tests.log",
+      "bytes": 917,
+      "sha256": "5044180f13bfcfda042dbbc08e5cd1a98ed08c2e1cf9f90ec4f7fffbbc77a39f"
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/resume-numeric-timing-42-candidate/typecheck.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "durableVerification": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/recovered-resume-42a4-verification.tar.gz",
+    "bytes": 14053,
+    "sha256": "4e90c927a56bf4838088f8e26934c650e77fe488e8358c9973e72d7a0bfe1721",
+    "contents": [
+      {
+        "path": "controls-invariants-after.log",
+        "bytes": 11791,
+        "sha256": "ca376b589eea517febb9d022bc161054eed11bd40a077a1b6bd111a552c5c9eb"
+      },
+      {
+        "path": "controls-invariants-before.log",
+        "bytes": 11794,
+        "sha256": "2cc38655493ebc39dca87475f7bee952644d595efa720b303db220c3c6c77fe4"
+      },
+      {
+        "path": "controls-invariants-runs.json",
+        "bytes": 1215,
+        "sha256": "50f357314757c9b9b130d23085ad3fdaf271bbf3cf8c40fa9930093cf0b4caf6"
+      },
+      {
+        "path": "manifest-pin.json",
+        "bytes": 276,
+        "sha256": "0239a05ff7e22f2d14cd053f51795e86b80b9b5cb52dceaf834a3829f9c869fa"
+      },
+      {
+        "path": "manifest.json",
+        "bytes": 17273,
+        "sha256": "045d4f0488a1358c730b78e5588d156d727e748da2fed0fa815255a48032ad62"
+      },
+      {
+        "path": "opt-in-initial-fixture-expectations-opt-in-tests-run.json",
+        "bytes": 540,
+        "sha256": "3f0c0b88dc9ece6a8f5c0ee6a1c603b221f90d47d46611ddeda988225d3dac11"
+      },
+      {
+        "path": "opt-in-initial-fixture-expectations-opt-in-tests.log",
+        "bytes": 3822,
+        "sha256": "3f7eeb187b655e744205c7ad2095d3033b3e8a83e612ef6d07af64620674b625"
+      },
+      {
+        "path": "opt-in-tests-run.json",
+        "bytes": 540,
+        "sha256": "2efa560585dce20ff07787920081673719e70cf7fd25825fce64b38fcf998287"
+      },
+      {
+        "path": "opt-in-tests.log",
+        "bytes": 917,
+        "sha256": "5044180f13bfcfda042dbbc08e5cd1a98ed08c2e1cf9f90ec4f7fffbbc77a39f"
+      },
+      {
+        "path": "original-source-pins.json",
+        "bytes": 3125,
+        "sha256": "b4354968f03d683992f69b4e8eff3dc03ed42b77aa3e41f6ce962b81810f8839"
+      },
+      {
+        "path": "r2-native-review.json",
+        "bytes": 7978,
+        "sha256": "663f305f49feea7af840b5ccdd4ca985ea3fe1cc711cd3b0cfe0c5bf30e83535"
+      },
+      {
+        "path": "static-loop-audit.json",
+        "bytes": 348,
+        "sha256": "6cb1c35ec247d41fccb74c8e1d34f17ca10a14df04fe266c46823e00a0ce11f5"
+      },
+      {
+        "path": "static-schema-audit.json",
+        "bytes": 1209,
+        "sha256": "21ab1f5b71e5b68a660717916a4d2c8441d1d3f4aed4d0ad923fdbd83debf25e"
+      },
+      {
+        "path": "static-schema-audit.mjs",
+        "bytes": 4326,
+        "sha256": "8f1b719f31a8ec53a6cff7ab12e7d6aaeb5bcbcda33c0c65bffad8a9b415cfc0"
+      },
+      {
+        "path": "typecheck-run.json",
+        "bytes": 835,
+        "sha256": "96118c90202a0820e063e4e389a417c494226d8e049e0ff8130484fb453f85c5"
+      },
+      {
+        "path": "typecheck.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "candidate/tsconfig.focused.json",
+        "bytes": 426,
+        "sha256": "041d579ac92438b3403cf37b7cfba4f83f4947db62601e1a1a1a3eae1349c846"
+      }
+    ],
+    "productionSourcesDuplicated": false,
+    "originalCandidatePatchOmittedBecauseItsFiveExactPostimagesArePublished": true
+  }
+}

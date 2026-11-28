@@ -15,4 +15,3 @@ export interface TeamWorktreeGitStatus {
   reason?: TeamWorktreeGitBlockReason;
   message?: string;
 }
-

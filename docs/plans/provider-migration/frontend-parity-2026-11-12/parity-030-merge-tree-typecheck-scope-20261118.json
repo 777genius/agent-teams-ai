@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "kind": "original-030-merge-tree-equivalence-and-scoped-typecheck",
+  "reviewer": "root",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "mergeCheckout": "e1cd736dc055035c6cbb39ca1476fa6f36b50ee8",
+  "mergeParents": [
+    "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+    "030b21f0765d1a6e6572f46d262c672d63e69eb7"
+  ],
+  "headTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "mergeTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "exactGitTreeEquality": true,
+  "equalitySource": "Root independently fetched immutable Git commit object, not inferred from pull_request metadata.",
+  "jobId": 135167668346,
+  "originalLog": {
+    "bytes": 55501,
+    "sha256": "965cc87150ff336f0b31583dad525354e5e8208214f24594bcafc810952cdde6",
+    "endpointRetired": true
+  },
+  "terminalMetadataAndLogProof": {
+    "blob": "f102c3d9b482558fb32f9d9a8825279dae7e3c4c",
+    "sha256": "f6c7cde724e1938ec7ae9610a3da7d1d72242ac1a46bed326cb693a499ea8c27"
+  },
+  "actualNode": "v26.12.1",
+  "actualPnpm": "11.22.0",
+  "engineCaveat": "Original log explicitly warns wanted Node>=24.21.0 <25. This historical executed check does not qualify the supported Node24 runtime.",
+  "typecheck": {
+    "invoked": "pnpm typecheck",
+    "prerequisites": "Actual legacy-agent-host/task-change-ledger builds passed before noEmit sequence.",
+    "noEmitConfigurations": [
+      "tsconfig.json",
+      "scripts/tsconfig/tsconfig.updater-e2e.json",
+      "scripts/tsconfig/tsconfig.release-tooling.json",
+      "scripts/tsconfig/tsconfig.sentry-e2e.json",
+      "scripts/tsconfig/tsconfig.sentry-sdk-e2e.json",
+      "scripts/tsconfig/tsconfig.sentry-sdk-preload.json",
+      "scripts/tsconfig/tsconfig.sentry-sdk-renderer.json",
+      "scripts/tsconfig/tsconfig.desktop-e2e.json"
+    ],
+    "completeCommand": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json",
+    "status": "PASS for these eight actual configurations"
+  },
+  "scopedLint": {
+    "paths": "scripts/e2e/release-updater/linux-packages*.mts",
+    "errors": 0,
+    "warnings": 72,
+    "fullTypedFeatureLint": false
+  },
+  "finiteNodeTests": {
+    "pass": 25,
+    "fail": 0,
+    "skipped": 0
+  },
+  "limits": [
+    "Retain actual merge checkout and Node26 provenance; exact tree equality only binds source content.",
+    "This is not canonical12 workspace invocations, the additional feature tsc, or full typed lint.",
+    "No local rerun/build/app/provider execution."
+  ]
+}

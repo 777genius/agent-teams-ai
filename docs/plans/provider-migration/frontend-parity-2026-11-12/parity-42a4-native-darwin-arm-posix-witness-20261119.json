@@ -1,0 +1,706 @@
+{
+  "schemaVersion": 1,
+  "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "runId": 44434982357,
+  "jobId": 135261468687,
+  "runAttempt": 1,
+  "jobConclusion": "failure",
+  "capturedAt": "2026-11-19T01:57:33.784584+00:00",
+  "classification": "Original Darwin ARM embedded Host and custody receipts PASS; subsequent POSIX pre-user executable witness mutation assertions remain INCOMPLETE and fail the overall job. No driver-close failure is attributed.",
+  "job": {
+    "id": 135261468687,
+    "run_id": 44434982357,
+    "workflow_name": "OpenCode V2 Stage1 static preflight (TEST only)",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44434982357",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAffjY4Dw",
+    "head_sha": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135261468687",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982357/job/135261468687",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-19T01:11:27Z",
+    "started_at": "2026-11-19T01:48:06Z",
+    "completed_at": "2026-11-19T01:52:33Z",
+    "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-19T01:48:07Z",
+        "completed_at": "2026-11-19T01:48:08Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 2,
+        "started_at": "2026-11-19T01:48:08Z",
+        "completed_at": "2026-11-19T01:48:08Z"
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-19T01:48:08Z",
+        "completed_at": "2026-11-19T01:48:20Z"
+      },
+      {
+        "name": "Require immutable source HEAD and record actual runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-19T01:48:20Z",
+        "completed_at": "2026-11-19T01:48:20Z"
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-19T01:48:20Z",
+        "completed_at": "2026-11-19T01:48:26Z"
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-19T01:48:26Z",
+        "completed_at": "2026-11-19T01:49:08Z"
+      },
+      {
+        "name": "Install exact source workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-19T01:49:08Z",
+        "completed_at": "2026-11-19T01:50:10Z"
+      },
+      {
+        "name": "Build original Host and its pinned provider implementation",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-19T01:50:10Z",
+        "completed_at": "2026-11-19T01:50:15Z"
+      },
+      {
+        "name": "Check original graph and custody boundaries",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-19T01:50:15Z",
+        "completed_at": "2026-11-19T01:50:22Z"
+      },
+      {
+        "name": "Stage checksum-pinned base archive without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-19T01:50:22Z",
+        "completed_at": "2026-11-19T01:50:26Z"
+      },
+      {
+        "name": "Prepare exact Bun, engine graph and original-process artifact",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11,
+        "started_at": "2026-11-19T01:50:26Z",
+        "completed_at": "2026-11-19T01:50:51Z"
+      },
+      {
+        "name": "Prove actual Darwin executable custody and adversarial cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-19T01:50:51Z",
+        "completed_at": "2026-11-19T01:50:57Z"
+      },
+      {
+        "name": "Require complete Darwin evidence for this exact candidate or product tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13,
+        "started_at": "2026-11-19T01:50:57Z",
+        "completed_at": "2026-11-19T01:50:57Z"
+      },
+      {
+        "name": "Prove original Windows Job custody and surviving descendant cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-19T01:50:57Z",
+        "completed_at": "2026-11-19T01:50:57Z"
+      },
+      {
+        "name": "Require exact Windows original-process evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-19T01:50:57Z",
+        "completed_at": "2026-11-19T01:50:57Z"
+      },
+      {
+        "name": "Check original Desktop private recipe composition",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-19T01:50:57Z",
+        "completed_at": "2026-11-19T01:51:07Z"
+      },
+      {
+        "name": "Exercise native model, tool, MCP, approval, Stop and cold Host Resume",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-19T01:51:07Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Exercise Windows automatic approval and cold Host Resume",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Exercise native catalog and model probe without tool allocation",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Exercise native key connection, saved-key reuse and cold original-intent recovery",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Exercise effective permissions and active Stop with a surviving sibling",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Exercise captured external MCP and app-only through the native Host",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Require complete native management and permission evidence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:21Z"
+      },
+      {
+        "name": "Require product-path Host proof after exact candidate qualification",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-19T01:52:21Z",
+        "completed_at": "2026-11-19T01:52:22Z"
+      },
+      {
+        "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 25,
+        "started_at": "2026-11-19T01:52:22Z",
+        "completed_at": "2026-11-19T01:52:24Z"
+      },
+      {
+        "name": "Preserve exact native evidence or candidate HOLD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26,
+        "started_at": "2026-11-19T01:52:24Z",
+        "completed_at": "2026-11-19T01:52:26Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 50,
+        "started_at": "2026-11-19T01:52:26Z",
+        "completed_at": "2026-11-19T01:52:26Z"
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 51,
+        "started_at": "2026-11-19T01:52:26Z",
+        "completed_at": "2026-11-19T01:52:26Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 52,
+        "started_at": "2026-11-19T01:52:26Z",
+        "completed_at": "2026-11-19T01:52:27Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 53,
+        "started_at": "2026-11-19T01:52:27Z",
+        "completed_at": "2026-11-19T01:52:29Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135261468687",
+    "labels": [
+      "macos-15"
+    ],
+    "runner_id": 1000396094,
+    "runner_name": "GitHub Actions 1000396094",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "failedSteps": [
+    {
+      "name": "Observe POSIX original-path exec and explicit mutation counterexamples",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 25,
+      "started_at": "2026-11-19T01:52:22Z",
+      "completed_at": "2026-11-19T01:52:24Z"
+    }
+  ],
+  "canonicalJobsPage": {
+    "path": "ci-current-42a4/poll-17-jobs.json",
+    "bytes": 107756,
+    "sha256": "cc0f487479f84af798d3fbbddcd01dbfca883d16e463b25b3d70d800c1ac3652",
+    "gitBlobComputed": "2af281876f52e71e7405ae32230a2372d1aeec0c"
+  },
+  "originalJobLog": {
+    "path": "ci-current-42a4/job-135261468687-terminal.log",
+    "bytes": 108117,
+    "sha256": "88662b0abdad435ca2d1bb923eea9e9b209d4f339ef24542d04018b2f5a53957",
+    "gitBlobComputed": "b9f6fa5531c2ceb0d8996a5cae976de7a1d98310"
+  },
+  "failureAndJourneyExcerpts": [
+    {
+      "line": 981,
+      "text": "2026-11-19T01:52:21.8614650Z ✔ embedded 2.1.4 performs native tools, MCP, once approval and cold Host Resume without replay (73934.564292ms)"
+    },
+    {
+      "line": 1083,
+      "text": "2026-11-19T01:52:24.4097070Z {\"kind\":\"TEST_POSIX_MUTATION_FAILURE\",\"case\":\"adhoc-test-only:after-check\",\"stage\":\"exit\",\"errno\":0,\"execErrno\":0,\"stoppedBeforeUser\":true,\"payloadMarkersAbsentBeforeGate\":true,\"kernelImageObserved\":true,\"imageMatched\":true,\"resumed\":true,\"mutationAfterCheckErrno\":0,\"codeSigningFlags\":570425345,\"codeSigningError\":0,\"exitCode\":0,\"exitSignal\":0,\"originalReaped\":true,\"originalGroupAbsent\":true,\"cleanup\":true,\"markers\":{\"count\":3,\"library\":true,\"constructorA\":true,\"constructorB\":false,\"mainA\":true,\"mainB\":false}}"
+    },
+    {
+      "line": 1084,
+      "text": "2026-11-19T01:52:24.4843450Z {\"kind\":\"TEST_POSIX_MUTATION_FAILURE\",\"case\":\"adhoc-test-only:writer-open\",\"stage\":\"exit\",\"errno\":0,\"execErrno\":0,\"stoppedBeforeUser\":true,\"payloadMarkersAbsentBeforeGate\":true,\"kernelImageObserved\":true,\"imageMatched\":true,\"resumed\":true,\"mutationAfterCheckErrno\":0,\"codeSigningFlags\":570425345,\"codeSigningError\":0,\"exitCode\":0,\"exitSignal\":0,\"originalReaped\":true,\"originalGroupAbsent\":true,\"cleanup\":true,\"markers\":{\"count\":3,\"library\":true,\"constructorA\":true,\"constructorB\":false,\"mainA\":true,\"mainB\":false}}"
+    },
+    {
+      "line": 1099,
+      "text": "2026-11-19T01:52:24.8655310Z   AssertionError [ERR_ASSERTION]: no selected library or payload constructor may run after byte mutation"
+    },
+    {
+      "line": 1105,
+      "text": "2026-11-19T01:52:24.8657720Z       at TestContext.<anonymous> (file:///Users/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/tests/registered-process-executable.native.ts:496:24)"
+    }
+  ],
+  "artifact": {
+    "path": "ci-current-42a4/artifact-14490956505.zip",
+    "bytes": 11061,
+    "sha256": "32c6187fac486be2313b5184089c7b08685d3601eb207cdc050d0437f2f454e7",
+    "gitBlobComputed": "211d33cbd81b5163164c8165142108dcbe54f659"
+  },
+  "artifactId": 14490956505,
+  "artifactInventory": {
+    "path": "ci-current-42a4/artifact-14490956505-inventory.json",
+    "bytes": 2443,
+    "sha256": "d7330adbf8ceeb87e3b90b7230031a9d7a34965a4b67eb432f0d2f5b3210a1a2",
+    "gitBlobComputed": "963b4bf70120348de2911eff9e3f11a8e83fa553"
+  },
+  "embeddedHost": {
+    "receipt": {
+      "path": "ci-current-42a4/artifact-14490956505/opencode-v2-embedded-host.json",
+      "bytes": 96419,
+      "sha256": "5d7657525f1965784e509bc6edaf5a6e94dd521e8d22783778afc8396acf659b",
+      "gitBlobComputed": "96dce499ed59e239c31feb315957c7fcdbd10a42"
+    },
+    "projection": {
+      "status": "PASS",
+      "cleanup": true,
+      "hosts": [
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        },
+        {
+          "exitCode": 0,
+          "signalCode": null,
+          "stdoutValid": true
+        }
+      ],
+      "steps": [
+        "original_host_embedded_native_and_mcp_ready",
+        "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+        "changed_project_config_did_not_retarget_running_native_session",
+        "original_uploaded_PNG_native_image_inference_and_public_readback",
+        "all_image_MIMEs_exact_PDF_and_4MiB_PNG_native_normalization_and_public_readback",
+        "checkpoint_and_original_host_native_cleanup_confirmed",
+        "cold_host_restored_native_history_without_model_or_tool_replay"
+      ],
+      "failureCode": null,
+      "approvalMode": "manual",
+      "modelRequests": 11,
+      "modelFailures": [],
+      "modelSelection": {
+        "providerId": "TEST-local",
+        "modelId": "TEST-model-B",
+        "variant": "high"
+      },
+      "configurationSelection": {
+        "scope": "project",
+        "original": "project-A",
+        "later": "project-B"
+      },
+      "preferencesSelection": {
+        "nativeDefault": "TEST-local/TEST-model",
+        "appDefault": "TEST-local/TEST-model-B"
+      },
+      "digests": {
+        "bun": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+        "manifest": "a6091937d1c8686b7e1f125b2ef69c52146867b208517eb0fab4cb7ea18c2204",
+        "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "hostSource": "d606b96c26666f68e2bb861dcd62eeaed1608191a35253958ca4b01d0e79f49e",
+        "hostDist": "0147ae16ef6b984234f3be6a0b3a4600e933956d871087ce58a83e9fd9ce7aa7",
+        "provider": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7"
+      },
+      "elapsedMs": 73932,
+      "coordination": {
+        "status": "unqualified",
+        "cleanup": null
+      },
+      "vendorAuthQualified": false,
+      "desktopQualified": false,
+      "releaseQualified": false
+    }
+  },
+  "darwinCustody": {
+    "receipt": {
+      "path": "ci-current-42a4/artifact-14490956505/opencode-v2-darwin-custody.json",
+      "bytes": 1442,
+      "sha256": "14d2b891fcc6f1275b9ffc9018ae358538f5b1628be6ab858dce9ad1d926186e",
+      "gitBlobComputed": "788d97fc4b7b99850be17480a472527c5a18fd46"
+    },
+    "projection": {
+      "kind": "TEST_DARWIN_CUSTODY_PRODUCT_PATH",
+      "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "platform": "darwin",
+      "arch": "arm64",
+      "osBuild": "24H232",
+      "hostBuild": {
+        "hostSourceDigest": "d606b96c26666f68e2bb861dcd62eeaed1608191a35253958ca4b01d0e79f49e",
+        "hostDistDigest": "0147ae16ef6b984234f3be6a0b3a4600e933956d871087ce58a83e9fd9ce7aa7",
+        "providerDigest": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7"
+      },
+      "productQualified": false,
+      "bunSha256": "0a2237cdcfa0d16ef501d9acca9f0026309ef348bea7393a64e8d1e3609565cc",
+      "processArtifactManifestSha256": "89b0baf9c4fb0a9b408824ebd6936a756846b4072a02097d9460b3ea4fca0c55",
+      "replacementRefused": true,
+      "siblingSurvivedTargetStop": true,
+      "cleanup": "confirmed",
+      "status": "PASS"
+    }
+  },
+  "posixWitness": {
+    "receipt": {
+      "path": "ci-current-42a4/artifact-14490956505/opencode-v2-posix-exec.json",
+      "bytes": 14566,
+      "sha256": "769abf68bb5f18d2fbcf241809f8ed7c4800d8a3cccd960478535b2b7470b6d4",
+      "gitBlobComputed": "3c523c1f926cd3e6d26af27e58588cd868029be4"
+    },
+    "projection": {
+      "kind": "TEST_POSIX_PRE_USER_EXEC_IMAGE",
+      "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "sourceSha256": "085eeb378d9b500490300dcf1c595bf13e7979c1218f2f37f4ba6e18787441e9",
+      "platform": "darwin",
+      "arch": "arm64",
+      "nodeVersion": "v24.21.0",
+      "osBuild": "24H232",
+      "tools": {
+        "compiler": "8291fbbbaa75761bb649970a16af2ef84b4afd5da0bc133f4d8915f0f2f63e98",
+        "hashTool": "0812595f981a26f813d98dc380af14d4af427626c9339eda29eb849ae13de1e3",
+        "node": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b"
+      },
+      "productQualified": false,
+      "installedRuntimeQualified": false,
+      "customExecutableQualified": false,
+      "scriptQualified": false,
+      "cleanup": true,
+      "nativeFixtureQualified": false,
+      "status": "INCOMPLETE"
+    },
+    "observations": [
+      {
+        "label": "compiler-default:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      {
+        "label": "compiler-default:baseline",
+        "result": "PASS",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570556417,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      {
+        "label": "adhoc-test-only:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      {
+        "label": "adhoc-test-only:baseline",
+        "result": "PASS",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      {
+        "label": "adhoc-test-only:rename",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": []
+      },
+      {
+        "label": "adhoc-test-only:inplace",
+        "result": "PASS",
+        "stage": "rejected-image",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": false,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "exitCode": -1,
+        "exitSignal": 9,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": []
+      },
+      {
+        "label": "adhoc-test-only:after-check",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      {
+        "label": "adhoc-test-only:writer-open",
+        "result": "INCOMPLETE",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": true,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 570425345,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "LIB",
+          "BIN:A",
+          "MAIN:A"
+        ]
+      },
+      {
+        "label": "script:plain",
+        "result": "PASS",
+        "stage": "plain-exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": false,
+        "payloadMarkersAbsentBeforeGate": false,
+        "kernelImageObserved": false,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": -1,
+        "codeSigningFlags": 0,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:A"
+        ]
+      },
+      {
+        "label": "script:script-negative",
+        "result": "COUNTEREXAMPLE",
+        "stage": "exit",
+        "errno": 0,
+        "execErrno": 0,
+        "stoppedBeforeUser": true,
+        "payloadMarkersAbsentBeforeGate": true,
+        "kernelImageObserved": true,
+        "imageMatched": false,
+        "resumed": true,
+        "mutationAfterCheckErrno": 0,
+        "codeSigningFlags": 637601793,
+        "codeSigningError": 0,
+        "exitCode": 0,
+        "exitSignal": 0,
+        "originalReaped": true,
+        "originalGroupAbsent": true,
+        "cleanup": true,
+        "markerLines": [
+          "SCRIPT:B"
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "Overall original job remains FAILURE; the earlier embedded journey and custody PASS do not qualify the later POSIX witness.",
+    "Original mutation rows record a successful byte mutation plus resumed original payload markers; they remain INCOMPLETE even though original image matched before mutation and cleanup succeeded.",
+    "POSIX cleanup=true means recorded children reaped/groups absent, not proof of executable identity or mutation prevention.",
+    "All product/installed-runtime/custom-executable/script/native-fixture qualification flags in the POSIX receipt remain false; no P09 contract choice or source/budget/guard weakening is proposed.",
+    "No native driver-close failure or safe corrective mechanism is inferred from diagnostic absence.",
+    "No local native/app/build/install or repeated retired endpoint access."
+  ]
+}

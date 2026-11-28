@@ -1,0 +1,30 @@
+{
+  "kind": "original-2cb-terminal-addendum-file-manifest",
+  "sourceHead": "2cb0c0a92c954ab04d081b7a5672270d7484f4a7",
+  "parentCheckpoint": {
+    "path": "completed-audits-checkpoint-20261115-2035.json",
+    "gitBlob": "ed136bd0bfcdc556abdf1a7208821c0389ecea03",
+    "sha256": "b490da1a17fce69eac30158acc2781b8de3b0da2d0f40d044e8f2e5bb088b63d"
+  },
+  "files": [
+    {
+      "path": "jobs-snapshot-20261115-2038-terminal.json",
+      "bytes": 189604,
+      "sha256": "bc2265b85e171ece020f9ceafb345541ae93b77a2507da34197c7f8c319a0401",
+      "gitBlob": "add68242c276967fc7e3f60d8d1d83880b07c48d"
+    },
+    {
+      "path": "plan29-2cb-terminal-disposition-appendix.md",
+      "bytes": 3313,
+      "sha256": "cb178b45b1df663fac71376734de03dcba727cef747289729288947d4b3b3b79",
+      "gitBlob": "a33b2bf1258fbb4c93403c95ea33b450df643403"
+    }
+  ],
+  "fileCount": 2,
+  "totalBytes": 192917,
+  "limits": [
+    "Evidence-only terminal jobs snapshot and prose; no newly qualified native scenario.",
+    "General workflow excluded; Creation status is separately timestamped.",
+    "The earlier checkpoint remains unchanged."
+  ]
+}

@@ -40,5 +40,10 @@ export function memberSettingsTargetToMember(target: MemberSettingsTarget): Reso
     selectedFastMode: fastMode,
     mcpPolicy: settings.mcpPolicy ?? undefined,
     configuredRuntimeSettings: { providerId, providerBackendId, model, effort, fastMode },
+    ...(target.configuredSettingsFingerprint === undefined
+      ? {}
+      : {
+          configuredSettingsFingerprint: target.configuredSettingsFingerprint,
+        }),
   };
 }

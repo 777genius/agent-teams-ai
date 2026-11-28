@@ -1,0 +1,83 @@
+{
+  "kind": "N608 original HTTP discovery recoverable author packet",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234721,
+  "jobId": 133062438856,
+  "artifactId": 14197046657,
+  "result": "success",
+  "payloadCount": 10,
+  "payloadBytes": 294312,
+  "payloads": [
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/job-133062438856.log",
+      "bytes": 74401,
+      "blob": "5da07bc32f31201dd69b2719f6a1e84ed7e30895",
+      "sha256": "77b98faad35766a9d7d2cd018fe625c2b35018ae6ff6259c5a14a8ff56247fa5"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/httpLog-original-response.json",
+      "bytes": 76191,
+      "blob": "4a41e3363705112e9da434f6f64ae284f6208167",
+      "sha256": "e66b23b06b23324aa2d35e051368d0a0eeb9294b989cea92b17ffff6e587f0e5"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/artifact-14197046657.zip",
+      "bytes": 874,
+      "blob": "2f0e418c73873c15659dcc3138f0d9868d426821",
+      "sha256": "56495f2b66647e2e9bfdfb538260e7b700086842c803427ee566d1e1d294b2ef"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/archive-14197046657-retention.json",
+      "bytes": 1473,
+      "blob": "9bd2bcd9b43ff1008b209b088fb04c84844dd189",
+      "sha256": "00dd6f87ba89605f51c7f5804be5da5071a4861b9fa3b1c02b0085a82557a90d"
+    },
+    {
+      "path": "native-audit-N608efb/new-terminal-0413/v2Artifacts-original-response.json",
+      "bytes": 5853,
+      "blob": "53550ed4522464e3ccf84d45a643b22540e93e9b",
+      "sha256": "dc45d647ab7bc278680061e2bedcb6d6b94fdcc2e24fffa1ee37cb13e2efd6e0"
+    },
+    {
+      "path": "ci-n-608efb/v2-jobs-0413.json",
+      "bytes": 46992,
+      "blob": "edffef5ea961b05e9abacff05c45fca2d9ef87ae",
+      "sha256": "3d6ac715cec8575e1d8a4c1390e8a19ff9a598f053603982bbe580415ff896d2"
+    },
+    {
+      "path": "ci-n-608efb/v2-original-run-0258.json",
+      "bytes": 30144,
+      "blob": "8087402aa25d3eb6d5a4a72d1771cb7843366b76",
+      "sha256": "2cd2b012a3155fb0a798f2b8badb7c6a033dd17407ddb71433fd979a149975c1"
+    },
+    {
+      "path": "native-audit-N608efb/http-discovery/source-audit.json",
+      "bytes": 5831,
+      "blob": "9fd9ec021600d3192b7c9bf0ab9620c1516e2a13",
+      "sha256": "d9c71bad8de37cea3d9eeaa827d5c7c490039238050e34c921bef87acb7240c1"
+    },
+    {
+      "path": "native-audit-N608efb/http-discovery/audit.json",
+      "bytes": 49098,
+      "blob": "e5844f9f543aae5cffac0464bb3d9ee57004d1a7",
+      "sha256": "710520d6ab019c7bab859f36bc35b4641b4e98eed97430c91e05a11a209e4e90"
+    },
+    {
+      "path": "native-audit-N608efb/http-discovery/Plan29-http-discovery-appendix.md",
+      "bytes": 3455,
+      "blob": "634b80a9c31dcc580cd2bb1b7b147b9710d1707e",
+      "sha256": "f129b03f66c26e2168630f0ee3d25e28c316506055178d543542309aac0225cd"
+    }
+  ],
+  "archiveMemberCount": 1,
+  "member": {
+    "path": "opencode-v2-http-persist.json",
+    "bytes": 1851,
+    "blob": "cbd01bbc6aa7bf374cbde0be593190c4cb7a0ce7",
+    "sha256": "76d2b3758a5fc5d713ca0c5783184f26bc44f2d850f3546018d8a5275d4f1397",
+    "crc32": "d8845e20"
+  },
+  "allOriginalRetainedFilesUnchanged": true,
+  "transientDownloadUrlAbsent": true,
+  "independentReviewPending": true
+}

@@ -26,6 +26,19 @@ on:
       ]
   merge_group:
   workflow_dispatch:
+    inputs:
+      stage1_desktop:
+        description: Run existing Stage 1 source Desktop controls with isolated localhost fixtures
+        type: boolean
+        default: false
+      stage1_process_diagnostic:
+        description: Record an unqualified current macOS tuple diagnostic with one owned finite Node child
+        type: boolean
+        default: false
+      stage1_process_qualification:
+        description: Run fresh TEST kernel ancestry, normal SDK Stop and unsigned packed Launch on the exact prospective tuple
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -94,7 +107,7 @@ jobs:
           cache: pnpm
       # Force exit: a broken gate wait loop must fail this step, not hang it.
       - name: Test feedback policy
-        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts
+        run: node --test --test-force-exit test/scripts/ciFeedback*.test.mts test/scripts/ciChangeScope*.test.mts test/scripts/installDependenciesWithRetry.test.mjs
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Guard runtime artifacts
@@ -157,15 +170,19 @@ jobs:
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
       - name: Rebuild test SQLite native module for Node
+        id: native-test-sqlite
         run: node ./scripts/ci/rebuild-better-sqlite3-node.cjs
 
       - name: Audit dependencies
         run: node ./scripts/ci/audit-dependencies.mjs
 
+      # Independent gates share successful setup; every failure still fails this job.
       - name: Verify release download transport protocol
+        if: ${{ !cancelled() && steps.native-test-sqlite.outcome == 'success' }}
         run: node --test scripts/e2e/release-updater/github-download.test.mts
 
       - name: Validate workspace truth gate
+        if: ${{ !cancelled() && steps.native-test-sqlite.outcome == 'success' }}
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm validate:ci
@@ -191,6 +208,14 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+
+      - name: Setup captured Host Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+
+      - name: Capture exact Host test runtime
+        run: echo "AGENT_BACKEND_TEST_NODE=$(node -p 'process.execPath')" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -241,7 +266,12 @@ jobs:
 
       - name: Test workspace packages
         if: matrix.shard == 1
-        run: pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test
+        run: |
+          set -euo pipefail
+          pnpm --filter agent-teams-controller test
+          pnpm --filter agent-teams-mcp test
+          # The portable Host test script requires Node 24; reuse the runtime captured above.
+          PATH="$(dirname "$AGENT_BACKEND_TEST_NODE"):$PATH" pnpm --filter @agent-teams/legacy-agent-host test
 
       - name: Test CI scripts and OpenCode proof runner safety
         if: matrix.shard == 1
@@ -251,6 +281,9 @@ jobs:
 
       - name: Build MCP server for root integration tests
         run: pnpm --filter agent-teams-mcp build
+
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
 
       - name: Test root shard
         run: pnpm exec vitest run --maxWorkers=2 --shard=${{ matrix.shard }}/4
@@ -312,6 +345,9 @@ jobs:
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+
       - name: Restore ESLint cache
         uses: actions/cache@v5
         with:
@@ -338,12 +374,12 @@ jobs:
     steps:
       - name: 'CI runner proof: ${{ runner.os }} | ${{ runner.arch }} | windows-latest'
         run: echo 'Runner identity recorded in job metadata'
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Enable Windows long paths
         shell: pwsh
         run: git config --global core.longpaths true
+
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -385,13 +421,19 @@ jobs:
         if: steps.windows.outputs.reuse != 'true'
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
 
+      - name: Build captured Host and ledger prerequisites
+        if: steps.windows.outputs.reuse != 'true'
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+
       - name: Test crash-safe app lock publication
         if: steps.windows.outputs.reuse != 'true'
         run: pnpm exec vitest run --environment node test/main/services/team/fileLock.test.ts test/main/services/team/fileLock.publication.test.ts
 
       - name: Test controller lock compatibility
         if: steps.windows.outputs.reuse != 'true'
-        run: pnpm --dir agent-teams-controller exec vitest run test/fileLock.test.js
+        run: >-
+          pnpm --dir agent-teams-controller exec vitest run
+          test/fileLock.test.js test/fileLockMissingObservation.test.ts
 
       - name: Test task change ledger
         if: steps.windows.outputs.reuse != 'true'
@@ -501,6 +543,2412 @@ jobs:
       - name: Build and mount DMG fixture
         run: node scripts/ci/verify-dmg-artwork.mts
 
+  retained-opencode-coexistence:
+    name: Retained OpenCode V1 and Host V2 original Desktop
+    needs: plan
+    if: >-
+      (
+        needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&
+        ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
+      ) ||
+      (
+        needs.plan.result == 'success' &&
+        needs.plan.outputs.scope == 'full' &&
+        needs.plan.outputs.full == 'false' &&
+        needs.plan.outputs.metadata == 'false' &&
+        needs.plan.outputs.reuse == 'false' &&
+        github.event_name == 'pull_request' &&
+        github.repository == '777genius/agent-teams-ai' &&
+        github.event.pull_request.number == 1192 &&
+        github.event.pull_request.draft == true &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' &&
+        github.event.pull_request.head.ref == 'fix/frontend-parity-completion-20261113'
+      )
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      OPENCODE_V2_TEST_PLATFORM: linux-x64
+      OPENCODE_V1_V2_RETAINED_REPO: ${{ github.workspace }}/.runtime-download/TEST-retained-release-158
+      OPENCODE_V1_V2_RETAINED_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-retained-runtime-source
+      OPENCODE_V1_V2_DONOR_REPO: ${{ github.workspace }}/.runtime-download/TEST-donor-4a
+      OPENCODE_V1_V2_DONOR_CUSTODY_SOURCE: ${{ github.workspace }}/.runtime-download/TEST-donor-runtime-source
+    steps:
+      - name: Bind private TEST receipt paths after runner allocation
+        run: |
+          set -euo pipefail
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT=%s/retained-opencode-v2-inputs.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'OPENCODE_V1_V2_INPUTS_RECEIPT=%s/retained-opencode-inputs.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'OPENCODE_V1_V2_COEXISTENCE_RECEIPT=%s/retained-opencode-coexistence.json\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Install frozen workspace and original Electron
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ensure-electron-install.cjs --strict
+      - name: Rebuild original SQLite for the pinned Electron ABI
+        timeout-minutes: 10
+        run: |
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+      - name: Build existing Host and stage checksum-pinned current V2 base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          node scripts/stage-runtime.mjs --platform linux-x64
+      - name: Check existing strict retained script project and changed files
+        run: |
+          set -euo pipefail
+          pnpm typecheck:legacy-host-scripts
+          pnpm lint:fast:files -- \
+            scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-app.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-model.ts \
+            scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts \
+            scripts/legacy-agent-host/desktop-retained-open-diagnostics.ts \
+            scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts \
+            scripts/legacy-agent-host/desktop-retained-product-record-diagnostics.ts \
+            scripts/legacy-agent-host/desktop-retained-product-record-diagnostics.test.ts
+      - name: Prepare existing verified V2 graph and original Bun
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Checkout the immutable historical retained release inputs
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent-teams-ai
+          ref: 1d0f97f55de566036c970eab4f36b84620afdb3f
+          path: .runtime-download/TEST-retained-release-158
+          persist-credentials: false
+      - name: Stage the original checksum-pinned retained 0.0.158 separately
+        working-directory: .runtime-download/TEST-retained-release-158
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          verify_retained_source() {
+            test "$(pwd -P)" = "$OPENCODE_V1_V2_RETAINED_REPO"
+            test "$(git rev-parse --show-toplevel)" = "$OPENCODE_V1_V2_RETAINED_REPO"
+            test "$(git rev-parse HEAD)" = '1d0f97f55de566036c970eab4f36b84620afdb3f'
+            test "$(git rev-parse 'HEAD^{tree}')" = 'ec540290c86af9755c94e52ac795aeda8586a98f'
+            test -z "$(git diff --name-only HEAD)"
+            test -z "$(git ls-files --others --exclude-standard)"
+          }
+          verify_retained_source
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync } from 'node:fs';
+          for (const [path, expected] of [
+            ['runtime.lock.json', '1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d'],
+            ['scripts/stage-runtime.mjs', '7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be'],
+          ]) assert.equal(createHash('sha256').update(readFileSync(path)).digest('hex'), expected);
+          NODE
+          node scripts/stage-runtime.mjs --platform linux-x64
+          verify_retained_source
+      - name: Verify the retained release matches the pinned stock helper source
+        working-directory: .runtime-download/TEST-retained-release-158
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const lock = JSON.parse(readFileSync('runtime.lock.json', 'utf8'));
+          const commit = readFileSync('resources/runtime/COMMIT_SHA', 'utf8').trim();
+          assert.equal(lock.version, '0.0.158');
+          assert.equal(readFileSync('resources/runtime/VERSION', 'utf8').trim(), '0.0.158');
+          assert.equal(lock.sourceRepository, '777genius/agent_teams_orchestrator');
+          assert.equal(commit, lock.opencodeV2Delivery['linux-x64'].sourceCommit);
+          assert.equal(commit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62');
+          NODE
+      - name: Checkout unchanged helper source in ignored TEST inputs
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: f5c69c2e9024ffc36a5db5eafe30f53539b52f62
+          path: .runtime-download/TEST-retained-runtime-source
+          persist-credentials: false
+      - name: Checkout immutable original donor4a in separate ignored TEST inputs
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent-teams-ai
+          ref: 4a0e06277fe216d9f82dbbede362668fe46622ee
+          path: .runtime-download/TEST-donor-4a
+          persist-credentials: false
+      - name: Checkout unchanged donor runtime helper source
+        uses: actions/checkout@v6
+        with:
+          repository: 777genius/agent_teams_orchestrator
+          ref: e13edcd3d4ffbecc0272ae30195cc6b15b710ee7
+          path: .runtime-download/TEST-donor-runtime-source
+          persist-credentials: false
+      - name: Stage exact retained V1 and existing TEST package manager
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-retained-opencode-inputs-XXXXXX")"
+          printf '{"name":"test-retained-opencode-inputs","private":true}\n' > "$selected_inputs/package.json"
+          pnpm --dir "$selected_inputs" add --ignore-scripts --save-exact opencode-ai@1.19.4 opencode-linux-x64@1.19.4 corepack@0.36.0
+          printf 'OPENCODE_V1_V2_TEST_PACKAGES=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          selected_v2_a="$(mktemp -d "$RUNNER_TEMP/TEST-retained-opencode-v2-a-XXXXXX")"
+          selected_v2_b="$(mktemp -d "$RUNNER_TEMP/TEST-retained-opencode-v2-b-XXXXXX")"
+          printf '{"name":"test-retained-opencode-v2-a","private":true}\n' > "$selected_v2_a/package.json"
+          printf '{"name":"test-retained-opencode-v2-b","private":true}\n' > "$selected_v2_b/package.json"
+          pnpm --dir "$selected_v2_a" add --ignore-scripts --save-exact @opencode/cli@2.0.21 @opencode/cli-linux-x64@2.0.21 corepack@0.36.0
+          pnpm --dir "$selected_v2_b" add --ignore-scripts --save-exact @opencode/cli@2.3.0 @opencode/cli-linux-x64@2.3.0
+          printf 'OPENCODE_V2_UI_ORIGINAL_PACKAGES=%s\nOPENCODE_V2_UI_NEXT_PACKAGES=%s\n' "$selected_v2_a" "$selected_v2_b" >> "$GITHUB_ENV"
+          LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
+            --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
+            > "$selected_inputs/linux-child-exec-selection.json"
+          node --input-type=module - "$selected_inputs/linux-child-exec-selection.json" <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const pin = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+          assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+          assert.equal(pin.manifestPath, join(dirname(process.argv[2]), 'linux-child-exec/manifest.json'));
+          assert.equal(realpathSync(pin.manifestPath), pin.manifestPath);
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          assert.match(pin.manifestSha256, /^[a-f0-9]{64}$/);
+          assert.equal(digest(pin.manifestPath), pin.manifestSha256);
+          const manifest = JSON.parse(readFileSync(pin.manifestPath, 'utf8'));
+          assert.equal(manifest.protocol, 'linux-child-exec-v1');
+          assert.equal(manifest.sourceSha256, digest('packages/legacy-agent-host/native/linux-child-exec.c'));
+          assert.equal(manifest.binarySha256, pin.binarySha256);
+          assert.equal(digest(join(dirname(pin.manifestPath), 'linux-child-exec')), pin.binarySha256);
+          assert.ok(!/[\r\n]/.test(pin.manifestPath));
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_LINUX_CHILD_EXEC_MANIFEST=${pin.manifestPath}\nLEGACY_LINUX_CHILD_EXEC_SHA256=${pin.manifestSha256}\n`);
+          NODE
+      - name: Prepare original donor4a dependencies runtime and non-session build inputs
+        working-directory: .runtime-download/TEST-donor-4a
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 4a0e06277fe216d9f82dbbede362668fe46622ee
+          test "$(git rev-parse HEAD^{tree})" = 4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd
+          node -e "const a=require('node:assert/strict'); a.equal(process.version,'v24.21.0'); a.equal(require('./package.json').packageManager,'pnpm@11.22.0+sha512.1ff870c4c6133dfd88fb2afc46dd13d47f09c9794b438c6fdb47ca98caf3bc16381ee0be93a091b8e3824cf01f889f46d7d9e20910fb0be1ab0fb5baa80dd621')"
+          test "$(pnpm --version)" = 11.22.0
+          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ensure-electron-install.cjs --strict
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version,'44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+          node scripts/stage-runtime.mjs --platform linux-x64
+          node agent-teams-controller/scripts/build.mjs
+          pnpm --filter agent-teams-mcp build
+          test -z "$(git diff --name-only HEAD)"
+          test -z "$(git ls-files --others --exclude-standard)"
+      - name: Bind retained inputs and exact stock helper source without launching a session
+        run: node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
+      - name: Exercise original retained V1 and new Host V2 controls once
+        env:
+          OPENCODE_V1_V2_COEXISTENCE_GO: '1'
+        run: |
+          set -euo pipefail
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts scripts/legacy-agent-host/desktop-retained-opencode-launch.test.ts scripts/legacy-agent-host/desktop-retained-open-diagnostics.test.ts scripts/legacy-agent-host/desktop-retained-product-record-diagnostics.test.ts
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-coexistence.log"
+      - name: Exercise original OpenCode Install Refresh and Update controls once
+        env:
+          OPENCODE_V1_V2_COEXISTENCE_GO: '1'
+          OPENCODE_V1_UI_SOURCE_SELECTION_GO: '1'
+          OPENCODE_V1_V2_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-source-inputs.json
+          OPENCODE_V1_UI_SOURCE_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-source-inputs.json
+          OPENCODE_V1_V2_COEXISTENCE_RECEIPT: ${{ runner.temp }}/retained-opencode-source-selection.json
+        run: |
+          set -euo pipefail
+          node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-source-selection.log"
+      - name: Exercise original V2 download support Install Update and healthy Repair once
+        env:
+          OPENCODE_V1_V2_COEXISTENCE_GO: '1'
+          OPENCODE_V2_UI_SOURCE_SELECTION_GO: '1'
+          OPENCODE_V1_V2_TEST_PACKAGES: ${{ env.OPENCODE_V2_UI_ORIGINAL_PACKAGES }}
+          OPENCODE_V1_V2_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-v2-source-inputs.json
+          OPENCODE_V2_UI_SOURCE_INPUTS_RECEIPT: ${{ runner.temp }}/retained-opencode-v2-source-inputs.json
+          OPENCODE_V1_V2_COEXISTENCE_RECEIPT: ${{ runner.temp }}/retained-opencode-v2-source-selection.json
+        run: |
+          set -euo pipefail
+          node scripts/legacy-agent-host/prepare-retained-opencode-coexistence.ts
+          node --test scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts 2>&1 | tee "$RUNNER_TEMP/retained-opencode-v2-source-selection.log"
+      - name: Require original V2 source owners Repair member selection and cold history
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { readNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const r = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'retained-opencode-v2-source-selection.json'), 'utf8'));
+          const provider = await readNativeProviderArtifact(process.cwd());
+          assert.equal(r.kind, 'TEST_NATIVE_OPENCODE_SOURCE_SELECTION_DESKTOP');
+          assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(r.platform, 'linux-x64'); assert.equal(r.generation, 'v2');
+          assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+          assert.deepEqual(r.cleanupErrors, []); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
+          assert.equal(r.build.providerDigest, provider.sha256);
+          assert.equal(r.inputs.kind, 'TEST_DESKTOP_V2_SOURCE_INPUTS'); assert.equal(r.inputs.status, 'READY');
+          assert.equal(r.inputs.v2.version, '2.0.21'); assert.equal(r.inputs.next.version, '2.3.0');
+          assert.equal(r.inputs.next.packageName, '@opencode/cli-linux-x64');
+          assert.equal(r.inputs.engine.version, '2.1.4');
+          assert.match(r.inputs.v2.sha256, /^[a-f0-9]{64}$/); assert.match(r.inputs.next.executableSha256, /^[a-f0-9]{64}$/);
+          assert.equal(r.inputs.next.integrity, r.inputs.next.nativeIntegrity);
+          const markers = ['TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B'];
+          assert.deepEqual(r.businessInputs, markers);
+          assert.deepEqual(r.modelObservations.filter(row => row.marker).map(row => row.marker), markers);
+          assert.ok(r.modelObservations.length <= 32);
+          assert.ok(r.modelObservations.every(row => row.owner === 'host' && (row.marker || row.sourcePreflight === true)));
+          assert.deepEqual(r.namespaces.map(row => row.initial), ['missing', 'path']);
+          assert.ok(r.namespaces.every(row => row.status === 'PASS' && row.cleanup.every(command => !command.resourceHeld)));
+          const [install, update] = r.namespaces;
+          for (const phase of r.namespaces) {
+            assert.equal(phase.configuration.index.records.length, 1);
+            assert.equal(phase.configuration.selected.intent, 'configuration');
+            assert.equal(phase.configuration.selected.candidate.nativeCli, undefined);
+            assert.deepEqual(phase.configuration.selected.candidate.executable, r.inputs.engine.bun);
+            assert.equal(phase.before.installed, true); assert.equal(phase.before.state, 'ready');
+            assert.equal(phase.before.engineVersion, '2.1.4'); assert.equal(phase.before.v2Support, 'ready');
+          }
+          assert.deepEqual(install.before.maintenance, { kind: 'missing', engineVersion: '2.1.4' });
+          assert.equal(install.publication.index.records.length, 2);
+          assert.equal(install.publication.selected.previousRevision, install.configuration.selected.revision);
+          assert.equal(install.publication.selected.candidate.nativeCli.version, '2.3.0');
+          assert.equal(install.publication.selected.candidate.sourceKind, 'app-managed');
+          assert.equal(install.teams.length, 1); assert.equal(install.appEpochs.length, 1);
+          assert.deepEqual(update.before.maintenance, { kind: 'installed', cliVersion: '2.0.21', engineVersion: '2.1.4', support: 'required' });
+          assert.equal(update.publicationA.index.records.length, 2);
+          assert.equal(update.publicationA.selected.previousRevision, update.configuration.selected.revision);
+          assert.equal(update.publicationA.selected.candidate.sourceKind, 'path');
+          assert.equal(update.publicationA.selected.candidate.nativeCli.version, '2.0.21');
+          assert.equal(update.publicationB.index.records.length, 3);
+          assert.equal(update.publicationB.selected.candidate.sourceKind, 'app-managed');
+          assert.equal(update.publicationB.selected.candidate.nativeCli.version, '2.3.0');
+          assert.equal(update.publicationB.selected.previousRevision, update.publicationA.selected.revision);
+          assert.deepEqual(update.publicationB.index.records.slice(0, 2), update.publicationA.index.records);
+          assert.equal(update.repair.verified, true); assert.equal(update.repair.newInstance, false);
+          assert.equal(update.repair.samePublication, true);
+          assert.equal(update.repair.completed.sourceRevision, update.publicationB.selected.revision);
+          assert.equal(update.repair.completed.loading, false);
+          assert.deepEqual(update.repair.support.embedded, update.publicationB.selected.candidate.embedded);
+          assert.deepEqual(update.publicationA.selected.candidate.embedded, update.publicationB.selected.candidate.embedded);
+          assert.equal(update.teams.length, 2); assert.equal(update.appEpochs.length, 2);
+          assert.equal(update.retainedAAfterUpdate.runtime.inputs.length, 2);
+          assert.deepEqual(update.retainedAAfterUpdate.native, update.teams[0].native);
+          assert.equal(update.cold.originalProfile, true); assert.equal(update.cold.historyEqual, true);
+          assert.equal(update.cold.callsAfter, update.cold.callsBefore);
+          assert.deepEqual(update.cold.sourceIndex, update.publicationB.index);
+          for (const selected of [install.publication.selected, update.publicationA.selected, update.publicationB.selected]) {
+            assert.equal(selected.candidate.nativeCli.generation, 'v2');
+            assert.equal(selected.candidate.embedded.version, '2.1.4');
+            assert.deepEqual(selected.candidate.executable, r.inputs.engine.bun);
+          }
+          assert.equal(r.metadataLineages.length, 3);
+          assert.ok(r.metadataLineages.every(row => row.lineage.live.length === 0 &&
+            row.lineage.profileHashes.length <= 3 && row.lineage.partitions.length > 0));
+          assert.ok(r.metadataLineages.reduce((sum, row) => sum + row.lineage.events.length, 0) <= 128);
+          assert.ok(r.originalNativeBirths.length > 0 && r.originalNativeBirths.length <= 64);
+          NODE
+      - name: Require original source publication active-session isolation and cold readback
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { readNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const r = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'retained-opencode-source-selection.json'), 'utf8'));
+          const provider = await readNativeProviderArtifact(process.cwd());
+          assert.equal(r.kind, 'TEST_NATIVE_OPENCODE_SOURCE_SELECTION_DESKTOP');
+          assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(r.platform, 'linux-x64');
+          assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+          assert.deepEqual(r.cleanupErrors, []); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
+          assert.equal(r.build.providerDigest, provider.sha256);
+          assert.equal(r.inputs.kind, 'TEST_DESKTOP_V1_SOURCE_INPUTS'); assert.equal(r.inputs.status, 'READY');
+          assert.equal(r.inputs.v1.version, '1.19.4');
+          assert.equal(r.inputs.v1.sha256, '538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7');
+          assert.equal(r.inputs.next.version, '1.19.5');
+          assert.equal(r.inputs.next.executableSha256, '7df4e4136301f16589b0f30bf91a61380fca5f8ef22dd36570f5ebe1d4ec802c');
+          const markers = ['TEST_SOURCE_INSTALL_B', 'TEST_SOURCE_PATH_A', 'TEST_SOURCE_LIVE_A', 'TEST_SOURCE_UPDATE_B'];
+          assert.deepEqual(r.businessInputs, markers);
+          assert.deepEqual(r.modelObservations.filter(row => row.marker).map(row => row.marker), markers);
+          assert.ok(r.modelObservations.length <= 32);
+          assert.ok(r.modelObservations.every(row => row.owner === 'host' && (row.marker || row.sourcePreflight === true)));
+          assert.deepEqual(r.namespaces.map(row => row.initial), ['missing', 'path']);
+          assert.ok(r.namespaces.every(row => row.status === 'PASS' && row.cleanup.every(command => !command.resourceHeld)));
+          const [install, update] = r.namespaces;
+          assert.equal(install.before.installed, false); assert.equal(install.before.source, 'missing');
+          assert.equal(install.publication.selected.candidate.nativeCli.version, '1.19.5');
+          assert.equal(install.publication.selected.candidate.sourceKind, 'app-managed');
+          assert.equal(install.teams.length, 1); assert.equal(install.appEpochs.length, 1);
+          assert.equal(update.before.source, 'path'); assert.equal(update.before.version, '1.19.4');
+          assert.equal(update.publicationA.selected.candidate.sourceKind, 'path');
+          assert.equal(update.publicationA.selected.candidate.nativeCli.version, '1.19.4');
+          assert.equal(update.publicationB.selected.candidate.sourceKind, 'app-managed');
+          assert.equal(update.publicationB.selected.candidate.nativeCli.version, '1.19.5');
+          assert.equal(update.publicationB.selected.previousRevision, update.publicationA.selected.revision);
+          assert.equal(update.teams.length, 2); assert.equal(update.appEpochs.length, 2);
+          assert.equal(update.retainedAAfterUpdate.runtime.inputs.length, 2);
+          assert.deepEqual(update.retainedAAfterUpdate.native, update.teams[0].native);
+          assert.equal(update.cold.originalProfile, true); assert.equal(update.cold.historyEqual, true);
+          assert.equal(update.cold.callsAfter, update.cold.callsBefore);
+          assert.equal(update.cold.sourceIndex.records.length, 2);
+          assert.equal(update.cold.sourceIndex.current[0].revision, update.publicationB.selected.revision);
+          assert.ok(r.originalNativeBirths.length > 0 && r.originalNativeBirths.length <= 64);
+          NODE
+      - name: Require complete same-source business, Stop, cold and cleanup evidence
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { lstatSync, readFileSync, realpathSync } from 'node:fs';
+          import { isAbsolute, join } from 'node:path';
+          const r = JSON.parse(readFileSync(process.env.OPENCODE_V1_V2_COEXISTENCE_RECEIPT, 'utf8'));
+          assert.equal(r.kind, 'TEST_NATIVE_RETAINED_V1_HOST_V2_DESKTOP');
+          assert.equal(r.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(r.status, 'PASS'); assert.equal(r.cleanup, true);
+          assert.deepEqual(r.cleanupFailures, []); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.releaseQualified, false); assert.equal(r.vendorAuthQualified, false);
+          assert.equal(r.inputs.retainedRuntime.sourceBuiltRetainedHelper.kind, 'EXACT_RELEASE_SOURCE_BUILD');
+          assert.equal(r.inputs.retainedRuntime.sourceBuiltRetainedHelper.publishedRuntimeComplete, false);
+          const observed = new Set(r.steps.map(step => step.observed));
+          for (const step of ['actual_legacy_fork_V1_history_before_new_Host_selection',
+            'retained_legacy_fork_owner_before_new_Host_runtime', 'both_actual_owner_inputs_through_original_renderer_routing',
+            'both_original_Stop_controls_preserve_the_other_actual_owner', 'same_profile_cold_original_UI_reads_both_histories_without_replay'])
+            assert.ok(observed.has(step), step);
+          const markers = r.modelObservations.filter(row => row.marker).map(row => row.marker).sort();
+          assert.deepEqual(markers, ['TEST_RETAINED_V1_HISTORY', 'TEST_RETAINED_V1_FIRST', 'TEST_RETAINED_V1_AFTER_STOP',
+            'TEST_OWNED_V2_FIRST', 'TEST_OWNED_V2_AFTER_STOP'].sort());
+          const donorInputs = JSON.parse(readFileSync(process.env.OPENCODE_V1_V2_INPUTS_RECEIPT, 'utf8'));
+          assert.equal(donorInputs.kind, 'TEST_RETAINED_V1_HOST_V2_INPUTS');
+          assert.equal(donorInputs.status, 'READY'); assert.equal(donorInputs.sourceHead, r.sourceHead);
+          const retained = r.inputs.retainedRuntime;
+          const retainedRoot = realpathSync(process.env.OPENCODE_V1_V2_RETAINED_REPO);
+          assert.equal(retainedRoot, join(realpathSync('.'), '.runtime-download/TEST-retained-release-158'));
+          assert.deepEqual(retained.appSource, { root: retainedRoot,
+            commit: '1d0f97f55de566036c970eab4f36b84620afdb3f', tree: 'ec540290c86af9755c94e52ac795aeda8586a98f',
+            lockSha256: '1311acf34215a47950dd071a23669a69ed866d4825bcde5d21db41302a71d29d',
+            stageScriptSha256: '7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be' });
+          assert.equal(retained.version, '0.0.158');
+          assert.equal(retained.sourceCommit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62');
+          assert.equal(retained.sha256, 'b9b4c9f786238922cad49f46e5ac147b4e361b182bd250e5fbb47571571059cd');
+          assert.equal(retained.archiveSha256, '4c106fcebab79de525aa7c9bb7636aa91fa43e76b4d567a00f98b2e6650ab29d');
+          assert.deepEqual(donorInputs.retainedRuntime, { version: retained.version,
+            path: join(retainedRoot, 'resources/runtime/claude-multimodel'), sha256: retained.sha256,
+            sourceCommit: retained.sourceCommit, appSource: retained.appSource, archiveSha256: retained.archiveSha256 });
+          const d = r.donorHistory;
+          assert.equal(d.kind, 'TEST_DONOR_4A_NATIVE_HISTORY'); assert.equal(d.status, 'PASS');
+          assert.equal(d.cleanup, true); assert.deepEqual(d.cleanupFailures, []);
+          assert.deepEqual(d.inputs, donorInputs.donor);
+          assert.equal(d.inputs.kind, 'TEST_DONOR_4A_RUNTIME_160_INPUTS');
+          assert.equal(d.inputs.commit, '4a0e06277fe216d9f82dbbede362668fe46622ee');
+          assert.equal(d.inputs.tree, '4bb456a5b35b6fca0e795bc8b19a13f5f1f6defd');
+          assert.equal(d.inputs.node.version, 'v24.21.0'); assert.equal(d.inputs.electron.version, '44.10.1');
+          assert.equal(d.inputs.runtime.version, '0.0.160'); assert.equal(d.inputs.runtime.cliVersion, '2.777.777');
+          assert.equal(d.inputs.runtime.archiveSha256, '09b174841e74c95337f8b1be986f1501a71582ce190671c548bf4c70ab814e10');
+          assert.equal(d.inputs.runtime.sourceCommit, 'e13edcd3d4ffbecc0272ae30195cc6b15b710ee7');
+          assert.equal(d.inputs.custody.sourceCommit, d.inputs.runtime.sourceCommit);
+          assert.equal(d.inputs.custody.sourceTree, 'a5ed6ffc453a68a5454328bd79a9422ce1e4e3e9');
+          assert.ok(['PUBLISHED_RUNTIME_ASSET', 'EXACT_RELEASE_SOURCE_BUILD'].includes(d.inputs.custody.kind));
+          assert.equal(d.inputs.custody.publishedRuntimeComplete, false);
+          const inputFiles = ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.node-version',
+            'runtime.lock.json', 'electron.vite.config.ts', 'scripts/stage-runtime.mjs',
+            'scripts/lib/github-release-download-error.mjs', 'scripts/lib/runtime-archive-checksum.mjs',
+            'scripts/lib/runtime-payload-cache.mjs', 'scripts/lib/opencode-v2-base-inventory.mts',
+            'scripts/ci/enforce-pnpm-install.mjs', 'scripts/ci/install-dependencies-with-retry.mjs',
+            'scripts/ensure-electron-install.cjs', 'scripts/postinstall-electron.cjs',
+            'scripts/prepare-cpu-features-rebuild.cjs', 'agent-teams-controller/package.json',
+            'agent-teams-controller/scripts/build.mjs', 'mcp-server/package.json',
+            'resources/runtime/COMMIT_SHA', 'resources/runtime/VERSION'];
+          assert.deepEqual(d.inputs.files.map(row => row.path), inputFiles);
+          for (const row of [...d.inputs.files, d.inputs.node, d.inputs.electron, d.inputs.runtime, d.inputs.custody])
+            assert.match(row.sha256, /^[a-f0-9]{64}$/);
+          for (const key of ['manifestSha256', 'sourceSha256', 'buildScriptSha256', 'validatorSha256'])
+            assert.match(d.inputs.custody[key], /^[a-f0-9]{64}$/);
+          assert.equal(d.marker, 'TEST_RETAINED_V1_HISTORY'); assert.equal(d.reply, 'REPLY_TEST_RETAINED_V1_HISTORY');
+          assert.equal(d.identity.teamName, d.teamName); assert.equal(d.identity.provider, 'opencode_runtime');
+          for (const key of ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'displayId', 'messageId', 'replyUuid'])
+            assert.ok(typeof d.identity[key] === 'string' && d.identity[key].length > 0);
+          assert.match(d.identity.replyContentSha256, /^[a-f0-9]{64}$/);
+          assert.match(d.identity.taskId, /^[A-Za-z0-9_-]+$/);
+          assert.match(d.identity.displayId, /^[A-Za-z0-9-]{1,128}$/);
+          const taskRefs = [{ taskId: d.identity.taskId, displayId: d.identity.displayId, teamName: d.teamName }];
+          const messageText = d.marker + ' #' + d.identity.displayId;
+          const fixture = d.reviewFixture;
+          const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+          assert.equal(fixture.relativePath, 'TEST-donor-review.txt');
+          assert.equal(fixture.filePath, join(d.root, 'project', fixture.relativePath));
+          assert.equal(fixture.before, 'TEST donor native review before\n');
+          assert.equal(fixture.after, 'TEST donor native review after\n');
+          assert.equal(fixture.beforeSha256, sha256(fixture.before)); assert.equal(fixture.afterSha256, sha256(fixture.after));
+          assert.match(fixture.commit, /^[a-f0-9]{40}$/); assert.match(fixture.tree, /^[a-f0-9]{40}$/);
+          assert.deepEqual(fixture.png, { path: join(d.root, 'TEST-donor-task.png'), name: 'TEST-donor-task.png',
+            bytes: 71, sha256: '5a852fbaaaecaf4cd14c01e150c7f881c5c5894b0a1e3c53be7e007c58374ee6' });
+          const pick = (row, keys) => Object.fromEntries(keys.map(key => [key, row[key]]));
+          const bindingKeys = ['teamName', 'runId', 'memberName', 'laneId', 'nativeSessionId', 'taskId', 'displayId', 'messageId'];
+          const deliveryKeys = ['id', 'source', 'status', 'inboxMessageId', 'deliveredUserMessageId',
+            'runtimeSessionId', 'runId', 'laneId', 'memberName', 'taskRefs'];
+          const eventKeys = ['eventId', 'toolUseId', 'taskId', 'sessionId', 'memberName', 'filePath', 'relativePath',
+            'source', 'sourceRuntime', 'sourceProvider', 'sourceSessionId', 'sourcePartId', 'sourceMessageId',
+            'parentUserMessageId', 'attributionMethod', 'sourceImportKey', 'evidenceProof', 'snapshotId', 'snapshotSource',
+            'toolStatus', 'operation', 'confidence'];
+          const stableReview = value => pick(value, ['binding', 'delivery', 'event', 'before', 'after']);
+          assert.deepEqual(d.epochs.map(epoch => epoch.kind), ['donor', 'current', 'cold']);
+          assert.deepEqual(d.model.failures, []); assert.ok(Array.isArray(d.model.observations) && d.model.observations.length <= 32);
+          assert.ok(Number.isSafeInteger(d.inferenceAtDonorQuit) && d.inferenceAtDonorQuit > 0);
+          assert.equal(d.model.observations.length, d.inferenceAtDonorQuit);
+          assert.deepEqual(d.model.observations.filter(row => row.marker).map(row => row.marker), [d.marker]);
+          const turns = d.model.observations.filter(row => row.donorStage);
+          assert.deepEqual(turns.map(row => row.donorStage), ['read', 'edit', 'reply']);
+          assert.deepEqual(turns.map(row => row.toolCallId ?? null), ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT', null]);
+          assert.deepEqual(turns.map(row => row.toolResultIds), [[], ['TEST_DONOR_REVIEW_READ'],
+            ['TEST_DONOR_REVIEW_READ', 'TEST_DONOR_REVIEW_EDIT']]);
+          assert.ok(turns.every(row => row.owner === 'legacy'));
+          const nativeHistory = { provider: d.identity.provider, laneId: d.identity.laneId,
+            nativeSessionId: d.identity.nativeSessionId, replyUuid: d.identity.replyUuid,
+            replyContentSha256: d.identity.replyContentSha256 };
+          const processKey = row => {
+            assert.ok(Number.isSafeInteger(row.pid) && row.pid > 0); assert.match(row.birth, /^[0-9]+$/);
+            return `${row.pid}:${row.birth}`;
+          };
+          const epochProcesses = [];
+          for (const [index, epoch] of d.epochs.entries()) {
+            assert.equal(epoch.sourceCommit, index === 0 ? d.inputs.commit : r.sourceHead);
+            epochProcesses.push(processKey(epoch.original), processKey(epoch.electron));
+            assert.equal(epoch.task.id, d.identity.taskId); assert.equal(epoch.task.displayId, d.identity.displayId);
+            assert.ok(typeof epoch.task.subject === 'string' && epoch.task.subject.length > 0);
+            assert.deepEqual(epoch.task, d.epochs[0].task);
+            assert.deepEqual(epoch.message, { messageId: d.identity.messageId, text: messageText, to: d.identity.memberName, taskRefs });
+            assert.deepEqual(epoch.visibleTask, { key: JSON.stringify([d.teamName, d.identity.taskId]), subject: epoch.task.subject });
+            for (const [field, expected] of [['visibleMessage', messageText], ['visibleReply', d.reply]]) {
+              assert.equal(epoch[field].text, expected);
+              assert.ok(Number.isSafeInteger(epoch[field].matches) && epoch[field].matches >= 1 && epoch[field].matches <= 32);
+            }
+            assert.deepEqual(epoch.nativeHistory, nativeHistory);
+            const attachment = epoch.attachment;
+            assert.ok(typeof attachment.id === 'string' && attachment.id.length > 0);
+            assert.equal(attachment.filename, fixture.png.name); assert.equal(attachment.mimeType, 'image/png');
+            assert.equal(attachment.size, fixture.png.bytes); assert.equal(attachment.sha256, fixture.png.sha256);
+            assert.equal(attachment.width, 2); assert.equal(attachment.height, 1);
+            assert.deepEqual(attachment, d.epochs[0].attachment);
+            assert.equal(epoch.review.filePath, fixture.filePath); assert.equal(epoch.review.relativePath, fixture.relativePath);
+            assert.equal(epoch.review.visibleBefore, fixture.before.trim()); assert.equal(epoch.review.visibleAfter, fixture.after.trim());
+            const provenance = epoch.review.provenance, delivery = provenance.delivery, event = provenance.event;
+            assert.deepEqual(provenance.binding, pick(d.identity, bindingKeys));
+            assert.deepEqual(stableReview(provenance), stableReview(d.epochs[0].review.provenance));
+            assert.ok(['ui-send', 'watcher'].includes(delivery.source)); assert.equal(delivery.status, 'responded');
+            assert.equal(delivery.inboxMessageId, d.identity.messageId); assert.equal(delivery.runtimeSessionId, d.identity.nativeSessionId);
+            for (const key of ['runId', 'laneId', 'memberName']) assert.equal(delivery[key], d.identity[key]);
+            assert.deepEqual(delivery.taskRefs, taskRefs);
+            for (const key of ['id', 'deliveredUserMessageId']) assert.ok(typeof delivery[key] === 'string' && delivery[key].length > 0);
+            for (const [key, expected] of Object.entries({ toolUseId: 'TEST_DONOR_REVIEW_EDIT', taskId: d.identity.taskId,
+              sessionId: d.identity.nativeSessionId, memberName: d.identity.memberName, filePath: fixture.filePath,
+              relativePath: fixture.relativePath, source: 'opencode_toolpart_edit', sourceRuntime: 'opencode',
+              sourceProvider: 'opencode', sourceSessionId: d.identity.nativeSessionId,
+              parentUserMessageId: delivery.deliveredUserMessageId, attributionMethod: 'delivery-ledger-taskrefs',
+              snapshotSource: 'opencode', toolStatus: 'succeeded', operation: 'modify', confidence: 'high' })) assert.equal(event[key], expected);
+            assert.ok(['opencode-snapshot', 'inverse-edit-chain'].includes(event.evidenceProof));
+            for (const key of ['eventId', 'sourcePartId', 'sourceMessageId', 'sourceImportKey', 'snapshotId'])
+              assert.ok(typeof event[key] === 'string' && event[key].length > 0);
+            for (const side of ['before', 'after'])
+              assert.deepEqual(provenance[side], { sha256: fixture[side + 'Sha256'], bytes: Buffer.byteLength(fixture[side]) });
+            assert.equal(provenance.sources.delivery.path, `claude/teams/${d.teamName}/.opencode-runtime/lanes/${encodeURIComponent(d.identity.laneId)}/opencode-prompt-delivery-ledger.json`);
+            assert.match(provenance.sources.journal.path, /^claude\/projects\/[^/]+\/\.board-task-changes\/events\//);
+            assert.ok(provenance.sources.journal.path.endsWith(`/${d.identity.taskId}.jsonl`));
+            for (const field of ['delivery', 'journal']) assert.match(provenance.sources[field].sha256, /^[a-f0-9]{64}$/);
+            assert.deepEqual(epoch.quit, { launcherAbsent: true, electronAbsent: true, launcherExitCode: 0,
+              launcherSignal: null, originalGroupReleased: true, namespaceAfter: [] });
+            assert.equal(epoch.inferenceAfterQuit, d.inferenceAtDonorQuit);
+            if (index > 0) assert.equal(epoch.inferenceAtStart, d.inferenceAtDonorQuit);
+          }
+          assert.equal(new Set(epochProcesses).size, 6);
+          assert.equal(d.stop.processAlive, false); assert.equal(d.stop.originalNativeAbsentAfterQuit, true);
+          assert.ok(d.processes.length > 0 && d.stop.processes.length > 0 && d.epochs[0].nativeProcesses.length > 0);
+          const nativeProcesses = new Set(d.processes.map(processKey));
+          assert.equal(nativeProcesses.size, d.processes.length);
+          for (const row of [...d.stop.processes, ...d.epochs[0].nativeProcesses]) assert.ok(nativeProcesses.has(processKey(row)));
+          assert.ok(isAbsolute(d.root)); assert.equal(realpathSync(d.root), d.root);
+          assert.equal(d.corpus.directory, join(d.root, 'evidence-corpus'));
+          assert.equal(realpathSync(d.corpus.directory), d.corpus.directory);
+          assert.deepEqual(JSON.parse(readFileSync(join(d.corpus.directory, 'manifest.json'), 'utf8')), d.corpus);
+          assert.ok(d.corpus.files.length > 0 && d.corpus.files.length <= 4096);
+          const donorProvenance = d.epochs[0].review.provenance;
+          const donorLedgerRoot = donorProvenance.sources.journal.path.slice(0, donorProvenance.sources.journal.path.lastIndexOf('/events/'));
+          const selectedRawPaths = new Set([donorProvenance.sources.delivery.path, donorProvenance.sources.journal.path,
+            `project/${fixture.relativePath}`,
+            `userData/data/task-attachments/${d.teamName}/${d.identity.taskId}/${d.epochs[0].attachment.id}--${fixture.png.name}`,
+            ...['before', 'after'].map(side => `${donorLedgerRoot}/blobs/sha256/${fixture[side + 'Sha256']}`)]);
+          const corpusPaths = new Set(), corpusData = new Map(); let corpusBytes = 0;
+          for (const [index, row] of d.corpus.files.entries()) {
+            assert.ok(typeof row.path === 'string' && !isAbsolute(row.path) && row.path.split('/').every(part => part && part !== '.' && part !== '..'));
+            assert.equal(corpusPaths.has(row.path), false); corpusPaths.add(row.path);
+            assert.equal(row.copy, `file-${String(index).padStart(5, '0')}.bin`);
+            assert.ok(Number.isSafeInteger(row.bytes) && row.bytes >= 0 && row.bytes <= 64 * 1024 * 1024);
+            assert.match(row.sha256, /^[a-f0-9]{64}$/);
+            const path = join(d.corpus.directory, row.copy), stat = lstatSync(path);
+            assert.ok(stat.isFile() && !stat.isSymbolicLink()); assert.equal(stat.size, row.bytes);
+            corpusBytes += row.bytes; assert.ok(corpusBytes <= 256 * 1024 * 1024);
+            const bytes = readFileSync(path);
+            assert.equal(bytes.length, row.bytes); assert.equal(createHash('sha256').update(bytes).digest('hex'), row.sha256);
+            if (selectedRawPaths.has(row.path)) {
+              assert.ok(bytes.length <= 8 * 1024 * 1024); corpusData.set(row.path, bytes);
+            }
+          }
+          assert.equal(corpusBytes, d.corpus.bytes);
+          for (const prefix of [`claude/teams/${d.teamName}/`, `claude/tasks/${d.teamName}/`])
+            assert.ok(d.corpus.files.some(row => row.path.startsWith(prefix)));
+          assert.ok(d.corpus.files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\//.test(row.path)));
+          assert.ok(d.corpus.files.some(row => /^runtime-data\/opencode\/profiles\/[^/]+\/data\/opencode\/snapshot\/[^/]+\/[a-f0-9]{40}\//.test(row.path)));
+          assert.equal(corpusData.has('project/.git'), false);
+          assert.equal(d.corpus.files.some(row => row.path.startsWith('project/.git/')), false);
+          assert.equal(corpusData.get(`project/${fixture.relativePath}`)?.toString('utf8'), fixture.after);
+          const attachmentPath = `userData/data/task-attachments/${d.teamName}/${d.identity.taskId}/${d.epochs[0].attachment.id}--${fixture.png.name}`;
+          const attachmentBytes = corpusData.get(attachmentPath);
+          assert.ok(attachmentBytes); assert.equal(attachmentBytes.length, fixture.png.bytes); assert.equal(sha256(attachmentBytes), fixture.png.sha256);
+          const provenance = d.epochs[0].review.provenance;
+          const deliveryEnvelope = JSON.parse(corpusData.get(provenance.sources.delivery.path).toString('utf8'));
+          assert.equal(deliveryEnvelope.schemaVersion, 1); assert.ok(deliveryEnvelope.data.length <= 200);
+          const deliveries = deliveryEnvelope.data.filter(row => row.inboxMessageId === d.identity.messageId);
+          assert.equal(deliveries.length, 1); assert.deepEqual(pick(deliveries[0], deliveryKeys), provenance.delivery);
+          const events = corpusData.get(provenance.sources.journal.path).toString('utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+          assert.ok(events.length > 0 && events.length <= 128);
+          assert.equal(new Set(events.map(row => row.eventId)).size, events.length);
+          const superseded = new Set(events.map(row => row.supersedesEventId).filter(id => typeof id === 'string'));
+          for (const id of superseded) assert.ok(events.some(row => row.eventId === id));
+          for (const event of events) {
+            assert.equal(event.taskId, d.identity.taskId); assert.equal(event.toolUseId, 'TEST_DONOR_REVIEW_EDIT');
+            assert.equal(event.filePath, fixture.filePath); assert.equal(event.sourceRuntime, 'opencode');
+          }
+          const active = events.filter(row => row.suppressed !== true && !superseded.has(row.eventId));
+          assert.equal(active.length, 1); assert.deepEqual(pick(active[0], eventKeys), provenance.event);
+          assert.equal(active[0].taskRef, d.identity.taskId); assert.equal(active[0].taskRefKind, 'canonical'); assert.equal(active[0].phase, 'work');
+          const ledgerRoot = provenance.sources.journal.path.slice(0, provenance.sources.journal.path.lastIndexOf('/events/'));
+          for (const side of ['before', 'after']) {
+            const ref = active[0][side]; assert.equal(ref.sha256, fixture[side + 'Sha256']);
+            assert.equal(ref.sizeBytes, Buffer.byteLength(fixture[side])); assert.equal(ref.blobRef, `sha256/${ref.sha256}`);
+            const bytes = corpusData.get(`${ledgerRoot}/blobs/${ref.blobRef}`);
+            assert.ok(bytes); assert.equal(bytes.toString('utf8'), fixture[side]); assert.equal(sha256(bytes), ref.sha256);
+          }
+          NODE
+      - name: Preserve original coexistence receipts and failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: retained-opencode-coexistence-${{ github.event.pull_request.head.sha || github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/retained-opencode-*.json
+            ${{ runner.temp }}/retained-opencode-*.log
+            ${{ runner.temp }}/TEST-retained-opencode-inputs-*/linux-child-exec-selection.json
+            ${{ runner.temp }}/TEST-retained-opencode-inputs-*/linux-child-exec/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/coexistence-*.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-retained-opencode-v1/launch-failure-artifacts/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/evidence-corpus/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-failure.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-task.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-donor-review.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current-task.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-current-review.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold-task.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/donor-history-cold-review.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-3.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-4.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-5.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-3-failure.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-4-failure.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/coexistence-app-5-failure.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/sentinel-invocations.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/tmp/claude-team-preflight-debug.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/logs/app-errors.1.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/opencode-bridge/diagnostics/latest.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/donor-history/userData/opencode-bridge/diagnostics/events.ndjson
+
+  codex-login-desktop:
+    name: Codex login Desktop (Linux x64)
+    # Bounded frontend-parity qualification, including Ready Stage 1 children.
+    # This does not change Stage 1's broader native/UI gate or qualify account completion.
+    needs: plan
+    if: >-
+      needs.plan.outputs.metadata == 'false' &&
+      ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+       (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+         github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' ||
+         github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
+         (github.event.pull_request.number == 982 &&
+          github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
+    runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubicloud-standard-4' }}
+    timeout-minutes: 41
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      CODEX_LOGIN_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Prepare private Linux display dependencies
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = x86_64
+          test "$(git rev-parse HEAD)" = "$CODEX_LOGIN_SOURCE_HEAD"
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth lsof
+      - name: Install frozen workspace and pinned Electron
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs
+          node scripts/ensure-electron-install.cjs --strict
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+      - name: Build existing Desktop prerequisites
+        run: |
+          set -euo pipefail
+          node scripts/build/buildLinuxNodeExec.mjs
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+      - name: Prepare pinned Codex for the original finite native schedule proof
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-scheduled-native-inputs-XXXXXX")"
+          curl --fail --location --retry 2 --output "$selected_inputs/codex.tgz" https://registry.npmjs.org/@openai/codex/-/codex-0.162.0-linux-x64.tgz
+          printf '%s  %s\n' dbd342e7ad896d53dbb505e926f1b82314b79a9d33e209b0b7616ced6b06c983 "$selected_inputs/codex.tgz" | sha256sum -c -
+          tar -xzf "$selected_inputs/codex.tgz" -C "$selected_inputs"
+          selected_codex="$selected_inputs/package/vendor/x86_64-unknown-linux-musl/bin/codex"
+          printf '%s  %s\n' 50ed828f357c655a3c82054d346cab8434f24901f14ec19b8267571bdd008b38 "$selected_codex" | sha256sum -c -
+          printf 'LEGACY_SCHEDULE_CODEX=%s\n' "$selected_codex" >> "$GITHUB_ENV"
+      - name: Verify finite native Claude and Codex scheduled runs
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { spawnSync } from 'node:child_process';
+          import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join, resolve } from 'node:path';
+          import { fileHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const repo = process.cwd(), selected = await readNativeProviderArtifact(repo);
+          await verifyNativeProviderArtifact(repo, selected);
+          const providerRoot = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
+          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
+          assert.equal(JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8')).version, '0.3.305');
+          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-linux-x64/claude'));
+          assert.equal(await fileHash(claude), '86cb722ab68348877dba7971e4d0c659919e05e6228c05e006e83da320e656ef');
+          const output = mkdtempSync(join(process.env.RUNNER_TEMP, 'TEST-scheduled-native-evidence-'));
+          const logPath = join(output, 'native-schedules.log'), maxOutputBytes = 8 * 1024 * 1024;
+          const run = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/scheduled-run-host.native.ts'], {
+              cwd: repo, timeout: 650_000, maxBuffer: maxOutputBytes, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env,
+                LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process.env.CODEX_LOGIN_SOURCE_HEAD,
+                LEGACY_SCHEDULE_CLAUDE: claude,
+                LEGACY_NATIVE_PROVIDER_ARTIFACT: realpathSync(selected.path), LEGACY_NATIVE_PROVIDER_SHA256: selected.sha256,
+                LEGACY_SCHEDULE_NATIVE_EVIDENCE: output,
+              },
+          });
+          const chunks = [run.stdout ?? Buffer.alloc(0), run.stderr ?? Buffer.alloc(0)];
+          const capturedBytes = chunks.reduce((bytes, chunk) => bytes + chunk.length, 0);
+          const log = Buffer.concat(chunks, Math.min(capturedBytes, maxOutputBytes));
+          writeFileSync(logPath, log, { mode: 0o600 });
+          console.log(log.toString('utf8'));
+          assert.ok(capturedBytes <= maxOutputBytes, 'original native schedule output exceeded its bound');
+          assert.equal(run.error, undefined); assert.equal(run.status, 0);
+          for (const provider of ['claude', 'codex']) {
+            const receipt = JSON.parse(readFileSync(join(output, `${provider}-scheduled-native.json`), 'utf8'));
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.provider, provider);
+            assert.equal(receipt.sourceHead, process.env.CODEX_LOGIN_SOURCE_HEAD);
+            assert.equal(receipt.providerSha256, selected.sha256);
+            assert.equal(receipt.cleanup, true); assert.equal(receipt.frozen, true);
+            assert.deepEqual(receipt.modelFailures, []);
+            assert.equal(receipt.desktopQualified, false); assert.equal(receipt.vendorAuthQualified, false);
+          }
+          NODE
+      - name: Capture finite account and schedule inputs without vendor executables
+        uses: ./.github/actions/prepare-host-emulated-inputs
+        with:
+          source-head: ${{ env.CODEX_LOGIN_SOURCE_HEAD }}
+          lane: codex-login
+      - name: Verify finite account and schedule owner contracts
+        run: >-
+          node --test --test-concurrency=1
+          packages/legacy-agent-host/tests/codex-login.test.ts
+          packages/legacy-agent-host/tests/scheduled-run-host.test.ts
+      - name: Exercise original login and schedule controls through protocol peers
+        run: |
+          set -euo pipefail
+          for mode in emulated-codex-login-ui emulated-claude-runtime-ui emulated-codex-runtime-ui; do
+            LEGACY_DESKTOP_PROOF_MODE="$mode" \
+              xvfb-run --auto-servernum --server-args='-screen 0 1280x900x24 -nolisten tcp' \
+              bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+              2>&1 | tee "$RUNNER_TEMP/host-account-$mode.log"
+          done
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const modes = ['emulated-codex-login-ui', 'emulated-claude-runtime-ui', 'emulated-codex-runtime-ui'];
+          for (const mode of modes) {
+            const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-account-${mode}.log`), 'utf8')
+              .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+            const finished = rows.findLast(row => row.receipt && row.status);
+            assert.ok(finished && finished.status === 'PASS', 'complete original UI and cleanup receipt');
+            const receipt = JSON.parse(readFileSync(finished.receipt, 'utf8'));
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.source.head, process.env.CODEX_LOGIN_SOURCE_HEAD);
+            assert.equal(receipt.source.dirty, false);
+            const login = mode === modes[0];
+            const proof = login ? receipt.codexLoginUi : receipt.emulatedRuntimeUiProof;
+            const cleanup = login ? receipt.emulatedManagementCleanup : receipt.emulatedRuntimeCleanup;
+            assert.equal(proof.status, 'PASS'); assert.equal(cleanup.absent, true);
+            assert.deepEqual(cleanup.remaining, []); assert.ok(cleanup.originalPeerPids.length > 0);
+            if (login) {
+              assert.equal(proof.execution, 'finite-protocol-peer'); assert.equal(proof.vendorExecutable, false);
+              assert.deepEqual(proof.cases.map(row => [row.mode, row.status]), [['browser', 'PASS'], ['device_code', 'PASS']]);
+              for (const row of proof.cases) for (const key of ['copyAcknowledged', 'externalOpenDispatched',
+                'reopenPreservedOriginal', 'cancelledOriginal', 'privateFieldsCleared']) assert.equal(row[key], true);
+              assert.equal(cleanup.protocol.originalLoginIdsCancelled, true);
+              assert.equal(cleanup.protocol.sessionOrModelRequests, 0); assert.equal(cleanup.protocol.accountAbsent, true);
+            } else {
+              assert.equal(proof.provider, mode === modes[1] ? 'claude' : 'codex');
+              assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.reloadWithoutReplay, true);
+              assert.equal(proof.stopReleased, true); assert.equal(proof.schedule.status, 'dispatched');
+              assert.equal(proof.schedule.savedPromptAcknowledged, true); assert.equal(proof.schedule.savedPromptNotReplayed, true);
+              assert.equal(proof.automaticSchedule.trigger, 'real-cron-tick');
+              assert.equal(proof.automaticSchedule.runNowClicks, 0); assert.equal(proof.automaticSchedule.taskCompleted, true);
+              assert.equal(proof.automaticSchedule.paused, true); assert.equal(proof.automaticSchedule.savedPromptNotReplayed, true);
+              assert.notEqual(proof.schedule.runId, proof.automaticSchedule.runId);
+            }
+          }
+          NODE
+      - name: Preserve finite account and schedule proofs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-login-linux-x64-${{ github.event.pull_request.head.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/host-emulated-inputs.json
+            ${{ runner.temp }}/host-account-*.log
+            ${{ runner.temp }}/TEST-scheduled-native-evidence-*/*
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
+
+  stage1-desktop:
+    name: Stage 1 source Desktop (${{ matrix.label }})
+    needs: plan
+    # Run native/UI acceptance on ready Stage1 source PR and its integration PRs.
+    # Main-bound umbrella selection requires the same repository.
+    if: >-
+      needs.plan.outputs.full == 'true' &&
+      needs.plan.outputs.metadata == 'false' &&
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
+      )
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: native-mixed-create-launch-ui
+            label: mixed Create and Launch
+          - mode: native-mixed-create-launch-ui
+            variant: native-mixed-v2-create-launch-ui
+            label: mixed Create and Launch with OpenCode V2
+            opencode_generation: v2
+          - mode: native-create-ui
+            label: Create with native launch
+          - mode: native-create-ui
+            variant: native-create-member
+            label: solo Create and native persistent teammate
+            native_member_create: '1'
+          - mode: stopped-import-ui
+            label: saved legacy import only
+          - mode: stopped-import-ui
+            variant: stopped-import-native-launch
+            label: stopped legacy import and native Launch
+            import_launch: '1'
+          - mode: native-quit-ui
+            variant: native-quit-active-readback
+            label: active input Quit and cold readback
+            readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-quit-pending-open-readback
+            label: pending open Quit and cold readback
+            quit_scenario: pending-open
+            readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-v2-quit-active-readback
+            label: OpenCode V2 active input Quit and cold readback
+            opencode_generation: v2
+            readback: native-quit-readback-ui
+          - mode: native-quit-ui
+            variant: native-v2-quit-pending-open-readback
+            label: OpenCode V2 pending open Quit and cold readback
+            opencode_generation: v2
+            quit_scenario: pending-open
+            readback: native-quit-readback-ui
+          - mode: native-resume-ui
+            label: cold selected Resume
+          - mode: native-resume-ui
+            variant: native-codex-resume-ui
+            label: cold selected Codex Resume
+            resume_provider: codex
+          - mode: native-resume-ui
+            variant: native-v2-resume-ui
+            label: cold selected OpenCode V2 Resume
+            resume_provider: opencode
+            opencode_generation: v2
+          - mode: native-review-ui
+            label: native review and cold readback
+            readback: native-review-readback-ui
+          - mode: native-review-ui
+            variant: native-v2-review-ui
+            label: OpenCode V2 native Review and cold readback
+            opencode_generation: v2
+            readback: native-review-readback-ui
+          - mode: native-conversation-ui
+            variant: opencode-v2-chat-attachments
+            label: OpenCode V2 original PNG Composer and cold readback
+            opencode_generation: v2
+            chat_attachments: '1'
+            readback: native-readback-ui
+          - mode: task-board-cross-team-ui
+            label: existing Task board and cross-Team controls
+    env:
+      TMPDIR: /private/tmp
+      STAGE1_MODE: ${{ matrix.mode }}
+      STAGE1_VARIANT: ${{ matrix.variant || matrix.mode }}
+      STAGE1_READBACK_MODE: ${{ matrix.readback || '' }}
+      STAGE1_QUIT_SCENARIO: ${{ matrix.quit_scenario || '' }}
+      LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH: ${{ matrix.import_launch || '' }}
+      LEGACY_DESKTOP_NATIVE_MEMBER_CREATE: ${{ matrix.native_member_create || '' }}
+      LEGACY_DESKTOP_RESUME_PROVIDER: ${{ matrix.resume_provider || '' }}
+      LEGACY_DESKTOP_OPENCODE_GENERATION: ${{ matrix.opencode_generation || '' }}
+      LEGACY_DESKTOP_CHAT_ATTACHMENTS: ${{ matrix.chat_attachments || '' }}
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      OPENCODE_V2_TEST_PLATFORM: darwin-arm64
+      OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ github.workspace }}/opencode-v2-desktop-inputs.json
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Record actual macOS tuple before native qualification
+        run: |
+          set -euo pipefail
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          printf 'Actual build: '
+          sw_vers -buildVersion
+          test "$(git rev-parse HEAD)" = "$OPENCODE_V2_TEST_SOURCE_HEAD"
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Verify and stage pinned Node before Desktop dependencies
+        run: |
+          set -euo pipefail
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install Desktop dependencies including Electron
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build existing Host, controller and MCP prerequisites
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+      - name: Prepare exact TEST package manager and reviewed native binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-setup-$STAGE1_VARIANT.log") 2>&1
+          selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-inputs-XXXXXX)"
+          printf 'STAGE1_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
+          printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
+          tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
+          mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"
+          test -f "$selected_inputs/codex/codex-code-mode-host" && test ! -L "$selected_inputs/codex/codex-code-mode-host" && test -x "$selected_inputs/codex/codex-code-mode-host"
+          printf '%s  %s\n' 0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a "$selected_inputs/codex/codex-code-mode-host" | shasum -a 256 -c -
+          unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
+          STAGE1_SELECTED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join, resolve } from 'node:path';
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const selected = process.env.STAGE1_SELECTED_INPUTS;
+          // These ESM-only packages intentionally expose no require-condition entrypoint.
+          // Frozen pnpm installs each dependency beside its requesting scoped package.
+          const providerRoot = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations');
+          const sdkRoot = realpathSync(resolve(providerRoot, '../../@anthropic-ai/claude-agent-sdk'));
+          const sdkPackage = JSON.parse(readFileSync(join(sdkRoot, 'package.json'), 'utf8'));
+          assert.equal(sdkPackage.name, '@anthropic-ai/claude-agent-sdk');
+          assert.equal(sdkPackage.version, '0.3.305');
+          const claude = realpathSync(resolve(sdkRoot, '../claude-agent-sdk-darwin-arm64/claude'));
+          const codex = realpathSync(join(selected, 'codex/codex-aarch64-apple-darwin'));
+          const codexCodeModeHost = realpathSync(join(selected, 'codex/codex-code-mode-host'));
+          const opencode = realpathSync(join(selected, 'opencode/opencode'));
+          for (const [path, expected] of [
+            [claude, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f'],
+            [codex, '8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57'],
+            [codexCodeModeHost, '0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a'],
+            [opencode, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b'],
+          ]) assert.equal(digest(path), expected, 'exact reviewed native executable');
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const host = realpathSync('packages/legacy-agent-host/dist/cli.js');
+          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
+          const pnpm = join(corepack, 'dist/pnpm.js');
+          const values = {
+            LEGACY_DESKTOP_BACKEND_GO: '1',
+            LEGACY_DESKTOP_PROOF_MODE: process.env.STAGE1_MODE,
+            LEGACY_DESKTOP_CLAUDE_PATH: claude,
+            ...(process.env.STAGE1_MODE === 'native-mixed-create-launch-ui' ? {
+              LEGACY_DESKTOP_CODEX_PATH: codex, LEGACY_DESKTOP_OPENCODE_PATH: opencode,
+            } : {}),
+            ...(process.env.LEGACY_DESKTOP_RESUME_PROVIDER === 'codex' ? { LEGACY_DESKTOP_CODEX_PATH: codex } : {}),
+            LEGACY_DESKTOP_NODE_SHA256: digest(node),
+            LEGACY_DESKTOP_HOST_ENTRY_SHA256: digest(host),
+            LEGACY_DESKTOP_PNPM_PATH: pnpm,
+            LEGACY_DESKTOP_PNPM_SHA256: digest(pnpm),
+            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: digest(join(corepack, 'package.json')),
+            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: digest(join(corepack, 'dist/lib/corepack.cjs')),
+          };
+          for (const [key, value] of Object.entries(values)) {
+            assert.equal(typeof value, 'string');
+            assert.ok(!/[\r\n]/u.test(value));
+            appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          }
+          writeFileSync(join(selected, 'input-pins.json'), JSON.stringify({
+            mode: process.env.STAGE1_MODE,
+            ...(process.env.STAGE1_MODE === 'native-resume-ui' ? { resumeProvider: process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude' } : {}),
+            node: { path: node, sha256: digest(node) },
+            host: { path: host, sha256: digest(host) },
+            native: [claude, codex, codexCodeModeHost, opencode].map(path => ({ path, sha256: digest(path) })),
+            nativeArchives: [{ path: join(selected, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz'), sha256: digest(join(selected, 'codex-code-mode-host-aarch64-apple-darwin.tar.gz')) }],
+            corepackVersion: JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version,
+            qualification: 'Source Desktop and localhost inference only; no installed/packed or vendor-auth claim',
+          }, null, 2));
+          NODE
+      - name: Check out the exact old Host for genuine checkpoint evidence
+        if: matrix.mode == 'native-resume-ui' && !matrix.variant
+        uses: actions/checkout@v6
+        with:
+          ref: 1d0f97f55de566036c970eab4f36b84620afdb3f
+          path: .stage1-checkpoint-donor
+          persist-credentials: false
+      - name: Build the unchanged old Host with its original frozen dependencies
+        if: matrix.mode == 'native-resume-ui' && !matrix.variant
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-checkpoint-donor-setup.log") 2>&1
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          selected_donor="$GITHUB_WORKSPACE/.stage1-checkpoint-donor"
+          test "$(git -C "$selected_donor" rev-parse HEAD)" = 1d0f97f55de566036c970eab4f36b84620afdb3f
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" install --frozen-lockfile --ignore-scripts --filter '@agent-teams/legacy-agent-host...'
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" --filter @agent-teams/legacy-agent-host build
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+      - name: Qualify genuine old checkpoint and strict current D refusal before Desktop Resume
+        if: matrix.mode == 'native-resume-ui' && !matrix.variant
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync, spawnSync } from 'node:child_process';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { fileHash, treeHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const repo = process.cwd(), donor = realpathSync(join(repo, '.stage1-checkpoint-donor'));
+          const commit = '1d0f97f55de566036c970eab4f36b84620afdb3f';
+          assert.equal(execFileSync('git', ['-C', donor, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), commit);
+          const oldProvider = {
+            path: 'vendor/provider-migration/opencode-v2-host-9ede557c/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'fc8a821aff5b96b649647dac3853c831acf83d1555a480dc1f9645006600cb89',
+          };
+          const currentProvider = await readNativeProviderArtifact(repo);
+          assert.equal(currentProvider.sha256, 'ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db');
+          await verifyNativeProviderArtifact(donor, oldProvider);
+          await verifyNativeProviderArtifact(repo, currentProvider);
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const donorPackage = join(donor, 'packages/legacy-agent-host');
+          const pins = {
+            LEGACY_NATIVE_CLAUDE_HOST_GO: '1',
+            LEGACY_NATIVE_CLAUDE_CHECKPOINT_DONOR: donor,
+            LEGACY_NATIVE_PROVIDER_ARTIFACT: oldProvider.path,
+            LEGACY_NATIVE_PROVIDER_SHA256: oldProvider.sha256,
+            LEGACY_NATIVE_CLAUDE_SHA256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f',
+            LEGACY_NATIVE_HOST_SOURCE_SHA256: await treeHash(join(donorPackage, 'src'), '.ts'),
+            LEGACY_NATIVE_HOST_DIST_SHA256: await treeHash(join(donorPackage, 'dist'), '.js'),
+            LEGACY_NATIVE_PROVIDER_DIST_SHA256: await treeHash(realpathSync(join(donorPackage, 'node_modules/@agent-teams/provider-implementations/dist')), '.js'),
+            LEGACY_NATIVE_CURRENT_PROVIDER_ARTIFACT: currentProvider.path,
+            LEGACY_NATIVE_CURRENT_PROVIDER_DIST_SHA256: await treeHash(realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist'), '.js'),
+          };
+          const input = {
+            sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD, donorCommit: commit, oldProvider, currentProvider,
+            nodeSha256: await fileHash(node),
+            oldEntrySha256: await fileHash(join(donorPackage, 'dist/cli.js')),
+            currentEntrySha256: await fileHash('packages/legacy-agent-host/dist/cli.js'),
+            pins, originalLocalOutcome: 'unknown-separate-attempt',
+            scope: 'Independent genuine old corpus; current public-D negative only; ordinary Main migration unqualified',
+          };
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor-inputs.json'), JSON.stringify(input, null, 2), { mode: 0o600 });
+          const logPath = join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor.log'), maxOutputBytes = 8 * 1024 * 1024;
+          const run = spawnSync(node, ['--test', 'packages/legacy-agent-host/tests/native-claude-host.native.ts'], {
+            cwd: repo, env: { ...process.env, ...pins }, maxBuffer: maxOutputBytes, stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          const chunks = [run.stdout ?? Buffer.alloc(0), run.stderr ?? Buffer.alloc(0)];
+          const capturedBytes = chunks.reduce((bytes, chunk) => bytes + chunk.length, 0);
+          const bytes = Buffer.concat(chunks, Math.min(capturedBytes, maxOutputBytes));
+          writeFileSync(logPath, bytes, { mode: 0o600 });
+          const log = bytes.toString('utf8'); console.log(log);
+          assert.ok(capturedBytes <= maxOutputBytes, 'original checkpoint proof output exceeded its bound');
+          assert.equal(run.error, undefined); assert.equal(run.status, 0);
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-claude-checkpoint-donor-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'One new independent original donor attempt');
+          const path = realpathSync(matches[0][1]), r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(r.sourceHead, input.sourceHead);
+          assert.equal(r.status, 'CORPUS_QUALIFIED_CURRENT_D_REFUSED');
+          assert.equal(r.cleanupConfirmed, true); assert.equal(r.oldRestoredHistory, true);
+          assert.equal(r.donorInputs.donorCommit, commit);
+          assert.equal(r.artifacts.provider.sha256, oldProvider.sha256);
+          assert.equal(r.artifacts.host.sourceSha256, pins.LEGACY_NATIVE_HOST_SOURCE_SHA256);
+          assert.equal(r.artifacts.host.distSha256, pins.LEGACY_NATIVE_HOST_DIST_SHA256);
+          assert.equal(r.donorInputs.providerDistSha256, pins.LEGACY_NATIVE_PROVIDER_DIST_SHA256);
+          assert.equal(r.donorInputs.currentProviderSha256, currentProvider.sha256);
+          assert.equal(r.donorInputs.currentProviderDistSha256, pins.LEGACY_NATIVE_CURRENT_PROVIDER_DIST_SHA256);
+          const proof = r.donorCheckpoint;
+          assert.deepEqual(proof.currentRefusal, { ok: false, code: 'checkpoint-incompatible' });
+          assert.ok(Object.values(proof.calls).every(value => value === 0));
+          assert.equal(proof.oldEntrySha256, input.oldEntrySha256);
+          assert.equal(proof.currentEntrySha256, input.currentEntrySha256);
+          assert.equal(proof.compiledEntryEqual, input.oldEntrySha256 === input.currentEntrySha256);
+          assert.equal(proof.originalNodeSha256, input.nodeSha256);
+          assert.equal(proof.currentNodeSha256, input.nodeSha256);
+          assert.equal(proof.ordinaryCurrentMainRouteQualified, false);
+          assert.equal(proof.currentHostHandshakeQualified, false);
+          assert.equal(proof.mainHandle, 'not-produced-by-standalone-fixture');
+          assert.equal(await fileHash(join(r.root, 'frozen/original-checkpoint.json')), proof.checkpointSha256);
+          assert.equal(await fileHash(join(r.root, 'frozen/original-native-prefix.jsonl')), proof.nativePrefixSha256);
+          assert.equal(await fileHash(join(r.root, 'frozen/original-profile.json')), proof.profileSha256);
+          assert.equal(await fileHash(join(r.root, 'frozen/original-launch.json')), proof.originalLaunchSha256);
+          assert.equal(r.modelObservations.length, 11); assert.deepEqual(r.modelFailures, []);
+          assert.equal(r.businessReceipts.length, 2);
+          assert.equal(execFileSync('git', ['-C', donor, 'status', '--porcelain=v1', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), input.sourceHead);
+          console.log(JSON.stringify({ status: r.status, receipt: path, oldEntryEqualsCurrent: proof.compiledEntryEqual,
+            scope: 'Old corpus and old-owner Resume proven; current D refused without native allocation; no Main migration claim' }));
+          NODE
+      - name: Prepare current frontend runtime for its original Stop and import
+        if: matrix.import_launch == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          mkdir "$STAGE1_INPUTS/current-runtime"
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT="$STAGE1_INPUTS/current-runtime" "$selected_node" scripts/dev-with-runtime.mjs --print-runtime-path
+          printf 'LEGACY_DESKTOP_CURRENT_RUNTIME_CACHE=%s\n' "$STAGE1_INPUTS/current-runtime" >> "$GITHUB_ENV"
+      - name: Verify captured Claude commands and original native receipt recovery
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { spawnSync } from 'node:child_process';
+          import { closeSync, openSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          import { fileHash, treeHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const repo = process.cwd();
+          const provider = await readNativeProviderArtifact(repo);
+          await verifyNativeProviderArtifact(repo, provider);
+          const node = realpathSync('resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node');
+          const providerEntry = realpathSync('packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/claude.js');
+          const pins = {
+            LEGACY_NATIVE_CLAUDE_COMPACTION_GO: '1',
+            LEGACY_NATIVE_COMPACTION_NODE: node,
+            LEGACY_NATIVE_PROVIDER_ARTIFACT: provider.path,
+            LEGACY_NATIVE_PROVIDER_SHA256: provider.sha256,
+            LEGACY_NATIVE_CLAUDE_SHA256: 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f',
+            LEGACY_NATIVE_PROVIDER_DIST_SHA256: await treeHash(dirname(providerEntry), '.js'),
+            LEGACY_NATIVE_HOST_SOURCE_SHA256: await treeHash('packages/legacy-agent-host/src', '.ts'),
+            LEGACY_NATIVE_HOST_DIST_SHA256: await treeHash('packages/legacy-agent-host/dist', '.js'),
+          };
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-commands-inputs.json'), JSON.stringify({
+            sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            node: { path: node, sha256: await fileHash(node) }, provider, pins,
+            scope: 'Actual native Query commands through marked Host message.send; Desktop selection is separate',
+          }, null, 2));
+          const logPath = join(process.env.RUNNER_TEMP, 'stage1-native-commands.log');
+          const logFd = openSync(logPath, 'w', 0o600);
+          let run;
+          try {
+            run = spawnSync(node, ['--test', 'packages/legacy-agent-host/tests/native-claude-compaction.native.ts'], {
+              cwd: repo, env: { ...process.env, ...pins }, stdio: ['ignore', logFd, logFd], timeout: 330_000,
+            });
+          } finally { closeSync(logFd); }
+          assert.ok(statSync(logPath).size <= 8 * 1024 * 1024, 'bounded original native fixture log');
+          const log = readFileSync(logPath, 'utf8');
+          console.log(log);
+          assert.equal(run.error, undefined); assert.equal(run.status, 0);
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-claude-compaction-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'one original native command journey');
+          const receipt = JSON.parse(readFileSync(realpathSync(matches[0][1]), 'utf8'));
+          assert.equal(receipt.status, 'SCOPED_PASS');
+          assert.equal(receipt.cleanupConfirmed, true);
+          assert.equal(receipt.physicalNativeCleanup.qualified, true);
+          assert.equal(receipt.sourcePinsUnchanged, true);
+          assert.equal(receipt.artifacts.provider.sha256, provider.sha256);
+          assert.equal(receipt.artifacts.host.sourceSha256, pins.LEGACY_NATIVE_HOST_SOURCE_SHA256);
+          assert.equal(receipt.artifacts.host.distSha256, pins.LEGACY_NATIVE_HOST_DIST_SHA256);
+          assert.equal(receipt.proofs.localCommand.command, '/cost');
+          assert.equal(receipt.proofs.localCommand.modelRequestsUnchanged, true);
+          assert.equal(receipt.proofs.localCommand.pendingContextPreserved, true);
+          assert.equal(receipt.proofs.namedCommands.project, true);
+          assert.equal(receipt.proofs.namedCommands.user, true);
+          assert.equal(receipt.proofs.namedCommands.nativeTeamReplies, 2);
+          const review = receipt.proofs.legacyInlineReview;
+          assert.equal(review.command, '/review');
+          assert.equal(review.execution, 'legacy-inline-review-v1');
+          assert.equal(review.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(review.nativeTeamReplies, 1);
+          assert.equal(review.nativeRequests, 3);
+          assert.equal(review.originalPermission.inputId, review.inputId);
+          assert.deepEqual(review.originalPermission.binding, receipt.proofs.currentContext.binding);
+          assert.equal(review.originalPermission.toolUseId, 'TEST-p03-review-read');
+          for (const field of ['interactionRef', 'operationRef', 'sessionRef'])
+            assert.ok(typeof review.originalPermission[field] === 'string' && review.originalPermission[field].length > 0);
+          assert.match(review.readResultEventId, /^[a-f0-9]{64}:\d+$/u);
+          assert.deepEqual(receipt.modelRequests.filter(row => row.phase === 'review').map(row => row.commandExecution),
+            ['legacy-inline-review-v1', 'legacy-inline-review-v1', 'legacy-inline-review-v1']);
+          assert.equal(receipt.proofs.coldRecovery.exactOriginalReceipts, 8);
+          assert.equal(receipt.proofs.coldRecovery.noNativeAllocation, true);
+          assert.equal(receipt.proofs.coldRecovery.modelRequestsUnchanged, true);
+          assert.equal(receipt.modelRequests.length, 11);
+          NODE
+      - name: Stage exact OpenCode V2 base for original Desktop acceptance
+        if: matrix.opencode_generation == 'v2'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs --platform darwin-arm64
+      - name: Prepare verified V2 graph and product process custody for original Desktop
+        if: matrix.opencode_generation == 'v2'
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Require qualified product custody before original Desktop V2 Launch
+        if: matrix.opencode_generation == 'v2'
+        run: test "$OPENCODE_V2_EMBEDDED_PRODUCT_ADMITTED" = 1
+      - name: Qualify public D Codex 0.169.0 before ordinary Codex Desktop Resume
+        if: ${{ matrix.variant == 'native-codex-resume-ui' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          candidate_stage="$STAGE1_INPUTS/codex-0.169.0"
+          mkdir "$candidate_stage"
+          gh release download rust-v0.169.0 --repo openai/codex --pattern codex-npm-darwin-arm64-0.169.0.tgz --dir "$candidate_stage"
+          archive="$candidate_stage/codex-npm-darwin-arm64-0.169.0.tgz"
+          test "$(stat -f %z "$archive")" = 153831622
+          printf '%s  %s\n' d67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d "$archive" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$candidate_stage"
+          CODEX_CANDIDATE_STAGE="$candidate_stage" "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { createReadStream } from 'node:fs';
+          import { lstat, readdir, realpath, writeFile } from 'node:fs/promises';
+          import { join } from 'node:path';
+          import { readNativeProviderArtifact, verifyNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const provider = await readNativeProviderArtifact(process.cwd());
+          assert.deepEqual(provider, {
+            path: 'vendor/provider-migration/v2-catalog-56afd245/agent-teams-provider-implementations-0.0.0.tgz',
+            sha256: 'ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db',
+          });
+          await verifyNativeProviderArtifact(process.cwd(), provider);
+          const stage = process.env.CODEX_CANDIDATE_STAGE;
+          assert.equal(await realpath(stage), stage);
+          const files = []; let visited = 0, total = 0;
+          const walk = async path => {
+            assert.ok(++visited <= 1024 && path.split('/').length <= 16);
+            const full = join(stage, path), info = await lstat(full);
+            assert.equal(await realpath(full), full);
+            if (info.isDirectory()) {
+              for (const name of (await readdir(full)).sort()) await walk(path + '/' + name);
+              return;
+            }
+            assert.ok(info.isFile() && info.nlink === 1 && files.length < 512);
+            assert.equal(info.mode & 0o7000, 0);
+            assert.ok(info.size <= 1024 ** 3 && (total += info.size) <= 2 * 1024 ** 3);
+            const digest = createHash('sha256');
+            for await (const bytes of createReadStream(full)) digest.update(bytes);
+            files.push({ path, bytes: info.size, mode: info.mode & 0o777, sha256: digest.digest('hex') });
+          };
+          await walk('package');
+          files.sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
+          await writeFile(join(stage, 'input-pins.json'), JSON.stringify({
+            kind: 'TEST_CODEX_CANDIDATE_INPUTS_V1', version: '0.169.0', target: 'aarch64-apple-darwin',
+            archive: { name: 'codex-npm-darwin-arm64-0.169.0.tgz', bytes: 153831622,
+              sha256: 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d' },
+            files,
+          }, null, 2), { mode: 0o600, flag: 'wx' });
+          NODE
+          LEGACY_CODEX_TEAM_GO=1 \
+          LEGACY_CODEX_CANDIDATE_VERSION=0.169.0 \
+          LEGACY_CODEX_CANDIDATE_INPUTS="$candidate_stage/input-pins.json" \
+          LEGACY_NATIVE_PROVIDER_ARTIFACT=vendor/provider-migration/v2-catalog-56afd245/agent-teams-provider-implementations-0.0.0.tgz \
+          LEGACY_NATIVE_PROVIDER_SHA256=ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db \
+          "$selected_node" --test packages/legacy-agent-host/tests/native-codex-team.native.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-0169-candidate.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-codex-0169-candidate.log'), 'utf8');
+          assert.ok(Buffer.byteLength(log) <= 8 * 1024 * 1024);
+          const entries = [...log.matchAll(/\{"status":"(?:PASS|INCOMPLETE)","scope":"codex-0\.169\.0-candidate","receipt":"(\/private\/tmp\/TEST-native-codex-team-[^"\s]+\/receipt\.json)"\}/g)];
+          assert.equal(entries.length, 1, 'one original candidate invocation');
+          const path = realpathSync(entries[0][1]), receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.status, 'PASS'); assert.equal(receipt.cleanup, true);
+          assert.equal(receipt.nativeVersion, 'codex-cli 0.169.0');
+          assert.equal(receipt.scope, 'public-D Codex 0.169.0 candidate Darwin ARM64');
+          assert.equal(receipt.artifacts.provider.sha256, 'ab18b535ef17d42c6033b29205e6f0a8748bbc1df5b2b889acf8c081c18cf1db');
+          assert.equal(receipt.artifacts.node.version, 'v24.21.0');
+          assert.equal(receipt.artifacts.inputs.archive.sha256, 'd67d443253294438a21fde15753d7c1174e6a32147d842eb84428479d664c93d');
+          assert.equal(receipt.catalog.originalChildExited, true);
+          assert.ok(receipt.catalog.page.data.some(row => row.model === receipt.selectedModel && !row.hidden && row.inputModalities.includes('text')));
+          assert.equal(receipt.permission.effectBefore, 'absent'); assert.equal(receipt.permission.allowed, true);
+          assert.equal(receipt.permission.native.kind, 'command'); assert.equal(receipt.checkpointReads, 1);
+          assert.deepEqual(receipt.interruption, { ok: true, value: { requested: true, terminal: 'unconfirmed' } });
+          assert.deepEqual(receipt.closes, [
+            { logicallyClosed: true, cleanup: 'confirmed' }, { logicallyClosed: true, cleanup: 'confirmed' },
+          ]);
+          assert.deepEqual(receipt.native.map(row => row.role), ['metadata', 'C1', 'C2']);
+          const [metadata, c1, c2] = receipt.native;
+          assert.deepEqual(metadata.inputs, []); assert.equal(metadata.wire.approvals.length, 0);
+          assert.equal(c1.inputs.length, 1); assert.equal(c2.inputs.length, 1);
+          assert.equal(c1.wire.approvals.length, 1); assert.equal(c2.wire.approvals.length, 0);
+          assert.deepEqual([c1.terminals[0].outcome, c2.terminals[0].outcome], ['succeeded', 'cancelled']);
+          assert.equal(c1.facts.threadId, c2.facts.threadId);
+          assert.equal(c1.facts.threadId, receipt.checkpoint.nativeThreadId);
+          assert.equal(c1.configSha256, c2.configSha256);
+          assert.equal(c1.facts.sentMethods.filter(method => method === 'thread/start').length, 1);
+          assert.equal(c2.facts.sentMethods.filter(method => method === 'thread/resume').length, 1);
+          assert.equal(c2.facts.sentMethods.includes('thread/start'), false);
+          assert.equal(receipt.modelObservations.length, 11); assert.deepEqual(receipt.modelFailures, []);
+          assert.ok(receipt.modelObservations.every(row => row.requestedModel === receipt.selectedModel));
+          assert.equal(receipt.businessReceipts.length, 2);
+          assert.ok(receipt.native.every(row => row.children.length === 1 &&
+            row.children.every(child => child.exitCode !== null || child.signalCode !== null)));
+          assert.ok(receipt.excluded.includes('Host/source eligibility'));
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-codex-0169-candidate-inputs.json'), JSON.stringify({
+            receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: receipt.scope, artifacts: receipt.artifacts,
+          }, null, 2));
+          NODE
+      - name: Check existing UI fixtures and run original Desktop controls once
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" --test scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/desktop-owner-routing-product.test.ts scripts/legacy-agent-host/desktop-mixed-native-fixture.test.ts
+          if [ "$LEGACY_DESKTOP_RESUME_PROVIDER" = codex ]; then
+            "$selected_node" --test scripts/legacy-agent-host/desktop-codex-resume-fixture.test.ts
+          fi
+          if [ -n "$STAGE1_QUIT_SCENARIO" ]; then
+            export LEGACY_DESKTOP_QUIT_SCENARIO="$STAGE1_QUIT_SCENARIO"
+          fi
+          if [ "$STAGE1_VARIANT" = native-resume-ui ]; then
+            test "$STAGE1_MODE" = native-resume-ui
+            test -z "$LEGACY_DESKTOP_RESUME_PROVIDER"
+            export LEGACY_DESKTOP_CLAUDE_CHECKPOINT_UPGRADE=1
+            export LEGACY_DESKTOP_CLAUDE_CHECKPOINT_DONOR="$GITHUB_WORKSPACE/.stage1-checkpoint-donor"
+          fi
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-$STAGE1_VARIANT.log"
+      - name: Capture original successful lifecycle receipt for cold readback
+        if: ${{ matrix.readback }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-desktop-${process.env.STAGE1_VARIANT}.log`), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'exactly one original lifecycle attempt');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const bytes = readFileSync(path), receipt = JSON.parse(bytes.toString('utf8'));
+          assert.equal(receipt.mode, process.env.STAGE1_MODE);
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(realpathSync(receipt.root), dirname(path));
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_DESKTOP_READBACK_ROOT=${receipt.root}\n`);
+          appendFileSync(process.env.GITHUB_ENV, `LEGACY_DESKTOP_READBACK_RECEIPT_SHA256=${createHash('sha256').update(bytes).digest('hex')}\n`);
+          NODE
+      - name: Reopen the same owner through the existing cold readback controls
+        if: ${{ matrix.readback }}
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          LEGACY_DESKTOP_CHAT_ATTACHMENTS= LEGACY_DESKTOP_PROOF_MODE="$STAGE1_READBACK_MODE" "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-readback-$STAGE1_VARIANT.log"
+      - name: Require the original retained receipt to report PASS
+        if: always()
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          function verify(phase, expectedMode) {
+          const log = readFileSync(join(process.env.RUNNER_TEMP, `stage1-${phase}-${process.env.STAGE1_VARIANT}.log`), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original prepared Desktop proof, no automatic retry');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-(?:backend|readback|native-review-readback)-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.mode, expectedMode);
+          assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains an acceptance failure');
+          if (process.env.STAGE1_VARIANT === 'opencode-v2-chat-attachments') {
+            assert.equal(receipt.nativeChatAttachments?.status, 'PASS');
+            assert.equal(receipt.nativeChatAttachments?.preparedImage?.mimeType, 'image/png');
+            assert.equal(receipt.nativeChatAttachments?.files?.length, 1);
+            assert.match(receipt.nativeChatAttachments?.nativeHistory?.sha256 ?? '', /^[a-f0-9]{64}$/);
+            if (phase === 'desktop') {
+              assert.equal(receipt.nativeProvider, 'opencode');
+              assert.equal(receipt.nativeGeneration, 'v2');
+              assert.equal(receipt.conversationUiProof?.status, 'PASS');
+              assert.equal(receipt.conversationUiProof?.nativeGeneration, 'v2');
+              assert.equal(receipt.conversationUiProof?.nativeInputs, 2);
+              assert.equal(receipt.conversationUiProof?.nativeChildAbsentBeforeQuit, true);
+              assert.equal(receipt.conversationUiProof?.custody, 'released');
+            } else {
+              assert.equal(receipt.savedNativeReadback?.status, 'PASS');
+              assert.equal(receipt.savedNativeReadback?.nativeInputsReplayed, 0);
+              assert.equal(receipt.savedNativeReadback?.nativeAllocations, 0);
+              assert.equal(receipt.savedNativeReadback?.runtimeRecordUnchanged, true);
+            }
+          }
+          if (phase === 'desktop' && expectedMode === 'native-review-ui' && process.env.LEGACY_DESKTOP_OPENCODE_GENERATION === 'v2') {
+            assert.equal(receipt.nativeReviewUiProof?.provider, 'opencode-v2');
+            assert.equal(receipt.nativeReviewUiProof?.status, 'PASS');
+            assert.equal(receipt.nativeReviewUiProof?.events?.length, 1);
+            assert.equal(receipt.nativeReviewUiProof.events[0].nativeCaptureProof.kind, 'opencode-update-patch-v2');
+          }
+          if (phase === 'desktop' && expectedMode === 'native-resume-ui') {
+            const provider = process.env.LEGACY_DESKTOP_RESUME_PROVIDER || 'claude';
+            assert.equal(receipt.resumeProvider, provider);
+            assert.equal(receipt.resumeNativeProfile?.provider, provider);
+            assert.equal(receipt.launchDialogProof?.provider, provider);
+            assert.equal(receipt.resumeDialogProof?.provider, provider);
+            assert.equal(receipt.coldResumeBoundary?.provider, provider);
+            const pins = JSON.parse(readFileSync(join(process.env.STAGE1_INPUTS, 'input-pins.json'), 'utf8'));
+            assert.equal(pins.resumeProvider, provider);
+            if (provider === 'claude') {
+              const upgrade = receipt.claudeCheckpointUpgrade;
+              const donor = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'stage1-checkpoint-donor-inputs.json'), 'utf8'));
+              assert.equal(upgrade?.schemaVersion, 1); assert.equal(upgrade?.status, 'PASS');
+              assert.equal(upgrade.donorCommit, '1d0f97f55de566036c970eab4f36b84620afdb3f');
+              assert.equal(donor.donorCommit, upgrade.donorCommit);
+              assert.equal(donor.sourceHead, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+              assert.equal(upgrade.originalArchiveSha256, donor.oldProvider.sha256);
+              assert.equal(upgrade.currentArchiveSha256, donor.currentProvider.sha256);
+              assert.notEqual(upgrade.originalArchiveSha256, upgrade.currentArchiveSha256);
+              assert.equal(upgrade.contractsSha256, 'aaf9506473f6a2868a375a6087e1b4edc561b38f34101ef7a8703a73bb2674db');
+              assert.equal(upgrade.sdkVersion, '0.3.305');
+              assert.equal(upgrade.nativeSha256, 'ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f');
+              assert.equal(upgrade.nodeVersion, 'v24.21.0'); assert.equal(upgrade.nodeSha256, donor.nodeSha256);
+              assert.equal(upgrade.originalEntrySha256, donor.oldEntrySha256);
+              assert.equal(upgrade.currentEntrySha256, donor.currentEntrySha256);
+              assert.equal(upgrade.originalEntrySha256, upgrade.currentEntrySha256);
+              assert.equal(upgrade.naturalEntryBytesEqual, true);
+              assert.deepEqual(upgrade.originalOwner, upgrade.successorOwner);
+              assert.notEqual(upgrade.sources.originalSource, upgrade.sources.currentSource);
+              assert.notEqual(upgrade.sources.originalDist, upgrade.sources.currentDist);
+              assert.equal(upgrade.originalBytesAfterQuit, true);
+              assert.equal(upgrade.unchangedStoredHandleAfterCold, true);
+              assert.equal(receipt.coldResumeBoundary.status, 'PASS');
+              assert.equal(receipt.coldResumeBoundary.originalBindingRetained, true);
+              assert.equal(receipt.resumeDialogProof.status, 'PASS');
+              assert.equal(upgrade.original.reference, upgrade.current.originalReference);
+              assert.equal(upgrade.original.reference, receipt.coldResumeBoundary.beforeQuitCheckpoint.reference);
+              assert.equal(upgrade.original.checkpointSha256, receipt.coldResumeBoundary.beforeQuitCheckpoint.payloadFileSha256);
+              assert.equal(upgrade.original.nativeSession, upgrade.current.nativeSession);
+              assert.equal(upgrade.original.nativeSession, receipt.resumeDialogProof.source.nativeSession);
+              assert.equal(upgrade.current.nativeSession, receipt.resumeDialogProof.secondStop.nativeSession);
+              assert.notEqual(upgrade.original.compatibility, upgrade.current.compatibility);
+              assert.equal(upgrade.current.originalPrefixRetained, true);
+              assert.equal(upgrade.current.originalCheckpointUnchanged, true);
+              assert.equal(upgrade.current.samePersistedHandle, true);
+              assert.equal(upgrade.current.inputs, 2);
+            }
+            if (provider === 'codex') {
+              assert.equal(receipt.resumeNativeProfile.managedMcp, true);
+              const selected = receipt.codexResumeCatalog;
+              assert.ok(selected?.catalog.models.some(row => row.id === selected.modelId && row.model === selected.model && !row.hidden));
+              assert.equal(receipt.launchDialogProof.savedSettings.model, selected.model);
+              const resumed = receipt.resumeDialogProof;
+              assert.equal(resumed.status, 'PASS');
+              assert.equal(resumed.source.nativeSession, resumed.secondStop.nativeSession);
+              assert.match(resumed.runtimeMcpEndpoints.originalSha256, /^[a-f0-9]{64}$/);
+              assert.match(resumed.runtimeMcpEndpoints.resumedSha256, /^[a-f0-9]{64}$/);
+              assert.notEqual(resumed.runtimeMcpEndpoints.originalSha256, resumed.runtimeMcpEndpoints.resumedSha256);
+            }
+            if (provider === 'opencode') {
+              assert.equal(receipt.nativeGeneration, 'v2');
+              assert.equal(receipt.resumeNativeProfile.version, '2.1.4');
+              assert.match(receipt.resumeNativeProfile.engineManifestSha256, /^[a-f0-9]{64}$/);
+              assert.equal(receipt.resumeDialogProof.status, 'PASS');
+              assert.equal(receipt.resumeDialogProof.source.nativeSession,
+                receipt.resumeDialogProof.secondStop.nativeSession);
+            }
+          }
+          if (phase === 'desktop' && process.env.LEGACY_DESKTOP_NATIVE_MEMBER_CREATE === '1') {
+            const added = receipt.createLaunchDialogProof?.nativeMemberCreationProof;
+            assert.equal(added?.status, 'PASS', 'ordinary solo Create alone does not qualify native addition');
+            assert.equal(added.currentRosterReminderExactlyOnce, true);
+            assert.equal(added.retainedAfterReload, true);
+            assert.equal(added.stoppedSessions?.length, 2);
+            assert.ok(added.stoppedSessions.every(value => value.phase === 'closed' && value.custody === 'released'));
+          }
+          if (phase === 'desktop' && process.env.LEGACY_DESKTOP_STOPPED_IMPORT_LAUNCH === '1') {
+            const imported = receipt.stoppedImportUiProof;
+            assert.equal(imported?.status, 'PASS');
+            assert.equal(imported.noLaunchSubmit, false, 'import-only is not native Launch acceptance');
+            assert.equal(imported.nativeLaunch?.status, 'PASS');
+            const source = imported.nativeLaunch.sourcePreparation;
+            assert.equal(source?.sourceNativeInputs, 1, 'actual current frontend source input required');
+            assert.equal(source.status, 'PASS'); assert.equal(source.sourceKind, 'actual-current-native-solo');
+            assert.deepEqual(source, receipt.currentStoppedProducer);
+            assert.equal(source.producer.commit, process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+            assert.equal(source.producer.runtime.version, '0.0.161');
+            assert.equal(source.producer.runtime.cacheValidated, true);
+            assert.equal(source.hostDescriptorPresent, false); assert.equal(source.sourceFrozen, true);
+            assert.deepEqual(source.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
+              originalGroupAbsent: true, remaining: [], listenerAbsent: true });
+            assert.deepEqual(source.cleanup.remaining, []); assert.equal(source.cleanup.cleanupFailure, undefined);
+            for (const census of [source.nativeChildren, source.nativeChildrenAfterCleanup]) {
+              assert.ok(census.captured.length >= 1 && census.captured.length <= 32);
+              assert.deepEqual(census.remaining, []); assert.deepEqual(census.unmatched, []);
+            }
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.canonicalReleaseCurrent, true);
+            assert.equal(source.originalStopDiagnostics.canonicalNodeRead.proofParseable, true);
+            assert.equal(source.proof.target.runId, source.sourceRunId);
+            assert.equal(source.proof.target.sessionId, source.sourceSessionId);
+            assert.equal(source.model.turns.length, 1);
+            assert.deepEqual(imported.importedTask, source.sourceTask);
+            const seedBytes = readFileSync(join(dirname(path), 'stopped-import-ui-seed.json'));
+            assert.equal(createHash('sha256').update(seedBytes).digest('hex'), imported.seedSha256);
+            assert.equal(JSON.parse(seedBytes.toString('utf8')).sourceKind, 'actual-current-native-solo');
+          }
+          if (phase === 'desktop' && expectedMode === 'native-mixed-create-launch-ui') {
+            const local = process.env.STAGE1_VARIANT !== 'native-mixed-v2-create-launch-ui';
+            const generation = local ? 'v1' : 'v2';
+            const modelA = (local ? 'local' : 'test-local') + '/TEST-model';
+            const p = receipt.mixedCreateLaunchProof, settings = p?.providerSettings;
+            assert.equal(p?.status, 'PASS'); assert.equal(p.openCodeGeneration, generation);
+            assert.equal(settings?.status, 'PASS'); assert.equal(settings.generation, generation);
+            const steps = ['global-default', 'project-default', 'project-test',
+              ...(local ? ['local-limits'] : [])];
+            assert.equal(settings.expectedSettingsRequests, steps.length);
+            assert.deepEqual(settings.settingsRequests.map(row => row.settingsStep), steps);
+            assert.deepEqual(settings.settingsRequests.map(row => row.requestedModel),
+              ['TEST-model', 'TEST-project-model', 'TEST-project-model', ...(local ? ['TEST-model'] : [])]);
+            assert.ok(settings.settingsRequests.every(row => row.requestedEffort === undefined));
+            if (local) assert.equal(settings.settingsRequests.at(-1).requestedOutputTokens, 1536);
+            const models = JSON.parse(readFileSync(join(dirname(path), 'mixed-models.json'), 'utf8'));
+            assert.equal(models.schemaVersion, 1); assert.equal(models.phase, 'before-model-close');
+            assert.equal(realpathSync(models.root), dirname(path));
+            for (const name of ['claude', 'codex', 'opencode']) {
+              assert.deepEqual(models.providers[name].failures, []);
+              assert.deepEqual(p.probes[name], models.providers[name].probes);
+            }
+            const native = models.providers.opencode;
+            assert.deepEqual(native.probes.filter(row => row.settingsStep !== undefined), settings.settingsRequests);
+            const ordinary = native.probes.filter(row => row.settingsStep === undefined);
+            assert.ok(ordinary.length > 0 && ordinary.length <= 8);
+            assert.equal(native.probes.length, steps.length + ordinary.length);
+            assert.equal(settings.businessRequests, native.observations.length);
+            assert.ok(native.observations.length > 0);
+            assert.ok(native.observations.every(row => row.requestedModel === 'TEST-model' &&
+              (!local || row.requestedOutputTokens === 1536)));
+            assert.equal(settings.defaultBeforeSave.selected, true);
+            assert.equal(settings.defaultBeforeSave.modelId, modelA);
+            assert.match(settings.defaultBeforeSave.globalPreferenceSha256, /^[a-f0-9]{64}$/);
+            assert.equal(settings.defaultBeforeSave.globalPreferenceSha256, settings.clearedProject.globalSha256);
+            assert.equal(settings.projectOverride.globalSha256, settings.clearedProject.globalSha256);
+            assert.equal(settings.clearedProject.otherProjectAbsent, true);
+            assert.equal(settings.clearedProject.visibleInheritedModel, modelA);
+            assert.deepEqual(settings.visibleLocalLimits, local ? { contextTokens: 65536, outputTokens: 1536 } : null);
+            assert.deepEqual(settings.experimentalOverride,
+              { requested: false, checkedControl: false, failedLocalOverrideQualified: false });
+            assert.equal(settings.nativeCapture.originalRuntimeBound, true);
+            assert.equal(settings.nativeCapture.launchId, p.capture.launchId);
+            assert.deepEqual(settings.nativeCapture.capturedPreferences, {
+              defaultModelId: modelA,
+              modelLimitOverrides: local ? { [modelA]: { contextTokens: 65536, outputTokens: 1536 } } : {},
+            });
+            assert.match(settings.nativeCapture.recordSha256, /^[a-f0-9]{64}$/);
+            assert.equal(settings.originalSettingsOwnersReleased, true);
+            assert.equal(settings.sameSettingsAfterCold, true);
+            assert.equal(settings.successorOwnersReleased, true);
+            const cold = receipt.coldSettingsBoundary;
+            assert.equal(cold.status, 'PASS'); assert.equal(cold.secondEpoch.status, 'PASS');
+            assert.equal(cold.originalSavedTeamBindings.length, 2);
+            assert.deepEqual(cold.originalSavedTeamBindings.map(row => row.members.length).sort(), [1, 3]);
+            assert.equal(cold.firstCleanup.writerLockReleased, true);
+            for (const cleanup of [cold.firstCleanup, cold.secondCleanup, receipt.cleanup]) {
+              assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
+              assert.equal(cleanup.capturedHostAbsent, true); assert.deepEqual(cleanup.remaining, []);
+              assert.equal(cleanup.cleanupFailure, undefined);
+            }
+            assert.equal(p.stop.releasedBeforeQuit, true);
+            assert.equal(receipt.sourceFreezeFailure, undefined);
+            assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          }
+          console.log(JSON.stringify({ status: receipt.status, mode: receipt.mode,
+            variant: process.env.STAGE1_VARIANT, receipt: path }));
+          }
+          verify('desktop', process.env.STAGE1_MODE);
+          if (process.env.STAGE1_READBACK_MODE) verify('readback', process.env.STAGE1_READBACK_MODE);
+          NODE
+          if [ "$STAGE1_MODE" = native-mixed-create-launch-ui ]; then
+            selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+            LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI=1 "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-live-membership-$STAGE1_VARIANT.log"
+            "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const variant = process.env.STAGE1_VARIANT;
+          const prepared = phase => readFileSync(join(process.env.RUNNER_TEMP, 'stage1-' + phase + '-' + variant + '.log'), 'utf8')
+            .split('\n').flatMap(line => {
+              try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+              catch { return []; }
+            });
+          const original = prepared('desktop'), current = prepared('live-membership');
+          assert.equal(original.length, 1); assert.equal(current.length, 1, 'one new original membership case');
+          const path = realpathSync(current[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          assert.notEqual(dirname(path), dirname(realpathSync(original[0].receipt)), 'separate original TEST root');
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(realpathSync(receipt.root), dirname(path));
+          assert.equal(receipt.mode, 'native-mixed-create-launch-ui'); assert.equal(receipt.status, 'PASS');
+          const proof = receipt.liveMembershipProof, cold = receipt.coldMembershipBoundary;
+          assert.equal(proof?.kind, 'mixed-live-membership'); assert.equal(proof.status, 'PASS');
+          assert.equal(proof.openCodeGeneration, variant === 'native-mixed-v2-create-launch-ui' ? 'v2' : 'v1');
+          assert.deepEqual(proof.counts, { ordinaryProbes: 2, businessRequests: 4, inputs: 2, runtimeGenerations: 4 });
+          assert.deepEqual(proof.coldHistory, { unchanged: true, noPreparation: true, noInput: true, noRuntimeAllocation: true });
+          assert.equal(proof.physicalEpochs.length, 2); assert.ok(proof.physicalEpochs.every(row => row.released === true));
+          assert.equal(proof.removed.released, true);
+          assert.equal(proof.added.identity.memberId, proof.restored.identity.memberId);
+          assert.notEqual(proof.added.identity.principalId, proof.restored.identity.principalId);
+          assert.notEqual(proof.added.identity.sessionId, proof.restored.identity.sessionId);
+          assert.notEqual(proof.added.identity.binding.generation, proof.restored.identity.binding.generation);
+          assert.notEqual(proof.added.physical.pid, proof.restored.physical.pid);
+          assert.equal(proof.beforeCold.sessions.length, 4);
+          assert.ok(proof.beforeCold.sessions.every(row => row.phase === 'closed' && row.custody === 'released'));
+          const models = JSON.parse(readFileSync(join(dirname(path), 'mixed-models.json'), 'utf8'));
+          assert.equal(models.schemaVersion, 1); assert.equal(models.phase, 'before-model-close');
+          assert.equal(realpathSync(models.root), dirname(path));
+          for (const name of ['claude', 'codex', 'opencode']) {
+            assert.deepEqual(models.providers[name].failures, []);
+            assert.deepEqual(models.providers[name].notificationObservations ?? [], []);
+          }
+          const native = models.providers.opencode;
+          assert.equal(native.probes.length, 2); assert.ok(native.probes.every(row => row.settingsStep === undefined));
+          assert.deepEqual(native.observations.map(row => [row.turn, row.step]),
+            [['TEST_LIVE_MEMBERSHIP_ADD', 0], ['TEST_LIVE_MEMBERSHIP_ADD', 1],
+             ['TEST_LIVE_MEMBERSHIP_RESTORE', 0], ['TEST_LIVE_MEMBERSHIP_RESTORE', 1]]);
+          assert.deepEqual(models.providers.claude.observations, []); assert.deepEqual(models.providers.codex.observations, []);
+          assert.deepEqual(proof.initial.probeCounts, [models.providers.claude.probes.length, models.providers.codex.probes.length]);
+          assert.ok(models.providers.claude.probes.length >= 1 && models.providers.claude.probes.length <= 9);
+          assert.ok(models.providers.codex.probes.length >= 1 && models.providers.codex.probes.length <= 8);
+          assert.equal(cold.status, 'PASS'); assert.equal(cold.secondEpoch.status, 'PASS');
+          assert.equal(cold.firstQuit.attempted, true); assert.equal(cold.firstCleanup.writerLockReleased, true);
+          assert.equal(cold.originalHistoryDigest, cold.secondEpoch.originalHistoryDigest);
+          assert.deepEqual(cold.originalSavedTeamBindings.map(row => row.members.length).sort(), [1, 3]);
+          for (const cleanup of [cold.firstCleanup, cold.secondCleanup, receipt.cleanup]) {
+            assert.equal(cleanup.appExitCode, 0); assert.equal(cleanup.appSignalCode, null);
+            assert.equal(cleanup.capturedHostAbsent, true); assert.deepEqual(cleanup.remaining, []);
+            assert.equal(cleanup.cleanupFailure, undefined);
+          }
+          assert.equal(receipt.sourceFreezeFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          console.log(JSON.stringify({ status: receipt.status, kind: proof.kind, variant, receipt: path, counts: proof.counts }));
+          NODE
+          fi
+      - name: Check out the exact old frontend for genuine saved-only records
+        if: matrix.mode == 'stopped-import-ui' && !matrix.variant
+        uses: actions/checkout@v6
+        with:
+          ref: 4a0e06277fe216d9f82dbbede362668fe46622ee
+          path: .stage1-donor-saved
+          persist-credentials: false
+      - name: Prepare the frozen donor toolchain and its ordinary runtime payload
+        if: matrix.mode == 'stopped-import-ui' && !matrix.variant
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-donor-saved-setup.log") 2>&1
+          selected_node="$GITHUB_WORKSPACE/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node"
+          selected_donor="$GITHUB_WORKSPACE/.stage1-donor-saved"
+          test "$(git -C "$selected_donor" rev-parse HEAD)" = 4a0e06277fe216d9f82dbbede362668fe46622ee
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" install --frozen-lockfile
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" --filter agent-teams-controller build
+          "$selected_node" "$LEGACY_DESKTOP_PNPM_PATH" --dir "$selected_donor" --filter agent-teams-mcp build
+          CLAUDE_DEV_RUNTIME_CACHE_ROOT="$STAGE1_INPUTS/donor-runtime" "$selected_node" "$selected_donor/scripts/dev-with-runtime.mjs" --print-runtime-path
+          "$selected_node" "$selected_donor/scripts/ensure-terminal-platform-runtime.mjs"
+          test -z "$(git -C "$selected_donor" status --porcelain=v1 --untracked-files=no)"
+          printf 'LEGACY_DESKTOP_DONOR_PATH=%s\n' "$selected_donor" >> "$GITHUB_ENV"
+          printf 'LEGACY_DESKTOP_DONOR_RUNTIME_CACHE=%s\n' "$STAGE1_INPUTS/donor-runtime" >> "$GITHUB_ENV"
+      - name: Import actual donor UI output after original Quit and absence
+        if: matrix.mode == 'stopped-import-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_DONOR_SAVED_ONLY: '1'
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-donor-saved.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, realpathSync, lstatSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const digest = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-donor-saved.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original donor/consumer attempt');
+          const path = realpathSync(prepared[0].receipt), root = dirname(path);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(receipt.mode, 'stopped-import-ui'); assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.cleanup.capturedHostAbsent, true); assert.deepEqual(receipt.cleanup.remaining, []);
+          assert.equal(receipt.sourceFreezeFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          const producer = receipt.donorSavedProducer, proof = receipt.donorSavedImportUiProof;
+          assert.equal(producer.status, 'PASS'); assert.equal(proof.status, 'PASS');
+          assert.equal(producer.producer.commit, '4a0e06277fe216d9f82dbbede362668fe46622ee');
+          assert.equal(proof.producerCommit, producer.producer.commit);
+          assert.equal(producer.producer.node.version, 'v24.21.0');
+          assert.equal(producer.producer.runtime.version, '0.0.160');
+          assert.equal(producer.producer.runtime.cacheValidated, true);
+          assert.equal(producer.hostDescriptorPresent, false); assert.equal(producer.sourceFrozen, true);
+          assert.deepEqual(producer.ordinaryQuit, { requestedOnce: true, exitCode: 0, signalCode: null,
+            originalGroupAbsent: true, remaining: [], listenerAbsent: true });
+          assert.deepEqual(producer.cleanup.remaining, []); assert.equal(producer.cleanup.cleanupFailure, undefined);
+          for (const census of [producer.nativeChildren, producer.nativeChildrenAfterCleanup]) {
+            assert.deepEqual(census.remaining, []); assert.deepEqual(census.unmatched, []);
+            assert.ok(census.captured.length <= 32);
+            for (const child of census.captured) {
+              assert.ok(Number.isInteger(child.pid) && child.pid > 0);
+              assert.ok(typeof child.birth === 'string' && child.birth.length > 0);
+              assert.ok(child.ancestry.length >= 1 && child.ancestry.length <= 65);
+            }
+          }
+          assert.deepEqual(producer.nativeChildrenAfterCleanup.captured, producer.nativeChildren.captured);
+          assert.equal(producer.nativeBusinessInputs, 0); assert.equal(producer.nativeIdentity, 'empty');
+          assert.equal(proof.nativeBusinessInputs, 0); assert.equal(proof.noLaunchSubmit, true);
+          assert.equal(proof.originalImportAfterReload, true);
+          assert.equal(proof.producerReceiptSha256, digest(join(root, 'desktop-donor-saved-producer.json')));
+          assert.equal(proof.seedSha256, digest(join(root, 'desktop-donor-saved-seed.json')));
+          assert.equal(proof.seedSha256, producer.seedSha256);
+          assert.deepEqual(proof.sourceBefore, producer.source);
+          assert.deepEqual(proof.sourceAfter, producer.source);
+          assert.ok(proof.sourceAfter.files.length >= 2);
+          for (const file of proof.sourceAfter.files) {
+            assert.ok(file.path.startsWith(root + '/') && !file.path.includes('/../'));
+            assert.equal(realpathSync(file.path), file.path);
+            assert.equal(digest(file.path), file.sha256, 'unchanged actual corpus after consumer Quit');
+          }
+          for (const absent of proof.sourceAfter.absent) assert.throws(() => lstatSync(absent), { code: 'ENOENT' });
+          assert.ok(proof.consumerProbeCount >= 1 && proof.consumerProbeCount <= 8);
+          assert.equal(producer.modelProbes.length, proof.producerProbeCount);
+          console.log(JSON.stringify({ status: 'PASS', receipt: path, producer: producer.producer.commit,
+            scope: 'Genuine donor saved-only settings and roster; native history/Review and attachments remain separate' }));
+          NODE
+      - name: Verify native commands through original Desktop Launch and Composer
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_COMMANDS_UI: '1'
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-commands.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-commands.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original command UI journey, no replay');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(receipt.mode, 'native-launch-ui'); assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.launchDialogProof.status, 'PASS');
+          assert.equal(receipt.launchDialogProof.stop.releasedBeforeQuit, true);
+          assert.equal(receipt.cleanup.capturedHostAbsent, true);
+          assert.deepEqual(receipt.cleanup.remaining, []);
+          assert.equal(receipt.sourceFreezeFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          const proof = receipt.nativeCommandsUiProof;
+          assert.equal(proof.status, 'PASS');
+          assert.deepEqual(proof.commands.map(row => row.name), ['cost', 'compact', 'cost', 'test-project-command', 'review']);
+          assert.equal(new Set(proof.commands.map(row => row.inputId)).size, 5);
+          assert.equal(proof.localReplies.length, 2);
+          for (const reply of proof.localReplies) assert.match(reply.nativeMessageRef, /^local-command:.+/);
+          assert.deepEqual(proof.commandRequests.map(row => row.phase), ['compact', 'project-command', 'project-command', 'review', 'review']);
+          assert.deepEqual(proof.commandRequests.filter(row => row.phase === 'review').map(row => row.commandExecution),
+            ['legacy-inline-review-v1', 'legacy-inline-review-v1']);
+          assert.equal(proof.builtinReview.name, 'review');
+          assert.equal(proof.builtinReview.exactArguments, 'TEST_NATIVE_P03_EXACT_REVIEW_ARGUMENTS');
+          assert.equal(proof.builtinReview.replyId, 'TEST-p03-ui-review-native-reply');
+          assert.equal(proof.originalIdsRetainedAfterReload, true);
+          assert.equal(proof.noReplayAfterReload, true); assert.equal(proof.sourcesUnchanged, true);
+          console.log(JSON.stringify({ status: receipt.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Actual native commands, original Desktop controls, Stop and reload; finite localhost inference only' }));
+          NODE
+      - name: Verify UI-installed plugins and skills in the same native namespace
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI: '1'
+          LEGACY_DESKTOP_COMMANDS_UI: ''
+          LEGACY_DESKTOP_SCHEDULE_UI: ''
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-extension-consumption.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-extension-consumption.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original extension consumption journey, no retry');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(r.mode, 'native-launch-ui'); assert.equal(r.status, 'PASS');
+          assert.equal(r.sourceFreezeFailure, undefined);
+          assert.deepEqual(r.selectedSourceHashesAfterFlow, r.selectedSourceHashesBeforeApp);
+          assert.equal(r.cleanup.capturedHostAbsent, true); assert.deepEqual(r.cleanup.remaining, []);
+          assert.equal(r.nativeExtensionInstallUi.status, 'PASS');
+          assert.equal(r.nativeExtensionInstallUi.completedOriginalCommandIds.length, 1);
+          assert.equal(r.nativeExtensionUninstallUi.status, 'PASS');
+          assert.equal(r.nativeExtensionUninstallUi.completedOriginalCommandIds.length, 2);
+          assert.equal(new Set(r.nativeExtensionUninstallUi.completedOriginalCommandIds).size, 2);
+          assert.ok(r.nativeExtensionUninstallUi.completedOriginalCommandIds.includes(r.nativeExtensionInstallUi.completedOriginalCommandIds[0]));
+          const skills = r.nativeExtensionSkillsUi;
+          assert.equal(skills.status, 'PASS');
+          assert.deepEqual(skills.mutations.map(row => row.scope), ['user', 'project', 'project']);
+          assert.equal(new Set(skills.mutations.map(row => row.commandId)).size, 3);
+          const cold = r.coldExtensionBoundary;
+          assert.equal(cold.status, 'PASS'); assert.equal(cold.secondEpoch.status, 'PASS');
+          assert.equal(cold.firstCleanup.appExitCode, 0); assert.deepEqual(cold.firstCleanup.remaining, []);
+          assert.equal(cold.firstCleanup.capturedHostAbsent, true); assert.equal(cold.firstCleanup.writerLockReleased, true);
+          assert.equal(cold.secondEpoch.originalMutationRecordsUnchanged.length, 4);
+          assert.equal(cold.secondCleanup.appExitCode, 0); assert.equal(cold.secondCleanup.appSignalCode, null);
+          assert.equal(cold.secondCleanup.capturedHostAbsent, true); assert.deepEqual(cold.secondCleanup.remaining, []);
+          assert.equal(r.launchDialogProof.coldStartupBeforeFirstLaunch, true);
+          assert.equal(r.launchDialogProof.status, 'PASS'); assert.equal(r.launchDialogProof.stop.releasedBeforeQuit, true);
+          assert.equal(r.relaunchDialogProof.status, 'PASS'); assert.equal(r.relaunchDialogProof.stop.releasedBeforeQuit, true);
+          const p = r.nativeExtensionConsumption;
+          assert.equal(p.status, 'PASS'); assert.match(p.namespaceSha256, /^[a-f0-9]{64}$/u);
+          assert.equal(p.namespaceSha256, skills.namespaceSha256); assert.equal(p.sameNamespaceSha256, p.namespaceSha256);
+          assert.equal(p.installedPlugin.id, 'frontend-design@claude-plugins-official');
+          assert.equal(p.installedPlugin.scope, 'user'); assert.ok(p.installedPlugin.version);
+          assert.match(p.installedPlugin.sourceSha256, /^[a-f0-9]{64}$/u);
+          assert.deepEqual(p.commands.map(row => row.phase), ['user-skill', 'project-skill', 'plugin']);
+          assert.equal(new Set(p.commands.map(row => row.inputId)).size, 3);
+          assert.equal(new Set(p.commands.map(row => row.commandId)).size, 3);
+          assert.equal(p.firstInputs.length, 4);
+          assert.deepEqual(p.nativeRequests.map(row => row.phase), ['user-skill', 'user-skill', 'project-skill', 'project-skill', 'plugin', 'plugin']);
+          assert.deepEqual(p.nativeRequests.map(row => row.step), [0, 1, 0, 1, 0, 1]);
+          for (const row of p.nativeRequests) {
+            assert.equal(row.nativeBodyObserved, true); assert.equal(row.requestedModel, 'claude-opus-4-6');
+            assert.equal(row.sourceSha256, p.commands.find(command => command.phase === row.phase).sourceSha256);
+          }
+          for (const name of ['/test-native-user-extension', '/test-native-project-extension']) {
+            assert.ok(p.nativeCatalogBefore.includes(name)); assert.ok(p.nativeCatalogAfter.includes(name));
+          }
+          assert.ok(p.nativeCatalogBefore.includes('/frontend-design:frontend-design'));
+          assert.equal(p.nativeCatalogAfter.includes('/frontend-design:frontend-design'), false);
+          assert.equal(p.originalCommandsRetained, true); assert.equal(p.noReplayAfterUninstall, true);
+          assert.equal(p.uninstalledPluginAbsentFromNewQuery, true); assert.equal(p.bothNativeRunsReleased, true);
+          assert.notDeepEqual(p.firstBinding, p.secondBinding);
+          console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Same native namespace: original UI Install/Create/Edit, cold startup, expanded native commands, Uninstall and new Query' }));
+          NODE
+      - name: Verify original Schedule controls with finite native and task-first Host execution
+        if: matrix.mode == 'native-create-ui' && !matrix.variant
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_SCHEDULE_UI: '1'
+          LEGACY_DESKTOP_COMMANDS_UI: ''
+          LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI: ''
+          LEGACY_DESKTOP_OPENCODE_MCP_UI: ''
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-schedules.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-schedules.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const value = JSON.parse(line); return value.phase === 'prepared' && typeof value.receipt === 'string' ? [value] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1);
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(r.mode, 'native-launch-ui'); assert.equal(r.status, 'PASS');
+          assert.equal(r.sourceFreezeFailure, undefined);
+          assert.deepEqual(r.selectedSourceHashesAfterFlow, r.selectedSourceHashesBeforeApp);
+          assert.equal(r.cleanup.capturedHostAbsent, true); assert.deepEqual(r.cleanup.remaining, []);
+          const p = r.scheduleUi;
+          assert.equal(p.status, 'PASS'); assert.equal(p.finite.actualTool, true); assert.equal(p.finite.logVisible, true);
+          assert.deepEqual(p.finite.limits, { maxTurns: 6, maxBudgetUsd: 0.25 });
+          assert.equal(p.smart.actualTool, true); assert.equal(p.smart.nativeReplyVisible, true);
+          assert.equal(p.smart.cleanup, 'confirmed'); assert.equal(p.reloadWithoutReplay, true);
+          assert.equal(typeof p.finite.runId, 'string');
+          assert.equal(typeof p.smart.runId, 'string'); assert.notEqual(p.finite.runId, p.smart.runId);
+          assert.equal(typeof p.smart.taskId, 'string'); assert.ok(p.smart.taskId.length > 0);
+          assert.deepEqual(p.nativeRequests.map(row => row.mode), ['finite', 'finite', 'smart', 'smart', 'smart', 'smart']);
+          assert.deepEqual(r.model.failures, []);
+          console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Original Schedule controls, actual native Bash and Team MCP, Stop, history and reload without replay' }));
+          NODE
+      - name: Verify captured member MCP policies through original V2 Desktop controls
+        if: matrix.variant == 'native-mixed-v2-create-launch-ui'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: native-launch-ui
+          LEGACY_DESKTOP_OPENCODE_MCP_UI: '1'
+          LEGACY_DESKTOP_COMMANDS_UI: ''
+          LEGACY_DESKTOP_SCHEDULE_UI: ''
+          LEGACY_DESKTOP_EXTENSIONS_CONSUMPTION_UI: ''
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-desktop-native-captured-mcp.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { assertDesktopMetadataLineageRetained, assertDesktopMetadataReleasedEvidence } from './scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts';
+          import { execFileSync } from 'node:child_process';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { dirname, join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-desktop-native-captured-mcp.log'), 'utf8');
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original MCP UI journey, no replay');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const r = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.OPENCODE_V2_TEST_SOURCE_HEAD);
+          assert.equal(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim(), '');
+          assert.equal(r.mode, 'native-launch-ui'); assert.equal(r.status, 'PASS');
+          assert.equal(r.nativeProvider, 'opencode'); assert.equal(r.nativeGeneration, 'v2');
+          assert.equal(r.sourceFreezeFailure, undefined);
+          assert.deepEqual(r.selectedSourceHashesAfterFlow, r.selectedSourceHashesBeforeApp);
+          assert.equal(r.cleanup.capturedHostAbsent, true); assert.deepEqual(r.cleanup.remaining, []);
+          const p = r.launchDialogProof;
+          assert.equal(p.status, 'PASS'); assert.equal(p.variant, 'captured-mcp-member-policies');
+          assert.equal(p.provider, 'opencode'); assert.equal(p.metadataAbsentBeforeHarnessCleanup, true);
+          assert.deepEqual(p.metadataSources.map(row => row.scope), ['global', 'project']);
+          assert.equal(new Set(p.metadataSources.map(row => row.profileId)).size, 2);
+          assert.equal(p.originalMetadataBeforeLaunch.children.length, 2);
+          const metadata = [p.originalMetadataBeforeLaunch, p.metadataAtRuntimeObservation, p.metadataAfterStop, p.metadataAfterReadback];
+          for (let i = 1; i < metadata.length; i++) {
+            assert.deepEqual(metadata[i].host, metadata[0].host);
+            assert.deepEqual(metadata[i].metadataLineage.profileHashes, metadata[0].metadataLineage.profileHashes);
+            assertDesktopMetadataLineageRetained(metadata[i - 1].metadataLineage, metadata[i].metadataLineage);
+          }
+          const present = execFileSync('/bin/ps', ['-ax', '-o', 'pid='], { encoding: 'utf8', timeout: 3000, maxBuffer: 2 * 1024 * 1024 })
+            .trim().split(/\s+/).map(value => ({ pid: Number(value) }));
+          assertDesktopMetadataReleasedEvidence(p.metadataAfterReadback, p.metadataAtHostClose, present);
+          assert.deepEqual(p.savedPolicies, [
+            { mode: 'strictAllowlist', scopes: { user: true, project: false, local: false }, serverNames: ['TEST.selected'] },
+            { mode: 'appOnly' },
+          ]);
+          assert.equal(p.policiesRetainedAfterStop, true); assert.equal(p.originalCommandsRetained, true);
+          assert.match(p.readbackRuntimeDigest, /^[a-f0-9]{64}$/u);
+          assert.ok(p.readbackModelProbes.length > 0 && p.readbackModelProbes.length <= 128);
+          assert.ok(p.readbackModelProbes.every(row => row.resourceHeld === false && ['completed', 'cancelled'].includes(row.phase)));
+          assert.equal(p.savedSettings.prompt ?? '', ''); assert.equal(p.savedSettings.skipPermissions, false);
+          assert.equal(p.leadInputs, 0); assert.equal(p.ordinaryRequests, 5);
+          assert.ok(p.probeRequests > 0 && p.probeRequests <= 8);
+          assert.deepEqual(r.model.failures, []); assert.equal(r.model.probes.length, p.probeRequests);
+          assert.ok(r.model.probes.every(row => row.requestedModel === 'TEST-model'));
+          assert.deepEqual(r.model.requests.map(row => [row.turn, row.step]), [
+            ['ALLOW', 0], ['ALLOW', 1], ['ALLOW', 2], ['APP_ONLY', 0], ['APP_ONLY', 1],
+          ]);
+          assert.equal(r.model.requests[0].tool, 'TEST_selected_write_marker');
+          assert.ok(['agent-teams_message_send', 'mcp__agent-teams__message_send'].includes(r.model.requests[1].tool));
+          assert.equal(r.model.requests[3].tool, r.model.requests[1].tool);
+          assert.equal(r.model.requests[2].tool, null); assert.equal(r.model.requests[4].tool, null);
+          assert.equal(p.excludedActorStarted, false); assert.equal(p.externalCalls, 1);
+          const source = JSON.parse(readFileSync(join(dirname(path), 'captured-mcp-fixture.json'), 'utf8'));
+          assert.equal(p.catalogSha256, source.catalogSha256);
+          assert.deepEqual(p.externalEffect, { server: 'selected', instanceId: p.originalActor.instanceId,
+            pid: p.originalActor.pid, nonce: source.nonce });
+          assert.equal(p.originalActor.physical.pid, p.originalActor.pid);
+          assert.ok(p.originalActor.physical.birth); assert.ok(p.originalActor.runtimeParent.birth);
+          assert.deepEqual(p.stop.actor, p.originalActor.physical);
+          assert.equal(p.stop.nativeChildren.length, 3);
+          assert.ok(p.stop.nativeChildren.some(row => JSON.stringify(row) === JSON.stringify(p.originalActor.runtimeParent)));
+          assert.equal(p.stop.originalActorAbsentBeforeQuit, true); assert.equal(p.stop.releasedBeforeQuit, true);
+          assert.equal(p.manualPermission.beforeEffect, true); assert.equal(p.manualPermission.clicks, 1);
+          assert.equal(p.manualPermission.decision, 'allow'); assert.ok(p.manualPermission.interactionRef);
+          assert.equal(p.manualPermission.inputId, p.commands[0].inputId);
+          assert.equal(p.steps.filter(row => row.action === 'mouseClick' && row.label === 'Allow this exact original MCP request once').length, 1);
+          assert.equal(p.steps.filter(row => row.action === 'mouseClick' && row.label === 'one original three-member Launch').length, 1);
+          assert.equal(p.steps.filter(row => row.action === 'mouseClick' && row.label === 'Send original member input once').length, 2);
+          assert.deepEqual(p.commands.map(row => row.memberId), ['TEST-mcp-allowed', 'TEST-mcp-app-only']);
+          assert.equal(new Set(p.commands.map(row => row.inputId)).size, 2);
+          assert.equal(new Set(p.commands.map(row => row.command.commandId)).size, 2);
+          assert.equal(p.capture.members.length, 3); assert.equal(p.artifacts.length, 3);
+          for (const [index, item] of p.commands.entries()) {
+            const member = p.capture.members.find(row => row.memberId === item.memberId);
+            assert.ok(member); assert.equal(item.command.phase, 'completed');
+            assert.equal(item.command.principalId, 'TEST-human'); assert.equal(item.command.command.operation, 'message.send');
+            assert.equal(item.outbox.phase, 'admitted'); assert.equal(item.outbox.inputId, item.inputId);
+            assert.equal(item.outbox.commandId, item.command.commandId); assert.equal(item.outbox.messageId, item.command.effects.messageId);
+            assert.deepEqual(item.outbox.binding, member.delivery);
+            assert.equal(item.nativeReply.phase, 'completed'); assert.equal(item.nativeReply.principalId, member.principalId);
+            assert.equal(item.nativeReply.commandId, 'TEST-mcp-native-reply-' + (index === 0 ? 'ALLOW' : 'APP_ONLY'));
+          }
+          assert.equal(p.nativeSessionsAfterStop.length, 3);
+          for (const session of p.nativeSessionsAfterStop) {
+            assert.equal(session.phase, 'closed'); assert.equal(session.custody, 'released'); assert.equal(session.sealed, true);
+            const expected = p.commands.find(row => row.memberId === session.binding.memberId);
+            assert.deepEqual(session.inputs.map(row => [row.inputId, row.phase, row.terminal]),
+              expected ? [[expected.inputId, 'terminal', 'succeeded']] : []);
+          }
+          console.log(JSON.stringify({ status: r.status, receipt: path, sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD,
+            scope: 'Original per-member MCP controls, actual V2 inventory and permission, once native effect, Team replies, Stop and readback' }));
+          NODE
+      - name: Verify retained Codex A through real Update and fresh B Launch
+        if: ${{ success() && matrix.variant == 'native-codex-resume-ui' }}
+        env:
+          LEGACY_DESKTOP_CODEX_SOURCE_SELECTION: '1'
+        run: |
+          set -euo pipefail
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          export LEGACY_CODEX_CANDIDATE_INPUTS="$STAGE1_INPUTS/codex-0.169.0/input-pins.json"
+          test -f "$LEGACY_CODEX_CANDIDATE_INPUTS"
+          "$selected_node" scripts/legacy-agent-host/desktop-backend-smoke.ts 2>&1 | tee "$RUNNER_TEMP/stage1-codex-source-selection.log"
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync } from 'node:fs';
+          import { join } from 'node:path';
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-codex-source-selection.log'), 'utf8');
+          assert.ok(Buffer.byteLength(log) <= 8 * 1024 * 1024);
+          const prepared = log.split('\n').flatMap(line => {
+            try { const row = JSON.parse(line); return row.phase === 'prepared' ? [row] : []; }
+            catch { return []; }
+          });
+          assert.equal(prepared.length, 1, 'one original source-selection invocation');
+          const path = realpathSync(prepared[0].receipt);
+          assert.match(path, /^\/private\/tmp\/TEST-desktop-backend-[^/]+\/desktop-backend-receipt\.json$/u);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.mode, 'native-resume-ui');
+          assert.equal(receipt.resumeProvider, 'codex');
+          assert.equal(receipt.status, 'PASS', 'INCOMPLETE remains a failed source-selection proof');
+          assert.equal(receipt.codexSourceSelectionProof?.status, 'PASS');
+          assert.equal(receipt.model.observations.length, 11);
+          assert.equal(receipt.model.probes.length, 2);
+          assert.deepEqual(receipt.model.failures, []);
+          assert.deepEqual(receipt.cleanup.remaining, []);
+          assert.equal(receipt.cleanup.appExitCode, 0);
+          assert.equal(receipt.cleanup.appSignalCode, null);
+          assert.equal(receipt.cleanup.capturedHostObserved, true);
+          assert.equal(receipt.cleanup.capturedHostAbsent, true);
+          assert.equal(receipt.cleanup.cleanupFailure, undefined);
+          assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+          assert.deepEqual(receipt.selectedNativeInputHashesAfterCleanup, receipt.selectedNativeInputHashesBeforeApp);
+          console.log(JSON.stringify({ status: receipt.status, receipt: path,
+            sourceHead: process.env.OPENCODE_V2_TEST_SOURCE_HEAD, scope: 'Retained A, real Codex Update, fresh B Launch and cold history' }));
+          NODE
+      - name: Verify current native mixed history restore after Codex Desktop acceptance
+        if: ${{ success() && matrix.resume_provider == 'codex' }}
+        env:
+          LEGACY_NATIVE_MIXED_HOST_GO: '1'
+          LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
+        run: |
+          set -euo pipefail
+          unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO
+          export LEGACY_NATIVE_CODEX_PATH="$STAGE1_INPUTS/codex/codex-aarch64-apple-darwin"
+          export LEGACY_NATIVE_OPENCODE_PATH="$STAGE1_INPUTS/opencode/opencode"
+          selected_node=resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node
+          export LEGACY_NATIVE_HOST_SOURCE_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/src", ".ts"));')"
+          export LEGACY_NATIVE_HOST_DIST_SHA256="$("$selected_node" --input-type=module -e 'import { treeHash } from "./packages/legacy-agent-host/tests/fixtures/native-host.ts"; console.log(await treeHash("packages/legacy-agent-host/dist", ".js"));')"
+          "$selected_node" --input-type=module <<'NODE' 2>&1 | tee "$RUNNER_TEMP/stage1-native-restore.log"
+          import { spawnSync } from 'node:child_process';
+          import { readNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const provider = await readNativeProviderArtifact(process.cwd());
+          const result = spawnSync(process.execPath, ['--test', 'packages/legacy-agent-host/tests/native-mixed-host.native.ts'], {
+            stdio: 'inherit',
+            env: { ...process.env, LEGACY_NATIVE_PROVIDER_ARTIFACT: provider.path, LEGACY_NATIVE_PROVIDER_SHA256: provider.sha256 },
+          });
+          if (result.error) throw result.error;
+          process.exit(result.status ?? 1);
+          NODE
+          "$selected_node" --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { readNativeProviderArtifact } from './packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+          const provider = await readNativeProviderArtifact(process.cwd());
+          const log = readFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore.log'), 'utf8');
+          const matches = [...log.matchAll(/TEST receipt: (\/private\/tmp\/TEST-native-mixed-host-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(matches.length, 1, 'one original native restore attempt');
+          const path = realpathSync(matches[0][1]);
+          const receipt = JSON.parse(readFileSync(path, 'utf8'));
+          assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.exerciseRestore, true);
+          assert.equal(receipt.exercisePeers, false); assert.equal(receipt.exerciseCrossTeam, false);
+          assert.equal(receipt.cleanupConfirmed, true);
+          assert.deepEqual(Object.keys(receipt.restoreSelections).sort(), ['alice', 'bob', 'carol']);
+          assert.equal(receipt.artifacts.providerSha256, provider.sha256);
+          assert.equal(receipt.artifacts.source, process.env.LEGACY_NATIVE_HOST_SOURCE_SHA256);
+          assert.equal(receipt.artifacts.dist, process.env.LEGACY_NATIVE_HOST_DIST_SHA256);
+          assert.equal(receipt.artifacts.executables.opencode.sha256, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b');
+          assert.ok(receipt.excluded.includes('Desktop controls'));
+          writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore-inputs.json'), JSON.stringify({
+            receipt: path, providerScope: 'Claude/Codex/OpenCode V1 1.19.4 native history only; Desktop controls separate',
+            sourceSha256: process.env.LEGACY_NATIVE_HOST_SOURCE_SHA256,
+            distSha256: process.env.LEGACY_NATIVE_HOST_DIST_SHA256,
+            artifacts: receipt.artifacts,
+          }, null, 2));
+          NODE
+      - name: Preserve original source Desktop diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-source-desktop-${{ matrix.variant || matrix.mode }}-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-desktop-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-readback-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-live-membership-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-setup-${{ matrix.variant || matrix.mode }}.log
+            ${{ runner.temp }}/stage1-native-restore.log
+            ${{ runner.temp }}/stage1-native-restore-inputs.json
+            ${{ runner.temp }}/stage1-codex-0169-candidate.log
+            ${{ runner.temp }}/stage1-codex-source-selection.log
+            ${{ runner.temp }}/stage1-codex-0169-candidate-inputs.json
+            /private/tmp/TEST-stage1-inputs-*/codex-0.169.0/input-pins.json
+            /private/tmp/TEST-native-codex-team-*/receipt.json
+            /private/tmp/TEST-native-codex-team-*/candidate-checkpoint.json
+            ${{ runner.temp }}/stage1-native-commands.log
+            ${{ runner.temp }}/stage1-native-commands-inputs.json
+            ${{ runner.temp }}/stage1-desktop-native-commands.log
+            ${{ runner.temp }}/stage1-desktop-native-schedules.log
+            ${{ runner.temp }}/stage1-checkpoint-donor-setup.log
+            ${{ runner.temp }}/stage1-checkpoint-donor-inputs.json
+            ${{ runner.temp }}/stage1-checkpoint-donor.log
+            /private/tmp/TEST-native-claude-checkpoint-donor-*/receipt.json
+            /private/tmp/TEST-native-claude-checkpoint-donor-*/host-stderr.log
+            /private/tmp/TEST-native-claude-checkpoint-donor-*/frozen/*
+            ${{ runner.temp }}/stage1-donor-saved-setup.log
+            ${{ runner.temp }}/stage1-desktop-donor-saved.log
+            ${{ runner.temp }}/stage1-desktop-native-extension-consumption.log
+            ${{ runner.temp }}/stage1-desktop-native-captured-mcp.log
+            /private/tmp/TEST-native-claude-compaction-*/receipt.json
+            /private/tmp/TEST-native-claude-compaction-*/host-stderr.log
+            opencode-v2-desktop-inputs.json
+            /private/tmp/TEST-stage1-inputs-*/input-pins.json
+            /private/tmp/TEST-desktop-backend-*/*.json
+            /private/tmp/TEST-desktop-backend-*/*.png
+            /private/tmp/TEST-desktop-backend-*/*.log
+            /private/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-desktop-backend-*/userData/logs/app-errors*.ndjson
+            /private/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-desktop-backend-*/owner-routing/**
+            /private/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
+            /private/tmp/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+            /private/tmp/TEST-desktop-backend-*/claude/teams/test-donor-saved-*/**
+            /private/tmp/TEST-desktop-backend-*/claude/tasks/test-donor-saved-*/**
+            /private/tmp/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+            /private/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-desktop-backend-*/home/TEST-mcp-catalog.json
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
+            /private/tmp/TEST-desktop-backend-*/claude-checkpoint-upgrade/*
+            /private/tmp/TEST-desktop-backend-*/cold-resume-epoch1-bundles/**
+            /private/tmp/TEST-desktop-backend-*/cold-extension-epoch1-bundles/**
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/skills/**
+            /private/tmp/TEST-desktop-backend-*/native-claude/config/plugins/installed_plugins.json
+            /private/tmp/TEST-desktop-backend-*/home/Downloads/**
+            /private/tmp/TEST-desktop-backend-*/native-codex/config/config.toml
+            /private/tmp/TEST-desktop-backend-*/native-codex/config/sessions/**
+            /private/tmp/TEST-desktop-backend-*/providers/opencode/data/opencode/log/opencode.log
+            /private/tmp/TEST-native-mixed-host-*/**
+
+  stage1-process-diagnostic:
+    name: Stage 1 process tuple diagnostic (unqualified)
+    if: github.event_name == 'workflow_dispatch' && inputs.stage1_process_diagnostic
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 10
+    env:
+      TMPDIR: /private/tmp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Record current tuple without production qualification or signals
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/process-tuple-diagnostic.log") 2>&1
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+          headers="$(mktemp -d /private/tmp/TEST-process-tuple-headers-XXXXXX)"
+          archive="$headers/node-v24.21.0-headers.tar.gz"
+          curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          tar -xzf "$archive" -C "$headers" node-v24.21.0/include/node
+          LEGACY_PROCESS_TUPLE_DIAGNOSTIC_GO=1 resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/diagnose-process-tuple.ts /private/tmp "$headers/node-v24.21.0/include/node" "$archive"
+      - name: Preserve unqualified tuple inputs and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-tuple-diagnostic-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/process-tuple-diagnostic.log
+            /private/tmp/TEST-process-tuple-*/**
+
+  stage1-process-qualification:
+    name: Stage 1 current-tuple process and packed qualification
+    needs: plan
+    # Original P7/positive-M19 receipt must bind both selected Stage1 and its integration tree.
+    if: >-
+      needs.plan.outputs.full == 'true' &&
+      needs.plan.outputs.metadata == 'false' &&
+      (
+        (github.event_name == 'workflow_dispatch' && inputs.stage1_process_qualification) ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false && (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1' && github.event.pull_request.head.repo.full_name == github.repository)))
+      )
+    runs-on: ${{ vars.CI_MACOS_ARM_RUNNER || 'macos-15' }}
+    timeout-minutes: 45
+    env:
+      TMPDIR: /private/tmp
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Cache exact pinned macOS Node archive
+        uses: actions/cache@v5
+        with:
+          path: .legacy-host-download/node-v24.21.0-darwin-arm64.tar.gz
+          key: legacy-host-node-darwin-arm64-24.21.0-bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057
+      - name: Verify and stage the existing pinned Node
+        run: |
+          set -euo pipefail
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          git rev-parse HEAD
+          node scripts/ci/prefill-legacy-host-macos-node.mts
+          node scripts/legacy-agent-host/stage-node.ts --platform darwin-arm64
+      - name: Install Desktop dependencies including Electron
+        run: node scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build all existing prerequisites before qualification freeze
+        run: |
+          set -euo pipefail
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          node --max-old-space-size=8192 node_modules/electron-vite/bin/electron-vite.js build
+      - name: Prepare the existing exact private TEST inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          exec > >(tee "$RUNNER_TEMP/stage1-process-qualification-setup.log") 2>&1
+          selected_inputs="$(mktemp -d /private/tmp/TEST-stage1-p7-inputs-XXXXXX)"
+          printf 'STAGE1_P7_INPUTS=%s\n' "$selected_inputs" >> "$GITHUB_ENV"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/codex" "$selected_inputs/opencode"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download rust-v0.162.0 --repo openai/codex --pattern codex-code-mode-host-aarch64-apple-darwin.tar.gz --dir "$selected_inputs"
+          gh release download v1.19.4 --repo anomalyco/opencode --pattern opencode-darwin-arm64.zip --dir "$selected_inputs"
+          gh release download v0.3.4 --repo 777genius/terminal-platform --pattern terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz --dir "$selected_inputs"
+          printf '%s  %s\n' 98e9413a1bd167ae573723939ff178e6d44f1bb21d5cda960dbeb2fa65f49104 "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' 9455c17fa9ba6e89f8ec24ebfd3419825e2c651c56f8bd8df7141411e6decdc2 "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" | shasum -a 256 -c -
+          printf '%s  %s\n' c400a2f8c8ab7e99478a7f4dd1a466b57bf33888e520d85c55780a5464c4b689 "$selected_inputs/opencode-darwin-arm64.zip" | shasum -a 256 -c -
+          printf '%s  %s\n' b4fad2842deb430c8c4f89b7e1d6ab9e6934f80195a9dcfbc0f67a196d4ad038 "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz" | shasum -a 256 -c -
+          node scripts/stage-terminal-platform-runtime.mjs --platform darwin-arm64 --archive "$selected_inputs/terminal-platform-runtime-darwin-arm64-v0.3.4.tar.gz"
+          tar -xzf "$selected_inputs/codex-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-aarch64-apple-darwin
+          tar -xzf "$selected_inputs/codex-code-mode-host-aarch64-apple-darwin.tar.gz" -C "$selected_inputs/codex" codex-code-mode-host-aarch64-apple-darwin
+          mv "$selected_inputs/codex/codex-code-mode-host-aarch64-apple-darwin" "$selected_inputs/codex/codex-code-mode-host"
+          test -f "$selected_inputs/codex/codex-code-mode-host" && test ! -L "$selected_inputs/codex/codex-code-mode-host" && test -x "$selected_inputs/codex/codex-code-mode-host"
+          printf '%s  %s\n' 0b74f513cd960f32e60836f39c574761e6fd1500e608135f3f34347acc3e0e6a "$selected_inputs/codex/codex-code-mode-host" | shasum -a 256 -c -
+          unzip -q "$selected_inputs/opencode-darwin-arm64.zip" -d "$selected_inputs/opencode"
+          archive="$selected_inputs/node-v24.21.0-headers.tar.gz"
+          curl --http1.1 --fail --show-error --silent --connect-timeout 15 --max-time 60 https://nodejs.org/download/release/v24.21.0/node-v24.21.0-headers.tar.gz --output "$archive"
+          printf '%s  %s\n' 57c6bee2e30bbbee5bd51d6cc343eb992e174b56a2a1d0eab7a7510771c20ea2 "$archive" | shasum -a 256 -c -
+          tar -xzf "$archive" -C "$selected_inputs" node-v24.21.0/include/node
+      - name: Run the two existing native proofs and original packed controls once
+        env:
+          LEGACY_STAGE1_P7_GO: '1'
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/run-process-qualification.ts "$STAGE1_P7_INPUTS" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification.log"
+      - name: Qualify controlled native child cold Host and existing Processes UI Stop separately
+        env:
+          LEGACY_PROCESS_COLD_UI_GO: '1'
+        run: |
+          set -euo pipefail
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --test scripts/legacy-agent-host/fixtures/process-controlled-root.test.ts scripts/legacy-agent-host/desktop-native-process-ui.test.ts
+          original_p7_log_sha256="$(shasum -a 256 "$RUNNER_TEMP/stage1-process-qualification.log" | cut -d ' ' -f 1)"
+          resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node scripts/legacy-agent-host/qualify-process-cold-ui.ts "$RUNNER_TEMP/stage1-process-qualification.log" "$original_p7_log_sha256" 2>&1 | tee "$RUNNER_TEMP/stage1-process-qualification-cold-ui.log"
+      - name: Preserve original process and packed proof receipts separately
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1-process-qualification-proof-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-process-qualification*.log
+            /private/tmp/TEST-stage1-p7-*/*.json
+            /private/tmp/TEST-stage1-p7-*/*.log
+            /private/tmp/TEST-stage1-p7-*/process-artifact/manifest.json
+            /private/tmp/TEST-stage1-p7-*/process-artifact/registered-process-darwin.c
+            /private/tmp/TEST-stage1-p7-*/process-artifact/registered-process.node
+            /private/tmp/TEST-stage1-p7-*/candidate/electron-builder.candidate.json
+            /private/tmp/TEST-stage1-p7-*/candidate/legacy-agent-host/candidate.json
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-native-ancestry-*/proof.ndjson
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.json
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.ndjson
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.log
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/*.png
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/hoststore/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/workspace/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/userData/agent-backend/bindings/**
+            /private/tmp/TEST-stage1-p7-*/tmp/TEST-desktop-backend-*/native-claude/config/projects/**/*.jsonl
+      - name: Preserve exact TEST inputs, original receipts and incomplete custody
+        if: always()
+        uses: actions/upload-artifact@v4
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        with:
+          name: stage1-process-qualification-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: warn
+          include-hidden-files: true
+          path: |
+            ${{ runner.temp }}/stage1-process-qualification*.log
+            /private/tmp/TEST-stage1-p7-*/**
+
   # Required by branch protection. Keep the name static for every event: on
   # PR #985 an edited-event run that reported another name left the required
   # context "Expected" although earlier runs for the same head had passed.
@@ -509,7 +2957,7 @@ jobs:
   # authenticated complete success. See docs/ci-qualification.md.
   full-qualification:
     name: Full qualification
-    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork]
+    needs: [plan, validate, test, lint, task-change-ledger-windows, focused, source, dmg-artwork, retained-opencode-coexistence, codex-login-desktop]
     if: always() && !cancelled()
     runs-on: ${{ vars.CI_LINUX_RUNNER || 'ubuntu-latest' }}
     steps:
@@ -519,6 +2967,45 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+      - name: Require selected Codex login and protocol-peer schedule qualification
+        if: >-
+          needs.plan.outputs.metadata == 'false' &&
+          ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+           (github.event_name == 'pull_request' && github.event.pull_request.draft == false &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            (github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' ||
+             github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' ||
+             github.event.pull_request.head.ref == 'feat/provider-host-frontend-parity-20261112' ||
+             (github.event.pull_request.number == 982 &&
+              github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
+        env:
+          CODEX_LOGIN_RESULT: ${{ needs.codex-login-desktop.result }}
+        run: test "$CODEX_LOGIN_RESULT" = success
+      - name: Require selected retained V1 and Host V2 native Desktop qualification
+        if: >-
+          (
+            needs.plan.outputs.full == 'true' && needs.plan.outputs.reuse == 'false' &&
+            ((github.event_name == 'workflow_dispatch' && inputs.stage1_desktop) ||
+            (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository &&
+            (github.event.pull_request.base.ref == 'feat/provider-migration-stage-1' || (github.event.pull_request.base.ref == 'main' && github.event.pull_request.head.ref == 'feat/provider-migration-stage-1'))))
+          ) ||
+          (
+            needs.plan.result == 'success' &&
+            needs.plan.outputs.scope == 'full' &&
+            needs.plan.outputs.full == 'false' &&
+            needs.plan.outputs.metadata == 'false' &&
+            needs.plan.outputs.reuse == 'false' &&
+            github.event_name == 'pull_request' &&
+            github.repository == '777genius/agent-teams-ai' &&
+            github.event.pull_request.number == 1192 &&
+            github.event.pull_request.draft == true &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            github.event.pull_request.base.ref == 'feat/provider-host-frontend-parity-20261112' &&
+            github.event.pull_request.head.ref == 'fix/frontend-parity-completion-20261113'
+          )
+        env:
+          RETAINED_COEXISTENCE_RESULT: ${{ needs.retained-opencode-coexistence.result }}
+        run: test "$RETAINED_COEXISTENCE_RESULT" = success
       # The script deadline (METADATA_GATE.waitMs, 90 min) fails the gate first;
       # this timeout bounds the last proof after it. Either outcome is a failure.
       - name: Verify completed current-code qualification after metadata edits

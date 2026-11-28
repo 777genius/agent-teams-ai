@@ -4,6 +4,7 @@ import {
 } from '../../core/domain/reviewFlowPolicy';
 
 import type {
+  ReviewFlowOverview,
   ReviewFlowPolicy,
   ReviewFlowSettings,
   TeamReviewFlowOverrides,
@@ -18,6 +19,7 @@ export const DEFAULT_SCOPE_VALUE = '*';
 export interface TeamIdentity {
   teamName: string;
   displayName?: string;
+  ownerResourceRef?: string;
 }
 
 /** A row of the folded team list, as far as the review flow needs it. */
@@ -78,11 +80,16 @@ export function reviewFlowBoardsOf(
 ): TeamIdentity[] {
   return teams.flatMap((team): TeamIdentity[] => {
     if (projectCopies.has(team.teamName)) return [];
-    const own = { teamName: team.teamName, displayName: team.displayName };
+    const own = {
+      teamName: team.teamName,
+      displayName: team.displayName,
+      ...(team.ownerResourceRef ? { ownerResourceRef: team.ownerResourceRef } : {}),
+    };
     if (team.projectContextMode === 'per_project') return [own];
     const copies = (team.projectHistoryContexts ?? []).map((context) => ({
       teamName: context.executionTeamName,
       displayName: copyLabel(context.executionTeamName) ?? context.executionTeamName,
+      ...(team.ownerResourceRef ? { ownerResourceRef: team.ownerResourceRef } : {}),
     }));
     return [own, ...copies];
   });
@@ -221,4 +228,16 @@ export function policyIdentity(scope: ReviewFlowScope, policy: ReviewFlowPolicy)
     policy.reviewFlow,
     policy.reviewFlowPrompt,
   ]);
+}
+
+/** Incomplete owner reads cannot make a team appear to follow the default. */
+export function isReviewFlowTeamUnavailable(
+  team: TeamIdentity,
+  unavailable: NonNullable<ReviewFlowOverview['unavailable']>
+): boolean {
+  return unavailable.some((item) =>
+    item.kind === 'team'
+      ? item.teamName === team.teamName
+      : team.ownerResourceRef !== undefined && item.ownerResourceRef === team.ownerResourceRef
+  );
 }

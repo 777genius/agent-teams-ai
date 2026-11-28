@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Plan Progress Report</title>
+  <style>
+    :root {
+      --accent: #48d7c8;
+      --accent-rgb: 72, 215, 200;
+      --blue: #65a7ff;
+      --violet: #9d8cff;
+      --amber: #ffc66d;
+      --red: #ff7187;
+      --green: #58dda8;
+      --bg: #071019;
+      --bg-deep: #040a10;
+      --surface: rgba(12, 27, 40, .78);
+      --surface-strong: #0e2130;
+      --surface-soft: rgba(255,255,255,.034);
+      --text: #edf8f6;
+      --muted: #91a8b1;
+      --faint: #60757e;
+      --line: rgba(151, 192, 199, .16);
+      --line-strong: rgba(151, 192, 199, .27);
+      --shadow: 0 28px 90px rgba(0,0,0,.34);
+      --radius: 24px;
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark;
+    }
+    html[data-theme="light"] {
+      --bg: #f3f7f6;
+      --bg-deep: #e8efed;
+      --surface: rgba(255,255,255,.86);
+      --surface-strong: #ffffff;
+      --surface-soft: rgba(9, 45, 48, .045);
+      --text: #102b2e;
+      --muted: #5c7274;
+      --faint: #829294;
+      --line: rgba(24, 68, 72, .14);
+      --line-strong: rgba(24, 68, 72, .24);
+      --shadow: 0 24px 70px rgba(30, 70, 68, .12);
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: clip;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 14% -8%, rgba(var(--accent-rgb), .17), transparent 31rem),
+        radial-gradient(circle at 88% 2%, rgba(101, 167, 255, .12), transparent 29rem),
+        linear-gradient(145deg, var(--bg-deep), var(--bg) 45%, var(--bg-deep));
+      font-size: 15px;
+      line-height: 1.55;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        linear-gradient(rgba(139, 187, 192, .055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 187, 192, .055) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: linear-gradient(to bottom, black, transparent 72%);
+    }
+    button { font: inherit; }
+    .shell { width: min(1240px, calc(100% - 48px)); margin: 0 auto; position: relative; }
+    .topbar { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 22px; }
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .brand-mark { width: 30px; height: 30px; border-radius: 9px; background: conic-gradient(from 210deg, var(--accent), var(--blue), var(--accent)); box-shadow: 0 0 28px rgba(var(--accent-rgb), .22); position: relative; }
+    .brand-mark::after { content: ""; position: absolute; inset: 7px; border-radius: 50%; background: var(--bg); }
+    .brand-copy { min-width: 0; }
+    .brand-name { color: var(--text); font-size: 13px; font-weight: 800; letter-spacing: .035em; }
+    .brand-meta { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62vw; }
+    .actions { display: flex; align-items: center; gap: 8px; }
+    .icon-button, .segmented button, .filters button, .legend-button {
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--surface-soft);
+      cursor: pointer;
+      transition: color .18s, border-color .18s, background .18s, transform .18s;
+    }
+    .icon-button { min-width: 38px; height: 38px; border-radius: 12px; padding: 0 11px; display: grid; place-items: center; }
+    .icon-button:hover, .segmented button:hover, .filters button:hover, .legend-button:hover { color: var(--text); border-color: var(--line-strong); }
+    .icon-button:active, .segmented button:active, .filters button:active { transform: translateY(1px); }
+    .demo-ribbon { display: none; background: rgba(255, 198, 109, .1); border: 1px solid rgba(255, 198, 109, .22); color: var(--amber); padding: 9px 13px; border-radius: 12px; font-size: 12px; font-weight: 750; margin-bottom: 12px; }
+    .hero {
+      min-height: 492px;
+      display: grid;
+      grid-template-columns: 370px minmax(0, 1fr);
+      gap: 58px;
+      align-items: center;
+      padding: 48px 54px 42px;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      background: linear-gradient(145deg, rgba(var(--accent-rgb), .055), transparent 40%), var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+      overflow: hidden;
+      position: relative;
+    }
+    .hero > * { min-width: 0; }
+    .hero::after { content: ""; position: absolute; width: 420px; height: 420px; right: -180px; bottom: -230px; border: 1px solid rgba(var(--accent-rgb), .16); border-radius: 50%; box-shadow: 0 0 0 40px rgba(var(--accent-rgb), .018), 0 0 0 90px rgba(var(--accent-rgb), .012); pointer-events: none; }
+    .gauge-wrap { display: grid; place-items: center; position: relative; }
+    .gauge { width: min(100%, 320px); overflow: visible; filter: drop-shadow(0 20px 30px rgba(0,0,0,.22)); }
+    .gauge-bg { fill: none; stroke: var(--surface-soft); stroke-width: 18; }
+    .gauge-progress { fill: none; stroke: url(#gaugeGradient); stroke-width: 18; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 160px 160px; transition: stroke-dasharray .8s cubic-bezier(.2,.75,.25,1); }
+    .gauge-tick { stroke: var(--line); stroke-width: 1; }
+    .gauge-label { fill: var(--muted); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+    .gauge-value { fill: var(--text); font-size: 65px; font-weight: 820; letter-spacing: -.065em; }
+    .gauge-unit { fill: var(--muted); font-size: 18px; font-weight: 700; }
+    .gauge-remain { fill: var(--accent); font-size: 14px; font-weight: 750; }
+    .confidence-line { margin-top: -4px; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; }
+    .confidence-line::before { content: ""; width: 34px; height: 2px; background: linear-gradient(90deg, var(--accent), transparent); }
+    .eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 850; }
+    h1 { margin: 10px 0 13px; max-width: 780px; font-size: clamp(34px, 4.4vw, 61px); line-height: 1.02; letter-spacing: -.052em; font-weight: 820; }
+    .subtitle { color: var(--muted); font-size: 17px; line-height: 1.55; max-width: 760px; }
+    .status-row { margin-top: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .status-pill { display: inline-flex; align-items: center; gap: 9px; border: 1px solid var(--line); background: var(--surface-soft); border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 800; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 15px currentColor; }
+    .status-at-risk .status-dot, .status-blocked .status-dot { background: var(--amber); }
+    .status-complete .status-dot { background: var(--green); }
+    .boundary { color: var(--muted); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; word-break: break-word; }
+    .headline { margin-top: 26px; font-size: 20px; line-height: 1.35; letter-spacing: -.015em; font-weight: 760; max-width: 720px; }
+    .narrative { color: var(--muted); margin-top: 7px; max-width: 760px; }
+    .blocker { margin-top: 22px; padding: 12px 0 12px 16px; border-left: 2px solid var(--amber); display: grid; grid-template-columns: minmax(130px, .45fr) 1.55fr; gap: 18px; }
+    .blocker strong { color: var(--amber); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .blocker span { color: var(--muted); font-size: 13px; }
+    .progress-rail { margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .progress-track { min-width: 0; padding: 18px 20px 19px; }
+    .progress-track + .progress-track { border-left: 1px solid var(--line); }
+    .progress-track-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--muted); font-size: 11px; }
+    .progress-track-head strong { color: var(--text); font-size: 18px; letter-spacing: -.025em; }
+    .progress-track-name { text-transform: uppercase; letter-spacing: .06em; font-weight: 760; }
+    .progress-track-meta { display: flex; justify-content: space-between; gap: 10px; margin-top: 7px; color: var(--faint); font-size: 10px; }
+    .progress-track.unknown .progress-track-head strong { color: var(--faint); }
+    .progress-track.unknown .track { background: repeating-linear-gradient(135deg, var(--surface-soft), var(--surface-soft) 6px, rgba(var(--accent-rgb), .08) 6px, rgba(var(--accent-rgb), .08) 12px); }
+    .progress-track.global .track span { background: linear-gradient(90deg, var(--accent), var(--blue)); }
+    .progress-track.code .track span { background: linear-gradient(90deg, var(--blue), var(--violet)); }
+    .progress-track.verification .track span { background: linear-gradient(90deg, var(--green), var(--accent)); }
+    .metric-rail { margin: 24px 0 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: grid; grid-template-columns: repeat(6, 1fr); }
+    .metric { min-width: 0; padding: 22px 20px 20px; }
+    .metric + .metric { border-left: 1px solid var(--line); }
+    .metric-label { color: var(--muted); font-size: 11px; letter-spacing: .055em; text-transform: uppercase; }
+    .metric-value { margin-top: 4px; font-size: clamp(22px, 2.5vw, 32px); letter-spacing: -.04em; font-weight: 820; white-space: nowrap; }
+    .metric-note { margin-top: 2px; color: var(--faint); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    main { padding: 42px 0 74px; }
+    .section { padding: 40px 0 44px; border-top: 1px solid var(--line); }
+    .section:first-child { border-top: 0; }
+    .section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 26px; }
+    .section-kicker { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; font-weight: 850; }
+    h2 { margin: 5px 0 0; font-size: clamp(24px, 2.7vw, 34px); letter-spacing: -.035em; line-height: 1.12; }
+    .section-copy { color: var(--muted); max-width: 610px; margin-top: 8px; }
+    .filters, .segmented { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-soft); }
+    .filters button, .segmented button { border-color: transparent; background: transparent; padding: 7px 11px; border-radius: 9px; font-size: 12px; }
+    .filters button.active, .segmented button.active { color: var(--text); background: var(--surface-strong); border-color: var(--line); box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+    .workstream-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(340px, .76fr); gap: 46px; align-items: start; }
+    .history-overview { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .history-overview strong, .history-overview small { display: block; }
+    .history-overview strong { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .history-overview small { color: var(--accent); }
+    #historySection .history-notes { overflow-wrap: anywhere; }
+    .history-table-wrap { overflow-x: auto; }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .history-table th, .history-table td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 12px 16px 12px 0; }
+    .history-table th { color: var(--muted); }
+    .history-table td { min-width: 120px; }
+    .history-table small { display: block; color: var(--muted); }
+    .history-notes { color: var(--muted); font-size: 13px; }
+    .task-list { border-top: 1px solid var(--line); }
+    .task-item { border-bottom: 1px solid var(--line); transition: background .2s; }
+    .task-item.selected { background: linear-gradient(90deg, rgba(var(--accent-rgb), .07), transparent 78%); }
+    .task-row { width: 100%; border: 0; color: inherit; background: transparent; text-align: left; padding: 20px 0; cursor: pointer; display: grid; grid-template-columns: minmax(190px, 1.1fr) minmax(240px, .95fr) 118px 28px; gap: 24px; align-items: center; }
+    .task-name { font-weight: 780; letter-spacing: -.01em; }
+    .task-meta { color: var(--muted); font-size: 11px; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .task-status { text-transform: uppercase; letter-spacing: .06em; font-weight: 800; }
+    .task-status.done { color: var(--green); }
+    .task-status.active { color: var(--accent); }
+    .task-status.blocked, .task-status.at-risk { color: var(--amber); }
+    .progress-labels { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; margin-bottom: 7px; }
+    .progress-labels strong { color: var(--text); }
+    .track { height: 7px; background: var(--surface-soft); border-radius: 99px; overflow: hidden; }
+    .track span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--blue)); border-radius: inherit; }
+    .task-progress-stack { display: grid; gap: 7px; }
+    .task-progress-line { display: grid; grid-template-columns: 66px minmax(0, 1fr) 38px; gap: 8px; align-items: center; color: var(--muted); font-size: 10px; }
+    .task-progress-line strong { color: var(--text); text-align: right; font-size: 10px; }
+    .task-progress-line.code .track span { background: linear-gradient(90deg, var(--blue), var(--violet)); }
+    .task-progress-line.verification .track span { background: linear-gradient(90deg, var(--green), var(--accent)); }
+    .task-progress-line.unknown { color: var(--faint); }
+    .task-progress-line.unknown .track { background: repeating-linear-gradient(135deg, var(--surface-soft), var(--surface-soft) 5px, rgba(var(--accent-rgb), .08) 5px, rgba(var(--accent-rgb), .08) 10px); }
+    .task-lines { text-align: right; }
+    .task-lines strong { display: block; font-size: 14px; }
+    .task-lines span { color: var(--muted); font-size: 10px; }
+    .chevron { color: var(--muted); font-size: 17px; transition: transform .18s; }
+    .task-row[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+    .task-detail { display: none; padding: 0 28px 22px 0; grid-template-columns: 1.1fr 1fr; gap: 30px; color: var(--muted); font-size: 13px; }
+    .task-item.open .task-detail { display: grid; }
+    .detail-copy { margin: 0 0 12px; }
+    .loc-grid { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 10px 20px; }
+    .loc-grid span { display: block; color: var(--faint); font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+    .loc-grid strong { color: var(--text); font-size: 14px; }
+    .evidence-line { display: flex; gap: 8px; align-items: flex-start; margin: 5px 0; }
+    .evidence-line::before { content: ""; width: 5px; height: 5px; margin-top: 7px; border-radius: 50%; background: var(--accent); flex: 0 0 auto; }
+    .plot-pane { position: sticky; top: 18px; }
+    .plot-title { display: flex; justify-content: space-between; gap: 14px; margin-bottom: 10px; }
+    .plot-title strong { font-size: 13px; }
+    .plot-title span { color: var(--muted); font-size: 11px; }
+    .plot-shell { background: linear-gradient(180deg, var(--surface-soft), transparent); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 12px 0 3px; }
+    .plot-shell svg, .loc-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+    .axis-line, .grid-line { stroke: var(--line); }
+    .grid-line { stroke-dasharray: 3 5; }
+    .axis-label { fill: var(--muted); font-size: 10px; }
+    .task-bubble { cursor: pointer; stroke: var(--bg); stroke-width: 3; transition: opacity .18s, transform .18s; transform-box: fill-box; transform-origin: center; }
+    .task-bubble:hover, .task-bubble:focus { transform: scale(1.13); outline: none; }
+    .task-bubble.dim { opacity: .2; }
+    .plot-note { color: var(--faint); font-size: 10px; margin-top: 10px; }
+    .code-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, .66fr); gap: 50px; align-items: start; }
+    .loc-chart { min-width: 0; }
+    .chart-caption { display: flex; justify-content: space-between; gap: 18px; color: var(--muted); font-size: 11px; margin-top: 9px; }
+    .legend { display: grid; gap: 7px; }
+    .legend-button { border-color: transparent; background: transparent; border-radius: 9px; padding: 8px 9px; display: grid; grid-template-columns: 12px 1fr auto; gap: 9px; align-items: center; text-align: left; }
+    .legend-button.off { opacity: .38; }
+    .legend-swatch { width: 10px; height: 10px; border-radius: 3px; }
+    .legend-name { color: var(--text); font-size: 12px; }
+    .legend-value { color: var(--muted); font-size: 11px; }
+    .estimate-note { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .estimate-note strong { color: var(--text); }
+    .timeline { border-top: 1px solid var(--line); }
+    .stage { display: grid; grid-template-columns: 28px minmax(0,1fr) auto; gap: 14px; min-height: 72px; padding: 18px 0; border-bottom: 1px solid var(--line); position: relative; cursor: pointer; }
+    .stage::before { content: ""; position: absolute; left: 7px; top: 36px; bottom: -20px; width: 1px; background: var(--line-strong); }
+    .stage:last-child::before { display: none; }
+    .stage-dot { width: 15px; height: 15px; margin-top: 3px; border: 2px solid var(--faint); background: var(--bg); border-radius: 50%; position: relative; z-index: 1; }
+    .stage.done .stage-dot { border-color: var(--green); background: var(--green); }
+    .stage.active .stage-dot { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 17px rgba(var(--accent-rgb), .5); }
+    .stage.blocked .stage-dot, .stage.at-risk .stage-dot { border-color: var(--amber); background: var(--amber); box-shadow: 0 0 16px rgba(255,198,109,.38); }
+    .stage-name { font-weight: 760; }
+    .stage-detail { color: var(--muted); font-size: 12px; margin-top: 3px; }
+    .stage-tag { color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; font-size: 10px; height: fit-content; }
+    details.method { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    details.method summary { list-style: none; cursor: pointer; padding: 18px 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; font-weight: 750; }
+    details.method summary::-webkit-details-marker { display: none; }
+    details.method summary::after { content: "+"; color: var(--accent); font-size: 20px; font-weight: 400; }
+    details.method[open] summary::after { content: "−"; }
+    .method-body { padding: 0 0 26px; display: grid; grid-template-columns: .8fr 1.2fr; gap: 44px; }
+    .method-body > * { min-width: 0; }
+    .formula { font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); background: var(--surface-soft); padding: 13px 15px; border-left: 2px solid var(--accent); }
+    .method-notes { color: var(--muted); font-size: 13px; }
+    .method-notes p { margin: 0 0 7px; }
+    .evidence-scroll { width: 100%; min-width: 0; max-width: 100%; }
+    .evidence-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .evidence-table th, .evidence-table td { text-align: left; padding: 13px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .evidence-table th { color: var(--faint); text-transform: uppercase; letter-spacing: .055em; font-size: 10px; }
+    .quality { font-size: 10px; padding: 4px 7px; border-radius: 999px; border: 1px solid var(--line); white-space: nowrap; }
+    .quality.measured { color: var(--green); }
+    .quality.estimated { color: var(--amber); }
+    .quality.observed { color: var(--blue); }
+    .footer { padding: 25px 0 45px; color: var(--faint); font-size: 11px; display: flex; justify-content: space-between; gap: 20px; }
+    .tooltip { position: fixed; z-index: 50; pointer-events: none; opacity: 0; transform: translateY(5px); transition: opacity .12s, transform .12s; max-width: 280px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-strong); box-shadow: 0 18px 45px rgba(0,0,0,.28); color: var(--text); font-size: 11px; line-height: 1.45; }
+    .tooltip.show { opacity: 1; transform: translateY(0); }
+    .tooltip strong { display: block; margin-bottom: 3px; }
+    .tooltip span { color: var(--muted); }
+    .empty { color: var(--muted); padding: 24px 0; border-top: 1px solid var(--line); }
+    @media (max-width: 1000px) {
+      .hero { grid-template-columns: 290px 1fr; gap: 34px; padding: 38px; }
+      .progress-rail { grid-template-columns: repeat(3, 1fr); }
+      .metric-rail { grid-template-columns: repeat(3, 1fr); }
+      .metric:nth-child(4) { border-left: 0; border-top: 1px solid var(--line); }
+      .metric:nth-child(5), .metric:nth-child(6) { border-top: 1px solid var(--line); }
+      .workstream-layout, .code-layout { grid-template-columns: 1fr; gap: 34px; }
+      .plot-pane { position: static; max-width: 620px; }
+    }
+    @media (max-width: 740px) {
+      .shell { width: min(100% - 28px, 1240px); }
+      .topbar { min-height: 64px; }
+      .brand-meta { max-width: 46vw; }
+      .print-button { display: none; }
+      .hero { min-height: 0; grid-template-columns: 1fr; gap: 18px; padding: 28px 22px; }
+      .gauge { width: 250px; }
+      .confidence-line { justify-content: center; }
+      .progress-rail { grid-template-columns: 1fr; }
+      .progress-track { padding: 15px 10px; }
+      .progress-track + .progress-track { border-left: 0; border-top: 1px solid var(--line); }
+      h1 { font-size: clamp(32px, 10vw, 48px); }
+      .subtitle { font-size: 15px; }
+      .blocker { grid-template-columns: 1fr; gap: 5px; }
+      .metric-rail { grid-template-columns: repeat(2, 1fr); }
+      .metric { padding: 17px 10px; }
+      .metric:nth-child(3), .metric:nth-child(5) { border-left: 0; border-top: 1px solid var(--line); }
+      .metric:nth-child(4), .metric:nth-child(6) { border-left: 1px solid var(--line); }
+      .metric:nth-child(6) { border-top: 1px solid var(--line); }
+      .metric-value { font-size: 23px; }
+      main { padding-top: 24px; }
+      .section { padding: 30px 0 34px; }
+      .section-head { align-items: flex-start; flex-direction: column; margin-bottom: 20px; }
+      .filters { max-width: 100%; overflow-x: auto; }
+      .task-row { grid-template-columns: 1fr 28px; gap: 12px; }
+      .task-progress-stack, .task-lines { grid-column: 1 / -1; text-align: left; }
+      .task-lines { display: flex; align-items: baseline; gap: 7px; }
+      .chevron { grid-column: 2; grid-row: 1; }
+      .task-detail { grid-template-columns: 1fr; padding-right: 0; }
+      .code-layout { gap: 28px; }
+      .chart-caption { flex-direction: column; gap: 3px; }
+      .method-body { grid-template-columns: 1fr; gap: 20px; }
+      .evidence-scroll { overflow: auto; overscroll-behavior-x: contain; contain: inline-size; }
+      .evidence-table { min-width: 660px; }
+      .footer { flex-direction: column; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+    @media print {
+      :root { --bg: white; --bg-deep: white; --surface: white; --surface-strong: white; --text: #10272b; --muted: #52686a; --faint: #708082; --line: rgba(20,50,54,.16); color-scheme: light; }
+      body { background: white; }
+      body::before, .actions, .filters, .segmented, .plot-note { display: none !important; }
+      .shell { width: 100%; }
+      .topbar { min-height: 48px; }
+      .hero { min-height: 0; box-shadow: none; break-inside: avoid; }
+      .section { break-inside: avoid; }
+      .task-detail { display: grid; }
+      details.method .method-body { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div class="brand-copy">
+          <div class="brand-name">PLAN PROGRESS</div>
+          <div class="brand-meta" id="snapshotMeta"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle theme" title="Toggle theme">◐</button>
+        <button class="icon-button print-button" id="printButton" type="button" aria-label="Print report" title="Print report">↗</button>
+      </div>
+    </div>
+    <div class="demo-ribbon" id="demoRibbon"></div>
+    <section class="hero" aria-labelledby="reportTitle">
+      <div>
+        <div class="gauge-wrap">
+          <svg class="gauge" viewBox="0 0 320 320" role="img" aria-labelledby="gaugeTitle gaugeDesc">
+            <title id="gaugeTitle">Global readiness</title>
+            <desc id="gaugeDesc"></desc>
+            <defs>
+              <linearGradient id="gaugeGradient" x1="40" y1="270" x2="280" y2="42" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stop-color="var(--accent)"/>
+                <stop offset="1" stop-color="var(--blue)"/>
+              </linearGradient>
+            </defs>
+            <circle class="gauge-bg" cx="160" cy="160" r="116" pathLength="100"></circle>
+            <circle class="gauge-progress" id="gaugeProgress" cx="160" cy="160" r="116" pathLength="100"></circle>
+            <text class="gauge-label" x="160" y="118" text-anchor="middle" id="gaugeLabel"></text>
+            <text class="gauge-value" x="152" y="180" text-anchor="middle" id="gaugeValue"></text>
+            <text class="gauge-unit" id="gaugeUnit" x="207" y="180">%</text>
+            <text class="gauge-remain" x="160" y="214" text-anchor="middle" id="gaugeRemaining"></text>
+          </svg>
+          <div class="confidence-line" id="confidenceLine"></div>
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="reportTitle"></h1>
+        <p class="subtitle" id="subtitle"></p>
+        <div class="status-row">
+          <span class="status-pill" id="statusPill"><span class="status-dot"></span><span id="statusLabel"></span></span>
+          <span class="boundary" id="boundary"></span>
+        </div>
+        <div class="headline" id="headline"></div>
+        <p class="narrative" id="narrative"></p>
+        <div class="blocker" id="blocker"><strong id="blockerTitle"></strong><span id="blockerDetail"></span></div>
+      </div>
+    </section>
+    <div class="progress-rail" id="progressRail" aria-label="Progress tracks"></div>
+    <div class="metric-rail" id="metricRail"></div>
+  </header>
+
+  <main class="shell">
+    <section class="section" id="historySection" hidden></section>
+    <section class="section" id="workstreams">
+      <div class="section-head">
+        <div><div class="section-kicker" id="planKicker"></div><h2 id="planTitle"></h2><p class="section-copy" id="planCopy"></p></div>
+        <div class="filters" id="taskFilters" aria-label="Task filters"></div>
+      </div>
+      <div class="workstream-layout">
+        <div class="task-list" id="taskList"></div>
+        <aside class="plot-pane">
+          <div class="plot-title"><strong id="plotTitle"></strong><span id="plotMeta"></span></div>
+          <div class="plot-shell"><svg id="taskPlot" viewBox="0 0 460 330" role="img"></svg></div>
+          <div class="plot-note" id="plotNote"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="code">
+      <div class="section-head">
+        <div><div class="section-kicker" id="codeKicker"></div><h2 id="codeTitle"></h2><p class="section-copy" id="codeCopy"></p></div>
+        <div class="segmented" id="locMode"></div>
+      </div>
+      <div class="code-layout">
+        <div class="loc-chart">
+          <svg id="locChart" viewBox="0 0 820 270" role="img"></svg>
+          <div class="chart-caption"><span id="changedBasis"></span><span id="remainingBasis"></span></div>
+        </div>
+        <aside>
+          <div class="legend" id="locLegend"></div>
+          <div class="estimate-note" id="estimateNote"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="criticalPathSection">
+      <div class="section-head"><div><div class="section-kicker" id="pathKicker"></div><h2 id="pathTitle"></h2><p class="section-copy" id="pathCopy"></p></div></div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <section class="section" id="evidence">
+      <div class="section-head"><div><div class="section-kicker" id="evidenceKicker"></div><h2 id="evidenceTitle"></h2></div></div>
+      <details class="method">
+        <summary id="methodSummary"></summary>
+        <div class="method-body">
+          <div class="formula" id="formula"></div>
+          <div class="method-notes" id="methodNotes"></div>
+        </div>
+      </details>
+      <div class="evidence-scroll"><table class="evidence-table"><thead id="evidenceHead"></thead><tbody id="evidenceBody"></tbody></table></div>
+    </section>
+  </main>
+
+  <footer class="shell footer"><span id="footerScope"></span><span id="footerGenerated"></span></footer>
+  <div class="tooltip" id="tooltip" role="tooltip"></div>
+  <script id="report-data" type="application/json">{"meta":{"title":"Миграция: этап 1","subtitle":"Этап 1: отказ от форка при сохранении поведения Desktop.","eyebrow":"Agent Teams · текущая реализация","snapshot":"2026-10-22T07:15:42.378396+00:00","scope":"Только этап 1: P0–P8 / M01–M19. Этап 2 с готовыми будущими ядрами отложен и не выполняется в этой задаче.","scope_id":"provider-migration-stage-1","scope_version":"P0-P8-M01-M19-v1","series_id":"provider-migration-stage-1","evidence_boundary":"HEAD + текущий worktree; измерения и точные refs — ниже.","locale":"ru","accent":"#49cfb1","status":"at-risk","status_label":"Полная миграция ещё в работе"},"summary":{"headline":"Готовность около 41%; код готов примерно на 53%.","narrative":"Оценка по acceptance и scoped receipts: ориентир 40–45%. Веса оценочные. Новые UI edits не считаются проверенными по старым тестам.","blocker":{"title":"Текущий участок: обычный Launch UI","detail":"Разработка на fixtures продолжается. Не завершены полный UI, review/apply и packed cutover."},"comparison_notes":["Initial selected model/effort дошли до native HTTP и сохранились после mixed restore.","231 Host и108 frontend тестов прошли на предыдущем закреплённом tuple.","Новые configuration.read и ordinary Launch UI ещё проходят реализацию/проверки.","Уточнение владельца: этап 2 не выполняем; draft PR, без merge в основную/release ветку. Численный scope этапа 1 не изменён."],"progress":40.9,"derived_progress":40.9,"acceptance_progress":40.9,"global_progress":40.9,"remaining":59.1,"code_progress":53.1,"verification_progress":40.9,"track_coverage":{"global":{"known_weight":100.0,"total_weight":100.0,"percent":100.0},"acceptance":{"known_weight":100.0,"total_weight":100.0,"percent":100.0},"code":{"known_weight":100.0,"total_weight":100.0,"percent":100.0},"verification":{"known_weight":100.0,"total_weight":100.0,"percent":100.0}},"confidence":70.6},"code":{"changed":{"total":38789,"logical":14771,"tests":20169,"docs_config":2997,"generated":10,"other":842,"basis":"Измеренный diff vs HEAD + untracked текст в двух worktrees. Это текущий dirty delta, не весь исторический объём программы и не авторство одного агента. Production source diff: 15609; logical — приближённый proxy без blank/comment-only, не исключает formatting/moves. Binary archives исключены из LOC. Пофазное распределение выполненных LOC неизвестно."},"remaining":{"total_min":37000,"total_max":75000,"logical_min":18500,"logical_max":37500,"confidence":45.0,"basis":"Грубые bottom-up ranges по незавершённым acceptance; reuse/extraction и полный review/UI cutover дают наибольшую неопределённость. Не использовать как формулу процентов.","tests_min":17000,"tests_max":35000,"docs_config_min":1500,"docs_config_max":2500,"logical_mid":28000,"tests_mid":26000,"docs_config_mid":2000,"generated_min":0,"generated_max":0,"generated_mid":0,"other_min":0,"other_max":0,"other_mid":0,"total_mid":56000}},"tasks":[{"id":"P0","name":"Sources, mapping и изоляция","weight":5.0,"progress":75.0,"code_progress":90.0,"verification_progress":75.0,"status":"active","confidence":80.0,"summary":"Зафиксированы donor/artifact pins и worktrees; source→effective mapping и полный inventory ещё требуют завершения.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-source-selection.json — Зафиксированы donor/artifact pins и worktrees; source→effective mapping и полный inventory ещё требуют завершения."],"remaining_logical_min":200,"remaining_logical_max":500,"remaining_lines_min":400,"remaining_lines_max":1000,"measurement_unknown":true,"acceptance_progress":75.0,"global_progress":75.0,"acceptance_remaining":25.0,"remaining":25.0,"global_remaining":25.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":700,"remaining_logical_mid":350,"blocked_by":[]},{"id":"P1","name":"Контракты, package closure и walking slice","weight":8.0,"progress":75.0,"code_progress":90.0,"verification_progress":75.0,"status":"active","confidence":80.0,"summary":"Standalone Host/stdio, pinned Node/D и capture feasibility проверены. CMS/adoption и owning package gates остаются открытыми.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p1-native-capture-feasibility.tar.gz — Standalone Host/stdio, pinned Node/D и capture feasibility проверены. CMS/adoption и owning package gates остаются открытыми."],"remaining_logical_min":500,"remaining_logical_max":1500,"remaining_lines_min":1000,"remaining_lines_max":3000,"measurement_unknown":true,"acceptance_progress":75.0,"global_progress":75.0,"acceptance_remaining":25.0,"remaining":25.0,"global_remaining":25.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":2000,"remaining_logical_mid":1000,"blocked_by":[]},{"id":"P2","name":"Team/Task/Message owner и tools","weight":18.0,"progress":40.0,"code_progress":55.0,"verification_progress":40.0,"status":"active","confidence":65.0,"summary":"Canonical Task/DM, receipts, grants, delivery recovery работают. Group/cross-team, полный lifecycle/roster/trash/backup и все MCP группы ещё не готовы.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/compatibility-matrix.md — Canonical Task/DM, receipts, grants, delivery recovery работают. Group/cross-team, полный lifecycle/roster/trash/backup и все MCP группы ещё не готовы."],"remaining_logical_min":5000,"remaining_logical_max":9000,"remaining_lines_min":10000,"remaining_lines_max":18000,"measurement_unknown":true,"acceptance_progress":40.0,"global_progress":40.0,"acceptance_remaining":60.0,"remaining":60.0,"global_remaining":60.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":14000,"remaining_logical_mid":7000,"blocked_by":[]},{"id":"P3","name":"Runtime, control, custody и restore","weight":17.0,"progress":75.0,"code_progress":85.0,"verification_progress":75.0,"status":"active","confidence":80.0,"summary":"Bounded inputs/control, durable identities, selected checkpoint/restore трёх providers проверены. Все concurrency/attachments/compaction obligations ещё не закрыты.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p4-mixed-native-restore-handoff.json — Bounded inputs/control, durable identities, selected checkpoint/restore трёх providers проверены. Все concurrency/attachments/compaction obligations ещё не закрыты."],"remaining_logical_min":1000,"remaining_logical_max":3000,"remaining_lines_min":2000,"remaining_lines_max":6000,"measurement_unknown":true,"acceptance_progress":75.0,"global_progress":75.0,"acceptance_remaining":25.0,"remaining":25.0,"global_remaining":25.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":4000,"remaining_logical_mid":2000,"blocked_by":[]},{"id":"P4","name":"Три providers и headless team workflows","weight":14.0,"progress":40.0,"code_progress":55.0,"verification_progress":40.0,"status":"active","confidence":70.0,"summary":"Actual Claude/Codex/OpenCode, Task effects, все шесть peer-направлений и mixed restore прошли. Group, вторая Team, shared OpenCode, compaction и solo subagents ещё не приняты.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p4-mixed-native-peers-handoff.json — Actual Claude/Codex/OpenCode, Task effects, все шесть peer-направлений и mixed restore прошли. Group, вторая Team, shared OpenCode, compaction и solo subagents ещё не приняты."],"remaining_logical_min":2000,"remaining_logical_max":4000,"remaining_lines_min":4000,"remaining_lines_max":8000,"measurement_unknown":true,"acceptance_progress":40.0,"global_progress":40.0,"acceptance_remaining":60.0,"remaining":60.0,"global_remaining":60.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":6000,"remaining_logical_mid":3000,"blocked_by":[]},{"id":"P5","name":"Обычный Desktop UI и полный routing","weight":16.0,"progress":25.0,"code_progress":40.0,"verification_progress":25.0,"status":"active","confidence":75.0,"summary":"Обычные Composer/Task/board/Stop, Team snapshot/feed и routing подтверждены в Electron. Launch/Resume в работе; полный config/auth/review/process UI остаётся.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/evidence/p5-launch-configuration-handoff.json — Обычные Composer/Task/board/Stop, Team snapshot/feed и routing подтверждены в Electron. Launch/Resume в работе; полный config/auth/review/process UI остаётся."],"remaining_logical_min":4000,"remaining_logical_max":8000,"remaining_lines_min":8000,"remaining_lines_max":16000,"measurement_unknown":true,"acceptance_progress":25.0,"global_progress":25.0,"acceptance_remaining":75.0,"remaining":75.0,"global_remaining":75.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":12000,"remaining_logical_mid":6000,"blocked_by":[]},{"id":"P6","name":"Git evidence/review и оставшаяся parity","weight":12.0,"progress":5.0,"code_progress":10.0,"verification_progress":5.0,"status":"pending","confidence":55.0,"summary":"Ранняя capture feasibility не заменяет M13. Review Apply/Reject/Undo/Redo, attribution и полная user-visible parity ещё не реализованы.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-contracts.md — Ранняя capture feasibility не заменяет M13. Review Apply/Reject/Undo/Redo, attribution и полная user-visible parity ещё не реализованы."],"remaining_logical_min":5000,"remaining_logical_max":9000,"remaining_lines_min":10000,"remaining_lines_max":18000,"measurement_unknown":true,"acceptance_progress":5.0,"global_progress":5.0,"acceptance_remaining":95.0,"remaining":95.0,"global_remaining":95.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":14000,"remaining_logical_mid":7000,"blocked_by":[]},{"id":"P7","name":"Packed Electron без форка и OS qualification","weight":5.0,"progress":5.0,"code_progress":10.0,"verification_progress":5.0,"status":"pending","confidence":60.0,"summary":"Node/D staged artifacts есть; legacy --version dependency остаётся. Packed fork-free Electron и supported OS tuples ещё не приняты.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-legacy-host.md — Node/D staged artifacts есть; legacy --version dependency остаётся. Packed fork-free Electron и supported OS tuples ещё не приняты."],"remaining_logical_min":500,"remaining_logical_max":1500,"remaining_lines_min":1000,"remaining_lines_max":3000,"measurement_unknown":true,"acceptance_progress":5.0,"global_progress":5.0,"acceptance_remaining":95.0,"remaining":95.0,"global_remaining":95.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":2000,"remaining_logical_mid":1000,"blocked_by":[]},{"id":"P8","name":"Полная E2E матрица, final review и handoff","weight":5.0,"progress":15.0,"code_progress":25.0,"verification_progress":15.0,"status":"active","confidence":70.0,"summary":"Есть поддерживаемый Electron/native harness и scoped receipts. Полная M01–M19 композиция, final gates/review и packaged Quit/Relaunch ещё впереди.","evidence":["План / evidence: /Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/compatibility-matrix.md — Есть поддерживаемый Electron/native harness и scoped receipts. Полная M01–M19 композиция, final gates/review и packaged Quit/Relaunch ещё впереди."],"remaining_logical_min":300,"remaining_logical_max":1000,"remaining_lines_min":600,"remaining_lines_max":2000,"measurement_unknown":true,"acceptance_progress":15.0,"global_progress":15.0,"acceptance_remaining":85.0,"remaining":85.0,"global_remaining":85.0,"done_lines":0,"done_logical":0,"remaining_lines_mid":1300,"remaining_logical_mid":650,"blocked_by":[]}],"critical_path":[{"name":"Обычные Launch/Resume и runtime settings","status":"active","task_id":"P5"},{"name":"Roster/group/cross-team + полный MCP","status":"active","task_id":"P2"},{"name":"Review/evidence и остальная parity","status":"pending","task_id":"P6"},{"name":"Fork-free packed candidate","status":"pending","task_id":"P7"},{"name":"Полный E2E, required gates, final review","status":"pending","task_id":"P8"}],"sources":[{"label":"Принятый план","value":"/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/stage-1-legacy-host.md","quality":"observed"},{"label":"Матрица M01–M19","value":"/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/docs/plans/provider-migration/compatibility-matrix.md","quality":"observed"},{"label":"Последний полный scoped suite","value":"02c8236f96d5aa1b2d7ec55d4323b8dd: 231 Host +108 frontend PASS","note":"Исторический source tuple, не текущие новые UI edits","quality":"observed"},{"label":"Configured Electron native PASS","value":"d69e5f179a6d4df72a5e6713e78b9f55 / receipt 34b6bdfb3946d10ba8490f96d26b38d67cbc02b3814d25b2d19ea6f96dad3488","note":"Начальный launch через TEST API; ordinary Launch UI не квалифицирован","quality":"observed"},{"label":"Actual mixed selected restore PASS","value":"d90336c747bb9fadc881617967221a8e / receipt 270e5ff82bf8637cef58aa174db6753d45adde0a64bc51c8864501fb478817d6","quality":"observed"},{"label":"LOC measurement","value":"/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/.artifacts/provider-migration/progress-2026-10-22/loc-measurement.json","quality":"measured"}],"methodology":{"notes":["Проценты фаз и веса оценочные; acceptance остаётся незавершённым до полного выхода фазы.","Измеренный LOC snapshot снят до последующих UI edits; не является scope или процентом готовности.","Completed LOC per phase неизвестен; не интерпретировать renderer default0 как отсутствие кода.","Этап 2 не включён в численный знаменатель: его самостоятельный план ещё не принят."],"formula":"Σ(task weight × min(acceptance, known code, known verification)) / Σ(weight)"},"generated_at":"2026-10-22T10:52:30+03:00","history":{"series_id":"provider-migration-stage-1","scope_fingerprint":"45fc7ab7bdf86dce1f18fb42962ccf55e105db0b8962c323258d299cf15ccbe2","comparison":null,"comparison_notes":["Initial selected model/effort дошли до native HTTP и сохранились после mixed restore.","231 Host и108 frontend тестов прошли на предыдущем закреплённом tuple.","Новые configuration.read и ordinary Launch UI ещё проходят реализацию/проверки.","Уточнение владельца: этап 2 не выполняем; draft PR, без merge в основную/release ветку. Численный scope этапа 1 не изменён."],"previous_selection":"snapshot_time"}}</script>
+  <script>
+    (() => {
+      "use strict";
+      const data = JSON.parse(document.getElementById("report-data").textContent);
+      const locale = data.meta.locale === "en" ? "en" : "ru";
+      document.documentElement.lang = locale;
+      const L = {
+        en: {
+          done: "done", remaining: "remaining", confidence: "confidence", coverage: "coverage", unknown: "unknown", noEvidence: "no evidence", global: "global", codeReady: "code-ready", verifiedReady: "verified / tested", demo: "DEMONSTRATION DATA · replace with evidence from the actual plan",
+          status: {"on-track":"On track", "at-risk":"At risk", blocked:"Blocked", complete:"Complete", done:"Done", active:"Active", pending:"Pending"},
+          planKicker:"Three evidence tracks", planTitle:"Plan and subtasks", planCopy:"Global readiness follows the narrowest known track: acceptance, code-ready, or verified/tested. LOC explains volume but does not determine the percentage.",
+          filters:{all:"All", active:"Active", risk:"Risk", done:"Done"}, plotTitle:"Completion map", plotMeta:"bubble = logical LOC left", plotNote:"X: global readiness · Y: confidence · click a bubble to open its task.",
+          codeKicker:"Measured vs estimated", codeTitle:"Code volume", codeCopy:"Completed work is measured. Remaining work is a range, split by the kind of change.", modes:{all:"All changes", logical:"Logical only"},
+          changed:"Changed", estimated:"Estimated remaining", measured:"measured", estimate:"estimate", midpoint:"midpoint", range:"range", lines:"lines", logical:"Logical production", tests:"Tests / evidence", docs_config:"Docs / config", generated:"Generated / vendor", other:"Other",
+          estimateConfidence:"Estimate confidence", pathKicker:"Sequence", pathTitle:"Critical path", pathCopy:"The narrowest route from the current state to accepted completion.",
+          evidenceKicker:"Auditability", evidenceTitle:"Method and evidence", methodSummary:"How the percentage and LOC were calculated", source:"Source", value:"Value", note:"Interpretation", quality:"Quality",
+          metricProgress:"Global ready", metricCode:"Code ready", metricVerified:"Verified / tested", metricChanged:"Changed diff", metricLogicalDone:"Logical done", metricLogicalLeft:"Logical left", acceptance:"acceptance bottleneck", acceptanceBaseline:"acceptance baseline", exact:"exact boundary", future:"future range", production:"production only",
+          taskWeight:"weight", taskConfidence:"confidence", doneLines:"Changed done", logicalDone:"Logical done", remainingLines:"Changed left", logicalRemaining:"Logical left", blockers:"Blocked by", evidence:"Evidence",
+          footerGenerated:"Generated", noBlocker:"No blocking issue recorded", empty:"No tasks match this filter", formula:"Formula"
+        },
+        ru: {
+          done: "готово", remaining: "осталось", confidence: "уверенность", coverage: "покрытие", unknown: "нет данных", noEvidence: "нет подтверждения", global: "общий", codeReady: "код готов", verifiedReady: "проверено", demo: "ДЕМО-ДАННЫЕ · замените их доказательствами реального плана",
+          status: {"on-track":"По плану", "at-risk":"Есть риск", blocked:"Заблокировано", complete:"Готово", done:"Готово", active:"В работе", pending:"Ожидает"},
+          planKicker:"Три трека доказательств", planTitle:"План и подзадачи", planCopy:"Общая готовность следует самому узкому известному треку: acceptance, код или проверка. LOC объясняет объём, но не вычисляет готовность.",
+          filters:{all:"Все", active:"В работе", risk:"Риск", done:"Готово"}, plotTitle:"Карта завершения", plotMeta:"пузырь = logical LOC осталось", plotNote:"X: общая готовность · Y: уверенность · нажмите на точку, чтобы открыть подзадачу.",
+          codeKicker:"Измерено и оценено", codeTitle:"Объём кода", codeCopy:"Сделанное измерено. Остаток показан диапазоном и разделён по типу изменений.", modes:{all:"Все изменения", logical:"Только логика"},
+          changed:"Изменено", estimated:"Оценка остатка", measured:"измерено", estimate:"оценка", midpoint:"середина", range:"диапазон", lines:"строк", logical:"Production-логика", tests:"Тесты / evidence", docs_config:"Docs / config", generated:"Generated / vendor", other:"Прочее",
+          estimateConfidence:"Уверенность оценки", pathKicker:"Последовательность", pathTitle:"Критический путь", pathCopy:"Самый узкий маршрут от текущего состояния до принятого завершения.",
+          evidenceKicker:"Проверяемость", evidenceTitle:"Метод и доказательства", methodSummary:"Как посчитаны процент и LOC", source:"Источник", value:"Значение", note:"Интерпретация", quality:"Качество",
+          metricProgress:"Общая готовность", metricCode:"Код готов", metricVerified:"Проверено", metricChanged:"Изменено в diff", metricLogicalDone:"Логики готово", metricLogicalLeft:"Логики осталось", acceptance:"узкое место acceptance", acceptanceBaseline:"база acceptance", exact:"точная граница", future:"будущий диапазон", production:"только production",
+          taskWeight:"вес", taskConfidence:"уверенность", doneLines:"Изменено готово", logicalDone:"Логики готово", remainingLines:"Изменений осталось", logicalRemaining:"Логики осталось", blockers:"Блокирует", evidence:"Доказательства",
+          footerGenerated:"Сгенерировано", noBlocker:"Блокирующая проблема не зафиксирована", empty:"Для фильтра нет подзадач", formula:"Формула"
+        }
+      }[locale];
+
+      const $ = (id) => document.getElementById(id);
+      const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+      const fmt = (v, digits = 0) => new Intl.NumberFormat(locale === "ru" ? "ru-RU" : "en-US", {maximumFractionDigits:digits}).format(v);
+      const pct = (v) => `${fmt(v, v % 1 ? 1 : 0)}%`;
+      const knownPct = (v) => v == null ? L.unknown : pct(v);
+      const width = (v) => v == null ? 0 : Math.max(0, Math.min(100, Number(v)));
+      const range = (a, b) => a === b ? fmt(a) : `${fmt(a)}–${fmt(b)}`;
+      const statusLabel = (s) => L.status[s] || s;
+      const statusColor = (s) => s === "done" ? "var(--green)" : s === "blocked" || s === "at-risk" ? "var(--amber)" : s === "active" ? "var(--accent)" : "var(--blue)";
+      const hex = data.meta.accent || "#48D7C8";
+      const rgb = [1,3,5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(", ");
+      document.documentElement.style.setProperty("--accent", hex);
+      document.documentElement.style.setProperty("--accent-rgb", rgb);
+      document.title = `${data.meta.title} · Plan Progress`;
+
+      function showTooltip(event, title, body) {
+        const tip = $("tooltip");
+        tip.innerHTML = `<strong>${esc(title)}</strong><span>${esc(body)}</span>`;
+        const x = Math.min(event.clientX + 14, window.innerWidth - 300);
+        const y = Math.min(event.clientY + 14, window.innerHeight - 100);
+        tip.style.left = `${Math.max(8, x)}px`;
+        tip.style.top = `${Math.max(8, y)}px`;
+        tip.classList.add("show");
+      }
+      function hideTooltip() { $("tooltip").classList.remove("show"); }
+
+      function progressTrack(key, label, value, note) {
+        const known = value != null && Number.isFinite(Number(value));
+        const remaining = known ? pct(100 - Number(value)) : L.unknown;
+        return `<div class="progress-track ${esc(key)} ${known ? "" : "unknown"}">
+          <div class="progress-track-head"><span class="progress-track-name">${esc(label)}</span><strong>${esc(knownPct(value))}</strong></div>
+          <div class="track" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="100"${known ? ` aria-valuenow="${width(value)}"` : ` aria-valuetext="${esc(L.unknown)}"`}><span style="width:${width(value)}%"></span></div>
+          <div class="progress-track-meta"><span>${esc(known ? remaining : L.noEvidence)}</span><span>${esc(note || "")}</span></div>
+        </div>`;
+      }
+
+      function taskTrack(key, label, value) {
+        const known = value != null && Number.isFinite(Number(value));
+        return `<div class="task-progress-line ${esc(key)} ${known ? "" : "unknown"}"><span>${esc(label)}</span><div class="track" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="100"${known ? ` aria-valuenow="${width(value)}"` : ` aria-valuetext="${esc(L.unknown)}"` }><span style="width:${width(value)}%"></span></div><strong>${esc(knownPct(value))}</strong></div>`;
+      }
+
+      function initHeader() {
+        $("snapshotMeta").textContent = `${data.meta.snapshot || ""} · ${data.meta.scope || ""}`;
+        $("demoRibbon").textContent = L.demo;
+        $("demoRibbon").style.display = data.meta.demo ? "block" : "none";
+        $("eyebrow").textContent = data.meta.eyebrow || "Delivery intelligence";
+        $("reportTitle").textContent = data.meta.title;
+        $("subtitle").textContent = data.meta.subtitle || "";
+        $("statusPill").classList.add(`status-${data.meta.status}`);
+        $("statusLabel").textContent = data.meta.status_label || statusLabel(data.meta.status);
+        $("boundary").textContent = data.meta.evidence_boundary || data.meta.scope || "";
+        $("headline").textContent = data.summary.headline || "";
+        $("narrative").textContent = data.summary.narrative || "";
+        const blocker = data.summary.blocker;
+        if (blocker && (blocker.title || blocker.detail)) {
+          $("blockerTitle").textContent = blocker.title || L.status.blocked;
+          $("blockerDetail").textContent = blocker.detail || "";
+        } else {
+          $("blockerTitle").textContent = L.noBlocker;
+          $("blockerDetail").textContent = "";
+        }
+
+        const progress = data.summary.progress;
+        $("gaugeProgress").style.strokeDasharray = progress == null ? "0 100" : `${progress} ${100 - progress}`;
+        $("gaugeUnit").textContent = progress == null ? "" : "%";
+        $("gaugeTitle").textContent = L.global;
+        $("gaugeValue").textContent = progress == null ? "?" : fmt(progress, progress % 1 ? 1 : 0);
+        $("gaugeLabel").textContent = L.global;
+        $("gaugeRemaining").textContent = `${knownPct(data.summary.remaining)} ${L.remaining}`;
+        $("gaugeDesc").textContent = `${knownPct(progress)} ${L.global}, ${knownPct(data.summary.remaining)} ${L.remaining}; ${knownPct(data.summary.code_progress)} ${L.codeReady}; ${knownPct(data.summary.verification_progress)} ${L.verifiedReady}`;
+        $("confidenceLine").textContent = `${L.confidence} ${pct(data.summary.confidence)}`;
+
+        const c = data.code.changed;
+        const r = data.code.remaining;
+        $("progressRail").innerHTML = [
+          progressTrack("global", L.global, progress, L.acceptance),
+          progressTrack("code", L.codeReady, data.summary.code_progress, data.summary.track_coverage?.code ? `${fmt(data.summary.track_coverage.code.percent, 0)}% ${L.coverage}` : ""),
+          progressTrack("verification", L.verifiedReady, data.summary.verification_progress, data.summary.track_coverage?.verification ? `${fmt(data.summary.track_coverage.verification.percent, 0)}% ${L.coverage}` : "")
+        ].join("");
+        const metrics = [
+          [L.metricProgress, knownPct(progress), L.acceptance],
+          [L.metricCode, knownPct(data.summary.code_progress), L.codeReady],
+          [L.metricVerified, knownPct(data.summary.verification_progress), L.verifiedReady],
+          [L.metricChanged, fmt(c.total), L.exact],
+          [L.metricLogicalDone, c.logical_unknown ? (locale === "ru" ? "не измерено" : "not measured") : fmt(c.logical), L.production],
+          [L.metricLogicalLeft, range(r.logical_min, r.logical_max), L.future]
+        ];
+        $("metricRail").innerHTML = metrics.map(([label,value,note]) => `<div class="metric"><div class="metric-label">${esc(label)}</div><div class="metric-value">${esc(value)}</div><div class="metric-note">${esc(note)}</div></div>`).join("");
+      }
+
+      const filterDefs = [["all", L.filters.all], ["active", L.filters.active], ["risk", L.filters.risk], ["done", L.filters.done]];
+      let activeFilter = "all";
+      function renderHistory() {
+        const h = data.history;
+        if (!h) return;
+        const node = $("historySection"); node.hidden = false;
+        const ru = locale === "ru";
+        const title = ru ? "Изменения с прошлого отчёта" : "Changes since previous report";
+        const c = h.comparison;
+        const notes = Array.isArray(h.comparison_notes) ? h.comparison_notes : [h.comparison_notes];
+        const noteList = notes.filter(Boolean);
+        const noteBody = noteList.map(v => `<p class="history-notes">${esc(v)}</p>`).join("");
+        const noteHtml = noteList.length > 2 || noteList.join(" ").length > 320 ? `<details class="method"><summary>${ru ? "Что изменилось по evidence" : "Evidence accomplishments"} (${noteList.length})</summary>${noteBody}</details>` : noteBody;
+        if (!c) { node.innerHTML = `<h2>${title}</h2><p class="section-copy">${ru ? "Первый снимок серии. Сравнение появится в следующем отчёте." : "First snapshot in this series. The next report will include a comparison."}</p>${noteHtml}`; return; }
+        const metric = m => `${esc(knownPct(m.previous))} → ${esc(knownPct(m.current))}<small>${m.delta_pp === null ? (ru ? "Δ недоступна" : "Δ unavailable") : `${m.delta_pp > 0 ? "+" : ""}${fmt(m.delta_pp, 1)} ${ru ? "п.п." : "pp"}`}</small>`;
+        const headers = `<tr><th>${ru ? "Показатель / задача" : "Metric / task"}</th><th>${esc(L.global)}</th><th>${esc(L.codeReady)}</th><th>${esc(L.verifiedReady)}</th></tr>`;
+        const trackCells = tracks => ["global_progress", "code_progress", "verification_progress"].map(k => `<td>${metric(tracks[k])}</td>`).join("");
+        const labels = {weight: L.taskWeight, status: ru ? "Статус" : "Status", summary: ru ? "Содержание" : "Summary", blocked_by: L.blockers, confidence:L.confidence, done_lines:L.doneLines, done_logical:L.logicalDone, remaining_lines_min:ru?"Осталось LOC, мин.":"Remaining LOC, min", remaining_lines_max:ru?"Осталось LOC, макс.":"Remaining LOC, max", remaining_logical_min:ru?"Осталось логики, мин.":"Remaining logical, min", remaining_logical_max:ru?"Осталось логики, макс.":"Remaining logical, max"};
+        const value = v => v === null || v === undefined ? L.unknown : Array.isArray(v) ? v.join("; ") || "∅" : String(v);
+        const rows = c.tasks.map(t => {
+          const details = Object.entries(t.changes).map(([k,v])=>`${labels[k] || k}: ${value(v.previous)} → ${value(v.current)}`);
+          details.push(...t.evidence_added.map(v => `+ ${v}`), ...t.evidence_removed.map(v => `− ${v}`));
+          const kind = t.kind === 'added' ? (ru?'Добавлена':'Added') : t.kind === 'removed' ? (ru?'Удалена':'Removed') : '';
+          return `<tr><td><strong>${esc(t.name)}</strong><small>${esc(kind)}</small></td>${trackCells(t.tracks)}</tr>${details.length ? `<tr><td colspan="4">${details.map(v=>`<div class="history-notes">${esc(v)}</div>`).join('')}</td></tr>` : ''}`;
+        }).join("");
+        const changed = c.loc.measured_changed, remaining = c.loc.estimated_remaining;
+        node.innerHTML = `<div class="section-head"><div><div class="section-kicker">${esc(c.previous_snapshot || "")}</div><h2>${title}</h2><p class="section-copy">${ru ? "Предыдущий → текущий; разница в процентных пунктах." : "Previous → current; differences in percentage points."}</p></div></div>
+          ${h.previous_selection === "archive_creation" ? `<p class="history-notes">${ru ? "Предыдущий снимок выбран по порядку архива: даты не в ISO формате с часовым поясом." : "Previous snapshot selected by archive order: timestamps are not timezone-aware ISO dates."}</p>` : ""}
+          ${!c.scope_comparable ? `<p class="history-notes">⚠ ${ru ? "Изменился состав, вес или версия scope. Значения показаны отдельно; дельты не сопоставимы." : "Scope membership, weights or version changed. Values are shown separately; deltas are not comparable."}</p>` : ''}
+          ${Object.values(c.coverage_comparable).some(v=>!v) ? `<p class="history-notes">${ru ? "Изменилось покрытие известными треками. Затронутые агрегатные дельты скрыты." : "Known track coverage changed. Affected aggregate deltas are suppressed."}</p>` : ''}
+          <div class="history-overview">${[["global_progress", L.global], ["code_progress", L.codeReady], ["verification_progress", L.verifiedReady]].map(([key, label]) => `<div><strong>${esc(label)}</strong>${metric(c.tracks[key])}</div>`).join("")}</div>
+          <p class="history-notes">${ru ? "Измеренный changed LOC" : "Measured changed LOC"}: ${fmt(changed.previous)} → ${fmt(changed.current)}. ${ru ? "Оценка оставшихся LOC" : "Estimated remaining LOC"}: ${range(...remaining.previous)} → ${range(...remaining.current)}.</p>
+          <p class="history-notes">${ru ? "Граница измерений" : "Measurement boundary"}: ${esc(c.previous_boundary || L.unknown)} → ${esc(c.current_boundary || L.unknown)}. ${ru ? "Разница объёма diff не означает объём работы между снимками." : "A change in diff size is not the amount of work performed between snapshots."}</p>${h.previous_html && h.previous_html.startsWith("file:") ? `<a href="${esc(h.previous_html)}">${ru ? "Открыть предыдущий отчёт" : "Open previous report"}</a>` : ""}${noteHtml}<details class="method"><summary>${ru ? "Изменения по задачам" : "Changes by task"} (${c.tasks.length})</summary><div class="history-table-wrap"><table class="history-table"><thead>${headers}</thead><tbody>${rows}</tbody></table></div></details>`;
+      }
+
+      function filterMatch(task) {
+        if (activeFilter === "all") return true;
+        if (activeFilter === "risk") return task.status === "blocked" || task.status === "at-risk";
+        return task.status === activeFilter;
+      }
+      function renderTasks() {
+        const visible = data.tasks.filter(filterMatch);
+        $("taskList").innerHTML = visible.length ? visible.map(task => `
+          <article class="task-item" data-task-id="${esc(task.id)}">
+            <button class="task-row" type="button" aria-expanded="false">
+              <div><div class="task-name">${esc(task.name)}</div><div class="task-meta"><span class="task-status ${esc(task.status)}">${esc(statusLabel(task.status))}</span><span>${esc(L.taskWeight)} ${fmt(task.weight,1)}</span><span>${esc(L.taskConfidence)} ${pct(task.confidence)}</span></div></div>
+              <div class="task-progress-stack">
+                ${taskTrack("global", L.global, task.global_progress)}
+                ${taskTrack("code", L.codeReady, task.code_progress)}
+                ${taskTrack("verification", L.verifiedReady, task.verification_progress)}
+              </div>
+              <div class="task-lines"><strong>${range(task.remaining_logical_min, task.remaining_logical_max)}</strong><span>${esc(L.logicalRemaining)}</span></div>
+              <span class="chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="task-detail">
+              <div><p class="detail-copy">${esc(task.summary || "")}</p><div class="loc-grid"><div><span>${esc(L.acceptanceBaseline)}</span><strong>${knownPct(task.acceptance_progress)}</strong></div><div><span>${esc(L.global)}</span><strong>${knownPct(task.global_progress)}</strong></div><div><span>${esc(L.doneLines)}</span><strong>${task.measurement_unknown ? (locale === "ru" ? "не измерено" : "not measured") : fmt(task.done_lines)}</strong></div><div><span>${esc(L.logicalDone)}</span><strong>${task.measurement_unknown ? (locale === "ru" ? "не измерено" : "not measured") : fmt(task.done_logical)}</strong></div><div><span>${esc(L.remainingLines)}</span><strong>${range(task.remaining_lines_min, task.remaining_lines_max)}</strong></div><div><span>${esc(L.logicalRemaining)}</span><strong>${range(task.remaining_logical_min, task.remaining_logical_max)}</strong></div></div></div>
+              <div>${(task.blocked_by || []).length ? `<strong>${esc(L.blockers)}</strong>${task.blocked_by.map(v => `<div class="evidence-line">${esc(v)}</div>`).join("")}` : ""}${(task.evidence || []).length ? `<strong>${esc(L.evidence)}</strong>${task.evidence.map(v => `<div class="evidence-line">${esc(v)}</div>`).join("")}` : ""}</div>
+            </div>
+          </article>`).join("") : `<div class="empty">${esc(L.empty)}</div>`;
+        document.querySelectorAll(".task-row").forEach(row => row.addEventListener("click", () => {
+          const item = row.closest(".task-item");
+          const open = item.classList.toggle("open");
+          item.classList.toggle("selected", open);
+          row.setAttribute("aria-expanded", String(open));
+          highlightBubble(item.dataset.taskId, open);
+        }));
+      }
+      function initTaskFilters() {
+        $("taskFilters").innerHTML = filterDefs.map(([key,label]) => `<button type="button" data-filter="${key}" class="${key === activeFilter ? "active" : ""}">${esc(label)}</button>`).join("");
+        $("taskFilters").addEventListener("click", (event) => {
+          const button = event.target.closest("button[data-filter]");
+          if (!button) return;
+          activeFilter = button.dataset.filter;
+          $("taskFilters").querySelectorAll("button").forEach(b => b.classList.toggle("active", b === button));
+          renderTasks(); renderTaskPlot();
+        });
+      }
+      function selectTask(id) {
+        if (!data.tasks.some(t => t.id === id)) return;
+        activeFilter = "all";
+        $("taskFilters").querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+        renderTasks(); renderTaskPlot();
+        const item = document.querySelector(`.task-item[data-task-id="${CSS.escape(id)}"]`);
+        if (!item) return;
+        item.classList.add("open", "selected");
+        item.querySelector(".task-row").setAttribute("aria-expanded", "true");
+        highlightBubble(id, true);
+        item.scrollIntoView({behavior:"smooth", block:"center"});
+      }
+      function highlightBubble(id, active) {
+        document.querySelectorAll(".task-bubble").forEach(dot => dot.classList.toggle("dim", active && dot.dataset.taskId !== id));
+      }
+
+      function renderTaskPlot() {
+        const tasks = data.tasks.filter(filterMatch);
+        const svg = $("taskPlot");
+        const W = 460, H = 330, l = 46, r = 22, t = 26, b = 42;
+        const iw = W-l-r, ih = H-t-b;
+        const x = v => l + v/100*iw;
+        const y = v => t + (100-v)/100*ih;
+        const maxRemaining = Math.max(1, ...data.tasks.map(v => v.remaining_logical_mid));
+        let html = "";
+        [0,25,50,75,100].forEach(v => {
+          html += `<line class="grid-line" x1="${x(v)}" y1="${t}" x2="${x(v)}" y2="${H-b}"></line><text class="axis-label" x="${x(v)}" y="${H-17}" text-anchor="middle">${v}%</text>`;
+          html += `<line class="grid-line" x1="${l}" y1="${y(v)}" x2="${W-r}" y2="${y(v)}"></line><text class="axis-label" x="${l-9}" y="${y(v)+3}" text-anchor="end">${v}</text>`;
+        });
+        html += `<text class="axis-label" x="${W-r}" y="${H-2}" text-anchor="end">${esc(L.global)}</text><text class="axis-label" x="10" y="${t}" transform="rotate(-90 10 ${t})" text-anchor="end">${esc(L.confidence)}</text>`;
+        tasks.filter(task => task.global_progress != null).forEach(task => {
+          const radius = 7 + Math.sqrt(task.remaining_logical_mid / maxRemaining) * 12;
+          html += `<circle class="task-bubble" tabindex="0" data-task-id="${esc(task.id)}" cx="${x(task.global_progress)}" cy="${y(task.confidence)}" r="${radius.toFixed(1)}" fill="${statusColor(task.status)}"></circle>`;
+        });
+        svg.innerHTML = html;
+        svg.querySelectorAll(".task-bubble").forEach(dot => {
+          const task = data.tasks.find(t => t.id === dot.dataset.taskId);
+          const body = `${knownPct(task.global_progress)} ${L.global} · ${knownPct(task.code_progress)} ${L.codeReady} · ${knownPct(task.verification_progress)} ${L.verifiedReady} · ${range(task.remaining_logical_min, task.remaining_logical_max)} ${L.logicalRemaining}`;
+          dot.addEventListener("pointermove", e => showTooltip(e, task.name, body));
+          dot.addEventListener("pointerleave", hideTooltip);
+          dot.addEventListener("focus", e => showTooltip({clientX:innerWidth/2, clientY:innerHeight/2}, task.name, body));
+          dot.addEventListener("blur", hideTooltip);
+          dot.addEventListener("click", () => selectTask(task.id));
+          dot.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectTask(task.id); } });
+        });
+      }
+
+      const categories = [
+        {key:"logical", color:"var(--accent)"}, {key:"tests", color:"var(--blue)"}, {key:"docs_config", color:"var(--violet)"}, {key:"generated", color:"var(--amber)"}, {key:"other", color:"var(--faint)"}
+      ];
+      let locView = "all";
+      const hiddenCategories = new Set();
+      function categoryLabel(key) { return L[key] || key; }
+      function renderLocLegend() {
+        const c = data.code.changed, r = data.code.remaining;
+        $("locLegend").innerHTML = categories.map(cat => `<button type="button" class="legend-button ${hiddenCategories.has(cat.key) ? "off" : ""}" data-category="${cat.key}"><span class="legend-swatch" style="background:${cat.color}"></span><span class="legend-name">${esc(categoryLabel(cat.key))}</span><span class="legend-value">${fmt(c[cat.key])} · ${fmt(r[`${cat.key}_mid`])}</span></button>`).join("");
+        $("locLegend").querySelectorAll("button").forEach(button => button.addEventListener("click", () => {
+          const key = button.dataset.category;
+          hiddenCategories.has(key) ? hiddenCategories.delete(key) : hiddenCategories.add(key);
+          renderLocLegend(); renderLocChart();
+        }));
+      }
+      function renderLocChart() {
+        const svg = $("locChart"), c = data.code.changed, r = data.code.remaining;
+        const W=820,H=270,l=152,right=34,top=30,bottom=44, iw=W-l-right;
+        const logicalOnly = locView === "logical";
+        const max = logicalOnly ? Math.max(c.logical, r.logical_max, 1) : Math.max(c.total, r.total_max, 1);
+        const scale = v => v/max*iw;
+        let html = "";
+        [0,.25,.5,.75,1].forEach(p => { const xx=l+p*iw; html += `<line class="grid-line" x1="${xx}" y1="${top}" x2="${xx}" y2="${H-bottom}"></line><text class="axis-label" x="${xx}" y="${H-18}" text-anchor="middle">${fmt(max*p)}</text>`; });
+        html += `<text class="axis-label" x="${l-12}" y="84" text-anchor="end">${esc(L.changed)}</text><text class="axis-label" x="${l-12}" y="170" text-anchor="end">${esc(L.estimated)}</text>`;
+        const bars = logicalOnly ? [{key:"logical", color:"var(--accent)"}] : categories.filter(cat => !hiddenCategories.has(cat.key));
+        let cursor = l;
+        bars.forEach(cat => { const width=scale(c[cat.key]); if(width<=0)return; html += `<rect class="loc-segment" data-series="changed" data-key="${cat.key}" x="${cursor}" y="58" width="${width}" height="40" rx="${cursor===l?9:0}" fill="${cat.color}"></rect>`; cursor += width; });
+        const minKey = logicalOnly ? "logical_min" : "total_min", maxKey = logicalOnly ? "logical_max" : "total_max";
+        html += `<rect x="${l+scale(r[minKey])}" y="140" width="${Math.max(2,scale(r[maxKey]-r[minKey]))}" height="42" rx="9" fill="rgba(var(--accent-rgb),.11)" stroke="var(--line-strong)" stroke-dasharray="4 4"></rect>`;
+        cursor = l;
+        bars.forEach(cat => { const width=scale(r[`${cat.key}_mid`]); if(width<=0)return; html += `<rect class="loc-segment" data-series="remaining" data-key="${cat.key}" x="${cursor}" y="148" width="${width}" height="26" rx="${cursor===l?7:0}" fill="${cat.color}" opacity=".78"></rect>`; cursor += width; });
+        const rangeMid = logicalOnly ? r.logical_mid : r.total_mid;
+        html += `<line x1="${l+scale(rangeMid)}" y1="136" x2="${l+scale(rangeMid)}" y2="186" stroke="var(--text)" stroke-width="2"></line>`;
+        html += `<text class="axis-label" x="${Math.min(W-right, l+scale(logicalOnly?c.logical:c.total)+8)}" y="84">${fmt(logicalOnly?c.logical:c.total)}</text>`;
+        html += `<text class="axis-label" x="${Math.min(W-right, l+scale(r[maxKey])+8)}" y="170">${range(r[minKey],r[maxKey])}</text>`;
+        svg.innerHTML = html;
+        svg.querySelectorAll(".loc-segment").forEach(seg => {
+          const key=seg.dataset.key, series=seg.dataset.series;
+          const value=series==="changed" ? c[key] : r[`${key}_mid`];
+          const detail=series==="changed" ? `${fmt(value)} ${L.lines} · ${L.measured}` : `${fmt(value)} ${L.lines} · ${L.midpoint} ${L.estimate}`;
+          seg.addEventListener("pointermove", e => showTooltip(e, categoryLabel(key), detail));
+          seg.addEventListener("pointerleave", hideTooltip);
+        });
+      }
+      function initLoc() {
+        $("locMode").innerHTML = [["all",L.modes.all],["logical",L.modes.logical]].map(([key,label]) => `<button type="button" data-mode="${key}" class="${key===locView?"active":""}">${esc(label)}</button>`).join("");
+        $("locMode").addEventListener("click", e => { const b=e.target.closest("button[data-mode]"); if(!b)return; locView=b.dataset.mode; $("locMode").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b)); renderLocChart(); });
+        renderLocLegend(); renderLocChart();
+        $("changedBasis").textContent = data.code.changed.basis || "";
+        $("remainingBasis").textContent = data.code.remaining.basis || "";
+        $("estimateNote").innerHTML = `<strong>${esc(L.estimateConfidence)}: ${pct(data.code.remaining.confidence)}</strong><br>${esc(L.range)} ${range(data.code.remaining.total_min,data.code.remaining.total_max)} ${esc(L.lines)} · ${esc(L.logical)} ${range(data.code.remaining.logical_min,data.code.remaining.logical_max)}`;
+      }
+
+      function renderTimeline() {
+        const items=data.critical_path || [];
+        $("criticalPathSection").style.display=items.length?"block":"none";
+        $("timeline").innerHTML=items.map(stage=>`<article class="stage ${esc(stage.status)}" data-task-id="${esc(stage.task_id||"")}" tabindex="0"><span class="stage-dot"></span><div><div class="stage-name">${esc(stage.name)}</div><div class="stage-detail">${esc(stage.detail||"")}</div></div><span class="stage-tag">${esc(stage.tag||statusLabel(stage.status))}</span></article>`).join("");
+        $("timeline").querySelectorAll(".stage[data-task-id]").forEach(stage=>{ if(!stage.dataset.taskId)return; const act=()=>selectTask(stage.dataset.taskId); stage.addEventListener("click",act); stage.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();act();}}); });
+      }
+
+      function initEvidence() {
+        $("formula").textContent = `${L.formula}: ${data.methodology.formula}`;
+        $("methodNotes").innerHTML=(data.methodology.notes||[]).map(n=>`<p>${esc(n)}</p>`).join("");
+        $("evidenceHead").innerHTML=`<tr><th>${esc(L.source)}</th><th>${esc(L.value)}</th><th>${esc(L.note)}</th><th>${esc(L.quality)}</th></tr>`;
+        $("evidenceBody").innerHTML=(data.sources||[]).map(s=>`<tr><td>${esc(s.label)}</td><td>${esc(s.value)}</td><td>${esc(s.note||"")}</td><td><span class="quality ${esc(s.quality||"observed")}">${esc(s.quality||"observed")}</span></td></tr>`).join("");
+      }
+
+      function initLabels() {
+        $("planKicker").textContent=L.planKicker; $("planTitle").textContent=L.planTitle; $("planCopy").textContent=L.planCopy;
+        $("plotTitle").textContent=L.plotTitle; $("plotMeta").textContent=L.plotMeta; $("plotNote").textContent=L.plotNote;
+        $("codeKicker").textContent=L.codeKicker; $("codeTitle").textContent=L.codeTitle; $("codeCopy").textContent=L.codeCopy;
+        $("pathKicker").textContent=L.pathKicker; $("pathTitle").textContent=L.pathTitle; $("pathCopy").textContent=L.pathCopy;
+        $("evidenceKicker").textContent=L.evidenceKicker; $("evidenceTitle").textContent=L.evidenceTitle; $("methodSummary").textContent=L.methodSummary;
+        $("footerScope").textContent=`${data.meta.scope||""} · ${data.meta.evidence_boundary||""}`; $("footerGenerated").textContent=`${L.footerGenerated}: ${data.generated_at}`;
+      }
+
+      $("themeToggle").addEventListener("click",()=>{ const light=document.documentElement.dataset.theme==="light"; document.documentElement.dataset.theme=light?"dark":"light"; });
+      $("printButton").addEventListener("click",()=>window.print());
+      initLabels(); initHeader(); renderHistory(); initTaskFilters(); renderTasks(); renderTaskPlot(); initLoc(); renderTimeline(); initEvidence();
+    })();
+  </script>
+</body>
+</html>

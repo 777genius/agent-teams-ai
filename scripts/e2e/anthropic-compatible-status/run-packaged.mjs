@@ -24,6 +24,7 @@ import {
   sameIdentity,
 } from '../opencode-diagnostics/platform.mjs';
 import { clickNativeControl } from './native-click.ts';
+import { readProviderUiDiagnostics, startProviderUiDiagnostics } from './provider-ui-diagnostics.mjs';
 
 const { executable } = packagedArguments(process.argv.slice(2));
 const root = await mkdtemp(path.join(os.tmpdir(), 'anthropic-compatible-status-state-'));
@@ -36,7 +37,7 @@ const data = {
   project: path.join(root, 'test-project'),
   artifact: await packagedArtifact(executable),
 };
-const evidence = { passed: false, issue: 684, artifact: data.artifact, steps: [], requests: [] };
+const evidence = { passed: false, issue: 684, artifact: data.artifact, steps: [], requests: [], rendererErrors: [] };
 const token = `issue684-${randomBytes(18).toString('hex')}`;
 const model = 'issue684-compatible-model';
 let app;
@@ -59,6 +60,13 @@ class Cdp {
     this.pending = new Map();
     socket.on('message', (raw) => {
       const message = JSON.parse(String(raw));
+      if (message.method === 'Runtime.exceptionThrown' && evidence.rendererErrors.length < 20) {
+        const detail = message.params?.exceptionDetails;
+        evidence.rendererErrors.push({
+          at: new Date().toISOString(),
+          message: redact(detail?.exception?.description ?? detail?.text ?? 'Renderer exception').slice(0, 4000),
+        });
+      }
       const request = this.pending.get(message.id);
       if (!request) return;
       this.pending.delete(message.id);
@@ -345,6 +353,7 @@ try {
   await cdp.fill('#anthropic-compatible-base-url', baseUrl);
   await cdp.fill('#anthropic-compatible-auth-token', token);
   record('settings-fields-entered');
+  await cdp.evaluate(startProviderUiDiagnostics);
   await cdp.clickText('Save endpoint', 'document.querySelector("[role=dialog]")');
   await cdp.wait(
     `window.electronAPI.config.get().then(config => {
@@ -512,6 +521,15 @@ try {
   process.exitCode = 1;
 } finally {
   if (cdp) {
+    try {
+      evidence.providerUiDiagnostics = await cdp.evaluate(readProviderUiDiagnostics);
+      evidence.endpointAtCompletion = await cdp.evaluate(`window.electronAPI.config.get().then(config => ({
+        enabled: config.providerConnections.anthropic.compatibleEndpoint.enabled,
+        baseUrl: config.providerConnections.anthropic.compatibleEndpoint.baseUrl,
+      }))`);
+    } catch {
+      /* diagnostics are best-effort; preserve the independent screenshot attempt */
+    }
     try {
       await cdp.shot('final-state');
     } catch {

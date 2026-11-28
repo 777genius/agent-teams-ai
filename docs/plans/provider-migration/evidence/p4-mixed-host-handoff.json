@@ -1,0 +1,82 @@
+{
+  "status": "Scoped native mixed-Team PASS; full objective INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p4-mixed-host-native-v2.tar.gz",
+  "archiveSha256": "09a41fae2727746e20c0c08f952fb93febc2abcd6eecd14d524fa4b1bf128c17",
+  "receiptSha256": "039a81e6011fbcbb756afd9a02a56e9f0ea29cea1491ac2641e5cc95699e30fd",
+  "hostSourceSha256": "780f1f6e3caa93d4a599432b6a0ad201ed0a627cad66821c6d24e4bf190824ae",
+  "hostDistSha256": "dbcbd03536adac77d00902c73fc4fe5820c4a1e77f8516dc158eeb42d76fb78d",
+  "providerSha256": "2984c7bf851af9b7d4d0af9630af28c9e7febe795f45706d4ac4944b853fc9fe",
+  "jobId": "86aa06fb917edf22df8059c7dbfbff2b",
+  "scope": "One static captured Team with actual Claude SDK0.3.305, Codex0.162.0 and OpenCode1.18.35. Local scripted inference; real native tools, MCP, Team, Runtime and filesystem.",
+  "facts": {
+    "aggregateReadyMembers": 3,
+    "canonicalCompletedTasks": 3,
+    "humanBusinessInputs": 6,
+    "originalNativeInputsIncludingNotifications": 10,
+    "visibleHumanReplies": 6,
+    "modelRequests": [
+      13,
+      12,
+      12
+    ],
+    "modelFailures": [
+      [],
+      [],
+      []
+    ],
+    "hostExits": [
+      0,
+      0
+    ],
+    "cleanupConfirmed": true,
+    "nativeRedispatchAfterRestart": 0,
+    "workspaceEffects": "Each member TEST workspace contains exactly ONE newline TWO newline.",
+    "activity": "Every event input is attributed to that member original Runtime inputs and canonical Team outbox, including assignment/board-complete notifications."
+  },
+  "originalFailure": {
+    "jobId": "743ddf473e8ef81f133bb073f801643f",
+    "receiptSha256": "e516c1f0ff54e6d9e01730e2aa10df70b21e8a7fa1b67f080b7360dabe0e1f73",
+    "status": "INCOMPLETE retained",
+    "firstObservationError": "Harness counted only human inputs; actual canonical task assignment/board-complete notifications correctly generated additional inputs. Corrected member/outbox-scoped verification rather than suppressing notifications.",
+    "subsequentReadOnlyReconciliation": {
+      "jobId": "53d281f3979bc84713042867b7c21fd0",
+      "status": "FAIL retained",
+      "receiptSha256": "a63a7bef872acdc28866a5eccb0a9dd068d3d7974a5365c7b83f7552de9967b3",
+      "finding": "Only five of six replies persisted. Codex second message_send had a native HTTP transport error; no canonical codex-reply-two receipt existed. Native turn completion alone cannot establish successful MCP tools.",
+      "nativeEffectsResubmitted": 0,
+      "cleanupConfirmed": true
+    },
+    "originalExecutedHarnessReconstruction": "Inverse of three known observer edits matches original executed harness SHA0bcdaa0c0e58bc81389c6c82a14e0bdae343b36888fdabf24780655eafe4ee0e."
+  },
+  "repair": {
+    "transport": "Stateless SDK transport now uses an explicitly closing HTTP connection per response, so native clients do not reuse a socket retired with a request-owned transport. Exact cause of original HTTP transport failure is not conclusively established; successor native mixed proof passed without it.",
+    "oracles": "All three inference fixtures require every preceding MCP action completed for its original member before continuing. Failed tool output cannot become a fabricated DONE.",
+    "regressionRed": {
+      "jobId": "fc83787688af8e82d7b114c55306ec37",
+      "expectedFailure": "Original Codex oracle returned200 for failed MCP output; revised negative test requires400."
+    },
+    "regressionGreen": {
+      "jobId": "6baa39e43028ba141254e836fa59ab66",
+      "focusedTests": 13,
+      "status": "PASS"
+    },
+    "successor": "Fresh TEST namespace and new native allocation after meaningful transport/oracle repair; no ambiguous original command was retried."
+  },
+  "checks": {
+    "rootTS7": "PASS",
+    "fullHostTests": 225,
+    "jobId": "48485bf8b1b4d0518eb6ad66b84525da",
+    "hostTestStrict": "PASS",
+    "hostTestStrictJobId": "88b3bad48430dee3617018ffd2ec42ff",
+    "newNegativeFixtureIncludedInCanonicalHostTestScript": true
+  },
+  "excluded": [
+    "Desktop controls and ordinary native Team launch from UI",
+    "second Team/group/cross-Team",
+    "shared OpenCode backing",
+    "native history restore and generation replacement",
+    "vendor authentication",
+    "full P0-P8/M01-M19 acceptance"
+  ],
+  "postNativeDelta": "docs/plans/provider-migration/evidence/p5-codex-clock-rollback-handoff.json"
+}

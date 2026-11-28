@@ -16,6 +16,7 @@ const DARWIN_COMMAND_ROW = /^\s*(\d+)\s+(.*)$/;
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 const syncPause = (ms: number) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 class CensusDeadlineError extends Error {}
+class MalformedProcStatError extends Error {}
 class OwnershipDebtError extends Error {}
 class UnverifiableEnvironmentError extends Error {}
 
@@ -92,28 +93,35 @@ export function createPackagedSmokeOwnership(
     deadline: number,
     requireUser = false
   ): SmokeProcessIdentity | undefined {
-    budget(deadline);
-    try {
-      if (statSync(`/proc/${pid}`).uid !== uid) {
-        if (requireUser) throw new Error('Owned process changed user');
-        return undefined;
+    // /proc/<pid>/stat can be empty while an already-exiting child is being
+    // reaped. Recheck that exact PID once: only absence or a complete identity
+    // may settle it. A persistently unreadable live process remains a failure.
+    let retriedTornStat = false;
+    while (true) {
+      budget(deadline);
+      try {
+        if (statSync(`/proc/${pid}`).uid !== uid) {
+          if (requireUser) throw new Error('Owned process changed user');
+          return undefined;
+        }
+        const raw = readFileSync(`/proc/${pid}/stat`, 'utf8');
+        const end = raw.lastIndexOf(')');
+        const fields = end >= 0 ? raw.slice(end + 2).trim().split(/\s+/) : [];
+        if (!/^\d+$/.test(fields[19] ?? ''))
+          throw new MalformedProcStatError('Malformed packaged smoke process identity');
+        const parent = Number(fields[1]);
+        const group = Number(fields[2]);
+        if (!Number.isInteger(parent) || !Number.isInteger(group) || !fields[0])
+          throw new MalformedProcStatError('Malformed packaged smoke process metadata');
+        return { pid, parent, group, birth: `proc:${fields[19]}`, state: fields[0] };
+      } catch (error) {
+        if (gone(error)) return undefined;
+        if (error instanceof MalformedProcStatError && !retriedTornStat) {
+          retriedTornStat = true;
+          continue;
+        }
+        throw new Error(`Unable to verify packaged smoke process identity: pid=${pid}`);
       }
-      const raw = readFileSync(`/proc/${pid}/stat`, 'utf8');
-      const end = raw.lastIndexOf(')');
-      const fields = raw
-        .slice(end + 2)
-        .trim()
-        .split(/\s+/);
-      if (end < 0 || !/^\d+$/.test(fields[19] ?? ''))
-        throw new Error('Malformed packaged smoke process identity');
-      const parent = Number(fields[1]);
-      const group = Number(fields[2]);
-      if (!Number.isInteger(parent) || !Number.isInteger(group) || !fields[0])
-        throw new Error('Malformed packaged smoke process metadata');
-      return { pid, parent, group, birth: `proc:${fields[19]}`, state: fields[0] };
-    } catch (error) {
-      if (gone(error)) return undefined;
-      throw new Error(`Unable to verify packaged smoke process identity: pid=${pid}`);
     }
   }
 

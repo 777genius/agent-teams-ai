@@ -1,0 +1,7 @@
+{
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt11.tar.gz",
+  "archiveSha256": "5ea142571211ffeaaec8057ea71d929c5e59f225f2e0f2e08cdc9b1be53aa3ea",
+  "receiptSha256": "5a1c032557c23fd90d3ab081b49edd4128b9d967acceef4e026d4cdeb766d8fc",
+  "scope": "UI CONTROL PASS: ordinary sidebar/Open team/Create Task; one canonical Task and completed human command receipt, same fields/ID on board after real reload and second ordinary navigation, no duplicates. TEST-only renderer focus emulated for macOS occlusion. Overall INCOMPLETE because unchanged strict sentinel detects legacy provider-management/status CLI calls. Captured Host and app group retired.",
+  "status": "INCOMPLETE"
+}

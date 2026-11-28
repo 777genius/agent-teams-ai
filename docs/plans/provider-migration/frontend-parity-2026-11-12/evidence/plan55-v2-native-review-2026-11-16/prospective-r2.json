@@ -1,0 +1,208 @@
+{
+  "decision": "ACCEPT_PROSPECTIVE_PLAN55_EXACT_V3",
+  "plan": {
+    "path": "/workspace/scratch/20ba97c23d57/frontend-proposal/plan55-review-route-r1/proposal.md",
+    "sha256": "33fffde35fc2413ceb6b332e5278cb5fcb914ff493d3b0491880d8c108008bc5",
+    "bytes": 13596,
+    "priorSha256": "f172dc1fa99254009831e34ace0160820872fdaae3f22fe44f4c506d7a81b0eb",
+    "status": "Unpublished prospective document only; root retains selection/publication authority."
+  },
+  "sourceBasis": {
+    "side": "ee06c055eb7e360d6b851ddef3096307456c6bc9",
+    "tree": "b3881099adb278dfc569874126b204eb6fabd7fb",
+    "workflowPreimage": "a1513210012356a5178620b1f370bd1daf0de9d9",
+    "workflowSha256": "56158f6aac71a16f66959bd022d979860391bb237eacc31ab0571239b4835ca1",
+    "nativeHelpers": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+    "nativePreparationR1Sha256": "979aac1241174ac9ea74365ecac738b226210523802c0a85192f03a44ecbc03a"
+  },
+  "checks": [
+    {
+      "id": "exact ee06 workflow preimage independent fetch equals retained a151 bytes",
+      "result": "PASS"
+    },
+    {
+      "id": "all nineteen native R1 source byte bindings intact",
+      "result": "PASS"
+    },
+    {
+      "id": "twenty-one direct dependency entries already in claimed exact rosters",
+      "result": "PASS"
+    },
+    {
+      "id": "one existing workflow and one Darwin ARM64 matrix row",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "existing Draft-safe trigger and whole matrix aggregate preserved",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "only two shared V2 preparation predicates widened to selected native row",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "declared platform feeds existing stage and preparation; old linux tuple unchanged",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "same Node24.21.0 and common eight-file admission/build/type/lint boundaries",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "four new row-local stages and failure-visible verifier",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "one original successful warm root/receipt hash feeds cold epoch without reconstruction",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "native V2 recipe excludes genuine Claude/Codex selection and inference",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "unchanged warm Task/Read/edit/Keep/Reject/Undo/Redo/reload oracle reused",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "cold one attested metadata child distinguished from zero Runtime allocations",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "original metadata release lineage and absence before harness cleanup required",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "both receipts require PASS, exact owned cleanup and app exit0/null",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "original sentinel refusals remain diagnostic and do not become fork-free evidence",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "two referenced original PNGs retained with signature and digest checks",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "fourteen explicit artifact additions, existing globs/order/always/retention preserved",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "original 45-minute job and helper/phase budgets, no retry or new actions",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "only native row excluded from forbidden-provider generic verifier",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "generic source/header and native-input freeze overclaims corrected",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "no production/helper/roster/test changes selected",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "exact frozen YAML and original execution remain separate gates",
+      "result": "PASS_SOURCE_OR_PROSPECTIVE_CONTRACT"
+    },
+    {
+      "id": "14 unique proposed artifact operands include original namespace/session JSON depth without removing old *.json",
+      "result": "PASS"
+    }
+  ],
+  "implementationReviewBoundaries": {
+    "receiptDiscovery": "Exactly one original prepared event in each named log, canonical same TEST root under canonical RUNNER_TEMP, exact expected filenames; never newest-directory search, fallback receipt or second attempt.",
+    "source": "Match complete unique actual proof roster arrays and current bytes for both epochs. Use original workflow input source head/Git binding; native receipts have no generic source header.",
+    "failureFields": "Reject any original failure, sourceFreezeFailure, nativeInputFreezeFailure, sentinelCensusFailure, logCleanupFailure, metadataObservationFailure or cleanup.cleanupFailure alongside non-PASS status or null/nonempty remainder. Preserve other original applicable disqualifiers; do not treat merely truthy PASS strings or child exit as complete proof.",
+    "quitAndCleanup": "Retain original quitRequested/selected Host observations, captured Host absence, appExitCode0/appSignalCode null, empty original owned remainder, and per-epoch metadataAtHostClose plus metadataAbsentBeforeHarnessCleanup. No cleanup action is added to verifier.",
+    "warm": "Keep qualified opencode-update-patch-v2 event/source causal oracle in original helper; require provider opencode-v2/version2.1.4, six finite model observations, runtime release before Review, original native event bytes unchanged.",
+    "cold": "Require warm receipt full-byte SHA, same task/file, nativeInputsReplayed0/nativeAllocations0 with Runtime scope, metadataProcessCount1, unchanged runtime/events/decisions and actual coldOpenCodeMetadata close lineage; not zero native children.",
+    "inputFreezeLimit": "desktop-backend-smoke.ts:146–147 yields [] here, and desktop-source-freeze.ts:22–33 returns early. Final Codex-specific selectedNativeInputHashes cannot attest final Bun/graph rehash. Existing pre-recipe Bun/graph/custody verification and Host/metadata authority checks remain the supported scope.",
+    "sentinels": "Native branch retains refusals as legacy-maintenance diagnostics, not universal no-child/fork-free/P5 success; no new empty-census predicate.",
+    "oldRows": "Full byte preservation apart from listed shared V2 predicates, platform substitution with same old linux value, provider-label predicate and upload selection/additions must be shown at frozen source R2."
+  },
+  "remainingGate": "Prospective route approval is not an actual YAML/source acceptance or runtime PASS. Root must publish/read back selected plan, freeze exact one-path source and obtain independent source R2, then audit original warm/cold results on their exact future source.",
+  "qualificationLimits": [
+    "No full Stage1/M13, P08/P09, vendor authentication, genuine Claude/Codex, cross-platform, default-on, release or later-head qualification.",
+    "No claim both epochs fit the unchanged 45-minute budget before original CI evidence.",
+    "Twenty-one direct roster entries are checked; this is not an independent transitive all-repository closure rehash."
+  ],
+  "sourceBindings": [
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "sourceHead": "ee06c055eb7e360d6b851ddef3096307456c6bc9",
+      "bytes": 106650,
+      "sha256": "56158f6aac71a16f66959bd022d979860391bb237eacc31ab0571239b4835ca1",
+      "gitBlob": "a1513210012356a5178620b1f370bd1daf0de9d9"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-stop-fixture.ts",
+      "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "bytes": 29580,
+      "sha256": "2b954cec0846e30f530ae615e63ac05ae9a3969e0338e5d2ab03ec80a62a0f0d",
+      "gitBlob": "d2f58f7dd6ce6b05ff6200fabe67a4945f94a506"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "bytes": 3208,
+      "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+      "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705"
+    },
+    {
+      "path": "scripts/legacy-agent-host/prepare-opencode-v2-native.ts",
+      "sourceHead": "ee06c055eb7e360d6b851ddef3096307456c6bc9",
+      "bytes": 9450,
+      "sha256": "40c7b16a40c3efaf859dffcaa762d927d630d84945810782da2ca172c06fe16e",
+      "gitBlob": "b6fef813e23b8f18d7f8ebae5b14f5c0a104a30c"
+    },
+    {
+      "path": "scripts/stage-runtime.mjs",
+      "sourceHead": "ee06c055eb7e360d6b851ddef3096307456c6bc9",
+      "bytes": 9050,
+      "sha256": "7ee8a9036562728a66d5a1dcd3ce7c97abf75cabeb97092eb9b87171ed2e29be",
+      "gitBlob": "fb06c3470b93df96ec0859536f135191616db093"
+    }
+  ],
+  "operations": "Only source/log/document bytes, hashes and inert parsing reviewed. No project/compiler/test/provider/native/GUI invocation, source afterimage, remote mutation or CI polling/action.",
+  "resolvedFindings": [
+    {
+      "id": "native-review-receipt-has-no-source-header",
+      "source": "desktop-proof-evidence.ts:37–45; desktop-backend-smoke.ts:264–270,683",
+      "priorWording": "Both native receipts must have exact current head and clean source.",
+      "correction": "Plan now binds both to captured host-emulated-inputs.sourceHead plus exact current Git HEAD/clean tracked state and the original unique complete before/after source hash arrays. It does not require missing receipt.source and does not add a helper field.",
+      "scopePreserved": "One workflow only."
+    },
+    {
+      "id": "retain-actual-nested-runtime-records",
+      "source": "desktop-native-stop-fixture.ts:278–305; original workflow:1259",
+      "finding": "Original reader selects runtime-sessions/<64hex namespace>/<64hex>.json. Existing single-level *.json artifact operand misses these original records.",
+      "correction": "V3 appends one hoststore/runtime-sessions/**/*.json operand, preserves old *.json and every previous operand, and states14 new additions. The same workflow source path and TEST-root scope remain.",
+      "rootSelection": "Root explicitly accepted this operand before reseal."
+    }
+  ],
+  "artifactAdditions": [
+    "desktop-native-review-readback-receipt.json",
+    "desktop-native-review-readback-app.log",
+    "native-review-ui-seed.json",
+    "hoststore/runtime-sessions/**/*.json",
+    "hoststore/tasks/test-desktop-backend/*.json",
+    "hoststore/teams/test-desktop-backend/.host-owner/state.json",
+    "hoststore/teams/test-desktop-backend/.host-owner/commands/*.json",
+    "hoststore/teams/test-desktop-backend/.host-owner/outbox/*.json",
+    "hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/events/*.jsonl",
+    "hoststore/teams/test-desktop-backend/.host-evidence/.board-task-changes/blobs/**",
+    "hoststore/teams/test-desktop-backend/review-decisions/**/*.json",
+    "workspace/native-review.ts",
+    "workspace/.git/index",
+    "workspace/pre-existing-untracked.txt"
+  ],
+  "previousReview": {
+    "path": "prospective-r2.json",
+    "sha256": "c1ffd21a6a682a2d35a3b135f66bb44e8f996d351b2566db03f0a47279ea01b0",
+    "status": "Superseded by this final v3 binding; old review was held pending artifact correction."
+  }
+}

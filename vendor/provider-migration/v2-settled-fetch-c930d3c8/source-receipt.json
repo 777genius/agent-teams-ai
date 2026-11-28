@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+  "sourceTree": "a9ce51413c87bc65b54fe07e45a1dc13b2b4c63a",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "fullChecks": [
+    {
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43872562100,
+      "jobId": 133317224402,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43872562100/job/133317224402"
+    },
+    {
+      "node": "26.11.1",
+      "pnpm": "11.18.0",
+      "command": "pnpm check",
+      "result": "PASS",
+      "runId": 43872562100,
+      "jobId": 133317224592,
+      "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43872562100/job/133317224592"
+    }
+  ],
+  "checkedArtifact": {
+    "id": 14228920904,
+    "name": "opencode-v2-spi-consumer-checked-c930d3c8b9a213762528d6e28c9ed0172ab1fa27",
+    "bytes": 193575,
+    "sha256": "6088116cd6df79958c9f0e3024a0df3a0718ab4daf190a3c312fb8118b2ba8e5",
+    "url": "https://github.com/agent-teams-ai/old-provider-implementations/actions/runs/43872562100/artifacts/14228920904"
+  },
+  "packages": {
+    "provider-implementations": {
+      "file": "agent-teams-provider-implementations-0.0.0.tgz",
+      "oldSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+      "newSha256": "9d66036c17a4c2bf86dde9171d94d3048e5df6f6f1ee17ff05758e3a7cf2be41",
+      "bytes": 186425,
+      "integrity": "sha512-jvBcFBmYZWJ0ASvxlSgyNEpdOcm5CnvXPoUfWnWaFlK6nu/DqUfItdudhyFsnwKHc0ukZbqQk+dIzRuDM4PODw=="
+    },
+    "provider-session-contracts": {
+      "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+      "retainedPath": "vendor/provider-migration/host-logs-thinking-9423f600/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "unchanged": true,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "bytes": 6230,
+      "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g=="
+    }
+  }
+}

@@ -88,7 +88,7 @@ const ignoreProgress: Progress = () => undefined;
 /** What a parsed draft launch (a create request) shares with a launch request. */
 type DraftLaunchKey = Exclude<
   Extract<keyof TeamCreateRequest, keyof TeamLaunchRequest>,
-  'teamName' | 'cwd'
+  'teamName' | 'cwd' | 'command' | 'savedSettingsFingerprint'
 >;
 
 /** `satisfies` keeps the list equal to the shared keys of the two request types. */

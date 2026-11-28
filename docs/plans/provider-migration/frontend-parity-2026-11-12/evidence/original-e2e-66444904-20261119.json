@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 1,
+  "kind": "ORIGINAL_664_E2E_RUNS_AND_LOCAL_CAPABILITY",
+  "fullReceipts": false,
+  "source": {
+    "head": "664449047d3e901c58c0e1ffa77b10d3e8df7b10",
+    "tree": "bc4d79d33bfa6e338e3211d4d9f07befd2685b7f",
+    "dirty": false
+  },
+  "qualification": "Derived facts and hashes from already completed original runs. Source tests, input preparation, cleanup and local capability diagnostics do not substitute for a complete GUI/native mode or its mandatory validator. No original verdict is promoted.",
+  "nativeV2Preparation": {
+    "status": "READY",
+    "productQualified": false,
+    "sourceQualifiedField": "ABSENT in canonical input receipt",
+    "elapsedSeconds": 73.933,
+    "steps": [
+      {
+        "name": "original-host-input-capture",
+        "exitCode": 0,
+        "elapsedSeconds": 0.853
+      },
+      {
+        "name": "canonical-native-v2-prepare",
+        "exitCode": 0,
+        "elapsedSeconds": 72.946
+      }
+    ],
+    "providerSessionsLaunched": false,
+    "addedRetriesOrDeadlines": false,
+    "bunVersion": "1.3.11",
+    "openCodeVersion": "2.1.4",
+    "bunSha256": "45598a2814020c231575487a560e47d397d6902355d7e08171a2e56221a6d675",
+    "graphManifestSha256": "30fef1cda05763154901c6349b010bd3ea530c0da9454514d721284288db98ce",
+    "supportArchiveSha256": "c49a71cd1b4f253ed2d1392b44db419eaa28d91764f278c78b8c0fabe35a06ee",
+    "hostInputReceipt": {
+      "bytes": 2006,
+      "sha256": "707f270db79c9382631e06fd77df2c6a12a5292be1e6decfb84d18feb2afa3e9"
+    },
+    "nativeInputReceipt": {
+      "bytes": 782,
+      "sha256": "c64236abd8099184517b9ab22d7c797e5904ee7c32c4c9771e59948e74a2e970"
+    }
+  },
+  "finiteImport": {
+    "mode": "emulated-import-lifecycle-ui",
+    "originalStatus": "INCOMPLETE",
+    "harnessExitCode": 1,
+    "postExitCollector": "COMPLETED",
+    "sourceSelectedCount": 1909,
+    "sourceBeforeAfterEqual": true,
+    "childInputVerifiedAfterCleanup": true,
+    "sentinelInvocations": 14,
+    "refusedSentinels": 0,
+    "producer": {
+      "status": "PASS",
+      "steps": 36,
+      "canonicalReleaseCurrent": true,
+      "proofParseable": true,
+      "sourceTaskObserved": true,
+      "ordinaryQuit": {
+        "requestedOnce": true,
+        "exitCode": 0,
+        "signalCode": null,
+        "originalGroupAbsent": true,
+        "listenerAbsent": true,
+        "sourcePeerAbsent": true
+      },
+      "remaining": [],
+      "sourcePeerAbsentAfterCleanup": true,
+      "inputsFrozen": true
+    },
+    "consumer": {
+      "failure": "CDP command timed out: Runtime.evaluate",
+      "startupMatchingMainFoundAtMs": 38646,
+      "proof": "NOT_PUBLISHED",
+      "failureQuit": {
+        "attempted": true,
+        "reply": "acknowledged",
+        "listenerAbsent": true
+      },
+      "applicationCleanup": {
+        "processGroup": 5771,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": false,
+        "capturedHostAbsent": null
+      },
+      "emulatedRuntimeCleanup": {
+        "absent": false,
+        "observationFailed": true
+      },
+      "qualification": "Physical app group absence does not establish missing Host/emulated-runtime retirement."
+    },
+    "modeValidator": "NOT_RUN: original receipt is not PASS",
+    "retainedOriginalMode": "NOT_RUN: queue stopped on first incomplete",
+    "artifacts": [
+      {
+        "path": "/tmp/TEST-desktop-backend-LKPAdy/desktop-backend-receipt.json",
+        "bytes": 896452,
+        "sha256": "72019b0169574b17a7110c868bece2a1853843ebd1911956843f57fc0f87b668"
+      },
+      {
+        "path": "/tmp/TEST-desktop-backend-LKPAdy/finite-stopped-import-producer.json",
+        "bytes": 143058,
+        "sha256": "95d7b9d05c5d86fdaf8faf76b19a0423040a08f2e1e997b1f37f942a873074e7"
+      },
+      {
+        "path": "gui-66444904-import-lifecycle-derived-20261119/failure-summary.json",
+        "bytes": 4819,
+        "sha256": "f489a3df2a61466339fbfb9461e246b62869f71dc66411a04859a2eea18f9ee4"
+      }
+    ]
+  },
+  "nativeV2Settings": {
+    "mode": "opencode-v2-management-ui",
+    "status": "INCOMPLETE",
+    "failure": "CDP command timed out: Runtime.evaluate",
+    "phase": "Before Settings proof, binding verification and model intents",
+    "settingsVerifier": "NOT_RUN",
+    "membershipSmoke": "NOT_RUN",
+    "membershipVerifier": "NOT_RUN",
+    "sourceSelectedCount": 1921,
+    "sourceBeforeAfterEqual": true,
+    "childInputVerifiedAfterCleanup": true,
+    "model": {
+      "requests": 0,
+      "failures": 0,
+      "completeAfterCleanup": false,
+      "serverClosed": true
+    },
+    "native": {
+      "children": 0,
+      "probes": 0,
+      "remaining": []
+    },
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 554
+    },
+    "ordinaryQuit": {
+      "qualified": false,
+      "reply": "unconfirmed",
+      "reason": "closed-or-rejected",
+      "listenerAbsent": false,
+      "beforeHarnessCleanupCount": 13
+    },
+    "sentinels": {
+      "rows": 1,
+      "refused": 0
+    },
+    "artifacts": [
+      {
+        "path": "/tmp/TEST-desktop-backend-NAXdPA/desktop-backend-receipt.json",
+        "bytes": 781784,
+        "sha256": "c4d5eaf2e22ec96ccf85a6110dd9aa415430bb17e81f959b1812ef2a40b8f023"
+      },
+      {
+        "path": "gui-native-v2-66444904-settings-derived-20261119/failure-summary.json",
+        "bytes": 3677,
+        "sha256": "485e1916ce42ae19d6800600684e246691673172ca946ea1b63fffb7335f0a6a"
+      }
+    ]
+  },
+  "retainedCoexistence": {
+    "originalVerdict": "FAIL",
+    "orchestrationVerdict": "INCOMPLETE",
+    "actualExitCode": 1,
+    "canonicalPreparation": {
+      "exitCode": 0,
+      "elapsedSeconds": 13.124
+    },
+    "originalTest": {
+      "failures": 1,
+      "skips": 0,
+      "elapsedSeconds": 312.951,
+      "requiredBuildsCompleted": true
+    },
+    "originalCleanup": true,
+    "cleanupFailures": [],
+    "businessSteps": 0,
+    "modelObservations": 0,
+    "modelFailures": 0,
+    "failure": "Native gate timed out: actual retained V1 native session and original bootstrap ready",
+    "legacyReadiness": {
+      "runId": null,
+      "spawnRunId": null,
+      "alive": true,
+      "bootstrapConfirmed": false,
+      "nativeSessionPresent": false,
+      "status": "error",
+      "hardFailureReason": "native_custody_protocol"
+    },
+    "retainedOpenDiagnostic": {
+      "status": "diagnostic-unknown",
+      "reason": "not-correlated"
+    },
+    "authority": {
+      "phase": "unknown",
+      "reference": null,
+      "nativeExitReceiptBytes": 0,
+      "expectedProtocolPhase": "NOT_PERSISTED",
+      "helperExitCode": "NOT_PERSISTED",
+      "helperSignal": "NOT_PERSISTED"
+    },
+    "inputs": {
+      "runtimeVersion": "0.0.158",
+      "runtimeSource": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+      "openCodeVersion": "1.19.4",
+      "imageSha256": "538fcb1b6408c8d4608822acee19f7ff5b3a3eb3383c0633c4f06170857312a7",
+      "helperSha256": "024af7745b01ed9dc87117d94c029c3e19fef25230f1c4d961f16ff1b428391d",
+      "providerDigest": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+      "versionsAndSourceHashesMatch": true,
+      "launchEnvironmentEntries": 95,
+      "launchEnvironmentBytes": 19199,
+      "framedLaunchBelow22KiB": true,
+      "packetCapBytes": 256000
+    },
+    "artifacts": [
+      {
+        "path": "coexistence-runner-66444904-20261119/execution/retained-opencode-coexistence.json",
+        "bytes": 3762,
+        "sha256": "34e3398da7a46a26b771754a3b8a3a1786b83c53922ab6ef4ddf4789ff4b42c3"
+      },
+      {
+        "path": "coexistence-runner-66444904-20261119/derived-coexistence-failure-66444904.json",
+        "bytes": 7965,
+        "sha256": "9327825f8447b6aec046a11ddd75a8aec214d769426f8e955bee6ec7c7f67dfd"
+      },
+      {
+        "path": "coexistence-runner-66444904-20261119/passive-custody-diagnostic-proposal-66444904.json",
+        "bytes": 12945,
+        "sha256": "b24e7bf2b6a26fd719c6fd046d5366af492cf74741849a9f80745b60f3ef8170"
+      }
+    ]
+  },
+  "retainedLocalCapability": {
+    "operation": "socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0)",
+    "created": false,
+    "errno": 1,
+    "code": "EPERM",
+    "bindConnectListenAttempted": false,
+    "nativeProviderProcessLaunched": false,
+    "sourceInference": {
+      "source": "f5c69c2e9024ffc36a5db5eafe30f53539b52f62",
+      "file": "native/opencode-custody/linux.c",
+      "necessaryCapability": "Both measure and launch call control_socket before image open or fork. The exact original socket operation matches the local observation.",
+      "socketAddress": "Abstract AF_UNIX: leading NUL, literal agent-teams-opencode-, 64 hex epoch; does not use TMPDIR pathname.",
+      "independentReview": {
+        "owner": "/root/media",
+        "status": "PASS"
+      }
+    },
+    "qualification": "Confirmed limitation in the current executor; it does not retrospectively identify the unrecorded syscall or phase of original664.",
+    "diagnosticBoundary": "nativeHelperFailureDiagnostic is a WeakMap on the original runtime Error. Production runtime projects the error to strings and JSON before Main receives it; current Main/TEST cannot retrieve the original object.",
+    "decision": "No same-environment coexistence retry, transport replacement, deadline increase, frozen-runtime edit or acceptance weakening. Original supported-environment native CI remains required."
+  },
+  "continuation": {
+    "retainedOriginalCommand": "python run-original-gui-queue-finite1536-uv4.py --execute --expected-source-head <published-head> --mode emulated-retained-original-ui",
+    "modeValidator": "run-original-mode-validator.mjs <repo> <published-head> emulated-retained-original-ui <original-PASS-receipt>",
+    "status": "PREPARED_NOT_EXECUTED; local environment became unavailable before GO",
+    "inputReinstallRequired": false,
+    "reason": "Reuse exact prepared immutable inputs; original source fences and mandatory per-mode validator remain."
+  },
+  "reconstruction": "This compact repository evidence preserves facts already captured before the execution environment disconnected. It does not claim the unavailable raw files were uploaded or add a later native observation."
+}

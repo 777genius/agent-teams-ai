@@ -1,0 +1,146 @@
+{
+  "status": "OBSERVED_AND_RETAINED_SCOPED_PASS",
+  "source": "Original retained evidence only; no live calls, source rehash against later W, effects or replay.",
+  "owningDRef": "4e370 (Root-supplied; draft PR242)",
+  "originalJobId": "35efe9a2b2f2f89f8bbecec27761e618",
+  "retentionJobId": "c5a5dbdfc12a1339c3f47b7390151069",
+  "retainedRoot": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae",
+  "retainedEntryCount": 7997,
+  "providerArchiveSha256": "dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce",
+  "sourceAndBundles": {
+    "immutablePins": 2435,
+    "canonicalSources": 1211,
+    "startupBundles": 14,
+    "beforeAfterEqual": true
+  },
+  "processesKill": {
+    "uiClickCount": 1,
+    "registerCommandId": "TEST-live-process-v2-_dno22tt-register",
+    "stopCommandId": "66fad3fc-b442-455d-852c-d580ebde77c1",
+    "originalProcessRef": "p1:dc354bda-bd56-4a58-bd73-c9fcda506bab:918cf8c20c178c04c4945ce5bbe891a036d7770c0f9f85b64abfc07e8e39dca7",
+    "originalProcessId": "dc354bda-bd56-4a58-bd73-c9fcda506bab",
+    "receiptEvolution": "held/requested/native-accepted \u2192 completed/native-observed-absent/signalAcceptedtrue",
+    "canonicalStopReceiptCount": 1,
+    "primaryLifecycle": [
+      "listening",
+      "closing:SIGTERM",
+      "closed:SIGTERM"
+    ],
+    "nativePrimaryCompletion": {
+      "servicePid": 11241,
+      "exitReason": "SIGTERM",
+      "role": "primary",
+      "taskId": "bx6qqoszk",
+      "toolUseId": "TEST-live-process-v2-_dno22tt_tool_0",
+      "status": "completed",
+      "messageId": "TEST-live-process-v2-_dno22tt_message_5",
+      "responseFinished": true
+    },
+    "neighborHealthyImmediatelyAfterPrimaryStop": true,
+    "scope": "One live original-ref UI Kill and direct service lifecycle; no syscall/tree-wide claim"
+  },
+  "postNotification": {
+    "committedAckMessageId": "TEST-live-process-v2-_dno22tt_message_5",
+    "committedAckTimestamp": "2026-10-24T07:08:51.081Z",
+    "nativeSnapshotSha256": "1056047338a50a5e7eab9bb2a9ab33dc650471f1371a1f41109962b4660da870",
+    "snapshotVerifiedAsFinalNativeLogPrefixThroughLine": 43,
+    "nextUserCommandId": "8e32a35c-59bc-42f4-9192-f5430a14fd6b",
+    "nextUserCreatedAt": "2026-10-24T07:08:55.452Z",
+    "nextDeliveryId": "b54d3023-2b37-57d6-969d-20972ca041f6",
+    "sameRuntimeSession": "9f2fdf1b-df32-58de-adc9-f5b1773ea683",
+    "sameBindingGeneration": "capture-d5818a39-0353-5f3e-acfa-0e0aac5cf678",
+    "twoInputResults": [
+      {
+        "inputId": "c99b65c2-75cd-574c-9f43-31dbb13f13f5",
+        "operationRef": "f4494179-7243-4688-a848-7d56830740f0",
+        "phase": "terminal",
+        "terminal": "succeeded"
+      },
+      {
+        "inputId": "b54d3023-2b37-57d6-969d-20972ca041f6",
+        "operationRef": "eb997296-02dd-4209-8ff7-d1d19784bebf",
+        "phase": "terminal",
+        "terminal": "succeeded"
+      }
+    ],
+    "humanReplyCommandId": "TEST-live-process-v2-_dno22tt-visible-reply",
+    "humanReplyDeliveryId": "09c8b985-80f2-5560-8581-af901454301f",
+    "nativeReplyToolUseId": "TEST-live-process-v2-_dno22tt-visible-reply-tool",
+    "nativeToolCalls": {
+      "BashBackground": 2,
+      "processRegister": 1,
+      "messageSendToUser": 1
+    },
+    "receiptVerification": "Both native MCP tool_results correlate to exact completed canonical command/effects; duplicate persisted JSONL tool_result projections are not counted as distinct execution.",
+    "visibleHumanReply": "Existing harness asserted human-thread text before second native terminal/Team Stop"
+  },
+  "teamStopAndAppCleanup": {
+    "uiTeamStopCount": 1,
+    "runtimePhase": "closed",
+    "sealed": true,
+    "custody": "released",
+    "originalCliRootObservation": "absent",
+    "appExitCode": 0,
+    "appSignal": null,
+    "capturedAppGroupEmpty": true,
+    "capturedHostAbsent": true,
+    "writerReleased": true,
+    "retainedScopedNumericRows": 0,
+    "neighborFinalLifecycle": [
+      "SIGTERM",
+      "SIGTERM"
+    ],
+    "neighborInterpretation": "Healthy after primary Kill; later SIGTERM/closed during ordinary Team Stop. Natural TTL expiry was not observed in this run."
+  },
+  "excluded": [
+    "Original Host crash/cold recovery",
+    "Native or natural-Quit qualification",
+    "Whole process tree/escaped descendant finality",
+    "Vendor auth/inference",
+    "Stage2",
+    "Full M19 or M13 background-attribution completion"
+  ],
+  "priorFailures": "Earlier42b22f mixed-receipt-filter failure and all prior false/unknown cleanup records remain unchanged; this is a fresh independently retained original attempt.",
+  "evidence": [
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/tmp/TEST-desktop-backend-I2n7OM/desktop-backend-receipt.json",
+      "sha256": "11421d120b1aba332710f97e48b6169609a72909158d8051210dada59ce6d893"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/retention.json",
+      "sha256": "e35926942e40eff98dafc000a50d4321b47e0dacd9359e1301e909b10b77054b"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/original-spawn-outcome.json",
+      "sha256": "67f0d677bdd2de3529ae61f56cf6470f55c4531981b5496df10284a9fea995b4"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/finalization.json",
+      "sha256": "c1d12078fcb71a0326af9864625db3d595871067880627c9337f51728c9bc609"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/tmp/TEST-desktop-backend-I2n7OM/native-claude/config/projects/-private-tmp-TEST-m19-live-process-ui-v2-final-dad39-0ccplg9w-tmp-TEST-desktop-backend-I2n7OM-workspace/1c2015f2-debf-4078-baad-d5de1c247ab0.jsonl",
+      "sha256": "33dc4ebdbb863151def059e8a2c2c35a55196d65fc00e98e1249c6d643749eac"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/tmp/TEST-desktop-backend-I2n7OM/hoststore/teams/test-desktop-backend/.host-owner/commands/7625d54957019c64c3443c86cada1f39999c5a272900d7f54573b4684b510bb6.json",
+      "sha256": "7226190679c1090b62d6c97044f6cfad3cb4273a2aba2c8083db9f4ea7c60613"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/tmp/TEST-desktop-backend-I2n7OM/hoststore/teams/test-desktop-backend/.host-owner/commands/aceec6ec6a8db294509c62142b851e42b65310da30e323014bf5cd0c49134812.json",
+      "sha256": "9551be01aff6ea04f5c5439c0373d921dc4b662be7d853eec2b033e4daa358d1"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/tmp/TEST-desktop-backend-I2n7OM/hoststore/teams/test-desktop-backend/.host-owner/commands/126d841e70810837ec37609559979eb4c7f90136fdcb9f45989ff8d0437f590f.json",
+      "sha256": "0c2178c08593a46be342d349688ec7fc86c1aaf14e941db9a6b5d209525e3346"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/raw-operator/tmp/TEST-desktop-backend-I2n7OM/hoststore/teams/test-desktop-backend/.host-owner/commands/81d3df49ca3c9807e06b33435557b67c44c36cfba71dd5708b6796d7593de223.json",
+      "sha256": "8dc48e990cdacd335e238fc98e718e62788a6a818264ab139b9a8cfec2646b3a"
+    },
+    {
+      "path": "/private/tmp/TEST-m19-live-ui-retained-final-dad39-7c995121ae/scoped-numeric-physical-facts.json",
+      "sha256": "9b21856bdefc18963bddbfe85e40aaea8a5e2769e5eb0e26db5427663bdb8b1b"
+    }
+  ]
+}

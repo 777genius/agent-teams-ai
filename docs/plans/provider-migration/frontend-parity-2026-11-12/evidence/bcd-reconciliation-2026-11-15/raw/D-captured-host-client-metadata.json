@@ -1,0 +1,36 @@
+{
+  "stage": "D",
+  "commandName": "D-captured-host-client",
+  "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+  "parents": [
+    "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--maxWorkers=1",
+    "test/features/agent-backend/capturedHostClient.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:45:33.697794+00:00",
+  "finishedAtUTC": "2026-11-15T20:46:01.480845+00:00",
+  "elapsedSeconds": 27.78302340299706,
+  "exitCode": 0,
+  "preflightMetadataSHA256": "e9ef1b6661324facb06b144a58f846e2a7fe8cccb991d04ba155093e57d3e71f",
+  "logBytes": 2819,
+  "logSHA256": "a111477584827974462ac3f0454381762b21af77828e1cd069f98bdbc0f8dba0",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "outputInventoryBefore": null,
+  "outputInventoryAfter": null,
+  "builtOutputsCountAfter": 1446,
+  "freshSelectedOutputs": null,
+  "selectedSourceCount": 31,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17
+}

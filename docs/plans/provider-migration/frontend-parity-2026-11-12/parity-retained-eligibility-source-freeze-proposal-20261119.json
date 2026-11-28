@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "kind": "reviewer-finite-retained-observer-source-freeze-proposal",
+  "reviewer": "composition_review_030",
+  "createdAt": "2026-11-19T00:58:08.381995+00:00",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "targetPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+  "targetPriorReviewedFinal22Blob": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+  "targetArray": "desktopProofSupplementarySources",
+  "literalAdditions": [
+    "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+    "src/main/composition/createDesktopStoppedTeamOperations.ts",
+    "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+    "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+    "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+    "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts"
+  ],
+  "sourcePins": [
+    {
+      "path": "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "original030": {
+        "gitBlob": "5531bed60214eae761028dd534a05ee3a6db67e2",
+        "sha256": "46d7684927485c4124c07147c384644a849df7134a74edfff30f0af2481c2e9a",
+        "bytes": 4399
+      },
+      "kind": "changed-owner",
+      "currentProposedPostimage": {
+        "gitBlob": "48601395b8993858c5c03dc391f32620bff6d6cf",
+        "sha256": "9022504401848b9ec452fcb59e696a3c3e6c70410a68a88c5766a44e9678c4fc",
+        "bytes": 4875
+      },
+      "postimageFinalization": "Author manifest/tests still pending; parent must bind final postimage."
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "original030": {
+        "gitBlob": "0387d24830f45fa722b2e71765fdfde4c9a98f0d",
+        "sha256": "884a2de9e9bdb6e42f80579b65d5ddfe6e60e2b3d0c921d41cea686671fc7939",
+        "bytes": 13120
+      },
+      "kind": "changed-owner",
+      "currentProposedPostimage": {
+        "gitBlob": "5f866296505b11a891b3022806ea1bc05a35cdf2",
+        "sha256": "6372660dcac8f25825d3ace4095c480c4fd5c99aba65bdbc04d92d21ad6a485e",
+        "bytes": 13242
+      },
+      "postimageFinalization": "Author manifest/tests still pending; parent must bind final postimage."
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createRetainedLegacyOpenDiagnostic.ts",
+      "original030": {
+        "gitBlob": "423e94b0099241ca557442180f551c1c1a0d199e",
+        "sha256": "1d61d048cb4f384e8d46f86fb5a0a5cd0e7dcc902b131cbc7d5974f18a7c21ad",
+        "bytes": 3984
+      },
+      "kind": "existing-bounded-projection-dependency"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/retainedLegacyOpenDiagnosticContract.ts",
+      "original030": {
+        "gitBlob": "26eb1e9e513fe2db6a9d39ce2b20ed47f7e2678b",
+        "sha256": "7918e41e7692d4f9c2440488f4ccde5e195929948df41686ec59ed8b5602239b",
+        "bytes": 1476
+      },
+      "kind": "existing-bounded-projection-dependency"
+    },
+    {
+      "path": "src/features/agent-backend/main/infrastructure/stopped-import/createStoppedImportDiagnostic.ts",
+      "original030": {
+        "gitBlob": "91c3ad1a90cbdc1da7e08bdf9d9d63121548f50d",
+        "sha256": "d0743a080503a79ab8726abefa69cf665284cd7b2247bf36a0f4a7775d2df0cf",
+        "bytes": 4761
+      },
+      "kind": "existing-bounded-projection-dependency"
+    },
+    {
+      "path": "src/features/agent-backend/main/application/validateRetainedLegacyLaunchRequest.ts",
+      "original030": {
+        "gitBlob": "7b7c5b47985841b7a838806cfe7ae86c57bd9a8a",
+        "sha256": "b340227f25dce9f0525e96115b9c15d81233368288de4a71b007017628f3d03c",
+        "bytes": 3766
+      },
+      "kind": "existing-bounded-projection-dependency"
+    }
+  ],
+  "census": {
+    "allSixAbsentFromImmutableExplicitDesktopProofRosters": true,
+    "allSixAbsentFromFinal22IntegratedAndSupplementaryRosters": true,
+    "allSixAbsentFromOriginalF1Actual1883Pins": true
+  },
+  "constraints": [
+    "Parent is sole writer of the shared roster; reviewer and author leave final22 bytes untouched.",
+    "Add exactly these six literal paths inside desktopProofSupplementarySources, not finalWindowsRetrySources or another platform-only array.",
+    "Preserve prior literals, diagnostic helper, scheduler/Quit pins and executable bodies byte-for-byte.",
+    "No recursive import discovery or arbitrary dependency expansion.",
+    "Rebind final owner postimages and updated production roster tuple in the next complete composition/size report."
+  ],
+  "reason": "Freeze both newly edited Main owners and the existing bounded diagnostic hash/category projection, contract and own-data request validation they reuse."
+}

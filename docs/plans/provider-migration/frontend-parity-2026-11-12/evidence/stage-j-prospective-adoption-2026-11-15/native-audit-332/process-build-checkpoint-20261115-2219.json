@@ -1,0 +1,79 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+  "run": 43766708055,
+  "jobs": [
+    132973378700,
+    132973379104
+  ],
+  "selectedPayloads": [
+    {
+      "path": "332-process-win32-x64.zip",
+      "bytes": 9691,
+      "sha256": "7d62e776f1594773e418a19dd79a3771d9b85874d4fdcc86de31d1385f6934a0",
+      "gitBlob": "d2351a6d306da55671ef982307a19ab6e5d9a0d9"
+    },
+    {
+      "path": "332-process-win32-arm64.zip",
+      "bytes": 10004,
+      "sha256": "81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f",
+      "gitBlob": "02675c175e8d3c8ac7660b1cddaf4ce44022dd7b"
+    },
+    {
+      "path": "job-132973378700.log",
+      "bytes": 94192,
+      "sha256": "dd5e6457a7a4d1ddad575e3ca59c4a59197b1ef7f87a7627253c0aa2c8030b79",
+      "gitBlob": "2c3063fa4db921167f324a1e87f80bef0795ae89"
+    },
+    {
+      "path": "job-132973379104.log",
+      "bytes": 120277,
+      "sha256": "35a82d37a581106c8e2482be5ad05edf3b2c964f2ca994dc7d5d04704d2e177b",
+      "gitBlob": "0a24ab51b1ff7428d104e419519a0cfdedb64346"
+    },
+    {
+      "path": "archive-audit-process_win_x64.json",
+      "bytes": 2643,
+      "sha256": "870c8a57c9e4256de17fc9e57149d8c64a736c592a2258f549b5d21197bd169a",
+      "gitBlob": "0603b44f36f7a87edc32cff6e88a41dbc255d9d2"
+    },
+    {
+      "path": "archive-audit-process_win_arm64.json",
+      "bytes": 2651,
+      "sha256": "998d5fa7ff90edb72fa96c3b0498f05a9a05729dc47f38501a939af33535d71f",
+      "gitBlob": "c9131822f8a921fb4600d1d04109946e0d7633ea"
+    },
+    {
+      "path": "receipt-audit-process-build-failures.json",
+      "bytes": 28960,
+      "sha256": "328dc8d6cb3b08e53b7d29b040829c964e371a3dcf34faf0c3b1cf49d4be274f",
+      "gitBlob": "5b438efb863b1c8fa7f5df45ac3a33f23df71ce3"
+    },
+    {
+      "path": "native-jobs-snapshot-20261115-2213.json",
+      "bytes": 62308,
+      "sha256": "a0c1f786e1cfbe051e82701aefde4d89202da4e0fd5283d99bd19031f83e41bf",
+      "gitBlob": "c49f72aa82650d5779743d2dbe492eb591cd0820"
+    },
+    {
+      "path": "v2-terminal-jobs-snapshot-20261115-2218.json",
+      "bytes": 34653,
+      "sha256": "4cf38c1a7134550753aa607a45fbc554dcf7017731aeb5bec0c720146f23a86d",
+      "gitBlob": "9270afe90ad761a2c3e96fc4bdbb378160fc9097"
+    },
+    {
+      "path": "plan29-332-process-build-failures-appendix.md",
+      "bytes": 4355,
+      "sha256": "1c523e5696c94ad595abfae56101900c6a6bcce4912cb960d1957c8ff8257fed",
+      "gitBlob": "587d226653d47012321e1f8dd77b9e9fd0ba99a1"
+    }
+  ],
+  "qualification": "Two original Windows step15 link FAIL before native gate, no native cleanup claim; terminal332 cohort status separate from V2 x64 PASS",
+  "excluded": [
+    "private download URLs and transport",
+    "audit scripts",
+    "duplicate extracted ZIP members"
+  ],
+  "payloadCount": 10,
+  "payloadBytes": 369734
+}

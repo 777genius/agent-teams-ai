@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -5,7 +6,6 @@ import { dirname, join } from 'node:path';
 import { archiveFileWithGenerations } from '@features/internal-storage/main';
 import { JsonMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore';
 import { MemberWorkSyncStorePaths } from '@features/member-work-sync/main/infrastructure/MemberWorkSyncStorePaths';
-import * as atomicWrite from '@main/utils/atomicWrite';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { MemberWorkSyncStatus } from '@features/member-work-sync/contracts';
@@ -218,14 +218,21 @@ describe('JSON import source revision selection before snapshot overlay', () => 
   });
 
   it('fails preparation after uncertain publication and proves strict persistence on retry without incrementing revision', async () => {
-    const original = atomicWrite.atomicWriteAsync;
-    let fail = true;
-    vi.spyOn(atomicWrite, 'atomicWriteAsync').mockImplementation(async (...args) => {
-      await original(...args);
-      if (args[0] === canonical() && fail) {
-        fail = false;
-        throw new Error('post-publication sync error');
+    const open = fs.promises.open.bind(fs.promises);
+    let failedSync = false;
+    // The canonical writer now executes inside the Host package, beyond the old
+    // frontend re-export spy. Refuse its real post-rename directory sync instead.
+    vi.spyOn(fs.promises, 'open').mockImplementation(async (...args: Parameters<typeof open>) => {
+      const handle = await open(...args);
+      if (String(args[0]) === dirname(canonical()) && args[1] === 'r' && !failedSync) {
+        failedSync = true;
+        const sync = handle.sync.bind(handle);
+        vi.spyOn(handle, 'sync').mockImplementationOnce(async () => {
+          await sync();
+          throw new Error('post-publication sync error');
+        });
       }
+      return handle;
     });
     const snapshot = {
       statuses: [status(3)],
@@ -237,6 +244,7 @@ describe('JSON import source revision selection before snapshot overlay', () => 
     await expect(store.restoreReplicaSnapshot('sandbox', snapshot)).rejects.toMatchObject({
       reason: 'unavailable',
     });
+    expect(failedSync).toBe(true);
     expect(JSON.parse(await readFile(canonical(), 'utf8')).status).toEqual(status(3));
     await store.restoreReplicaSnapshot('sandbox', snapshot);
     expect(JSON.parse(await readFile(canonical(), 'utf8')).status).toEqual(status(3));

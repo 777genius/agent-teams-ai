@@ -1,0 +1,16 @@
+--- a/tools/owned-process-broker/nativeEmulatedSourceScenario.ts
++++ b/tools/owned-process-broker/nativeEmulatedSourceScenario.ts
+@@ -313,10 +313,10 @@
+               resumed: job.resumed, stopped: job.stopped, drained: job.drained, released: job.released,
+               originalHandleAbsent: job.handleAbsent, custodyTimings: job.timings,
+               stagingTimings: job.stagingTimings, firstCloseEntryMs }));
+-            assert.ok(job.root && job.witness && job.resumed && job.stopped && job.drained && job.released,
+-              'Every original physical Job retains confirmed Stop/drain/release');
+-            assert.equal(await job.witness.wait(), 0);
++            const custodyConfirmed = job.root && job.witness && job.resumed && job.stopped && job.drained && job.released;
++            assert.equal(await job.witness?.wait(), 0);
+             job.handleAbsent = true;
++            assert.ok(custodyConfirmed, 'Every original physical Job retains confirmed Stop/drain/release');
+           } catch (error) { failures.push(error); }
+         }
+         assert.equal(counts.service, 0, 'Source metadata/probes/standalone do not register Team services');

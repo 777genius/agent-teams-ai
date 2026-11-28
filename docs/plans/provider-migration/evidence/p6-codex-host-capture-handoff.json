@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "slice": "Bounded Codex Host original-input evidence consumer",
+  "status": "Source frozen; focused actual-files and in-memory driver checks PASS; native Task acceptance remains pending Root fixture",
+  "recordedAtUtc": "2026-10-23T02:49:47.502007+00:00",
+  "worktree": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend",
+  "providerArchive": {
+    "path": "vendor/provider-migration/codex-input-window-v1/agent-teams-provider-implementations-0.0.0.tgz",
+    "sha256": "b078cdeb0d69cbe64be8a88517b77d14c17292d55bfad761832eb0c632689daf",
+    "lines": 885
+  },
+  "jobRoot": "/Users/belief/.codex/plugins/data/agent-plugins/1c1e9d402d2702d970a503b8b40bb29f94f43144d4dd7f794c2ba39db32ac96b/jobs",
+  "scope": [
+    "Optional private D input-window observer; existing Team ownership/fence and Task evidence journal remain the authority and sole evidence store.",
+    "Exact original claimed inputId and operationRef bind before native turn/start; no latest-input lookup or additional Runtime custody port.",
+    "Complete bounded pre-input dirty-workspace baseline plus matched native started/completed update item chain plus exact final bytes is required for qualification.",
+    "Existing portable Reader and content resolver consume immutable Task evidence; actual ReviewApplier restores the captured dirty preimage rather than Git HEAD.",
+    "Input boundary notices may omit native toolUseId; qualified file events always use the actual last native itemId and retain all actual native item IDs."
+  ],
+  "qualification": {
+    "kind": "codex-update-patch-v1",
+    "supported": "One existing UTF-8 LF text path per input; ordered non-overlapping same-path update chain; move_path:null; exact-position unified diff with final newline.",
+    "limits": [
+      "80 selected workspace files",
+      "1 MiB per file/patch observations",
+      "8 MiB selected snapshot total",
+      "64 native started/completed observations (32 matched pairs)",
+      "1000 terminal fingerprints; bounded shared windows"
+    ],
+    "gaps": [
+      "create/delete/rename/multifile",
+      "CRLF, NUL/binary, no-final-newline markers",
+      "missing/incomplete baseline or final census",
+      "unmatched/duplicate/overlapping items or windows",
+      "outside captured workspace or unrelated selected-file changes",
+      "failed/unknown/aborted/timeout/stale/revoked input or native identity mismatch",
+      "patch/context/final-byte mismatch"
+    ],
+    "limitsStatement": "Bounded selected-file census is not global filesystem exclusivity; no HEAD or snapshot-only backfill; this handoff claims no native execution, full M13, unsupported file kind, or new UI acceptance."
+  },
+  "currentGreen": {
+    "caseCount": 70,
+    "counting": "62 Host + 8 portable cases from disjoint test files. Prior 53-case Host, standalone42 and older review cases are not added. Portable publication cases overlap historical work but occur only once in this current70.",
+    "host": {
+      "jobId": "6c94b88b310105346cc241bb3baea1cd",
+      "state": {
+        "job": {
+          "id": "6c94b88b310105346cc241bb3baea1cd",
+          "status": "exited",
+          "started_at": "2026-10-23T02:41:35Z"
+        },
+        "result": {
+          "exit_code": 0,
+          "signal": null,
+          "duration_ms": 74730
+        },
+        "pid": 27846,
+        "finished_at": "2026-10-23T02:42:50Z",
+        "updated_at": "2026-10-23T02:42:50Z",
+        "logs_drained": true
+      },
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "tests/codex-input-evidence.test.ts",
+        "tests/codex-update-patch.test.ts",
+        "tests/task-tool-evidence-binding.test.ts",
+        "tests/task-tool-evidence-writer.test.ts",
+        "tests/codex-member-provider.test.ts"
+      ],
+      "stdoutSha256": "10f9c3841f22dd8cac3f813ab9d699813290165c0fd266eb6ac7b4a8d4892bb0",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "portable": {
+      "jobId": "de5d191fd9d9d567faed213166d967de",
+      "state": {
+        "job": {
+          "id": "de5d191fd9d9d567faed213166d967de",
+          "status": "exited",
+          "started_at": "2026-10-23T02:36:25Z"
+        },
+        "result": {
+          "exit_code": 0,
+          "signal": null,
+          "duration_ms": 2074
+        },
+        "pid": 15252,
+        "finished_at": "2026-10-23T02:36:27Z",
+        "updated_at": "2026-10-23T02:36:27Z",
+        "logs_drained": true
+      },
+      "command": [
+        "/opt/homebrew/opt/node@24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "tests/portable-content.test.ts",
+        "tests/review-publication-authority.test.ts"
+      ],
+      "stdoutSha256": "7c855e332e46dceb7de86d41f0595f4fa7a515f2d626e3afa79d0cc50097280d",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "groups": {
+      "codex-input-evidence": 20,
+      "codex-update-patch": 9,
+      "codex-member-provider": 8,
+      "task-tool-evidence-binding": 8,
+      "task-tool-evidence-writer": 17,
+      "portable-content": 2,
+      "review-publication-authority": 6
+    }
+  },
+  "builds": {
+    "pinned24LedgerHostProductionAndTestTypes": {
+      "jobId": "8b76a012c8fa2deb438e13a0a22a4cd1",
+      "state": {
+        "job": {
+          "id": "8b76a012c8fa2deb438e13a0a22a4cd1",
+          "status": "exited",
+          "started_at": "2026-10-23T02:35:47Z"
+        },
+        "result": {
+          "exit_code": 0,
+          "signal": null,
+          "duration_ms": 1286
+        },
+        "pid": 14351,
+        "finished_at": "2026-10-23T02:35:48Z",
+        "updated_at": "2026-10-23T02:35:48Z",
+        "logs_drained": true
+      },
+      "command": [
+        "/bin/zsh",
+        "-f",
+        "-c",
+        "set -e\nexport PATH=/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/bin:/bin\nnode packages/task-change-ledger/node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json\nnode packages/task-change-ledger/node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.test.json\nnode packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json\nnode packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json"
+      ],
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pinned24HostProductionAndTestTypesAfterReadinessFix": {
+      "jobId": "83bbe541b50c53521d4f8b8bb5cee723",
+      "state": {
+        "job": {
+          "id": "83bbe541b50c53521d4f8b8bb5cee723",
+          "status": "exited",
+          "started_at": "2026-10-23T02:39:31Z"
+        },
+        "result": {
+          "exit_code": 0,
+          "signal": null,
+          "duration_ms": 1653
+        },
+        "pid": 24839,
+        "finished_at": "2026-10-23T02:39:33Z",
+        "updated_at": "2026-10-23T02:39:33Z",
+        "logs_drained": true
+      },
+      "command": [
+        "/bin/zsh",
+        "-f",
+        "-c",
+        "set -e\nexport PATH=/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/bin:/bin\nnode packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json\nnode packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json"
+      ],
+      "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "rootTypecheck": {
+      "jobId": "81cdae8407ecd59eb9c292ea33c22c84",
+      "state": {
+        "job": {
+          "id": "81cdae8407ecd59eb9c292ea33c22c84",
+          "status": "exited",
+          "started_at": "2026-10-23T02:44:28Z"
+        },
+        "result": {
+          "exit_code": 0,
+          "signal": null,
+          "duration_ms": 13002
+        },
+        "pid": 34593,
+        "finished_at": "2026-10-23T02:44:41Z",
+        "updated_at": "2026-10-23T02:44:41Z",
+        "logs_drained": true
+      },
+      "command": [
+        "pnpm",
+        "typecheck"
+      ],
+      "stdoutSha256": "ba8447949193070518b99cf2dea8b8c6c80eb3644c39ec2468aabf9643d88dec",
+      "stderrSha256": "e9842ed93769c8c7f7a4f2662ce38e91ed2a260ec7317c72f40df0a6c7efa39e"
+    },
+    "rootTypecheckRuntimeCaveat": "Normal pnpm typecheck passed but pnpm wrapper actually ran Node26.11.1 despite supplied PATH; not claimed as pinned24. Direct package builds and focused tests used Node24.21.0. Final adapter timing addition was test-only; direct pinned24 Host testtypes passed afterward (exec chunk ee5287)."
+  },
+  "initialCompileFailure": {
+    "job": {
+      "jobId": "a5b492a5138f542b33bb8d2741fb63ed",
+      "state": {
+        "job": {
+          "id": "a5b492a5138f542b33bb8d2741fb63ed",
+          "status": "exited",
+          "started_at": "2026-10-23T02:34:53Z"
+        },
+        "result": {
+          "exit_code": 2,
+          "signal": null,
+          "duration_ms": 282
+        },
+        "pid": 12739,
+        "finished_at": "2026-10-23T02:34:54Z",
+        "updated_at": "2026-10-23T02:34:54Z",
+        "logs_drained": true
+      },
+      "command": [
+        "/bin/zsh",
+        "-f",
+        "-c",
+        "set -e\nexport PATH=/opt/homebrew/opt/node@24/bin:/opt/homebrew/bin:/usr/bin:/bin\nnode packages/task-change-ledger/node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.json\nnode packages/task-change-ledger/node_modules/@typescript/native/bin/tsc -p packages/task-change-ledger/tsconfig.test.json\nnode packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.json\nnode packages/legacy-agent-host/node_modules/@typescript/native/bin/tsc -p packages/legacy-agent-host/tsconfig.test.json"
+      ],
+      "stdoutSha256": "bc095e899c42ac747c1cffbabdb52fadd66a132fc7d21d5bef38e5ef08921cc6",
+      "stderrSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "reason": "Making input-boundary notice toolUseId optional exposed summary projection type error. Fixed the sole projection to exclude absent IDs; no fake native IDs, no weakening of file-event identity."
+  },
+  "otherChecks": {
+    "scopedFastLint": "PASS; final exec session96923",
+    "sourceSize": "PASS; final exec session74277; 3579 production files,147 frozen exceptions,800 limit; RuntimeTeamCoordinator stays795 lines",
+    "teamProvisioningArchitecture": "PASS; exec chunk03ee3c"
+  },
+  "productionNew": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/createCodexEvidenceCapture.ts",
+      "sha256": "8bd8ef6e932b743cff52ced62de54543476f5fbbd1da72d577db6130dfdc82f9",
+      "lines": 89
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/createMemberEvidenceCapture.ts",
+      "sha256": "1ba327ec0e9b1ef868492bb5f9c1e939a2983194408566ea1c4d13e637f6687f",
+      "lines": 10
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/CodexInputEvidenceWriter.ts",
+      "sha256": "a69211b642bfaf5806e51556e837899d653805b2f3847e04b8e4e362246cd772",
+      "lines": 338
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/bindRuntimeInputEvidence.ts",
+      "sha256": "8a9c969a65d3fa3383617f00d5eafcac4340830543852a149ee3e1af30cf64b0",
+      "lines": 163
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/codexCaptureContracts.ts",
+      "sha256": "790121be50565078f0b746e54187659837d2b74bf6734cc8ab8c6d6c76569f24",
+      "lines": 46
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/exactCodexUpdatePatch.ts",
+      "sha256": "37548918541e98b13b54372d4512a7c517048e571b665165e53ddc7ecaa70fdf",
+      "lines": 91
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/qualifyCodexFileChange.ts",
+      "sha256": "a2d8867d39a3b7b84359a2b02edd49778bf5ab91cef20b318eafa37846aca367",
+      "lines": 134
+    }
+  ],
+  "productionModified": [
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+      "sha256": "34fa7104027bad3764e94211b0afe647b3e8cec00750fd1721bec395180dc57a",
+      "lines": 189
+    },
+    {
+      "path": "packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts",
+      "sha256": "4555ec59bfdcfcedbf093335a9b59e94cdb282bd92896d21740cb84d27d082d9",
+      "lines": 29
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+      "sha256": "fbdab4f697a740e47291090bc086ba5732a1f237357b850b57421374a8903957",
+      "lines": 795
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/TaskEvidenceJournal.ts",
+      "sha256": "92eedb775849856e98e962ddee465e096e7d8772129af607c61c3612af29e049",
+      "lines": 221
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/ToolEvidenceWindows.ts",
+      "sha256": "836466b708770f82d0434ddf7883677113bc716d41259c80c6708f1c63102751",
+      "lines": 30
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/bindTaskToolEvidence.ts",
+      "sha256": "ac2249f731bab3d5ca2c359d4019bd8e39c190749e5eb85e8772bd1d04263024",
+      "lines": 45
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/captureContracts.ts",
+      "sha256": "dce7c60bdbd9a4951b9722194506bf5b0543715a747c022bc5751323ac7ef602",
+      "lines": 52
+    },
+    {
+      "path": "packages/legacy-agent-host/src/evidence/qualifyNativeFileEffect.ts",
+      "sha256": "d04cabb595e737cdcb816a72b1584cab7ae94bf65a8f32a0d525099f72619ade",
+      "lines": 64
+    },
+    {
+      "path": "packages/task-change-ledger/src/ledgerTypes.ts",
+      "sha256": "4fe2260d8ce38b83c0602405ed46145ef2ced6c8ee44fd9c9d8026ef06e9267b",
+      "lines": 267
+    },
+    {
+      "path": "packages/task-change-ledger/src/fileProjection.ts",
+      "sha256": "9648871a2de66b46df3508d4aa5ddde0bb0e8b2d74a3cc6dbf0069d4918edf5e",
+      "lines": 315
+    },
+    {
+      "path": "packages/task-change-ledger/src/nativeCaptureProof.ts",
+      "sha256": "57515a6bcebfd139b65d29ae1fe696515a72d8d2384f23992c75e8dd83eac145",
+      "lines": 93
+    }
+  ],
+  "testSources": [
+    {
+      "path": "packages/legacy-agent-host/tests/codex-input-evidence.test.ts",
+      "sha256": "59d66bfdc30f1897f9f00d751cb7f098e78ea90a50ab6a9210dd01bfb77eb174",
+      "lines": 411
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-update-patch.test.ts",
+      "sha256": "8972807405b0c0ac79517fdfa6ae6cdf02133d5f09177a9fb77fc6bb4f62f905",
+      "lines": 25
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/codex-member-provider.test.ts",
+      "sha256": "2aa4880ae710b573d309d39e9485addfb5cf5864d24f577336a6a8f92756ecaa",
+      "lines": 519
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/task-tool-evidence-binding.test.ts",
+      "sha256": "4debd84d5187e639f457f62706caf64ac2ee6313391f63ba2b6e9d760e8fc346",
+      "lines": 392
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/task-tool-evidence-writer.test.ts",
+      "sha256": "8844079cd23daa039f57cdff56cb7a5ff4da036dcc2ac8ff887849085b112a74",
+      "lines": 526
+    },
+    {
+      "path": "packages/task-change-ledger/tests/portable-content.test.ts",
+      "sha256": "d2155780d264e2c88d90bb3a51976939e693bdcbfaac61fbf76757c21cadcb73",
+      "lines": 114
+    },
+    {
+      "path": "packages/task-change-ledger/tests/review-publication-authority.test.ts",
+      "sha256": "66c0396f09f3891858c99bb6a20377ffa31a0771bd10b147a187c865611a6f94",
+      "lines": 209
+    }
+  ],
+  "actionsNotRun": [
+    "Electron/app/native acceptance",
+    "network install",
+    "commit/push"
+  ],
+  "stagingNote": "External TEST staging initial patch is historical; current source hashes in this manifest are authoritative. Root installed the already-verified provider archive separately; this lane did not install dependencies."
+}

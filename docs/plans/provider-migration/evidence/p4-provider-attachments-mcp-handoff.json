@@ -1,0 +1,84 @@
+{
+  "status": "scoped-checkpoint-complete",
+  "source": {
+    "worktree": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host",
+    "base": "ffa392ebf021a74abdcca79b176d8adf26273d21",
+    "commit": "a7a768fb210200b34f4435eca5fc99c0e5739e9e",
+    "author": "iliya <iliyazelenkog@gmail.com>",
+    "committer": "iliya <iliyazelenkog@gmail.com>"
+  },
+  "artifacts": [
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/codex-mcp-readiness-v1/agent-teams-provider-implementations-0.0.0.tgz",
+      "sha256": "2884e9e77f2a693a59348019ae400819172e5406f672c89cfb5c1a589156e9e3"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/codex-mcp-readiness-v1/agent-teams-provider-session-contracts-0.0.0.tgz",
+      "sha256": "bde60366595ceb7d445c1aa44399ad7bbdc1a5dbedbfe19a8264a146139448dc"
+    },
+    {
+      "path": "/Users/belief/dev/projects/agent-teams-ai/_worktrees/runtime-provider-legacy-host/.cache/p1-artifacts/codex-mcp-readiness-v1/provider-codex-mcp-readiness.bundle",
+      "sha256": "ae516e40da8f572270b8b1282a50d5db1510d58bbf14490e6ec2eb3f162453b2"
+    }
+  ],
+  "api": {
+    "privateConfig": "CodexDriverConfig.requiredMcpTools?:Readonly<Record<string,readonly string[]>>; exact selected server names and raw native tool names.",
+    "client": "CodexAppServerClient.listMcpServerStatus({threadId,serverName,cursor?,limit?},signal?) through existing dispatcher; pins detail toolsAndAuthOnly; typed finite status/name projection; no arbitrary RPC escape.",
+    "readiness": "Configured floor creates/restores owned thread metadata, then requires connected runtimeStatus, null toolsError and exact raw map keys plus Tool.name before Host probe; no turn/work until both pass. Rechecks before each queued input. Typed dependency-unavailable/known-not-sent on failed floor.",
+    "bounds": "64 servers,256 required names/server,16 pages/server,100 rows/request, existing config.limits.timeoutMs and owner abort. Foreign thread/server, malformed/duplicate catalogs and repeated cursors rejected.",
+    "compatibility": "Omitted option preserves previous native request ordering and exact checkpoint compatibility bytes; configured floor cloned/frozen and included in compatibility identity.",
+    "contracts": "Canonical SPI remains exactly attachment-v1 bde60366595ceb7d445c1aa44399ad7bbdc1a5dbedbfe19a8264a146139448dc,14 exported names unchanged."
+  },
+  "checks": {
+    "node26D": {
+      "tests": 175,
+      "passed": true,
+      "strictTypecheck": true
+    },
+    "node24D": {
+      "tests": 175,
+      "passed": true,
+      "strictTypecheck": true
+    },
+    "focusedNativeRpcSeam": {
+      "tests": 16,
+      "passed": true
+    },
+    "exactPackedArchiveConsumer": true,
+    "fullProductBuild": true,
+    "rootStrictTypecheck": true,
+    "lint": true,
+    "sdkGuard": {
+      "tests": 53,
+      "passed": true,
+      "packages": 8,
+      "releaseEligible": false
+    },
+    "foundation": true,
+    "activeFeatureModules": true
+  },
+  "environmentPending": "Required TMPDIR=/private/tmp pnpm check:changed terminated with the sole existing Foundation aggregate failure at scripts/ci/foundation-fixture-sharding.test.ts:219: real Node default and three partitions preserve lifecycle/concurrency and aggregate actual execution. 290 tests,288 passed,1 failed,1 skipped. Existing Mac Bash3.2/mapfile limitation remains Linux-environment-pending; no weakened gate or installed tooling.",
+  "evidence": {
+    "sourceMap": "architecture/sdk-growth/provider-codex-mcp-source-map.json",
+    "proof": "architecture/sdk-growth/provider-codex-mcp-readiness.json",
+    "logs": [
+      ".cache/p1-codex-mcp-focused.log",
+      ".cache/p1-codex-mcp-node26.log",
+      ".cache/p1-codex-mcp-node24.log",
+      ".cache/p1-codex-mcp-packed-final.log",
+      ".cache/p1-codex-mcp-sdk-profile.log",
+      ".cache/p1-codex-mcp-sdk-tests.log",
+      ".cache/p1-codex-mcp-foundation.log",
+      ".cache/p1-codex-mcp-fms.log",
+      ".cache/p1-codex-mcp-product-build.log",
+      ".cache/p1-codex-mcp-root-typecheck.log",
+      ".cache/p1-codex-mcp-lint.log",
+      ".cache/p1-codex-mcp-changed.log"
+    ]
+  },
+  "remainingGaps": [
+    "Real native MCP discovery/tool qualification is root-owned and still waits ROOT_GO; no native model/conversation launched here.",
+    "Attachments-v1/4773/final predecessor archives and native proofs remain immutable.",
+    "No new provider features, frontend/host changes, Team/Runtime behavior or product policy added."
+  ]
+}

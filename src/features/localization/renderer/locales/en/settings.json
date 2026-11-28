@@ -1179,6 +1179,11 @@
         "geminiTitle": "Disconnect Gemini CLI?",
         "gemini": "This clears the local Gemini CLI session metadata. External ADC credentials and saved API keys are not removed."
       }
+    },
+    "nativeNextPrompt": {
+      "title": "Next-message suggestions",
+      "description": "Suggests a next message in the composer after this provider's teammates reply. Uses extra model requests on your account. On by default; turn it off here. Applies to new teammate sessions after restarting Agent Teams.",
+      "error": "Could not save the setting."
     }
   },
   "cliRuntime": {

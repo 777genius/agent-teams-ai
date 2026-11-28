@@ -1,0 +1,407 @@
+{
+  "kind": "INDEPENDENT_ORIGINAL_A07_SETTINGS_WAIT_VERSUS_CLEANUP_TIMING_REVIEW",
+  "reviewedUTC": "2026-11-16T17:47:46.202768+00:00",
+  "source": "a07e2d68ece77d08e152d7b0de1eb4b85d72ca06",
+  "run": "43892535269",
+  "job": "133387315229",
+  "verdict": "THE_FIRST_UI_REFUSAL_PRECEDES_RECORDED_SHUTDOWN; LATE_RESPONSE_ERROR_DOES_NOT_ESTABLISH_ORIGINAL_LATENCY_CAUSE",
+  "inputs": [
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-a07-original/job-133387315229.log",
+      "bytes": 125581,
+      "gitBlob": "39a83081933f9b6e987c9b06e8396ed1345dd34f",
+      "sha256": "6f8975052018a688c2e28668961475526f4db89fba7e7ddbfaf26d641b41761b"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-a07-original/archive/TEST-desktop-backend-Jd6GkO/desktop-backend-app.log",
+      "bytes": 14461,
+      "gitBlob": "80566009bf74cd586457d4aef650d7136a22c66d",
+      "sha256": "1b19ee96a2f0153051c675e79a283f899832267ebee5d8c64ce21fd60d2d442d"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-a07-original/archive/TEST-desktop-backend-Jd6GkO/userData/logs/app-errors.ndjson",
+      "bytes": 27612,
+      "gitBlob": "4142607d1713b68d0a693058f04982a2199acd84",
+      "sha256": "302d55d8e41a464fae1ca810a474482ffe818f5d0efcec4016b933458c76de8d"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-a07-original/archive/TEST-desktop-backend-Jd6GkO/desktop-backend-receipt.json",
+      "bytes": 750382,
+      "gitBlob": "abdc0c48020800d5717d945962038b639eaa12c1",
+      "sha256": "1e7691bc70b570b8884d919e687d42273414da08e9d272f18fa102cc38c9e572"
+    }
+  ],
+  "sourceReferences": [
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-b-original/source-reference/desktop-opencode-v2-management-ui.ts",
+      "bytes": 20435,
+      "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+      "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-b-original/source-reference/desktop-opencode-v2-management-smoke.ts",
+      "bytes": 12302,
+      "gitBlob": "6f8e3da7ba0cda6a13d5cfbafd1ecaf58ac738dd",
+      "sha256": "91bfb3b90c18e38af200e23d167811e526b339d1525ccc502db43759a5e6bf77"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/frontend/v2-settings-a07-original/source-reference/src/features/runtime-provider-management/renderer/hooks/runtimeProviderViewRefresh.ts",
+      "bytes": 5660,
+      "gitBlob": "e8fbf803614d4fecc90b8e8f34c64b9e6350a81f",
+      "sha256": "89707a4d23754519902d2a9413410e7468e41584fa1104bc4fb304ee8a889ea2"
+    }
+  ],
+  "sourceReferencesMatchOriginalReceiptSha256": true,
+  "timeline": [
+    {
+      "event": "Original view-load start diagnostic echoed",
+      "wallUTC": "2026-11-16T17:09:35.9413995Z",
+      "collectorMonotonicMs": 262331,
+      "anchor": "job log1071; receipt rendererDiagnostics.viewLoads.events[0]",
+      "meaning": "One retained nonsilent owner1/request1 emits start. This is collector/CI observation time, not a separate Main handler-entry or provider-operation-start timestamp."
+    },
+    {
+      "event": "Original Models wait failure diagnostic",
+      "wallUTC": "2026-11-16T17:10:06.5189937Z",
+      "anchor": "job log1072",
+      "meaning": "Source UI158–163 emits this only after the original waitRead has thrown; it records the last public Boolean sample and rethrows the same error."
+    },
+    {
+      "event": "First recorded shutdown wait",
+      "wallUTC": "2026-11-16T17:10:06.785Z",
+      "anchor": "app-errors29",
+      "meaning": "Shutdown step wait started, provider model catalog drain."
+    },
+    {
+      "event": "Recorded backend cleanup wait started",
+      "wallUTC": "2026-11-16T17:10:06.786Z",
+      "anchor": "app-errors33",
+      "meaning": "The exact log says Shutdown step wait started with label agent backend cleanup. It is a shutdown boundary, not proof of the exact child abort or first backend-cleanup instruction."
+    },
+    {
+      "event": "Original view response checked and error emitted",
+      "wallUTC": "2026-11-16T17:10:06.9231379Z / 17:10:06.9239460Z",
+      "collectorMonotonicMs": [
+        293313,
+        293314
+      ],
+      "anchor": "job log1073–1074; receipt events1–2",
+      "meaning": "Original sequence/context accepted the resolved error response during recorded shutdown. The response contains no retained error category/message/stage."
+    },
+    {
+      "event": "Original renderer finally released loading",
+      "wallUTC": "2026-11-16T17:10:06.9246140Z",
+      "collectorMonotonicMs": 293315,
+      "anchor": "job log1075; receipt event3",
+      "meaning": "loadingFalseSet:true; this disproves persistent loading at this final sample, not the earlier pending interval."
+    },
+    {
+      "event": "Backend cleanup wait finished",
+      "wallUTC": "2026-11-16T17:10:07.021Z",
+      "anchor": "app-errors35"
+    },
+    {
+      "event": "Top-level original error printed after cleanup",
+      "wallUTC": "2026-11-16T17:10:11.7778346Z",
+      "anchor": "job log1081–1086",
+      "meaning": "Original default inheritance timeout stack UI-controls204→managementUI138/219→managementSmoke102 is printed later. This is not the time of first refusal."
+    }
+  ],
+  "rawAnchors": [
+    {
+      "line": 1071,
+      "text": "2026-11-16T17:09:35.9413995Z {\"kind\":\"TEST_RENDERER_VIEW_LOAD\",\"observation\":{\"monotonicMs\":262331,\"executionContextId\":3,\"documentRevision\":2,\"kind\":\"runtime-provider-view-load-v1\",\"owner\":1,\"request\":1,\"phase\":\"start\",\"silent\":false,\"sequenceCurrent\":null,\"contextCurrent\":null,\"viewPresent\":null,\"inheritanceFields\":null,\"loadingFalseSet\":null}}"
+    },
+    {
+      "line": 1072,
+      "text": "2026-11-16T17:10:06.5189937Z {\"kind\":\"TEST_V2_MANAGEMENT_MODELS_WAIT_FAILURE\",\"observation\":{\"inheritanceCard\":false,\"modelsTabActive\":true,\"modelsTabDisabled\":false,\"refreshSpinner\":true,\"legacyModelsPanel\":true,\"projectContextSelector\":true,\"publicError\":false,\"publicWarning\":false}}"
+    },
+    {
+      "line": 1073,
+      "text": "2026-11-16T17:10:06.9231379Z {\"kind\":\"TEST_RENDERER_VIEW_LOAD\",\"observation\":{\"monotonicMs\":293313,\"executionContextId\":3,\"documentRevision\":2,\"kind\":\"runtime-provider-view-load-v1\",\"owner\":1,\"request\":1,\"phase\":\"response-checked\",\"silent\":false,\"sequenceCurrent\":true,\"contextCurrent\":true,\"viewPresent\":null,\"inheritanceFields\":null,\"loadingFalseSet\":null}}"
+    },
+    {
+      "line": 1074,
+      "text": "2026-11-16T17:10:06.9239460Z {\"kind\":\"TEST_RENDERER_VIEW_LOAD\",\"observation\":{\"monotonicMs\":293314,\"executionContextId\":3,\"documentRevision\":2,\"kind\":\"runtime-provider-view-load-v1\",\"owner\":1,\"request\":1,\"phase\":\"response-error\",\"silent\":false,\"sequenceCurrent\":true,\"contextCurrent\":true,\"viewPresent\":null,\"inheritanceFields\":null,\"loadingFalseSet\":null}}"
+    },
+    {
+      "line": 1075,
+      "text": "2026-11-16T17:10:06.9246140Z {\"kind\":\"TEST_RENDERER_VIEW_LOAD\",\"observation\":{\"monotonicMs\":293315,\"executionContextId\":3,\"documentRevision\":2,\"kind\":\"runtime-provider-view-load-v1\",\"owner\":1,\"request\":1,\"phase\":\"finished\",\"silent\":false,\"sequenceCurrent\":true,\"contextCurrent\":true,\"viewPresent\":null,\"inheritanceFields\":null,\"loadingFalseSet\":true}}"
+    },
+    {
+      "line": 1076,
+      "text": "2026-11-16T17:10:11.7749373Z {\"mode\":\"opencode-v2-management-ui\",\"status\":\"INCOMPLETE\",\"receipt\":\"/home/runner/work/_temp/TEST-desktop-backend-Jd6GkO/desktop-backend-receipt.json\"}"
+    },
+    {
+      "line": 1077,
+      "text": "2026-11-16T17:10:11.7775731Z file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-ui-controls.ts:204"
+    },
+    {
+      "line": 1078,
+      "text": "2026-11-16T17:10:11.7776976Z     throw new Error(`UI read timed out: ${label}; no mutation retry`);"
+    },
+    {
+      "line": 1079,
+      "text": "2026-11-16T17:10:11.7777614Z           ^"
+    },
+    {
+      "line": 1080,
+      "text": "2026-11-16T17:10:11.7777827Z "
+    },
+    {
+      "line": 1081,
+      "text": "2026-11-16T17:10:11.7778346Z Error: UI read timed out: original default inheritance; no mutation retry"
+    },
+    {
+      "line": 1082,
+      "text": "2026-11-16T17:10:11.7779852Z     at Object.waitRead (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-ui-controls.ts:204:11)"
+    },
+    {
+      "line": 1083,
+      "text": "2026-11-16T17:10:11.7781619Z     at async modelsTab (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts:138:7)"
+    },
+    {
+      "line": 1084,
+      "text": "2026-11-16T17:10:11.7783590Z     at async runDesktopV2ManagementUi (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts:219:3)"
+    },
+    {
+      "line": 1085,
+      "text": "2026-11-16T17:10:11.7785627Z     at async main (file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts:102:7)"
+    },
+    {
+      "line": 1086,
+      "text": "2026-11-16T17:10:11.7787549Z     at async file:///home/runner/work/agent-teams-ai/agent-teams-ai/scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts:168:1"
+    }
+  ],
+  "shutdownAnchors": [
+    {
+      "line": 29,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:06.785Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown step wait started {\"label\":\"provider model catalog drain\"}"
+      }
+    },
+    {
+      "line": 30,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:06.786Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown step wait finished {\"label\":\"provider model catalog drain\"}"
+      }
+    },
+    {
+      "line": 31,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:06.786Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown step wait started {\"label\":\"external connection admission drain\"}"
+      }
+    },
+    {
+      "line": 32,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:06.786Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown step wait finished {\"label\":\"external connection admission drain\"}"
+      }
+    },
+    {
+      "line": 33,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:06.786Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown step wait started {\"label\":\"agent backend cleanup\"}"
+      }
+    },
+    {
+      "line": 34,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:06.948Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "Host:OpenCodeMetadata",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "OpenCode metadata stage {\"profileHash\":\"3d6be10a81b4a404d0e250203cef1da909b728642160a97385d72827e239a611\",\"mode\":\"directory\",\"providerHash\":null,\"pid\":10024,\"startIdentityHash\":\"73893ebc9d587d423de2f5222ed1ae5032286efad875e95a67e3c00be786d9e5\",\"stage\":\"released\",\"hostPid\":5003}"
+      }
+    },
+    {
+      "line": 35,
+      "row": {
+        "v": 1,
+        "t": "2026-11-16T17:10:07.021Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "linux",
+        "message": "Shutdown step wait finished {\"label\":\"agent backend cleanup\"}"
+      }
+    }
+  ],
+  "receiptViewRows": {
+    "events": [
+      {
+        "monotonicMs": 262331,
+        "executionContextId": 3,
+        "documentRevision": 2,
+        "kind": "runtime-provider-view-load-v1",
+        "owner": 1,
+        "request": 1,
+        "phase": "start",
+        "silent": false,
+        "sequenceCurrent": null,
+        "contextCurrent": null,
+        "viewPresent": null,
+        "inheritanceFields": null,
+        "loadingFalseSet": null
+      },
+      {
+        "monotonicMs": 293313,
+        "executionContextId": 3,
+        "documentRevision": 2,
+        "kind": "runtime-provider-view-load-v1",
+        "owner": 1,
+        "request": 1,
+        "phase": "response-checked",
+        "silent": false,
+        "sequenceCurrent": true,
+        "contextCurrent": true,
+        "viewPresent": null,
+        "inheritanceFields": null,
+        "loadingFalseSet": null
+      },
+      {
+        "monotonicMs": 293314,
+        "executionContextId": 3,
+        "documentRevision": 2,
+        "kind": "runtime-provider-view-load-v1",
+        "owner": 1,
+        "request": 1,
+        "phase": "response-error",
+        "silent": false,
+        "sequenceCurrent": true,
+        "contextCurrent": true,
+        "viewPresent": null,
+        "inheritanceFields": null,
+        "loadingFalseSet": null
+      },
+      {
+        "monotonicMs": 293315,
+        "executionContextId": 3,
+        "documentRevision": 2,
+        "kind": "runtime-provider-view-load-v1",
+        "owner": 1,
+        "request": 1,
+        "phase": "finished",
+        "silent": false,
+        "sequenceCurrent": true,
+        "contextCurrent": true,
+        "viewPresent": null,
+        "inheritanceFields": null,
+        "loadingFalseSet": true
+      }
+    ],
+    "overflow": false
+  },
+  "failedPublicSample": {
+    "inheritanceCard": false,
+    "modelsTabActive": true,
+    "modelsTabDisabled": false,
+    "refreshSpinner": true,
+    "legacyModelsPanel": true,
+    "projectContextSelector": true,
+    "publicError": false,
+    "publicWarning": false
+  },
+  "selectedFlowFacts": {
+    "status": "INCOMPLETE",
+    "modelsClicks": [
+      {
+        "monotonicMs": 262317,
+        "action": "mouseClick",
+        "label": "original Models tab",
+        "state": "attempted"
+      }
+    ],
+    "completedEffectSteps": [
+      "reject-key",
+      "connect-key"
+    ]
+  },
+  "sourceControlFlow": {
+    "ui": "7f224 lines133–157: one original scroll/click, original30,000ms inheritance wait;158–163 saves last Boolean sample, emits failure diagnostic, rethrows original error. Caller219 invokes this before selectProject(workspace).",
+    "wrapper": "6f8e lines119–132 stores original error/INCOMPLETE, captures failure screenshot if owned, calls guarded failureQuit, then rethrows. Finally133+ disconnects and checks cleanup. The recorded Quit is therefore failure cleanup, not a successful business-flow completion.",
+    "renderer": "e8fb observe(start) precedes the original API await. A current resolved response.error sets original view/error/diagnostics, emits response-error and returns false. Finally emits finished/loadingFalseSet. There is no Main-stage/await-cost provenance in those rows."
+  },
+  "clockLimits": "CI line timestamps are log-observation times; app-errors timestamps are Main wall-clock records. Collector monotonic times establish relative renderer-event order but are not the Main request clock. The failed-wait source control flow plus explicit failureQuit/Shutdown records supports the sequence. It does not uniquely join a particular abort signal or prove cleanup caused the response error.",
+  "recordedCleanup": {
+    "failure": {
+      "name": "Error",
+      "message": "UI read timed out: original default inheritance; no mutation retry"
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "remaining": [],
+      "capturedHostAbsent": true,
+      "hostPid": 5003
+    },
+    "nativeRemaining": []
+  },
+  "appLogLimit": "The app stdout/stderr log has no joined loadView response payload or Main loadView stage record. Its last DBus lines at17:10:06.598 and unrelated codexAccount routing errors are not evidence of the initial Models wait cause.",
+  "assessmentOfLateCategoryFourFileProposal": {
+    "materiallyLocatesOriginalWait": false,
+    "reason": "It observes only a resolved renderer response.error, here after the UI had failed and shutdown was underway. Even a closed category/stage could describe shutdown fallout. It supplies neither Main entry/step-start/step-finish nor duration of the operation that exhausted the original UI read.",
+    "retirementDisposition": "Support keeping the category4 packet historical/inert and retiring it as the proposed remedy for this latency investigation. Source safety approval does not imply diagnostic necessity or cause repair.",
+    "Plan50Limit": "Plan50 presently selects prospective Main-stage observation in documentation only. Its source implementation and privacy/noninterference would still require exact review; this audit does not credit an unimplemented observation or impose an extra CI round."
+  },
+  "reviewerActions": {
+    "network": 0,
+    "polls": 0,
+    "repeatDownloads": 0,
+    "projectExecutions": 0,
+    "nativeGuiProviderActions": 0,
+    "sourceCanonicalRefWrites": 0,
+    "scratchDataOnly": true
+  }
+}

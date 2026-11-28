@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "kind": "existing-authority-readiness-negative-source-batch",
+  "createdAt": "2026-11-18T20:55:00.841033+00:00",
+  "sourceHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "sourceClosure": {
+    "head": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+    "sourceFiles": 804,
+    "exactCurrentFilesExceptFactory": 803,
+    "factorySha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+    "addedOriginalTestsAndHelpers": [
+      {
+        "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+        "bytes": 95105,
+        "sha256": "0b328c82c22451867d28c7337ad6d6efd6732d441d0bfac502d54be15b26630e"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-member-actions.test.ts",
+        "bytes": 19606,
+        "sha256": "4df95f4b62a99baee6dc8ed0528ec1a739e276a68c0f2b6d4f8cd0a07f391b64"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/native-member-actions-fixture.ts",
+        "bytes": 12415,
+        "sha256": "342b1fff3d87d5189934afdc88a0930af2961c0945a6ce3a071efce3cd093ea6"
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/runtime-source-selection.ts",
+        "bytes": 2265,
+        "sha256": "df9062305fb46aa1bce930b6e8fb3144b36ec92d73b174ac4e05351fca3191d0"
+      }
+    ],
+    "packageMetadataAdoption": {
+      "path": "packages/legacy-agent-host/package.json",
+      "baseSha256": "fcf79c402d39803877fe1bc67e3580160ccdbd8c4353c292c86b0d3593c55855",
+      "currentSha256": "dfcd70e7c5f5d8c8fc00a5396cdfbe920e94f0d69849f3abcdd33b3cf4e3610a",
+      "onlyAddedExport": {
+        "./team-host/readiness": {
+          "types": "./dist/composition/teamHostReadiness.d.ts",
+          "import": "./dist/composition/teamHostReadiness.js"
+        }
+      },
+      "allPriorExportMappingsAndOtherPackageFieldsUnchanged": true,
+      "newExportUsedInGreenResolution": false
+    },
+    "manifestSha256": "4d31d845be02b3295b84ec001d323e68c168fb57b224940fc2804add5c01f697",
+    "nativeOrVendorExecutionInSelectedPaths": false,
+    "sourceClassification": [
+      "Saved probe uses injected ModelProbeOwner and throwing business factory; existing Date/performance/diagnostics mocks retained exactly.",
+      "Native member actions fixture uses in-process Driver and production authority checks; no provider process.",
+      "Original tracked fixtures only; source aliases and pinned prepared policy resource unchanged."
+    ]
+  },
+  "result": {
+    "kind": "one-three-existing-negative-cases-source-batch",
+    "startedAt": "2026-11-18T20:51:47.714800+00:00",
+    "baseHead": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+    "command": [
+      "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+      "--import",
+      "./source-register.mjs",
+      "--test",
+      "--test-concurrency=1",
+      "--test-name-pattern=^(?:existing\\ probe\\ journal\\ retains\\ original\\ intents\\ and\\ exact\\ opencode\\ cleanup\\ after\\ roster\\ without\\ native\\ Team\\ allocation|source\\ grant\\ lost\\ inside\\ native\\ open\\ before\\ allocation\\ commit\\ cannot\\ grant\\ target\\ lifetime|committed\\ native\\ successor\\ owns\\ its\\ new\\ input\\ after\\ initiating\\ DO\\ ends;\\ old\\ callback\\ cannot\\ follow\\ a\\ replacement\\ or\\ revoked\\ target\\ grant)$",
+      "packages/legacy-agent-host/tests/native-member-actions.test.ts",
+      "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts"
+    ],
+    "selectedCases": [
+      "existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation",
+      "source grant lost inside native open before allocation commit cannot grant target lifetime",
+      "committed native successor owns its new input after initiating DO ends; old callback cannot follow a replacement or revoked target grant"
+    ],
+    "sourcePrecondition": "803current4f + one reviewed factory postimage + prepared resource hash",
+    "qualification": "Finite source authority/readiness regression only; no compiled/native/desktop qualification",
+    "candidateFactorySha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+    "addedMocks": false,
+    "status": "completed",
+    "pid": 4,
+    "exitCode": 0,
+    "outerTimeout": false,
+    "elapsedSeconds": 11.705,
+    "sourcePostMismatches": [],
+    "stdout": {
+      "sha256": "42117880ffa03caf2e5aadb89f27c441166d91cfedb333abd0365e3fda2dbb1d",
+      "bytes": 815
+    },
+    "stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "resolution": {
+      "sha256": "6abf94dbe5cf7591d36c8304e44bd8712d27b48039ed6be5613aaf31a910cf1b",
+      "bytes": 1054496,
+      "rows": 2958,
+      "uniqueSources": 674,
+      "policyPluginImported": false
+    },
+    "testAndSourceAndResourceUnchanged": true
+  },
+  "files": [
+    {
+      "path": "negative.stdout.log",
+      "bytes": 815,
+      "sha256": "42117880ffa03caf2e5aadb89f27c441166d91cfedb333abd0365e3fda2dbb1d",
+      "normalizedText": "legacy-agent-host: runtime-open {\"profileHash\":\"2682cf7928ae052a37769a933ec6c4833644cc8f32a83520bc1e42ef0313ed8d\",\"configurationHash\":\"3260eeeebcafa7212e3deeee2966a211f67194a8de302531289217dbfc546546\",\"source\":\"runtime\",\"phase\":\"driver-open\",\"category\":\"unknown\",\"observedAtMs\":1795035113163}\n✔ committed native successor owns its new input after initiating DO ends; old callback cannot follow a replacement or revoked target grant (1782.925749ms)\n✔ source grant lost inside native open before allocation commit cannot grant target lifetime (1164.154928ms)\n✔ existing probe journal retains original intents and exact opencode cleanup after roster without native Team allocation (1049.36992ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 11412.08968\n"
+    },
+    {
+      "path": "negative.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "normalizedText": ""
+    }
+  ],
+  "summary": {
+    "tests": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0,
+    "addedMocks": false
+  },
+  "independentReview": {
+    "blob": "e5491b6ae09b99106b44b7225c554b75aa69fc6c",
+    "sha256": "69c2647b33366ad4ae9582928cbee8f4248bad73a1c90e61c706faa6168feab6",
+    "bytes": 10788,
+    "readbackExactReported": true
+  },
+  "limits": [
+    "Source-only finite regression: not compiled or native desktop qualification.",
+    "Two member-action cases exercise actual authority guard with controlled in-process Driver, not the factory wrapper itself.",
+    "Saved-probe case exercises original readiness/credential/source/expiry rejects and cleanup without business allocation; original fixture mocks unchanged.",
+    "One runtime-open unknown diagnostic occurs in an intentionally refused native-open case; suite outcome is all3PASS.",
+    "No additional tests or runs were executed after this batch."
+  ]
+}

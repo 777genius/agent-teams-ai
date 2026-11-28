@@ -32,8 +32,8 @@
     "test": "vitest run",
     "test:e2e": "pnpm build && vitest run --config vitest.e2e.config.ts",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "node node_modules/@typescript/native/bin/tsc --noEmit",
+    "typecheck:test": "node node_modules/@typescript/native/bin/tsc --noEmit -p tsconfig.test.json",
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
+    "@typescript/native": "npm:typescript@7.0.2",
     "tsup": "^8.5.1",
     "tsx": "^4.23.15",
     "typescript": "^5.8.2",

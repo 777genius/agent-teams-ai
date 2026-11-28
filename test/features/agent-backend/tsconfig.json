@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": { "types": ["node", "vitest/globals", "react"] },
+  "include": [
+    "../../../src/features/agent-backend/**/*.ts",
+    "./*.test.ts",
+    "../../types/better-sqlite3-node.d.ts",
+    "../../../src/renderer/vite-env.d.ts",
+    "../../../src/types/pica.d.ts",
+    "../../../src/types/agent-teams-controller.d.ts"
+  ]
+}

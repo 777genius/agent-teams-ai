@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_NATIVE_RECOVERED_FAILED_TOOL_TUPLE_PASS_RETAINED",
+  "scope": "One original public Host TaskStart -> actual OpenCode V1 1.19.4 Bash exit7 -> containing input succeeds -> PARTIAL/nonreviewable exact dirty observations read cold after owned Stop without new allocation",
+  "actualRun": {
+    "jobId": "f6387c32bd4113f325ed988e7e44bf34",
+    "rawStatus": "PASS",
+    "exitCode": 0,
+    "signal": null,
+    "durationMs": 82894,
+    "sourceEpoch": "7ea18705ab0426c4afa32650e3e3c0008679f25382f06d6986c12bc70350c320",
+    "distEpoch": "03543b4fcbaaf5daecd6f23ed80871e314a7b0d4009c968d9be58ade867ff7d1",
+    "providerArchiveSha256": "3eb7ed93a004db6f6148f5ce640901127b9a86e8798b69186cba9a93060a6ca6",
+    "nativeVersion": "1.19.4",
+    "nativeSha256": "417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b",
+    "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "directGitSha256": "4c5ca299b5311572b4f948d11efd7c66dcadf30950fbf260688ee32f4a63f6a4",
+    "diagnosticObserverEnabled": false,
+    "providerTimeoutMs": 45000
+  },
+  "effects": {
+    "originalInputs": 2,
+    "inputs": "Original no-effect assignment and original public task.start input both terminal succeeded; task remains in_progress",
+    "taskId": "fa037d67-c610-5254-ac86-023c3c10407b",
+    "taskStartInputId": "a6b29a65-f738-5d16-a323-a1befb59202a",
+    "taskStartOperationRef": "d33312ed-99e1-49ae-b39b-4ddcfcef6904",
+    "modelRequests": 3,
+    "modelFailures": [],
+    "modelToolReplyShape": "marker-text",
+    "modelReplyIsNativeFailureProof": false,
+    "opaqueToolTextHandling": "TEST continuation accepts exact opaque no-output shape only; this accepted native run observed marker-text. Opaque native continuation is not separately qualified.",
+    "actualNativeFailedShellCalls": 1,
+    "nativeExitCode": 7,
+    "containingNativeInputOutcome": "succeeded",
+    "ledgerRows": 1,
+    "source": "shell_snapshot",
+    "toolStatus": "failed",
+    "executionSeq": 0,
+    "nativeCaptureProofPresent": false,
+    "reviewableComplete": false,
+    "before": {
+      "sha256": "2680de9293e39eacab7485ce9d1640616572d50d79f1da3f6f9447fc1d710570",
+      "sizeBytes": 48,
+      "blobRef": "2680de9293e39eacab7485ce9d1640616572d50d79f1da3f6f9447fc1d710570.txt"
+    },
+    "after": {
+      "sha256": "413e64cc6dc4734746ad3620ff383cd09f27469a0288d9899678658981ae293d",
+      "sizeBytes": 53,
+      "blobRef": "413e64cc6dc4734746ad3620ff383cd09f27469a0288d9899678658981ae293d.txt"
+    },
+    "nativeAnchors": {
+      "provider": "opencode",
+      "nativeSessionId": "ses_e8bfd1899ffeSj3PL3hGkJ0tdC",
+      "nativeInputId": "msg_1740379230005a64b5fe8bab62",
+      "windowRef": "e502feeb-9476-4b6e-926b-0b1cc2b13bff",
+      "messageId": "msg_17403792d0017BhV54QcvKFctA",
+      "partId": "prt_1740379740013ycCY7ylNHHAem",
+      "callId": "TEST_OPENCODE_CAPTURE_TASK_START_V1_0",
+      "status": "completed",
+      "exitCode": 7,
+      "commandSha256": "3694d184a27894d7fcfc23a1a9f20922f6c03a4c188c4b417c5476aa88336a1e",
+      "startedAt": 1792947747191,
+      "completedAt": 1792947747268,
+      "inputOutcome": "succeeded"
+    },
+    "coldRead": "After original Host closed; no Runtime/native allocation or additional inference; exact original input/delivery/message/operation/member/session/workspace binds to retained ledger",
+    "writableOriginalModifiedContent": null,
+    "contentSource": "unavailable",
+    "review": {
+      "applied": 0,
+      "skipped": "unqualified-native-failure"
+    },
+    "indexAndUnrelatedDirtyPreserved": true,
+    "originalOwnedStop": "Runtime closed/released; saved exact native PID/group absent after Stop and cleanup; original Host exit0/no signal",
+    "sourcePinsUnchanged": true
+  },
+  "retention": {
+    "collectorJobId": "799a8fc263dfdaca469ca4e7a3c109ca",
+    "collectorExitCode": 0,
+    "files": 2201,
+    "directories": 174,
+    "bytes": 11995388,
+    "collectionErrors": [],
+    "qualificationErrors": [],
+    "manifestSha256": "a024facaf502ea33cb3465be0b653323374c3dd98b9c70e5d7d760c668a985c7",
+    "originalRawReceiptSha256": "9c56f92aa05c7e6a7870938c1a79266f1faee0bf218c138dd41d42b2ed03fa62",
+    "originalJobStateSha256": "6d068cfb9a0e77e3ff80acde28f80799da1147b93559825dfb21e5508f553af7",
+    "collectorSha256": "3070f4c539bbb7df3304d3802c74298d462c051065d6840fb8186cada0feebe5",
+    "directoryPreservation": "Corrected raw-first collector preserves empty Git refs directories; unchanged retained-index oracle passes; no new native effects"
+  },
+  "originalFailuresPreserved": [
+    {
+      "jobId": "e6d7066b6a0f0f9e23b80170b067e71f",
+      "outcome": "Original TaskStart classified not-sent/dependency-unavailable before native work; original failure preserved."
+    },
+    {
+      "jobId": "3d7292ff551fc209455159564560ed71",
+      "outcome": "Diagnostic first post-submit read rejected and containing input remained UNKNOWN despite saved native completion; rejection cause unproven, never replayed."
+    },
+    {
+      "jobId": "35f04676a33f6f8f1aac11e80d31669f",
+      "outcome": "Diagnostic assignment preflight GET ECONNRESET before native input; not-sent, original failure preserved."
+    },
+    {
+      "jobId": "65a631fb0e02ec035365ebf705ec08f9",
+      "outcome": "Original actual Bash exit7/dirty bytes but TEST model rejected opaque tool reply; APIError400/failure retained, not promoted."
+    }
+  ],
+  "notClaimed": [
+    "Bash/external-writer authorship or exclusive workspace ownership",
+    "Writable/reviewable native success content or apply of failed window",
+    "Opaque native tool-text continuation acceptance beyond pure TEST coverage",
+    "Desktop Changes UI for this OpenCode tuple",
+    "create/delete/rename/multifile/CRLF/binary/background/hooks completeness",
+    "native Codex/OpenCode images or pending OpenCode permission reply",
+    "full mixed UI, final frontend CI or current P7 packed acceptance",
+    "vendor inference/auth",
+    "whole M13",
+    "full Stage1",
+    "Stage2 or OpenCode V2",
+    "original M19 SDK release/HOLD cleanup"
+  ]
+}

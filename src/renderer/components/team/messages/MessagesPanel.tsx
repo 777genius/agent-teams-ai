@@ -1,12 +1,4 @@
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Sheet, type SheetRef } from 'react-modal-sheet';
 
 import { ChatVisualizationPresentationProvider } from '@features/chat-visualizations/renderer';
@@ -31,7 +23,6 @@ import { useTeamMessagesExpanded } from '@renderer/hooks/useTeamMessagesExpanded
 import { useStore } from '@renderer/store';
 import { selectTeamMessages } from '@renderer/store/slices/teamSlice';
 import { toMessageKey } from '@renderer/utils/teamMessageKey';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { CheckCheck, MessageSquare, MoreHorizontal } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -65,7 +56,6 @@ import {
   conversationDraftAddress,
   conversationIdentity as createConversationIdentity,
   localDraftsByConversationScope,
-  memberConversationParticipants,
   outboxViewAddress,
   replyCandidates,
   visibleTeamMessages,
@@ -87,9 +77,11 @@ import { StatusBlock } from './StatusBlock';
 import { calculateBottomSheetGeometry, useBottomSheetLayout } from './useBottomSheetLayout';
 import { useComposerOutboxItems } from './useComposerOutboxItems';
 import { useCrossTeamDraftAddressAvailability } from './useCrossTeamDraftAddressAvailability';
+import { useMessageReplyRouting } from './useMessageReplyRouting';
 import { useMessageRevisionIntent } from './useMessageRevisionIntent';
 import { useMessagesComposerSections } from './useMessagesComposerSections';
 import { useMessagesGroupConversation } from './useMessagesGroupConversation';
+import { useMessagesMemberIdentities } from './useMessagesMemberIdentities';
 import {
   useDirectThreadAutoOlder,
   useResetScrollOnConversationChange,
@@ -99,6 +91,7 @@ import {
 import { useMessagesPanelSend } from './useMessagesPanelSend';
 import { useMessagesReadState } from './useMessagesReadState';
 import { useMessagesTimelineActions } from './useMessagesTimelineActions';
+import { useOpenCodeDeliveryStatusRefresh } from './useOpenCodeDeliveryStatusRefresh';
 
 import type { ConversationViewportHandle } from '../activity/useConversationViewport';
 import type { ComposerDraftDestination } from './composerDraftDestination';
@@ -106,15 +99,11 @@ import type { MessageRevisionTargetController } from './messageRevisionTarget';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { MessagesPanelProps } from './messagesPanelProps';
 import type { ComposerDraftAddress } from '@renderer/types/composerDraft';
-import type {
-  DiscardQueuedUserMessagesResult,
-  InboxMessage,
-} from '@shared/types';
+import type { DiscardQueuedUserMessagesResult, InboxMessage } from '@shared/types';
 
 const BOTTOM_SHEET_HEADER_HEIGHT = 40;
 const BOTTOM_SHEET_COLLAPSED_SNAP_INDEX = 1;
 const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
-const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
 const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
 
@@ -406,28 +395,33 @@ export const MessagesPanel = memo(function MessagesPanel({
     [navigationSurface, openChat, scope]
   );
 
-  const handleAttentionOpenChat = useCallback((target: typeof scope) => {
-    // Clear filters even when handleOpenChat skips an identical scope.
-    setMessagesSearchQuery('');
-    setMessagesFilter((current) => ({ ...current, from: new Set(), to: new Set() }));
-    // A floating composer has no thread surface. Expand the existing bottom sheet
-    // before navigating so the destination is actually visible to the user.
-    if (position === 'floating-composer') onPositionChange('sidebar');
-    if (position === 'bottom-sheet' &&
-        bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX) {
-      setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
-      bottomSheetRef.current?.snapTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
-    }
-    if (position === 'floating-composer') {
-      // Floating mode presents a synthetic team-feed scope; never shortcut based
-      // on that masked value when a different direct thread is actually selected.
-      revisionNavigationGenerationRef.current += 1;
-      openChat(target);
-    } else {
-      handleOpenChat(target);
-    }
-    setMessagesCollapsed(false);
-  }, [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat, openChat]);
+  const handleAttentionOpenChat = useCallback(
+    (target: typeof scope) => {
+      // Clear filters even when handleOpenChat skips an identical scope.
+      setMessagesSearchQuery('');
+      setMessagesFilter((current) => ({ ...current, from: new Set(), to: new Set() }));
+      // A floating composer has no thread surface. Expand the existing bottom sheet
+      // before navigating so the destination is actually visible to the user.
+      if (position === 'floating-composer') onPositionChange('sidebar');
+      if (
+        position === 'bottom-sheet' &&
+        bottomSheetSnapIndex === BOTTOM_SHEET_COLLAPSED_SNAP_INDEX
+      ) {
+        setBottomSheetSnapIndex(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+        bottomSheetRef.current?.snapTo(BOTTOM_SHEET_COMPOSER_SNAP_INDEX);
+      }
+      if (position === 'floating-composer') {
+        // Floating mode presents a synthetic team-feed scope; never shortcut based
+        // on that masked value when a different direct thread is actually selected.
+        revisionNavigationGenerationRef.current += 1;
+        openChat(target);
+      } else {
+        handleOpenChat(target);
+      }
+      setMessagesCollapsed(false);
+    },
+    [position, onPositionChange, bottomSheetSnapIndex, handleOpenChat, openChat]
+  );
 
   const handleExpandedChange = useCallback(
     (nextExpanded: boolean): void => {
@@ -603,12 +597,18 @@ export const MessagesPanel = memo(function MessagesPanel({
     scrollElementRef: activeScrollContainerRef ?? threadScrollRef,
   });
 
-  const leadNames = useMemo(
-    () => members.filter((member) => isLeadMember(member)).map((member) => member.name),
-    [members]
-  );
-  const memberNames = useMemo(() => new Set(members.map((member) => member.name)), [members]);
-  const normalizedMemberNames = useMemo(() => memberConversationParticipants(members), [members]);
+  const { leadNames, memberNames, normalizedMemberNames } = useMessagesMemberIdentities(members);
+  const { crossTeamReply, replyAddressRequest, handleReplyToTimelineMessage } =
+    useMessageReplyRouting({
+      contextId: activeContextId,
+      teamName,
+      scope,
+      members,
+      onReply: onReplyToMessage,
+      openTeamFeed: () => openChat(TEAM_FEED_SCOPE),
+      fetchTargets: () => useStore.getState().fetchCrossTeamTargets(),
+      focusComposer: () => composerTextareaRef.current?.focus(),
+    });
   const canonicalMessages = useMemo(
     () =>
       canonicalTeamMessages(
@@ -753,7 +753,7 @@ export const MessagesPanel = memo(function MessagesPanel({
     expandedItemKey,
     setExpandedItemKey,
     onCreateTask: onCreateTaskFromMessage,
-    onReply: onReplyToMessage,
+    onReply: handleReplyToTimelineMessage,
     groupId,
     groupQuote: groupConversation.quote,
     onRevise: (message) => {
@@ -761,7 +761,11 @@ export const MessagesPanel = memo(function MessagesPanel({
     },
   });
 
-  const { readSet, markAllRead, ready: readsReady } = useMessagesReadState(
+  const {
+    readSet,
+    markAllRead,
+    ready: readsReady,
+  } = useMessagesReadState(
     teamName,
     activeContextId,
     canonicalMessages,
@@ -897,33 +901,12 @@ export const MessagesPanel = memo(function MessagesPanel({
     sendMessageRuntimeReplyVisible,
   ]);
 
-  useEffect(() => {
-    const debugDetails = sendMessageDebugDetails;
-    const messageId = debugDetails?.messageId;
-    const shouldPoll =
-      debugDetails?.userVisibleState === 'checking' ||
-      (!debugDetails?.userVisibleState && debugDetails?.responsePending === true);
-    if (!messageId || sendMessageRuntimeReplyVisible || !shouldPoll) {
-      return;
-    }
-    const statusMessageId = debugDetails.statusMessageId || messageId;
-    const timers = OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS.map((delayMs) =>
-      window.setTimeout(() => {
-        void refreshSendMessageRuntimeDeliveryStatus(teamName, {
-          messageId,
-          statusMessageId,
-        });
-      }, delayMs)
-    );
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-    };
-  }, [
-    refreshSendMessageRuntimeDeliveryStatus,
+  useOpenCodeDeliveryStatusRefresh(
+    teamName,
     sendMessageDebugDetails,
     sendMessageRuntimeReplyVisible,
-    teamName,
-  ]);
+    refreshSendMessageRuntimeDeliveryStatus
+  );
 
   const { handleSend, handleCrossTeamSend } = useMessagesPanelSend({
     teamName,
@@ -1042,6 +1025,8 @@ export const MessagesPanel = memo(function MessagesPanel({
     suggestionPlacement: isConversation ? ('above' as const) : undefined,
     lockedRecipient,
     autoFocusKey: threadOpenedAt,
+    draftAddressRequest: replyAddressRequest,
+    crossTeamReply,
     workingDraftSummaries: workingDrafts.summaries,
     onSend: handleSend,
     onCrossTeamSend: handleCrossTeamSend,

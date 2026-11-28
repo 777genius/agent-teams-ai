@@ -40,7 +40,10 @@ import type { Schedule, ScheduleRun } from '@shared/types';
 // =============================================================================
 
 const projectFolderName = (path: string): string =>
-  path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path;
+  path
+    .replace(/[\\/]+$/, '')
+    .split(/[\\/]/)
+    .pop() || path;
 
 interface ScheduleSectionProps {
   teamName: string;
@@ -99,7 +102,9 @@ const ScheduleRow = ({
           className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
           onClick={handleExpand}
           aria-expanded={expanded}
-          aria-label={schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)}
+          aria-label={
+            schedule.label || getCronDescription(schedule.cronExpression, resolvedLanguage)
+          }
         >
           {expanded ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
@@ -113,11 +118,15 @@ const ScheduleRow = ({
             <ScheduleStatusBadge status={schedule.status} />
           </div>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
-            {schedule.label ? <span>{getCronDescription(schedule.cronExpression, resolvedLanguage)}</span> : null}
+            {schedule.label ? (
+              <span>{getCronDescription(schedule.cronExpression, resolvedLanguage)}</span>
+            ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default">
-                  {t('schedule.nextRun', { next: formatNextRun(schedule.nextRunAt, resolvedLanguage) })}
+                  {t('schedule.nextRun', {
+                    next: formatNextRun(schedule.nextRunAt, resolvedLanguage),
+                  })}
                 </span>
               </TooltipTrigger>
               {schedule.nextRunAt ? (
@@ -157,15 +166,23 @@ const ScheduleRow = ({
 
           <Popover open={menuOpen} onOpenChange={setMenuOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="size-7 p-0" aria-label={tCommon('actions.moreActions')}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-7 p-0"
+                aria-label={tCommon('actions.moreActions')}
+              >
                 <MoreHorizontal className="size-3.5" />
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-40 p-1">
               <button
                 type="button"
-                className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                onClick={() => { setMenuOpen(false); onEdit(schedule); }}
+                className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onEdit(schedule);
+                }}
               >
                 <Pencil className="mr-2 size-3.5" />
                 {t('schedule.actions.edit')}
@@ -174,7 +191,10 @@ const ScheduleRow = ({
                 <button
                   type="button"
                   className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => { setMenuOpen(false); onPause(schedule.id); }}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onPause(schedule.id);
+                  }}
                 >
                   <Pause className="mr-2 size-3.5" />
                   {t('schedule.actions.pause')}
@@ -182,8 +202,11 @@ const ScheduleRow = ({
               ) : (
                 <button
                   type="button"
-                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)]"
-                  onClick={() => { setMenuOpen(false); onResume(schedule.id); }}
+                  className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-[var(--color-text)] hover:bg-[var(--color-surface-raised)] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onResume(schedule.id);
+                  }}
                 >
                   <Play className="mr-2 size-3.5" />
                   {t('schedule.actions.resume')}
@@ -192,7 +215,10 @@ const ScheduleRow = ({
               <button
                 type="button"
                 className="flex w-full items-center rounded-sm px-2 py-1.5 text-xs text-red-400 hover:bg-[var(--color-surface-raised)]"
-                onClick={() => { setMenuOpen(false); onDelete(schedule.id); }}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete(schedule.id);
+                }}
               >
                 <Trash2 className="mr-2 size-3.5" />
                 {t('schedule.actions.delete')}
@@ -243,10 +269,12 @@ export const ScheduleSection = ({
   projectScope,
 }: ScheduleSectionProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const { schedules, fetchSchedules } = useStore(useShallow((s) => ({
-    schedules: s.schedules.filter((sch) => sch.teamName === teamName),
-    fetchSchedules: s.fetchSchedules,
-  })));
+  const { schedules, fetchSchedules } = useStore(
+    useShallow((s) => ({
+      schedules: s.schedules.filter((sch) => sch.teamName === teamName),
+      fetchSchedules: s.fetchSchedules,
+    }))
+  );
   const { feedback, act: actOnSchedule } = useScheduleActions();
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -291,7 +319,10 @@ export const ScheduleSection = ({
       </div>
 
       {feedback ? (
-        <p role={feedback.kind === 'error' ? 'alert' : 'status'} className={`rounded border px-2 py-1.5 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}>
+        <p
+          role={feedback.kind === 'error' ? 'alert' : 'status'}
+          className={`rounded border px-2 py-1.5 text-xs ${feedback.kind === 'error' ? 'border-red-500/30 text-red-400' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+        >
           {feedback.message}
         </p>
       ) : null}

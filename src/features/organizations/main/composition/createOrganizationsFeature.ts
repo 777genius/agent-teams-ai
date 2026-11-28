@@ -7,8 +7,10 @@ import {
   type NormalizedOrganizationMapRequest,
   type OrganizationsClockPort,
   type OrganizationsLoggerPort,
+  type OrganizationsStructurePort,
 } from '../../core/application';
 import { CrossTeamOrganizationAdapter } from '../adapters/output/CrossTeamOrganizationAdapter';
+import { HostRoutedOrganizationSource } from '../adapters/output/HostRoutedOrganizationSource';
 import { TeamDirectoryOrganizationAdapter } from '../adapters/output/TeamDirectoryOrganizationAdapter';
 import { JsonOrganizationStructureRepository } from '../infrastructure/JsonOrganizationStructureRepository';
 
@@ -24,6 +26,7 @@ import type {
   UpsertOrganizationRelationRequest,
   UpsertOrganizationUnitRequest,
 } from '../../contracts';
+import type { CaptureHostTeamReads } from '@features/agent-backend/main';
 import type { CrossTeamService } from '@main/services/team/CrossTeamService';
 import type { TeamDataService } from '@main/services/team/TeamDataService';
 
@@ -36,9 +39,7 @@ export interface OrganizationsFeatureFacade {
   upsertOrganizationUnit(
     request: UpsertOrganizationUnitRequest
   ): Promise<OrganizationStructurePayload>;
-  moveOrganizationUnit(
-    request: MoveOrganizationUnitRequest
-  ): Promise<OrganizationStructurePayload>;
+  moveOrganizationUnit(request: MoveOrganizationUnitRequest): Promise<OrganizationStructurePayload>;
   removeOrganizationUnit(
     request: RemoveOrganizationUnitRequest
   ): Promise<OrganizationStructurePayload>;
@@ -55,8 +56,9 @@ export interface OrganizationsFeatureFacade {
 }
 
 export function createOrganizationsFeature(deps: {
-  teamDataService: TeamDataService;
-  crossTeamService: CrossTeamService;
+  teamDataService: Pick<TeamDataService, 'listTeams' | 'getAllTasks' | 'listAliveProcessTeams'>;
+  crossTeamService: Pick<CrossTeamService, 'getOutbox'>;
+  captureHost?: CaptureHostTeamReads;
   logger: OrganizationsLoggerPort;
   clock?: OrganizationsClockPort;
 }): OrganizationsFeatureFacade {
@@ -65,30 +67,81 @@ export function createOrganizationsFeature(deps: {
     projectTeamSummaries(teams, new TeamMetaStore())
   );
   const clock = deps.clock ?? { now: () => Date.now() };
-  const mapUseCase = new GetOrganizationMapUseCase({
-    structure: structureRepository,
-    teamDirectory,
-    crossTeamMessages: new CrossTeamOrganizationAdapter(deps.crossTeamService, deps.logger),
-    clock,
-    logger: deps.logger,
+  const crossTeamMessages = new CrossTeamOrganizationAdapter(deps.crossTeamService, deps.logger);
+  const useCases = (
+    directory = teamDirectory,
+    messages = crossTeamMessages,
+    structure: OrganizationsStructurePort = structureRepository
+  ) => ({
+    map: new GetOrganizationMapUseCase({
+      structure,
+      teamDirectory: directory,
+      crossTeamMessages: messages,
+      clock,
+      logger: deps.logger,
+    }),
+    structure: new ManageOrganizationStructureUseCase({
+      structure,
+      teamDirectory: directory,
+      clock,
+      logger: deps.logger,
+    }),
   });
-  const structureUseCase = new ManageOrganizationStructureUseCase({
-    structure: structureRepository,
-    teamDirectory,
-    clock,
-    logger: deps.logger,
-  });
-
+  const legacy = useCases();
+  const captured = async <T>(
+    operation: (value: ReturnType<typeof useCases>) => Promise<T>
+  ): Promise<T> => {
+    const host = await deps.captureHost?.();
+    if (!host) return operation(legacy);
+    const source = new HostRoutedOrganizationSource(host, teamDirectory, crossTeamMessages);
+    source.assertCurrent();
+    const structure: OrganizationsStructurePort = {
+      async loadStructure() {
+        source.assertCurrent();
+        const value = await structureRepository.loadStructure();
+        source.assertCurrent();
+        return value;
+      },
+      async saveStructure(value) {
+        source.assertCurrent();
+        const result = await structureRepository.saveStructure(value);
+        source.assertCurrent();
+        return result;
+      },
+    };
+    const result = await operation({
+      map: new GetOrganizationMapUseCase({
+        structure,
+        teamDirectory: source,
+        crossTeamMessages: source,
+        clock,
+        logger: deps.logger,
+      }),
+      structure: new ManageOrganizationStructureUseCase({
+        structure,
+        teamDirectory: source,
+        clock,
+        logger: deps.logger,
+      }),
+    });
+    source.assertCurrent();
+    return result;
+  };
   return {
-    getOrganizationMap: (request) => mapUseCase.execute(request),
-    getOrganizationStructure: (request) => structureUseCase.getStructure(request),
-    createOrganization: (request) => structureUseCase.createOrganization(request),
-    upsertOrganizationUnit: (request) => structureUseCase.upsertUnit(request),
-    moveOrganizationUnit: (request) => structureUseCase.moveUnit(request),
-    removeOrganizationUnit: (request) => structureUseCase.removeUnit(request),
-    assignTeamToUnit: (request) => structureUseCase.assignTeam(request),
-    removeTeamFromOrganization: (request) => structureUseCase.removeTeam(request),
-    upsertOrganizationRelation: (request) => structureUseCase.upsertRelation(request),
-    deleteOrganizationRelation: (request) => structureUseCase.deleteRelation(request),
+    getOrganizationMap: (request) => captured((value) => value.map.execute(request)),
+    getOrganizationStructure: (request) =>
+      captured((value) => value.structure.getStructure(request)),
+    createOrganization: (request) =>
+      captured((value) => value.structure.createOrganization(request)),
+    upsertOrganizationUnit: (request) => captured((value) => value.structure.upsertUnit(request)),
+    moveOrganizationUnit: (request) => captured((value) => value.structure.moveUnit(request)),
+    removeOrganizationUnit: (request) => captured((value) => value.structure.removeUnit(request)),
+    assignTeamToUnit: (request) => captured((value) => value.structure.assignTeam(request)),
+    removeTeamFromOrganization: (request) =>
+      captured((value) => value.structure.removeTeam(request)),
+    upsertOrganizationRelation: (request) =>
+      captured((value) => value.structure.upsertRelation(request)),
+    deleteOrganizationRelation: (request) =>
+      captured((value) => value.structure.deleteRelation(request)),
   };
 }

@@ -211,7 +211,7 @@ describe('custom team templates worker ops', () => {
     }
   });
 
-  it('adds the template table in append-only v5 to v7 migrations without losing earlier rows', async () => {
+  it('adds the template table from v5 through current append-only migrations without losing earlier rows', async () => {
     const dbPath = await makeTmpDbPath();
     const seed = track(makeCore(dbPath));
     seed.handle('ping', {});
@@ -232,6 +232,7 @@ describe('custom team templates worker ops', () => {
     };
     const raw = new Database(dbPath);
     raw.exec(
+      'DROP TABLE IF EXISTS member_work_sync_primary_incarnations; ' +
       'DROP TABLE IF EXISTS custom_team_templates; ' +
         'DROP INDEX IF EXISTS idx_custom_team_templates_name_normalized; ' +
         'PRAGMA user_version = 5;'
@@ -255,7 +256,7 @@ describe('custom team templates worker ops', () => {
       );
     raw.close();
 
-    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(7);
+    expect(INTERNAL_STORAGE_SCHEMA_VERSION).toBe(8);
     const upgraded = track(makeCore(dbPath));
     const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
     expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
@@ -286,6 +287,7 @@ describe('custom team templates worker ops', () => {
     let originalRow: Record<string, unknown>;
     try {
       legacy.exec(
+        'DROP TABLE IF EXISTS member_work_sync_primary_incarnations; ' +
         'ALTER TABLE custom_team_templates DROP COLUMN revision; PRAGMA user_version = 6;'
       );
       originalRow = legacy.prepare('SELECT * FROM custom_team_templates').get() as Record<
@@ -298,7 +300,7 @@ describe('custom team templates worker ops', () => {
 
     const upgraded = track(makeCore(dbPath));
     const info = upgraded.handle('ping', {}) as InternalStorageBackendInfo;
-    expect(info.schemaVersion).toBe(7);
+    expect(info.schemaVersion).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
     expect(info.integrity).toBe('ok');
     expect(upgraded.handle('customTemplate.getById', { templateId: 'template-1' })).toEqual({
       status: 'found',

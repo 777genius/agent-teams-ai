@@ -4,7 +4,7 @@
  * Extensible: add a new PreviewType + extension set + component to support new formats.
  */
 
-import { getDocumentFormat,isDocumentPreviewable } from '@features/document-preview';
+import { getDocumentFormat, isDocumentPreviewable } from '@features/document-preview';
 
 export type PreviewType = 'image' | 'document' | 'unknown';
 

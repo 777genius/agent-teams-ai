@@ -1,0 +1,70 @@
+{
+  "schema": "N-renderer-exact-one-byte-source-publication/v1",
+  "baseHead": "67310c46b9d38f88e856ce2372d6ea10886d0dd6",
+  "baseTree": "5deaa9562f4d65a9bb62c2128c55f309479f8eaa",
+  "expectedTree": "3e395d54c5d9982dce16c545cfa9daf6702d99f1",
+  "originalCISource": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "originalDocsProposalBase": "dee9448e2c8771bed2f4e403259446b1d3b4d4e0",
+  "publicationBranch": "fix/frontend-parity-e2e-followups-20261115",
+  "primaryHeadRemains": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "files": [
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "scratchPath": "/workspace/scratch/82d3f9ba6b85/stage-n-renderer-assertion-fix-r1/candidate.ts",
+      "mode": "100644",
+      "type": "blob",
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10",
+      "preimage": {
+        "bytes": 8708,
+        "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+        "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+      }
+    }
+  ],
+  "changedPathCount": 1,
+  "baseLeafCount": 10698,
+  "finalLeafCount": 10698,
+  "unchangedParentLeaves": 10697,
+  "allOtherSourceAndDocumentationLeavesExact": true,
+  "nonDocumentationLeafCount": 8798,
+  "nonDocumentationBeforeSHA256": "d3ed00695b2d09d3bcd38d41830ddde5670908c858a600bae03c757dc00bc397",
+  "nonDocumentationAfterSHA256": "8a6dbb7ecf9104b2ad570c2ae2c75f333fc28a34cae493b93d4973fd9c2c11ab",
+  "actualOriginalPrivacy177And24GREEN": true,
+  "actualOriginalRendererRED": true,
+  "newSourceTypedGREENObserved": false,
+  "reviewedProposalDocumentsInActualParent": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/proposal.json",
+      "bytes": 6750,
+      "blob": "8ec9d75f40874056eb6fb565b6ded643ca4d23b4",
+      "sha256": "50ededbf744963ebc63256723d9e1463c435af059521485691f70d25bff851b9"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/candidate.patch",
+      "bytes": 324,
+      "blob": "3704dccb26289ee1e814e27ead70d3ed1ef7618e",
+      "sha256": "ab4703c7a3b29e8d2400f720854020d81fff3ab01d2ca91d5d730b2be9b9d67a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/independent-source-review.json",
+      "bytes": 10014,
+      "blob": "add9bc855ee894883ac7b9b9914488e6847d7ced",
+      "sha256": "244bf1a8c0d7cb95d3e56a672e8628404e15c17689f49dd3016c7b49cdeb115e"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/preimage.ts.txt",
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-n-green-and-completed-2026-11-16/stage-n-renderer-assertion-fix-r1/candidate.ts.txt",
+      "bytes": 8707,
+      "blob": "aeffeb87c6ef9ca20615b494d821d0ae53e436e1",
+      "sha256": "b0895c056def3641bd6546b8581b7e7c1e167b1db37f3531f5522efedd2f8d10"
+    }
+  ],
+  "completeForReview": true
+}

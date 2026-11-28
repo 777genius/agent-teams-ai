@@ -84,7 +84,6 @@ import {
   createMemberSettingsFingerprint,
   type MemberSettingsTargetSnapshot,
 } from '@features/team-provisioning/core/domain/memberSettingsPolicy';
-
 import { TeamMemberSettingsDialogRoute } from '@renderer/components/team/definitionEdit/TeamMemberSettingsDialogRoute';
 
 import type { MemberSettingsTarget } from '@features/team-provisioning/contracts';
@@ -189,16 +188,24 @@ describe('TeamMemberSettingsDialogRoute, the lead of a per-project team', () => 
       );
     });
     await flush();
+    // Loading the definition mounts the public lazy bridge; its import must
+    // settle before the real editor can receive input.
+    await act(async () => {
+      await vi.dynamicImportSettled();
+    });
     expect(teams.getMemberSettingsTarget).toHaveBeenCalledWith({
       teamName: 'builders',
       memberName: 'team-lead',
     });
     const editor = host.querySelector<HTMLButtonElement>('[data-testid="lead-model-editor"]');
+    expect(editor).not.toBeNull();
     expect(editor?.dataset.leadRuntimeOnly).toBe('true');
     act(() => editor?.click());
     const save = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('editTeam.actions.save')
     );
+    expect(save).toBeDefined();
+    expect(save?.disabled).toBe(false);
     await act(async () => save?.click());
     await flush();
 

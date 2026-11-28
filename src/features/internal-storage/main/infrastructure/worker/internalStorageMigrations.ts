@@ -200,6 +200,15 @@ const MIGRATIONS: InternalStorageMigration[] = [
       `UPDATE custom_team_templates SET revision = 1 WHERE revision IS NULL`,
     ],
   },
+  {
+    version: 8,
+    statements: [
+      `CREATE TABLE IF NOT EXISTS member_work_sync_primary_incarnations (
+        team_key TEXT PRIMARY KEY NOT NULL,
+        incarnation TEXT NOT NULL
+      )`,
+    ],
+  },
 ];
 
 export const INTERNAL_STORAGE_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;

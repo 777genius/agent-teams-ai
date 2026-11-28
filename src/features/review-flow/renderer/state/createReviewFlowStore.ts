@@ -20,6 +20,7 @@ export interface ReviewFlowStoreState {
   defaultsError: string | null;
   /** Teams whose saved settings are invalid; resetting them to the default repairs them. */
   unreadableTeams: string[];
+  unavailable: NonNullable<ReviewFlowOverview['unavailable']>;
   /** The setting saved with each team that keeps separate history per project. */
   projectTeams: ReviewFlowOverview['projectTeams'];
   /** Readable message of the last failed load; saves report through their rejection instead. */
@@ -83,6 +84,7 @@ export function createReviewFlowStore(
     overrides: {},
     defaultsError: null,
     unreadableTeams: [],
+    unavailable: [],
     projectTeams: {},
     error: null,
 
@@ -92,20 +94,22 @@ export function createReviewFlowStore(
       if (status === 'ready' && !options?.force) return Promise.resolve();
       if (status !== 'ready') set({ status: 'loading', error: null });
       inFlight = readFreshOverview()
-        .then(({ defaults, defaultsError, overrides, unreadableTeams, projectTeams }) =>
-          set({
-            status: 'ready',
-            defaults,
-            defaultsError: defaultsError ?? null,
-            overrides,
-            unreadableTeams,
-            projectTeams,
-            error: null,
-          })
+        .then(
+          ({ defaults, defaultsError, overrides, unreadableTeams, unavailable, projectTeams }) =>
+            set({
+              status: 'ready',
+              defaults,
+              defaultsError: defaultsError ?? null,
+              overrides,
+              unreadableTeams,
+              unavailable: unavailable ?? [],
+              projectTeams: projectTeams ?? {},
+              error: null,
+            })
         )
         .catch((error: unknown) => {
-          // A failed refresh keeps showing the last good data; only a first load becomes an error.
-          if (get().status !== 'ready') set({ status: 'error', error: toReadableMessage(error) });
+          // Retain data for retry, but do not present a stale policy as a current editable read.
+          set({ status: 'error', error: toReadableMessage(error) });
         })
         .finally(() => {
           inFlight = null;

@@ -1,3 +1,10 @@
+import { getCommentNotificationJournalPath } from '@main/services/team/JsonTaskCommentNotificationJournalStore';
+import {
+  readStoppedImportCommentJson,
+  stoppedImportCommentFacts,
+  unknownStoppedImportCommentFacts,
+} from '@main/services/team/stopped-import/commentFacts';
+
 import {
   commentJournalEntryToRecord,
   commentJournalRecordsToEntries,
@@ -27,6 +34,24 @@ export interface SqliteTaskCommentNotificationJournalStoreDeps {
  */
 export class SqliteTaskCommentNotificationJournalStore implements TaskCommentNotificationJournalStore {
   constructor(private readonly deps: SqliteTaskCommentNotificationJournalStoreDeps) {}
+
+  async inspectStoppedImport(teamName: string) {
+    try {
+      const records = await this.deps.gateway.loadCommentJournalEntries(teamName);
+      if (records.some((record) => record.teamName !== teamName))
+        return unknownStoppedImportCommentFacts();
+      const sql = stoppedImportCommentFacts(records),
+        json = readStoppedImportCommentJson(getCommentNotificationJournalPath(teamName));
+      if (!sql.known || !json.known) return unknownStoppedImportCommentFacts();
+      return {
+        known: true,
+        pending: sql.pending + json.pending,
+        revision: JSON.stringify([sql.revision, json.revision]),
+      };
+    } catch {
+      return unknownStoppedImportCommentFacts();
+    }
+  }
 
   async exists(teamName: string): Promise<boolean> {
     return this.deps.mutex.run(teamName, async () => {

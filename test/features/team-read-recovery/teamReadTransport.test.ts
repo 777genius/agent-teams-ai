@@ -91,6 +91,66 @@ describe('team read recovery transport', () => {
     ]);
   });
 
+  it.each([
+    {
+      method: 'getData',
+      channel: 'team:getData',
+      tail: [{ includeMemberBranches: false }],
+      read: (team: string) => readTeamData(team, { includeMemberBranches: false }),
+    },
+    {
+      method: 'getMessagesPage',
+      channel: 'team:getMessagesPage',
+      tail: [{ limit: 17 }],
+      read: (team: string) => readTeamMessagesPage(team, { limit: 17 }),
+    },
+    {
+      method: 'getMemberActivityMeta',
+      channel: 'team:getMemberActivityMeta',
+      tail: [],
+      read: (team: string) => readTeamMemberActivity(team),
+    },
+    {
+      method: 'getLogsForTask',
+      channel: 'team:getLogsForTask',
+      tail: ['TEST-task', { owner: 'alice' }],
+      read: (team: string) => readTeamTaskLogs(team, 'TEST-task', { owner: 'alice' }),
+    },
+  ])(
+    '$method keeps Host authority while native reads retain typed recovery',
+    async ({ read, channel, tail }) => {
+      const hostTeam = 'host-team:TEST-captured-handle';
+      const payload = { owner: hostTeam };
+      const captured = vi.fn(() => Promise.resolve(payload));
+      const failure = { kind: 'recovering', retryAt: 30001, recoveryId: 'TEST-native-recovery' };
+      const invoke = vi.fn(() =>
+        Promise.resolve({ success: false, error: 'TEST-native-unavailable', failure })
+      );
+      vi.stubGlobal('window', {
+        electronAPI: {
+          teams: {
+            readRecovery: createTeamReadRecoveryBridge(invoke),
+            getData: captured,
+            getMessagesPage: captured,
+            getMemberActivityMeta: captured,
+            getLogsForTask: captured,
+          },
+        } as unknown as ElectronAPI,
+      });
+
+      expect(await read(hostTeam)).toBe(payload);
+      expect(captured).toHaveBeenCalledExactlyOnceWith(hostTeam, ...tail);
+      expect(invoke).not.toHaveBeenCalled();
+
+      await expect(read('TEST-native-team')).rejects.toMatchObject({
+        message: 'TEST-native-unavailable',
+        failure,
+      });
+      expect(invoke).toHaveBeenCalledExactlyOnceWith(channel, 'TEST-native-team', ...tail);
+      expect(captured).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it('preserves legacy reads without deriving recovery from text', async () => {
     const legacy = vi.fn(() =>
       Promise.reject(new Error('Team data worker recovering after fatal failure'))

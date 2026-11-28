@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "slice": "P6 standalone review transaction settlement and original-command uncertainty",
+  "status": "implemented; 42 current focused cases PASS; production frozen",
+  "recordedAtUtc": "2026-10-23T01:07:49+00:00",
+  "worktree": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend",
+  "scope": [
+    "Public manual save/delete acknowledge their exact own transaction publication; parent-WAL directDisk primitives retain their existing settlement order.",
+    "Direct rejectHunks/rejectFile/restoreRejectedRename/reapplyRejectedRename and noScope Apply settle captured actual transition IDs/preimages through the existing finalizer.",
+    "Known partial Apply preserves its structured result and settles completed paths; failed paths retain evidence.",
+    "Existing command receipt observer and Host request ALS hold the original command only for exact unresolved transaction evidence or actual atomic-create publication on a failed path.",
+    "Atomic-create publication proof is actual dev/ino immediately after successful no-clobber link, before late guards; conflicts/prepared-no-detach/prelink EEXIST remain known completed failures."
+  ],
+  "jobRoot": "/Users/belief/.codex/plugins/data/agent-plugins/1c1e9d402d2702d970a503b8b40bb29f94f43144d4dd7f794c2ba39db32ac96b/jobs",
+  "jobReferenceFormat": "<jobRoot>/<jobId>/{meta.json,state.json,stdout.log,stderr.log}; raw files retained in place",
+  "canonical": {
+    "jobId": "5695423f0248052440c1e28371398ee3",
+    "exitCode": 0,
+    "stdoutSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "checks": [
+      "portable production build",
+      "portable test types",
+      "Host production build",
+      "Host test types"
+    ],
+    "runtime": "Node 24.21.0"
+  },
+  "currentGreen": {
+    "caseCount": 42,
+    "counting": "27 portable + 15 Host cases in disjoint test files; earlier 16/19/17-case runs are overlapping history/support and are NOT added.",
+    "portable": {
+      "jobId": "0570ffccfb7967f06bfdba91151bedca",
+      "exitCode": 0,
+      "stdoutSha256": "fce3ab68414a3d0920a6caed2f290f89983d5102ec354aff7d44ab95d88f73d5",
+      "counts": {
+        "tests": 27,
+        "pass": 27,
+        "fail": 0,
+        "skipped": 0
+      },
+      "groups": {
+        "portable-review-writer": 18,
+        "review-command-wal": 3,
+        "review-publication-authority": 6
+      }
+    },
+    "host": {
+      "jobId": "9fea94895ac6e6796969fe7ac9b5702f",
+      "exitCode": 0,
+      "stdoutSha256": "82991a4a73eaa95a9accd7aa62dcd283a48e09ac7681b6899b82eb90f7f77ebb",
+      "counts": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      },
+      "groups": {
+        "team-code-review existing": 9,
+        "team-code-review new outcome cases": 6
+      }
+    },
+    "criticalAssertions": [
+      "merged external edits survive reject and subsequent reopened edits",
+      "both rename directions and noScope Apply release acknowledged own links",
+      "finalization faults and actual detach preserve original proof",
+      "after-detach structured failure holds original across reopen and denies original/replacement dispatch",
+      "published create plus late guard failure holds original",
+      "known conflict, prepared-no-detach and prelink EEXIST complete and replay exact responses without effects"
+    ],
+    "scopedLint": "PASS; exec session 12876; no production edits afterward"
+  },
+  "redToGreen": {
+    "manualSave": {
+      "red": {
+        "jobId": "ccc9daf51ede3ce6b659adf293514b43",
+        "exitCode": 1,
+        "stdoutSha256": "ed0c74b6ba97c89ab14e444c8a037b3e129e56478e813af181ce2575bffbd7c9",
+        "counts": {
+          "tests": 2,
+          "pass": 0,
+          "fail": 2,
+          "skipped": 0
+        }
+      },
+      "green": {
+        "jobId": "b14f13d36ebb59d410a456f3c862e985",
+        "exitCode": 0,
+        "stdoutSha256": "67dabcd8e7fde879b9725524b0d92591655aeb3bcf4f1e382c28d23dfe0c98ae",
+        "counts": {
+          "tests": 16,
+          "pass": 16,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "canonical": "f8d7214f5d137f9cad53db47c9baf7f2",
+      "newCases": 2,
+      "defect": "Acknowledged save retained its own published afterPath hardlink; second same-file write was refused."
+    },
+    "manualDelete": {
+      "red": {
+        "jobId": "88bd2b8a939a84b6db82d5630d785821",
+        "exitCode": 1,
+        "stdoutSha256": "0da15492585e18663745ef96ad52949e23d92a5a4f3430660182b92607795cce",
+        "counts": {
+          "tests": 2,
+          "pass": 0,
+          "fail": 2,
+          "skipped": 0
+        }
+      },
+      "green": {
+        "jobId": "cb5ac9b8a93edb2cb28d8b7541cbabb5",
+        "exitCode": 0,
+        "stdoutSha256": "cb05e477e16da3d71f13d3540ec6a05a94f0cb89e1cac80e8d5bb22666759fd5",
+        "counts": {
+          "tests": 19,
+          "pass": 19,
+          "fail": 0,
+          "skipped": 0
+        }
+      },
+      "canonical": "f0e73aebd5a7e94dfb583b06fe20b3e3",
+      "newCases": 3,
+      "defect": "Unfinalized delete could falsely acknowledge a later independently recreated same-byte file; finalizer faults retain original proof."
+    },
+    "standalone": {
+      "red": {
+        "jobId": "b89a54f9eca6033fbc6ddc17a026dc92",
+        "exitCode": 1,
+        "stdoutSha256": "523bb57fd164110342d53de7e35971305e83cef2161ecca11be7ec31670f1f7f",
+        "counts": {
+          "tests": 7,
+          "pass": 0,
+          "fail": 7,
+          "skipped": 0
+        }
+      },
+      "earlierSubsetRedJobs": [
+        "e7ff38149426538f7f22a76c0dbfe387",
+        "273ab5a27e24ec787cfbe2b8052bb201"
+      ],
+      "greenJob": "0570ffccfb7967f06bfdba91151bedca",
+      "defect": "Successful direct reject/rename/noScope Apply left transaction links; finalizer was not invoked."
+    },
+    "structuredDetachOutcome": {
+      "red": {
+        "jobId": "0d4a1694ea29a6c666498419a897252e",
+        "exitCode": 1,
+        "stdoutSha256": "338da59c95495b94130b6431449ba1758c129e14b62fde2962abf09e747f7e94",
+        "counts": {
+          "tests": 3,
+          "pass": 2,
+          "fail": 1,
+          "skipped": 0
+        }
+      },
+      "greenJob": "9fea94895ac6e6796969fe7ac9b5702f",
+      "defect": "Host completed a returned structured failure after the original file was actually detached."
+    },
+    "atomicCreateOutcome": {
+      "red": {
+        "jobId": "86e129ed28d53742a44e09b8d08b1cce",
+        "exitCode": 1,
+        "stdoutSha256": "af34b3f7d8e15f6e46a4a22f12d2c2595f8370e956eabf040d33c2e1a5136742",
+        "counts": {
+          "tests": 3,
+          "pass": 2,
+          "fail": 1,
+          "skipped": 0
+        }
+      },
+      "greenJob": "9fea94895ac6e6796969fe7ac9b5702f",
+      "defect": "Host completed a noScope restore error after an actual create publication and later authority failure."
+    }
+  },
+  "honestCorrections": {
+    "intermediateGreenFailure": {
+      "jobId": "e879f118acb059d0ae1ad50e7d3e8b9e",
+      "exitCode": 1,
+      "stdoutSha256": "bbeafbb6cf95a57871becfd954bc2b21d462638aaa60ed53fccc3938004c34bd",
+      "counts": {
+        "tests": 15,
+        "pass": 14,
+        "fail": 1,
+        "skipped": 0
+      }
+    },
+    "correction": "Behavior/receipt assertions passed, but the cold replay error-text oracle expected held while TeamOwnerError has code hold. Changed only two test assertions to exact {code: hold}; reran full Host15 successfully. No production change."
+  },
+  "supportingOriginalCaptureRegression": {
+    "red": {
+      "jobId": "df7fbcff0966d1a6b10ccc49c0c4b381",
+      "exitCode": 1,
+      "stdoutSha256": "b730aafd94ecae184574fd168a65d4ccee29d6833184d55581bfc7a3ce73b69b",
+      "counts": {
+        "tests": 17,
+        "pass": 14,
+        "fail": 3,
+        "skipped": 0
+      }
+    },
+    "green": {
+      "jobId": "aa7dd5e836f971a7605909cda6b3c86c",
+      "exitCode": 0,
+      "stdoutSha256": "343d8da6312aa259c8e6f8a3d68fdf3db0480f1701189f54a3408a1e162e4574",
+      "counts": {
+        "tests": 17,
+        "pass": 17,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    "countedInCurrent42": false,
+    "notes": "Original Task save -> service reopen/main cwd change -> agent same-file save case retained without splitting. Original raw17 run had repeat-save plus two fixture setup failures; peers corrected fixture operator/consumed-phase setup, then original full17 passed.",
+    "retainedArtifact": ".artifacts/provider-migration/captured-review-roots-v2/raw-failure.json",
+    "retainedArtifactSha256": "cbec7d3324d0f15c3da56e1adbdf411dea86eaa9ba62236534e03c8b871da59a"
+  },
+  "sourcePins": {
+    "note": "Current post-GREEN source/test SHA256; not a claim that historical RED jobs independently snapshotted these exact current bytes. Historical jobs retain command metadata and raw logs.",
+    "productionSha256": {
+      "packages/task-change-ledger/src/review/writer/contentMutations.ts": "0f5199c990486bfb457322e952c5de7b0b63bbca5b043a8731051eff3f4fe922",
+      "packages/task-change-ledger/src/review/writer/reject.ts": "24414e8bd3b6edf4f9553814656a1e0dd7c6f1a43189caf20f5484ed49f9238d",
+      "packages/task-change-ledger/src/review/writer/apply.ts": "8f9c1ffe85fa6b4459cc81f79488ff7f3088df546f5932029ce7d2c3b881c6e2",
+      "packages/task-change-ledger/src/review/writer/standaloneMutations.ts": "04d9969c498040614cc84af8c7db5e2b920239f54f424950ac6013e796f1e580",
+      "packages/task-change-ledger/src/review/writer/createReviewWriter.ts": "4788608fffba3040be4427892fdf1db22bc841f056d43a5c1ebecd44cbd8eeb1",
+      "packages/task-change-ledger/src/review/writer/ports.ts": "39b0e0929598203f4c0e6023594306e8320c050bc3eba7c7195368d1883282df",
+      "packages/task-change-ledger/src/review/writer/reviewCommandJournal.ts": "c395d0a3bb56823645bbda234b2a5ead03c15577cbd38b91a7f9e7b23b9d88bd",
+      "packages/task-change-ledger/src/review/apply/fileMutation.ts": "7ae520705cdbecb7926dc2c2934df6e0e5768b7a1d2088bc1bb38dc2674a58db",
+      "packages/task-change-ledger/src/review/apply/reviewFileTransition.ts": "5d0fb65cf7b92d5fcb45ef5e14064023690b8e20b0dd073b5e8bc21f201a6c65",
+      "packages/task-change-ledger/src/review/apply/applyContext.ts": "726b620f8d7729dc2615d2c5feadcc9576c8e5174919dd8b851d086c5b89f212",
+      "packages/task-change-ledger/src/review/apply/publicationIO.ts": "b5ecc25584ab2a93b53fc2df3b7803fc426bba1e52555292cc5a23eb72088afc",
+      "packages/task-change-ledger/src/review/io/atomicCreate.ts": "f8189b922c2b66b62c6ced82a873a28425aa4ea7773218ad18533ac756ed30f0",
+      "packages/legacy-agent-host/src/composition/HostTeamReview.ts": "524090688947b8c3fda5523e60c00655e1d64bc36438a1c6cbb6624a69a12e45"
+    },
+    "testSha256": {
+      "packages/task-change-ledger/tests/portable-review-writer.test.ts": "3641c6e0fa8c11bc0c7065e792be6c5af59dad9356e6a650a6b22548e9dd4917",
+      "packages/task-change-ledger/tests/review-command-wal.test.ts": "7477da15b25abced8b8fe35e239f5a45f16fcfff2ee2e8352db4a5e97ab0e8c4",
+      "packages/task-change-ledger/tests/review-publication-authority.test.ts": "66c0396f09f3891858c99bb6a20377ffa31a0771bd10b147a187c865611a6f94",
+      "packages/legacy-agent-host/tests/team-code-review.test.ts": "b49de2407525435c1bedb9066aab948de5011c80078af35f2c1145b8d79daa6a"
+    },
+    "compiledArtifactSha256": {
+      "packages/task-change-ledger/dist/review/writer/standaloneMutations.js": "229cb12dc789c9bc68f4f9113187b3454448c8c334b7ab9d300e83035de67488",
+      "packages/task-change-ledger/dist/review/writer/contentMutations.js": "51efe8f21282a190486ac43faee5159e2ee3c50ae771be6aa876ef0916aa4468",
+      "packages/task-change-ledger/dist/review/writer/createReviewWriter.js": "10f19f9bdc62c967d1346d2df5a7ef5023996add978a218fc056bdb037cc948b",
+      "packages/task-change-ledger/dist/review/writer/reviewCommandJournal.d.ts": "03e6024f0d5cb31ffc537f1b2a1e5663ebfee037b8b720f65f4008217aee9115",
+      "packages/task-change-ledger/dist/review/apply/reviewFileTransition.js": "09290a5d4edef2c29702f6e4825ff86b66f7d5ea1704b4f60f1da58f43619201",
+      "packages/task-change-ledger/dist/review/apply/publicationIO.js": "f887542ff438dd27d01c0cc3c44c299be1f0739e30bd7a0dc6c92ae7dfcc0a75",
+      "packages/task-change-ledger/dist/review/io/atomicCreate.js": "c7bbb3d87a9973411ab3b4dfb7b4c3b29c8a1fd86876ce02fd132775907df77d",
+      "packages/legacy-agent-host/dist/composition/HostTeamReview.js": "75f1ed14d2a5731eddc7fa80dd158bad9fb8287b9fa64e6fff3a11f0272545ac"
+    }
+  },
+  "limits": [
+    "Sandbox actual-files/Host tests only. This handoff performs no native, Electron, app, build, commit, or push and does not claim UI/native review acceptance.",
+    "No new journal, owner, generic transaction framework, byte-equality recovery, or automatic mutation replay. Unprovable original direct mutations remain HOLD.",
+    "Failed-path artifacts are retained; no blanket conversion of all structured errors to UNKNOWN and no hardlink/symlink guard relaxation.",
+    "Historical temporary fixture roots, including the original coupled raw failure, were removed by normal test cleanup; retained logs/source references do not represent preserved original disk state.",
+    "Current pins were recorded after the canonical build and GREEN runs under the production freeze; unavailable historical per-job source hashes are not invented.",
+    "Existing parent WAL ordering is covered by the focused WAL/publication tests; no claim of exhaustive crash-state coverage or other workers' UI/watch fixes."
+  ]
+}

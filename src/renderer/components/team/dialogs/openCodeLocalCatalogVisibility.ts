@@ -45,8 +45,12 @@ export function isAppManagedOpenCodeLocalModel(
 export function shouldRetainOpenCodeLocalCatalogModel(
   modelId: string,
   catalogModel: CatalogModel | null | undefined,
-  overlayModelIds: ReadonlySet<string>
+  overlayModelIds: ReadonlySet<string>,
+  catalogScope?: string
 ): boolean {
+  // The app-local inventory cannot remove a model from another captured profile.
+  // Display provenance preserves the catalog row; it grants no launch readiness.
+  if (catalogModel && catalogScope?.trim()) return true;
   if (
     overlayModelIds.has(modelId) ||
     (catalogModel?.launchModel && overlayModelIds.has(catalogModel.launchModel)) ||

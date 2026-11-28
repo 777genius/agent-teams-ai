@@ -1,0 +1,1287 @@
+{
+  "kind": "SOURCE_SCOPED_ORIGINAL_CI_SNAPSHOT_AND_RECEIPTS",
+  "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+  "observedAt": "2026-11-19 23:15:32 UTC",
+  "sourceAndMetadataRunsSeparate": true,
+  "runs": [
+    {
+      "runId": 44629177811,
+      "sourceQualification": true,
+      "counts": {
+        "failure": 2,
+        "success": 3
+      },
+      "jobs": [
+        {
+          "id": 135930970876,
+          "name": "Host process fixtures (win32-arm64)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930970952,
+          "name": "Host process fixtures (darwin-arm64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930971049,
+          "name": "Host process fixtures (win32-x64)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930971113,
+          "name": "Host process fixtures (darwin-x64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930973392,
+          "name": "Host process fixtures (linux-x64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        }
+      ]
+    },
+    {
+      "runId": 44629178809,
+      "sourceQualification": true,
+      "counts": {
+        "success": 2,
+        "queued": 21,
+        "failure": 5,
+        "in_progress": 1
+      },
+      "jobs": [
+        {
+          "id": 135931028148,
+          "name": "Offline frontend tests (4/4)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028533,
+          "name": "Offline frontend tests (3/4)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028712,
+          "name": "Offline Host Desktop (linux-x64, skills)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028778,
+          "name": "Offline Host Desktop (linux-x64, taskboard)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028833,
+          "name": "Offline frontend tests (2/4)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028869,
+          "name": "Offline Host Desktop (linux-x64, cross-team)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028882,
+          "name": "Offline Host Desktop (linux-x64, collaboration)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028893,
+          "name": "Offline Host Desktop (linux-x64, team)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028947,
+          "name": "Offline Host Desktop (linux-x64, claude)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931028985,
+          "name": "Offline frontend tests (1/4)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029020,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-chat-attachments)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029025,
+          "name": "Offline Host Desktop (linux-x64, import-lifecycle)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029036,
+          "name": "Offline Host Desktop (darwin-arm64, installer)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029042,
+          "name": "Offline Host Desktop (linux-x64, extensions)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029044,
+          "name": "Offline Host Desktop (linux-x64, codex)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029050,
+          "name": "Offline Host Desktop (linux-x64, selection)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029067,
+          "name": "Offline Host Desktop (linux-x64, management)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029070,
+          "name": "Offline Host Desktop (linux-x64, retained-original)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029085,
+          "name": "Offline Host Desktop (linux-x64, codex-login)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029114,
+          "name": "Offline Host Desktop (linux-x64, opencode-v2-management)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029116,
+          "name": "Offline Host Desktop (linux-x64, review)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029166,
+          "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029173,
+          "name": "Offline Host Desktop (linux-x64, import)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029209,
+          "name": "Offline Host Desktop (linux-x64, processes)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029216,
+          "name": "Offline Host Desktop (linux-x64, opencode)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029257,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-active)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029315,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-quit-pending-open)",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029323,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-review)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135931029385,
+          "name": "Offline Host Desktop (darwin-arm64, opencode-v2-resume)",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        }
+      ]
+    },
+    {
+      "runId": 44629179503,
+      "sourceQualification": true,
+      "counts": {
+        "success": 6,
+        "queued": 3
+      },
+      "jobs": [
+        {
+          "id": 135930977164,
+          "name": "Static V01 source test (windows-2022)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977534,
+          "name": "Embedded V2.1.4 original Host (darwin-arm64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977607,
+          "name": "Static V01 source test (ubuntu-24.04)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977673,
+          "name": "Published V2.0.21 durable HTTP process (TEST discovery only)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977716,
+          "name": "Embedded V2.1.4 original Host (win32-arm64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977807,
+          "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977870,
+          "name": "Embedded V2.1.4 original Host (win32-x64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930977875,
+          "name": "Embedded V2.1.4 original Host (linux-x64)",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930978012,
+          "name": "Embedded V2.1.4 original Host (darwin-x64)",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        }
+      ]
+    },
+    {
+      "runId": 44629179088,
+      "sourceQualification": true,
+      "counts": {
+        "success": 1,
+        "skipped": 11,
+        "queued": 2
+      },
+      "jobs": [
+        {
+          "id": 135930988443,
+          "name": "plan",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930990753,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930990837,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135930991667,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954150635,
+          "name": "Fast feedback",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954150827,
+          "name": "Retained OpenCode V1 and Host V2 original Desktop",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954152541,
+          "name": "Focused documentation and asset validation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954152718,
+          "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954152904,
+          "name": "Renderer source validation",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954152934,
+          "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954153188,
+          "name": "Codex login Desktop (Linux x64)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954153459,
+          "name": "macOS DMG artwork end-to-end",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954153483,
+          "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135954153716,
+          "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        }
+      ]
+    },
+    {
+      "runId": 44630906283,
+      "sourceQualification": false,
+      "counts": {
+        "queued": 1,
+        "skipped": 3
+      },
+      "jobs": [
+        {
+          "id": 135936950892,
+          "name": "Metadata CI plan",
+          "status": "queued",
+          "conclusion": null,
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135936953240,
+          "name": "Stage 1 process tuple diagnostic (unqualified)",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135936953263,
+          "name": "Stage 1 source Desktop (${{ matrix.label }})",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        },
+        {
+          "id": 135936953521,
+          "name": "Stage 1 current-tuple process and packed qualification",
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": null,
+          "completed_at": null,
+          "html_url": null
+        }
+      ]
+    }
+  ],
+  "nativeAudits": [
+    {
+      "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+      "run": 44629179503,
+      "job": 135930977534,
+      "artifact": {
+        "id": 14582765792,
+        "bytes": 12064,
+        "sha256": "7f21928c15793ec2749261d08f7a8a1de886aaaeb346e214cfb294e67d1bf27a",
+        "hashMatchesGitHub": true
+      },
+      "receipts": [
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14582765792/opencode-v2-darwin-custody.json",
+          "bytes": 1442,
+          "sha256": "9b69ccd531d9d15e64c258ea83e7662bdd24684430ce7fe617ce563d85b03ba6",
+          "kind": "TEST_DARWIN_CUSTODY_PRODUCT_PATH",
+          "status": "PASS",
+          "cleanup": "confirmed"
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14582765792/opencode-v2-embedded-host.json",
+          "bytes": 96446,
+          "sha256": "82c8874a2b3638cdeac675e8f8ab3b33f23ee00990da7825a320ca6275619b5e",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "cleanup": true
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14582765792/opencode-v2-embedded-inputs.json",
+          "bytes": 2374,
+          "sha256": "2d6c2b5c1f8fa2818b58146ac9a638703d429d9d76fe0e42dc97c66c8b52a2af",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+          "status": "READY",
+          "cleanup": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14582765792/opencode-v2-posix-exec.json",
+          "bytes": 23413,
+          "sha256": "276affb44d5fdbbde3e16987b8e4e5eb00b28dda0955cb95613f77a04728b9e2",
+          "kind": "TEST_POSIX_ORIGINAL_PATH_CONTRACT_A",
+          "status": "PASS_TRUSTED_WRITER_FIXTURE_ONLY",
+          "cleanup": true
+        }
+      ],
+      "p09": {
+        "sourceHead": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+        "sourceSha256": "1cd5b353aaf58305fa2f55564be579d4dc97321a79c9046ab3abf0506797f152",
+        "status": "PASS_TRUSTED_WRITER_FIXTURE_ONLY",
+        "platform": "darwin",
+        "arch": "arm64",
+        "nodeVersion": "v24.21.0",
+        "cleanup": true,
+        "trustedWriterFixtureQualified": true,
+        "installedRuntimeQualified": false,
+        "releaseQualified": false
+      },
+      "p09Cases": 8,
+      "allTrustedWriterPass": true,
+      "legacyStrictStatus": "INCOMPLETE",
+      "qualificationLimits": [
+        "Original NativeV2 Darwin ARM passed on new appd8a provider45a source; source Desktop installer failure remains separate.",
+        "Native Host uses TEST-local model; no vendor authentication/Desktop/release qualification.",
+        "P09 trusted-writer fixture8/8 only; strict mutation counterexamples preserved."
+      ]
+    },
+    {
+      "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+      "run": 44629179503,
+      "jobs": [
+        135930977716,
+        135930977870,
+        135930978012
+      ],
+      "artifacts": [
+        {
+          "id": 14584231720,
+          "bytes": 13667,
+          "sha256": "72a76970ecb3d717ccb55af6f823f643c9c1fe58ff695dc5d28dd2b9539e0dd1",
+          "hashMatchesGitHub": true
+        },
+        {
+          "id": 14581579007,
+          "bytes": 14480,
+          "sha256": "fd402048164d91579dc251765eacff3599ff703bc687238490c53fc20040d300",
+          "hashMatchesGitHub": true
+        },
+        {
+          "id": 14581194630,
+          "bytes": 12102,
+          "sha256": "9ec421005f8a38b001bbb807c35275392559e803b1bec626e5a2bb1fbf7cd374",
+          "hashMatchesGitHub": true
+        }
+      ],
+      "receipts": [
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14584231720/opencode-v2-embedded-host-auto.json",
+          "bytes": 96475,
+          "sha256": "30a01545a042b8df9afb17b7a558ffd8b7a3d4d6d9cde1286daa4a95211e69ad",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "platform": "win32-arm64",
+          "cleanup": true,
+          "modelOrigin": "localhost-scripted",
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14584231720/opencode-v2-embedded-host.json",
+          "bytes": 91588,
+          "sha256": "fc21be281f8d52b5f2bc3a39816b52fe213c6ea71fdafe4988559156691f1141",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "platform": "win32-arm64",
+          "cleanup": true,
+          "modelOrigin": "localhost-scripted",
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14584231720/opencode-v2-embedded-inputs.json",
+          "bytes": 782,
+          "sha256": "226680a3a59fb0ad7c420b1b1d0cc8b291bc9d5bfeac431c87492aada7a9b99d",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+          "status": "READY",
+          "platform": "win32-arm64",
+          "cleanup": null,
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": null,
+          "releaseQualified": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14584231720/opencode-v2-windows-custody.json",
+          "bytes": 909,
+          "sha256": "27f993cd49c8cd1a618f9bff38c17a6b1189a411188e6a284ffbb9de2899e50b",
+          "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+          "status": "PASS",
+          "platform": "win32-arm64",
+          "cleanup": true,
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": false,
+          "releaseQualified": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581579007/opencode-v2-embedded-host-auto.json",
+          "bytes": 96422,
+          "sha256": "7d2301b81f4d8cedcc292c410f5b136371c44adfa6f16e71c302b42b03267021",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "platform": "win32-x64",
+          "cleanup": true,
+          "modelOrigin": "localhost-scripted",
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581579007/opencode-v2-embedded-host.json",
+          "bytes": 96614,
+          "sha256": "e0d8f776a309a76037f9969383f1c1b916554e506a28c8488e3ed02bae6d8d5b",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "platform": "win32-x64",
+          "cleanup": true,
+          "modelOrigin": "localhost-scripted",
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581579007/opencode-v2-embedded-inputs.json",
+          "bytes": 780,
+          "sha256": "d5cc55e243d109d6c8a563daf4dca9bccadc3534638f3659f8617a102a4547f0",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+          "status": "READY",
+          "platform": "win32-x64",
+          "cleanup": null,
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": null,
+          "releaseQualified": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581579007/opencode-v2-windows-custody.json",
+          "bytes": 907,
+          "sha256": "c4b52c40a0e45f26b57114b6245a046b6d58e25ffa1db35e37c68ff500ca8007",
+          "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+          "status": "PASS",
+          "platform": "win32-x64",
+          "cleanup": true,
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": false,
+          "releaseQualified": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581194630/opencode-v2-darwin-custody.json",
+          "bytes": 1444,
+          "sha256": "05013e1290491c4eb53bf8af0cb5f536733c097501d3dea2045ec49e41bd9d41",
+          "kind": "TEST_DARWIN_CUSTODY_PRODUCT_PATH",
+          "status": "PASS",
+          "platform": "darwin",
+          "cleanup": "confirmed",
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": null,
+          "releaseQualified": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581194630/opencode-v2-embedded-host.json",
+          "bytes": 96474,
+          "sha256": "5bc242fe666b6f50e09267df7b072c61c676964cc880699fa7e0a049e486bd62",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_HOST",
+          "status": "PASS",
+          "platform": "darwin-x64",
+          "cleanup": true,
+          "modelOrigin": "localhost-scripted",
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581194630/opencode-v2-embedded-inputs.json",
+          "bytes": 2370,
+          "sha256": "98c5ee4b604b1fa29a8e8991d6f6629f6b571a88f89c8fea785a7d84f10f4ae4",
+          "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+          "status": "READY",
+          "platform": "darwin-x64",
+          "cleanup": null,
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": null,
+          "releaseQualified": null
+        },
+        {
+          "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14581194630/opencode-v2-posix-exec.json",
+          "bytes": 23384,
+          "sha256": "debccb3380fa2ea1c4301d5d6b696bf105597d98a47826831eb9c48dc018e1fb",
+          "kind": "TEST_POSIX_ORIGINAL_PATH_CONTRACT_A",
+          "status": "PASS_TRUSTED_WRITER_FIXTURE_ONLY",
+          "platform": "darwin",
+          "cleanup": true,
+          "modelOrigin": null,
+          "vendorAuthQualified": null,
+          "desktopQualified": null,
+          "releaseQualified": false
+        }
+      ],
+      "darwinX64P09": {
+        "status": "PASS_TRUSTED_WRITER_FIXTURE_ONLY",
+        "trustedWriterCases": 8,
+        "allTrustedWriterPass": true,
+        "cleanup": true,
+        "installedRuntimeQualified": false,
+        "releaseQualified": false,
+        "legacyStrictStatus": "INCOMPLETE"
+      },
+      "limits": [
+        "Current d8a0c Native Host receipts only; original Windows TEST process failures and Desktop prerequisite failures remain FAIL.",
+        "Native uses TEST-local scripted models; vendor auth/Desktop/release false.",
+        "Remaining Linux source lanes queued; no whole-run qualification yet."
+      ]
+    }
+  ],
+  "windowsArmClockAudit": {
+    "kind": "BOUNDED_ORIGINAL_CODEX_ARM_CLOCK_AND_SOURCE_JOIN",
+    "recordedAt": "2026-11-19T23:15:26.195567+00:00",
+    "reviewer": "/root",
+    "head": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+    "job": 135930970876,
+    "originalCustody": {
+      "path": "windows-arm64-d8a0c-source-custody.json",
+      "sha256": "25a2972697847d98a5141943e91810cfeec2e66a713d1adcd5b440a0486e1fe4"
+    },
+    "receipt": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/artifact-14583133566/agent-teams-ai/agent-teams-ai/process-acceptance-evidence/windows-source-codex-receipt.json",
+      "bytes": 34684,
+      "sha256": "30df7b07c078ed64c37610d174e7ae6ae2f58d77f608cceb1ac6bb5848b69b02"
+    },
+    "status": "INCOMPLETE_UNCHANGED",
+    "readCount": 109,
+    "consumerElapsedMs": 15019.7985,
+    "lastNativeReady": true,
+    "firstRefusal": {
+      "status": "unknown",
+      "reason": "empty"
+    },
+    "catalogIntervals": [
+      {
+        "invocation": 2,
+        "beforeAwaitMs": 321.8,
+        "afterAwaitMs": 2746.9,
+        "awaitIntervalMs": 2425.1,
+        "returnedMs": 2755.0
+      },
+      {
+        "invocation": 3,
+        "beforeAwaitMs": 5643.9,
+        "afterAwaitMs": 8038.7,
+        "awaitIntervalMs": 2394.8,
+        "returnedMs": 8047.4
+      },
+      {
+        "invocation": 4,
+        "beforeAwaitMs": 9034.4,
+        "afterAwaitMs": 11396.9,
+        "awaitIntervalMs": 2362.5,
+        "returnedMs": 11405.5
+      },
+      {
+        "invocation": 6,
+        "beforeAwaitMs": 11873.9,
+        "afterAwaitMs": 14231.2,
+        "awaitIntervalMs": 2357.3,
+        "returnedMs": 14239.4
+      }
+    ],
+    "catalogAwaitTotalMs": 9539.7,
+    "guardCostsAtLastOriginalPhase": {
+      "isCurrent": {
+        "calls": 133,
+        "totalMs": 1133.6,
+        "maxMs": 24.4
+      },
+      "canAllocate": {
+        "calls": 58,
+        "totalMs": 1844.9,
+        "maxMs": 67.7
+      },
+      "mcpSourceCurrent": {
+        "calls": 189,
+        "totalMs": 0.5,
+        "maxMs": 0
+      }
+    },
+    "clockJoin": {
+      "readinessReturnedPhaseMs": 14533.5,
+      "phaseAnchor": "CodexMemberProvider readinessObservation creation, performance.now() at original d8 line107",
+      "consumerAnchor": "One deadline after Start acknowledgement; separate readinessStarted at original scenario lines473-479",
+      "sameAnchorEstablished": false,
+      "atomicAtFailure": false,
+      "mayDeclareReadinessBeforeConsumerDeadline": false
+    },
+    "sourceFiles": {
+      "tools/owned-process-broker/nativeEmulatedSourceScenario.ts": {
+        "bytes": 58832,
+        "sha256": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf"
+      },
+      "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts": {
+        "bytes": 16688,
+        "sha256": "9a221fd80ff7e39159b534be0e56c35ed3bdfd1cec5280cf2d5f3e036a238b67"
+      },
+      "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts": {
+        "bytes": 28682,
+        "sha256": "196356b90040c01d897e3034c2fc577ddadb8e78b306a49eebdbb1c7e38b4260"
+      }
+    },
+    "trackedSourcePins": [
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "receiptSha256": "c94c351f1151f644d8ea7f87b5df0339606c59d1754b82b0d82061297258bdd0",
+        "gitBytesSha256": "f8442e4b59447b4d41ab2a36bc67d29f69fd6f694483408eb93479a0bfaaa3b0",
+        "gitBytesWithCrlfSha256": "c94c351f1151f644d8ea7f87b5df0339606c59d1754b82b0d82061297258bdd0",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "receiptSha256": "e14fd55c030348252b8ed9265f8a68fe4826150444d1622c301cef96a9dcc32a",
+        "gitBytesSha256": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf",
+        "gitBytesWithCrlfSha256": "e14fd55c030348252b8ed9265f8a68fe4826150444d1622c301cef96a9dcc32a",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+        "receiptSha256": "b5096a7776bf3162f63a2cb7edfadc613721f6aea2b74d0da26137dad203af73",
+        "gitBytesSha256": "88463c59938091a9b4578cbc2a4d135732b0a775105b02311813410b1a1e02be",
+        "gitBytesWithCrlfSha256": "b5096a7776bf3162f63a2cb7edfadc613721f6aea2b74d0da26137dad203af73",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedProfile.ts",
+        "receiptSha256": "43dc0de873a72ea4745a7f67155fbb0aae6728b3e661d3604fc69ac94676a481",
+        "gitBytesSha256": "32d76fe07f3cde34997325bc4020f46cc7cab0bcc770611b5ae20415f32e0a9e",
+        "gitBytesWithCrlfSha256": "43dc0de873a72ea4745a7f67155fbb0aae6728b3e661d3604fc69ac94676a481",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateContext.ts",
+        "receiptSha256": "f4fed4a4859dfa759b75789ce312de7ae58e3e841dac5cfc75166c81b23e4275",
+        "gitBytesSha256": "2340474769ccd4b9962134cd42146185e11a9b5aa07232b54e90c25d197e422c",
+        "gitBytesWithCrlfSha256": "f4fed4a4859dfa759b75789ce312de7ae58e3e841dac5cfc75166c81b23e4275",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeGateEvents.ts",
+        "receiptSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+        "gitBytesSha256": "2f06d37ad0ea51fda654501d4c08a6066a1914a9cfe59c2d73d4f29db4c8ba7d",
+        "gitBytesWithCrlfSha256": "d8c7b487bbaac95d4fb25080ce57d8d3d36c04c9a2a7297157993dd98698e0c4",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceReadiness.ts",
+        "receiptSha256": "594c15aa3152189b25bf425b973cd374938f256e823eab4ec4bb1130d9a45a98",
+        "gitBytesSha256": "196356b90040c01d897e3034c2fc577ddadb8e78b306a49eebdbb1c7e38b4260",
+        "gitBytesWithCrlfSha256": "594c15aa3152189b25bf425b973cd374938f256e823eab4ec4bb1130d9a45a98",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+        "receiptSha256": "64f61c4110311f649a50d56011344d07b5f3343bc86a6ce3de01359d637c5c49",
+        "gitBytesSha256": "7214628f6af34fdb6f9224baec10e3aaceefdcef7632bb7942d2653f6fe405f1",
+        "gitBytesWithCrlfSha256": "64f61c4110311f649a50d56011344d07b5f3343bc86a6ce3de01359d637c5c49",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerPeer.mjs",
+        "receiptSha256": "72f63bb021adfb0a924f81e811e2528192f890d2f3f2585ca0d6bf93209ab063",
+        "gitBytesSha256": "6434d3246aaee59b4c3c485e2a943be344006120327f9731f1afe8be7673b4b9",
+        "gitBytesWithCrlfSha256": "72f63bb021adfb0a924f81e811e2528192f890d2f3f2585ca0d6bf93209ab063",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "tools/owned-process-broker/fixtures/providerDesktopPeer.mjs",
+        "receiptSha256": "f59f447a54788abae625acc9b285dcdef510fdd54a6a970c8e8998ed1cab3398",
+        "gitBytesSha256": "685245ef96356ed46b3915420b8ae78b460de322200fd473e6763fa81a7a6db4",
+        "gitBytesWithCrlfSha256": "f59f447a54788abae625acc9b285dcdef510fdd54a6a970c8e8998ed1cab3398",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/owned-process/HostWindowsLaunch.ts",
+        "receiptSha256": "896fa49921694cd230a5f49f20b149c02df3e8b3bc608e363273207bbcbac9f6",
+        "gitBytesSha256": "1f525b8dab2b9df0d40d2e76b7810c2c4bc576e53da920c59fbc3784c2afe97e",
+        "gitBytesWithCrlfSha256": "896fa49921694cd230a5f49f20b149c02df3e8b3bc608e363273207bbcbac9f6",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+        "receiptSha256": "ff912500bb6b6cefcbc7d0bc85c626bbcca22b037aa0da054a93dc183fc2005c",
+        "gitBytesSha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b",
+        "gitBytesWithCrlfSha256": "ff912500bb6b6cefcbc7d0bc85c626bbcca22b037aa0da054a93dc183fc2005c",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+        "receiptSha256": "6cb2d87177a276cb9d47fe1cf33886d16bec101ef778f3483bddb742a4daedc6",
+        "gitBytesSha256": "5aeb27d52112984292843ffbb9e5aa651466e068b33b40f1c4e93029d643e6a1",
+        "gitBytesWithCrlfSha256": "6cb2d87177a276cb9d47fe1cf33886d16bec101ef778f3483bddb742a4daedc6",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "receiptSha256": "a68cdd69dbd9035c3c77e19b1780580577dd1671908f2193861487eca0a5f7ec",
+        "gitBytesSha256": "38c42051561c5aca7e97f6ada0fb74c4bc3ccf397d3db45a93521d66053f5703",
+        "gitBytesWithCrlfSha256": "a68cdd69dbd9035c3c77e19b1780580577dd1671908f2193861487eca0a5f7ec",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/runtimeControlAuthority.ts",
+        "receiptSha256": "524b1903b6abc88e776ab1d1cbd044a46e706d0df08d72676c5cb7f31594ba37",
+        "gitBytesSha256": "aae5ab79d92ca2c6ad1c5ed06744ca6e40b13a98c6e801e374802967c5c722b7",
+        "gitBytesWithCrlfSha256": "524b1903b6abc88e776ab1d1cbd044a46e706d0df08d72676c5cb7f31594ba37",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+        "receiptSha256": "8e9894fe12540f4718b3faa1d61f25e35c71b7cdd97884400446d0876c0f3076",
+        "gitBytesSha256": "ca08d8b8df706da5cced63fdf51b3088b24889128e7f29b0aab330c616cfa232",
+        "gitBytesWithCrlfSha256": "8e9894fe12540f4718b3faa1d61f25e35c71b7cdd97884400446d0876c0f3076",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+        "receiptSha256": "8d2c29d4f670cb47fe47c51c48c5e3ea67a725e8b5607127b39b043855948adc",
+        "gitBytesSha256": "06f9e6879e0a806029c2fbc0fd55aa5f4741fdda8bee71dda87484779069aceb",
+        "gitBytesWithCrlfSha256": "8d2c29d4f670cb47fe47c51c48c5e3ea67a725e8b5607127b39b043855948adc",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+        "receiptSha256": "ad33df62f693684c0d4f2d73f1f2536870a3f9b30f740226332ad8824fb8e842",
+        "gitBytesSha256": "9c87416bacfc3c4f79a2ded42c039ae13687bc45ae6ae34f135c6d54d0784c93",
+        "gitBytesWithCrlfSha256": "ad33df62f693684c0d4f2d73f1f2536870a3f9b30f740226332ad8824fb8e842",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/teamRoster.ts",
+        "receiptSha256": "6cbacb6c827852c9bef61b3268cb3a9f77ae1c61d8a38043d72a1bca67b51b95",
+        "gitBytesSha256": "f3ecbccb830126422c3c9058a96ae17af4346f6472b31f6b11170843a30ff43b",
+        "gitBytesWithCrlfSha256": "6cbacb6c827852c9bef61b3268cb3a9f77ae1c61d8a38043d72a1bca67b51b95",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+        "receiptSha256": "81fe735ed0db4284a493c64e4dd71b533eaf8904ad52ebd07c362665abde16b0",
+        "gitBytesSha256": "eacdf3534e3c5e9ac8709ee149ead698272900e90f7b30ae7c5bf35ebfb607ae",
+        "gitBytesWithCrlfSha256": "81fe735ed0db4284a493c64e4dd71b533eaf8904ad52ebd07c362665abde16b0",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+        "receiptSha256": "944f4b61a6a41daa474efb2990cbace10cc63432634677cf9e67f48e6d5b7b3e",
+        "gitBytesSha256": "74fb65d52520ae92e5284649b742ea52f73ce338666b0cec45f0798f894ead38",
+        "gitBytesWithCrlfSha256": "944f4b61a6a41daa474efb2990cbace10cc63432634677cf9e67f48e6d5b7b3e",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/management/ModelProbeOwner.ts",
+        "receiptSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+        "gitBytesSha256": "fe9227bedef2284945618382289b36681757175e0f9ffa9f50cf219809f4ced2",
+        "gitBytesWithCrlfSha256": "db3058dc894c6d0555d55c60b2af92e51ad155d64667d3c7942484021b508361",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/projectRuntimeMember.ts",
+        "receiptSha256": "59d89f099308baef0e51b0d84fedfac82c7a0a906c2b3ba13b981a3d1724fbe9",
+        "gitBytesSha256": "f965241bd2d0a841682572f49007511dfa4edfd33e4ec5136e3bc6998775bc17",
+        "gitBytesWithCrlfSha256": "59d89f099308baef0e51b0d84fedfac82c7a0a906c2b3ba13b981a3d1724fbe9",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts",
+        "receiptSha256": "3dcd53575152fe76717e992892a94246c4e4a74007c2d2a3e40832dca1f5a3bf",
+        "gitBytesSha256": "6061f51e4537a966b3c33c595d2538cb0a7be1bf1fdce0975a0e07eeecb0f3f1",
+        "gitBytesWithCrlfSha256": "3dcd53575152fe76717e992892a94246c4e4a74007c2d2a3e40832dca1f5a3bf",
+        "match": "LF-to-CRLF"
+      },
+      {
+        "path": "packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts",
+        "receiptSha256": "12406cb4000b7e72593ed3f2802395ad539236fbd123d4b9c0defc7edbc0a606",
+        "gitBytesSha256": "9a221fd80ff7e39159b534be0e56c35ed3bdfd1cec5280cf2d5f3e036a238b67",
+        "gitBytesWithCrlfSha256": "12406cb4000b7e72593ed3f2802395ad539236fbd123d4b9c0defc7edbc0a606",
+        "match": "LF-to-CRLF"
+      }
+    ],
+    "allTrackedPinsMatchCheckoutLineEndingPolicy": true,
+    "cleanup": {
+      "confirmed": true,
+      "originalHandles": 7,
+      "allAbsent": true
+    },
+    "productionFixProved": null,
+    "nextIndependentStep": "Inspect the existing captured Codex catalog execution and settlement chain against the repeated 2.36-2.43s await intervals, reusing prior bounded reviews; no timeout increase, catalog caching, removal of observations or additional native execution.",
+    "limits": [
+      "No CI/download/test/provider execution or repository source edit for this audit.",
+      "Catalog intervals may include authority and custody; guard aggregates overlap rather than add as disjoint time.",
+      "Passive OpenCode namespace diagnostics are not declared a Codex ARM fix and first-refusal data is empty.",
+      "Keep 15s original oracle, UNKNOWN and cleanup facts separately."
+    ]
+  },
+  "windowsX64Analysis": {
+    "file": "windows-x64-d8a0c-source-analysis.json",
+    "sha256": "83cf41f3d0bbdba3aebf9654b5e4b520a4eec5faf98a976b7212e4d8588857df",
+    "qualification": "INCOMPLETE; cleanup confirmed; not fixed by passive metrics"
+  },
+  "desktopPrerequisiteFailure": "See provider-receipt-schema-correction-20261119.json and its raw bundle; original d8 failures retained.",
+  "prior639Terminal": {
+    "head": "63927aecd95c814f66db23d7bd4aef6975110168",
+    "supersededBy": "d8a0c2965740789008ee0b8965f0889fbff5b712",
+    "observedAt": "2026-11-19 22:39:48 UTC",
+    "newlyTerminalRuns": [
+      {
+        "id": 44612380113,
+        "head": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "runAttempt": 1,
+        "created_at": "2026-11-19T20:48:18Z",
+        "updated_at": "2026-11-19T22:30:07Z"
+      },
+      {
+        "id": 44612380114,
+        "head": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "runAttempt": 1,
+        "created_at": "2026-11-19T20:48:18Z",
+        "updated_at": "2026-11-19T22:30:03Z"
+      },
+      {
+        "id": 44612495031,
+        "head": "63927aecd95c814f66db23d7bd4aef6975110168",
+        "status": "completed",
+        "conclusion": "failure",
+        "runAttempt": 1,
+        "created_at": "2026-11-19T20:49:01Z",
+        "updated_at": "2026-11-19T22:33:26Z"
+      }
+    ],
+    "allJobCounts": [
+      {
+        "runId": 44612380409,
+        "sourceQualification": true,
+        "counts": {
+          "failure": 2,
+          "success": 3
+        }
+      },
+      {
+        "runId": 44612379988,
+        "sourceQualification": true,
+        "counts": {
+          "success": 9
+        }
+      },
+      {
+        "runId": 44612380113,
+        "sourceQualification": true,
+        "counts": {
+          "success": 15,
+          "cancelled": 14,
+          "failure": 1
+        }
+      },
+      {
+        "runId": 44612380114,
+        "sourceQualification": true,
+        "counts": {
+          "success": 2,
+          "skipped": 11,
+          "cancelled": 2
+        }
+      },
+      {
+        "runId": 44612495031,
+        "sourceQualification": false,
+        "counts": {
+          "success": 1,
+          "skipped": 13,
+          "failure": 1
+        }
+      }
+    ],
+    "sourceFailures": [
+      {
+        "job": 135872078380,
+        "audit": "windows-x64-63927ae-audit.json"
+      },
+      {
+        "job": 135872077782,
+        "audit": "windows-arm64-63927ae-audit.json"
+      },
+      {
+        "job": 135872091564,
+        "custody": "darwin-review-63927-source-custody.json",
+        "sourceAnalysis": "Root delegated separate source analysis; not changed by observer"
+      }
+    ],
+    "nativePassEvidence": "native63927-terminal-audit.json",
+    "processTerminalEvidence": "ci63927-process-terminal.json",
+    "metadataFailure": {
+      "run": 44612495031,
+      "job": 135902479105,
+      "reason": "Only a ready PR title/body edit can carry existing qualification",
+      "log": "job-135902479105.log",
+      "logSha256": "58fb2f575ba903fbaaec93f2a26b6abbf89cd596f1b4ac15b6ad8136b226ffe4"
+    },
+    "limits": [
+      "Natural cancellation after genuine reviewed source publication is not PASS.",
+      "All639 original runs terminal; no manual rerun/dispatch/cancel.",
+      "New appd8a source must qualify independently; do not carry partial639 passes forward."
+    ]
+  },
+  "rawEvidence": {
+    "path": "native-source-receipts-d8a0c29-20261119.tar.gz",
+    "bytes": 78997,
+    "sha256": "f11c155fd2109dfb5f510528d7644112e6081566b59ef7d88459c5e099294594",
+    "entries": 26
+  },
+  "limits": [
+    "Queued/running/skipped/cancelled are not PASS.",
+    "Only original d8 results qualify these recorded source paths; future source must run its own original checks.",
+    "Native Host/P09 fixture success does not qualify failed Windows process or Desktop journeys; installed/release=false."
+  ]
+}

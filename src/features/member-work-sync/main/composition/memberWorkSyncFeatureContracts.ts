@@ -27,6 +27,14 @@ export function buildMemberWorkSyncRuntimeTurnSettledEnvironment(input: {
 }
 
 export interface MemberWorkSyncFeatureFacade {
+  /** Main Stop only: capture before native teardown; drain outside all owner locks. */
+  captureNativeStopFence(teamName: string): {
+    drain(): Promise<void>;
+    assertDrained(): void;
+    release(): void;
+  };
+  /** Main-only read fence; never invoke from an admitted WorkSync operation. */
+  withStoppedImportFence<T>(teamName: string, read: () => Promise<T>): Promise<T>;
   getStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
   refreshStatus(request: MemberWorkSyncStatusRequest): Promise<MemberWorkSyncStatus>;
   getMetrics(request: MemberWorkSyncMetricsRequest): Promise<MemberWorkSyncTeamMetrics>;
@@ -119,4 +127,15 @@ export function normalizeRecoveryTaskRefs(
     });
   }
   return normalized.sort((left, right) => left.taskId.localeCompare(right.taskId));
+}
+
+export function emptyMemberWorkSyncSchedulerHealth(): ReturnType<
+  MemberWorkSyncFeatureFacade['getSchedulerHealth']
+> {
+  return {
+    pendingDiscovery: 0,
+    retainedDispatches: 0,
+    lastDiscoveryAt: null,
+    discoveryCapacityExhausted: false,
+  };
 }

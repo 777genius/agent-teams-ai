@@ -1,0 +1,483 @@
+import { runDesktopNativeGroupUiSmoke } from './desktop-native-group-ui-smoke.ts';
+import { prepareNativeNextPromptImeUi, qualifyNativeNextPromptUiStep } from './desktop-native-next-prompt-ui.ts';
+import { prepareNativeChatAttachments } from './desktop-native-chat-attachments-ui.ts';
+import { revealDesktopReply } from './desktop-reply-visibility.ts';
+import assert from 'node:assert/strict';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { fileDigest } from './desktop-backend-fixture.ts';
+import { readDesktopNativeStopSessions } from './desktop-native-stop-fixture.ts';
+import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import type { UiCdpPort } from './desktop-ui-controls.ts';
+import type { startNativeTeamModel } from '../../packages/legacy-agent-host/tests/fixtures/native-claude-team/model.ts';
+import type { startOpenCodeModel } from '../../packages/legacy-agent-host/tests/fixtures/native-opencode-team/model.ts';
+import { checkpoint } from './desktop-resume-records.ts';
+const record = (value: unknown): Record<string, unknown> => {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+  return value as Record<string, unknown>;
+};
+async function json(path: string): Promise<unknown> {
+  return JSON.parse(await readFile(path, 'utf8')) as unknown;
+}
+async function rows(path: string): Promise<Record<string, unknown>[]> {
+  const files = (await readdir(path)).filter((name) => /^[A-Za-z0-9_-]+\.json$/.test(name));
+  assert.ok(files.length <= 128);
+  return Promise.all(files.map(async (name) => record(await json(join(path, name)))));
+}
+/** Deliberate new conversation scenario; does not repeat the already proven Task-create UI. */
+export async function runDesktopComposerUiSmoke(
+  cdp: UiCdpPort,
+  options: {
+    root: string;
+    repo: string;
+    seed: { taskId: string; subject: string; commandId: string };
+    assertOwnedRenderer(): void;
+    evidence: Record<string, unknown>;
+    nativeStop?: { assertNativeAbsent(): void };
+    model?: Awaited<ReturnType<typeof startNativeTeamModel>>;
+    openCodeModel?: Awaited<ReturnType<typeof startOpenCodeModel>>;
+  }
+): Promise<void> {
+  assert.ok(options.nativeStop && (options.model || options.openCodeModel));
+  if (process.env.LEGACY_DESKTOP_GROUP_CHATS === '1') {
+    assert.ok(options.model && !options.openCodeModel);
+    await runDesktopNativeGroupUiSmoke(cdp, {
+      ...options,
+      nativeStop: options.nativeStop,
+      model: options.model,
+    });
+    return;
+  }
+  const openCode = options.openCodeModel !== undefined;
+  const model = options.openCodeModel ?? options.model!;
+  const nativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI === '1';
+  const extendedNativeNextPromptUi = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EXTENDED === '1';
+  const nativeNextPromptEditGuards = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_EDIT_GUARDS === '1';
+  const nativeNextPromptShiftTab = process.env.LEGACY_DESKTOP_NATIVE_NEXT_PROMPT_UI_SHIFT_TAB === '1';
+  assert.ok(!extendedNativeNextPromptUi || nativeNextPromptUi,
+    'extended suggestion proof requires its original native conversation fixture');
+  assert.ok(!nativeNextPromptEditGuards || extendedNativeNextPromptUi,
+    'suggestion edit guards require the original extended native UI fixture');
+  assert.ok(!nativeNextPromptShiftTab || nativeNextPromptEditGuards,
+    'visible-offer Shift+Tab requires the original native edit-guard fixture');
+  if (nativeNextPromptUi) {
+    assert.ok(!openCode && options.model?.suggestionRequests,
+      'original TEST Claude SDK must supply the actual follow-up model oracle');
+    options.evidence.nativeNextPromptUi = {
+      status: 'INCOMPLETE',
+      extended: extendedNativeNextPromptUi,
+      editGuards: nativeNextPromptEditGuards,
+      scope: 'original captured Host -> actual Claude SDK -> Main IPC -> physical Electron Composer',
+      screenshots: [],
+      excluded: ['paid vendor authentication', 'Codex native 0.169', 'unscoped HTTP SSE'],
+    };
+  }
+  const steps: Record<string, unknown>[] = [];
+  const step = (value: Record<string, unknown>) => {
+    steps.push({ monotonicMs: Math.round(performance.now()), ...value });
+  };
+  options.evidence.conversationUiProof = {
+    status: 'INCOMPLETE',
+    steps,
+    scope:
+      `Ordinary Composer/recipient/Send, two actual native ${openCode ? 'OpenCode V2' : 'Claude'} turns/MCP/shell, canonical replies and ordinary Stop before Quit`,
+    excluded: [
+      'ordinary Launch UI',
+      'vendor inference/authentication',
+      'full activity widgets',
+      'full P5/P8',
+    ],
+  };
+  const ui = createDesktopUiControls(cdp, {
+    assertOwnedRenderer: options.assertOwnedRenderer,
+    step,
+  });
+  await ui.observeInput();
+  await ui.clickSidebar(options.seed.subject);
+  await ui.click('button[aria-label^="alice,"]', 'open ordinary alice direct chat');
+  try {
+    await ui.waitRead(
+      `Boolean(document.querySelector('.message-composer-flat-layout textarea'))`,
+      'direct chat Composer is visible'
+    );
+  } catch (error) {
+    // Observe only closed TEST metadata. Do not log private messages or DOM text.
+    const renderer = await cdp.evaluate(`(() => {
+      const root = document.getElementById('root');
+      const state = window.__agentTeamsDevStore?.getState?.();
+      const selected = state?.selectedTeamData;
+      const members = Array.isArray(selected?.members) ? selected.members : [];
+      const alice = members.find(row => row.name === 'alice');
+      return {
+        rootPresent: !!root, rootChildren: Math.min(root?.childElementCount ?? 0, 16),
+        fatalFallback: Boolean(root?.firstElementChild?.querySelector('svg.size-10.text-red-500')),
+        storePresent: !!state, selectedHostTeam: typeof state?.selectedTeamName === 'string' &&
+          state.selectedTeamName.startsWith('host-team:'),
+        capturedAlice: alice?.runtimeOwner === 'captured-host',
+        aliceIdMatches: alice?.hostMemberId === 'alice-id',
+        selectedDirectChat: state?.selectedTeamName != null && members.some(row => row.name === 'alice'),
+        anyTextareas: Math.min(document.querySelectorAll('textarea').length, 16),
+        composerRoots: Math.min(document.querySelectorAll('.message-composer-flat-layout').length, 16),
+        targetTextareas: Math.min(document.querySelectorAll('.message-composer-flat-layout textarea').length, 16),
+        documentComplete: document.readyState === 'complete',
+      };
+    })()`).catch(() => null);
+    const facts = { phase: 'direct-composer-bootstrap', renderer };
+    step({ assertion: 'direct chat composer missing', ...facts });
+    process.stderr.write('TEST_NATIVE_COMPOSER_BOOTSTRAP_DIAGNOSTIC ' + JSON.stringify(facts) + '\n');
+    throw new Error('TEST direct chat Composer not visible: ' + JSON.stringify(facts), { cause: error });
+  }
+  if (nativeNextPromptUi) {
+    // The real Electron config, not the fixture's written file, owns billing opt-in.
+    assert.equal(await cdp.evaluate(`window.electronAPI.config.get().then(
+      config => config.providerConnections.anthropic.nativeNextPromptSuggestionsEnabled === true
+    )`), true, 'original Electron Main config captured native suggestion opt-in');
+    // TEST-only passive observation of the existing scoped preload channel.
+    // Capture booleans, never private suggestion content or credentials.
+    assert.equal(await cdp.evaluate(`(() => {
+      const bridge=window.electronAPI?.nativePromptSuggestions;
+      if(typeof bridge?.onUpdated!=='function')return false;
+      window.__TEST_nativeNextPromptNotices=[];
+      bridge.onUpdated(value=>{
+        const rows=window.__TEST_nativeNextPromptNotices;
+        if(!Array.isArray(rows)||rows.length>=8)return;
+        rows.push({
+          ownerIsHost:typeof value?.ownerHandle==='string'&&value.ownerHandle.startsWith('host-team:'),
+          memberIsAlice:value?.memberId==='alice-id',
+          providerIsClaude:value?.provider==='claude',
+          messageIdPresent:typeof value?.messageId==='string'&&value.messageId.length>0,
+          textIsTestSuggestion:typeof value?.text==='string'&&[
+            'Review the completed tests and open a PR',
+            'Summarize the changes and check for regressions.',
+            'Verify the final results and prepare a report.',
+            'Check the final report and summarize the remaining work.',
+            'Review the attachment changes and verify the result.',
+            'Review the referenced file and summarize the result.',
+            'Review the current action mode and verify the result.'
+          ].includes(value.text)
+        });
+      });
+      return true;
+    })()`), true, 'scoped native suggestion preload observable without a new transport');
+  }
+  const team = join(options.root, 'hoststore/teams/test-desktop-backend');
+  const commands = join(team, '.host-owner/commands');
+  const incomingIds: string[] = [];
+  const nativeInputIds: string[] = [];
+  const turns = openCode ? [
+    ['OPENCODE_TEAM_ONE', 'REPLY_OPENCODE_ONE'],
+    ['OPENCODE_TEAM_TWO', 'REPLY_OPENCODE_TWO'],
+  ] as const : [
+    ['NATIVE_TEAM_ONE', 'REPLY_NATIVE_ONE'],
+    ['NATIVE_TEAM_TWO', 'REPLY_NATIVE_TWO'],
+  ] as const;
+  const selectedTurns = nativeNextPromptUi
+    ? [...turns, ['NATIVE_TEAM_THREE', 'REPLY_NATIVE_THREE'] as const,
+        ['NATIVE_TEAM_FOUR', 'REPLY_NATIVE_FOUR'] as const,
+        ...(extendedNativeNextPromptUi ? [['NATIVE_TEAM_FIVE', 'REPLY_NATIVE_FIVE'] as const] : []),
+        ...(nativeNextPromptEditGuards ? [
+          ['NATIVE_TEAM_SIX', 'REPLY_NATIVE_SIX'] as const,
+          ['NATIVE_TEAM_SEVEN', 'REPLY_NATIVE_SEVEN'] as const,
+        ] : []),
+        ...(nativeNextPromptShiftTab ? [['NATIVE_TEAM_EIGHT', 'REPLY_NATIVE_EIGHT'] as const] : [])]
+    : turns;
+  for (const [turn, reply] of selectedTurns) {
+    if (nativeNextPromptUi) {
+      record(options.evidence.nativeNextPromptUi).currentTurn = turn;
+      process.stderr.write('TEST_NATIVE_COMPOSER_STAGE ' + JSON.stringify({ turn }) + '\n');
+    }
+    if (nativeNextPromptUi && turn === 'NATIVE_TEAM_FIVE')
+      await prepareNativeNextPromptImeUi(cdp, ui);
+    await ui.click('.message-composer-flat-layout textarea', 'focus ordinary Composer');
+    await cdp.send('Input.insertText', { text: turn });
+    await ui.waitRead(
+      `document.querySelector('.message-composer-flat-layout textarea')?.value===${JSON.stringify(turn)}`,
+      'typed message retained'
+    );
+    step({ action: 'Input.insertText', turn });
+    const verifyAttachments =
+      turn.endsWith('_TEAM_TWO') && process.env.LEGACY_DESKTOP_CHAT_ATTACHMENTS === '1'
+        ? await prepareNativeChatAttachments(cdp, { ...options, step, openCodeV2: openCode })
+        : undefined;
+    await ui.click('button.message-composer-send-button', 'ordinary Send once', 'Send');
+    await ui.waitRead(
+      `document.querySelector('.message-composer-flat-layout textarea')?.value===''`,
+      'Composer clears after admitted send'
+    );
+    // Only DOM reads wait for the visible native reply. Never click Send again.
+    await ui.waitRead(
+      `(() => {
+      const e=document.querySelector('.message-composer-flat-layout');
+      return Boolean(e)&&document.body.innerText.includes(${JSON.stringify(reply)});
+    })()`,
+      'native reply visible in ordinary thread',
+      45_000
+    );
+    await revealDesktopReply(cdp, reply, {
+      assertOwnedRenderer: options.assertOwnedRenderer,
+      step,
+    });
+    assert.deepEqual(model.failures, [], 'local model oracle rejects any failed native MCP action');
+    const human = (await rows(commands)).filter((row) => {
+      const command = record(row.command);
+      return (
+        row.principalId === 'TEST-human' &&
+        command.operation === 'message.send' &&
+        record(command.payload).text === turn
+      );
+    });
+    assert.equal(human.length, 1, 'one original human command per actual Send');
+    const receipt = human[0]!;
+    assert.equal(receipt.phase, 'completed');
+    const id = String(receipt.commandId);
+    assert.match(id, /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/);
+    assert.equal(record(record(receipt.command).payload).messageId, id);
+    assert.equal(record(receipt.effects).messageId, id);
+    const deliveryId = String(record(receipt.effects).deliveryId);
+    assert.match(deliveryId, /^[a-f0-9-]{36}$/);
+    const outbox = record(await json(join(team, '.host-owner/outbox', deliveryId + '.json')));
+    assert.equal(outbox.messageId, id);
+    assert.equal(outbox.inputId, deliveryId);
+    nativeInputIds.push(deliveryId);
+    assert.equal(outbox.phase, 'admitted');
+    assert.equal(record(outbox.binding).memberId, 'alice-id');
+    assert.equal(record(outbox.binding).generation, '1');
+    const observations = model.observations.filter((row) => row.turn === turn);
+    assert.ok(observations.length > 0);
+    assert.ok(
+      observations.every(
+        (row) =>
+          row.incomingMessageId === id &&
+          row.visibleReplyContract &&
+          row.contextEffective &&
+          (!('toolResultError' in row) || !row.toolResultError || (row.turn === 'NATIVE_TEAM_ONE' && row.step === 4))
+      )
+    );
+    if (nativeNextPromptUi) assert.ok(observations.every(row => !('toolResultError' in row) || !row.toolResultError),
+      'native suggestion proof uses a clean SDK turn; original failure-path proof stays separate');
+    if (turn.endsWith('_TEAM_TWO')) assert.ok(observations.every((row) => row.priorTurn));
+    if (verifyAttachments) {
+      const refs = record(record(receipt.command).payload).attachments;
+      assert.ok(
+        Array.isArray(refs) && refs.length === (openCode ? 1 : 2),
+        'same original message receipt retains every canonical reference'
+      );
+      assert.deepEqual(outbox.attachments, refs);
+      const attachmentsProof = record(options.evidence.nativeChatAttachments);
+      const sources = attachmentsProof.files;
+      assert.ok(Array.isArray(sources) && sources.length === (openCode ? 1 : 2));
+      const prepared = record(attachmentsProof.preparedImage);
+      assert.equal(prepared.originalFilename, record(sources[0]).filename);
+      const expected = openCode ? [prepared] : [prepared, sources[1]];
+      refs.forEach((value, index) => {
+        const ref = record(value),
+          file = record(expected[index]);
+        assert.match(String(ref.artifactId), /^[a-f0-9]{64}$/);
+        assert.equal(ref.digest, file.sha256);
+        assert.equal(ref.byteLength, file.size);
+        assert.equal(ref.mimeType, file.mimeType);
+        assert.equal(ref.filePath, undefined);
+        assert.equal(ref.base64Data, undefined);
+      });
+      if (options.openCodeModel) {
+        const images = options.openCodeModel.observations.filter(row => row.turn === turn);
+        assert.equal(images.length, 3);
+        assert.ok(images.every(row => row.nativeImage?.nativeSha256 === prepared.sha256),
+          'actual native inference receives exactly the original Composer prepared PNG');
+      }
+      await verifyAttachments(id);
+    }
+    const inbox = await json(join(team, 'inboxes/user.json'));
+    assert.ok(Array.isArray(inbox));
+    const replies = inbox.map(record).filter((row) => row.text === reply);
+    assert.equal(replies.length, 1);
+    assert.equal(replies[0]!.from, 'alice');
+    incomingIds.push(id);
+    step({
+      assertion: 'native reply visible with exact canonical input and MCP actor',
+      turn,
+      reply,
+      commandId: id,
+      observations: observations.length,
+    });
+    if (nativeNextPromptUi) {
+      assert.ok(
+        turn === 'NATIVE_TEAM_ONE' || turn === 'NATIVE_TEAM_TWO' ||
+          turn === 'NATIVE_TEAM_THREE' || turn === 'NATIVE_TEAM_FOUR' || turn === 'NATIVE_TEAM_FIVE' ||
+          turn === 'NATIVE_TEAM_SIX' || turn === 'NATIVE_TEAM_SEVEN' || turn === 'NATIVE_TEAM_EIGHT',
+        'original Claude native conversation only',
+      );
+      // Claude SDK's first native turn may not emit a follow-up. Only
+      // later turns must exercise actual Insert, Escape and Tab in Electron.
+      if (turn === 'NATIVE_TEAM_ONE') {
+        step({ assertion: 'first original Claude turn completed; SDK follow-up optional', turn });
+      } else {
+        try {
+          await qualifyNativeNextPromptUiStep(cdp, ui, {
+            root: options.root,
+            turn,
+            expectedHumanInputs: incomingIds.length,
+            originalHumanSendCount: async () => (await rows(commands)).filter(row =>
+              row.principalId === 'TEST-human' && record(row.command).operation === 'message.send'
+            ).length,
+            modelSampleCount: () => options.model?.suggestionRequests?.length ?? -1,
+            modelSampleCountForTurn: () => options.model?.suggestionRequests?.filter(sample => sample.turn === turn).length ?? -1,
+            step,
+            evidence: options.evidence,
+          });
+        } catch (error) {
+          // Diagnose missing row without another model request or product mutation.
+          const renderer = await cdp.evaluate(`(() => {
+            const state=window.__agentTeamsDevStore?.getState?.();
+            const team=state?.selectedTeamData;
+            const rawMessages=state?.selectedTeamName &&
+              state.teamMessagesByName?.[state.selectedTeamName]?.canonicalMessages;
+            const messages=Array.isArray(rawMessages)?rawMessages:[];
+            const members=Array.isArray(team?.members)?team.members:[];
+            const alice=members.find(member=>member.name==='alice');
+            const direct=messages.filter(message=>message.from==='user'&&message.to==='alice');
+            const notices=window.__TEST_nativeNextPromptNotices;
+            return {
+              storeAvailable:Boolean(state),
+              selectedHostTeam:typeof state?.selectedTeamName==='string'&&state.selectedTeamName.startsWith('host-team:'),
+              memberCaptured:alice?.runtimeOwner==='captured-host',
+              memberIdMatches:alice?.hostMemberId==='alice-id',
+              originalDirectMessages:Math.min(direct.length,16),
+              latestDirectHasMessageId:typeof direct.at(-1)?.messageId==='string',
+              draftEmpty:document.querySelector('.message-composer-flat-layout textarea')?.value==='',
+              rowCount:Math.min(document.querySelectorAll('[data-testid="native-next-prompt-row"]').length,8),
+              noticed:Array.isArray(notices)?notices.slice(0,8):null
+            };
+          })()`).catch(() => null);
+          const diagnostic = { turn, expectedHumanInputs: incomingIds.length,
+            nativeSampleRequests: options.model?.suggestionRequests?.length ?? -1, renderer };
+          step({ assertion: 'native next prompt missing row diagnostic', ...diagnostic });
+          // The outer Desktop harness retains only stack frames on failure.
+          // These diagnostic fields are bounded booleans/counts, never DM text,
+          // operation tokens, model payloads or user credentials.
+          process.stderr.write('TEST_NATIVE_SUGGESTION_DIAGNOSTIC ' +
+            JSON.stringify(diagnostic) + '\n');
+          throw new Error('TEST native suggestion UI incomplete: ' + JSON.stringify(diagnostic), { cause: error });
+        }
+      }
+    }
+  }
+  const until = Date.now() + 15_000;
+  let sessions = await readDesktopNativeStopSessions(options.root);
+  const settled = () =>
+    sessions.length === 1 &&
+    Array.isArray(sessions[0]!.inputs) &&
+    (sessions[0]!.inputs as unknown[])
+      .map(record)
+      .every((row) => row.phase === 'terminal' && row.terminal === 'succeeded');
+  while (!settled() && Date.now() < until) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 100));
+    sessions = await readDesktopNativeStopSessions(options.root);
+  }
+  assert.ok(settled(), 'all admitted native inputs settle before ordinary Stop');
+  const inputIds = (sessions[0]!.inputs as unknown[])
+    .map(record)
+    .map((row) => record(row.intent).inputId);
+  for (const id of nativeInputIds) assert.ok(inputIds.includes(id));
+  const tasks = await rows(join(options.root, 'hoststore/tasks/test-desktop-backend'));
+  assert.equal(tasks.length, 2, 'seed plus one actual native tool-created Task');
+  const task = tasks.find((row) => row.createdBy === 'alice');
+  assert.ok(task);
+  assert.equal(task.status, 'completed');
+  assert.equal(task.owner, 'alice');
+  assert.equal(record((task.comments as unknown[])[0]).author, 'alice');
+  await ui.waitRead(
+    `Boolean(document.querySelector('.kanban-task-card[data-task-id="'+CSS.escape(${JSON.stringify(task.id)})+'"]'))`,
+    'native Task automatically appears in ordinary Kanban',
+    15_000
+  );
+
+  assert.equal(
+    await readFile(join(options.root, 'workspace/native-effect.txt'), 'utf8'),
+    'ONE\nTWO\n'
+  );
+  const screenshot = record(
+    await cdp.send('Page.captureScreenshot', { format: 'png', fromSurface: true })
+  );
+  const screenshotPath = join(options.root, 'ui-native-replies.png');
+  await writeFile(screenshotPath, Buffer.from(String(screenshot.data), 'base64'), { mode: 0o600 });
+  options.evidence.conversationScreenshot = {
+    path: screenshotPath,
+    sha256: await fileDigest(screenshotPath),
+  };
+  if (nativeNextPromptUi)
+    await ui.scrollTo('button[aria-label="Stop"]',
+      'reveal original Stop after the native suggestion conversation', 'Stop');
+  await ui.click(
+    'button[aria-label="Stop"]',
+    'ordinary Stop once after native conversation',
+    'Stop'
+  );
+  await ui.waitRead(
+    `![...document.querySelectorAll('button')].some(e=>e.getAttribute('aria-label')==='Stop'||e.getAttribute('aria-label')?.startsWith('Stopping'))`,
+    'Stop settles before Quit'
+  );
+  sessions = await readDesktopNativeStopSessions(options.root);
+  assert.equal(sessions.length, 1);
+  assert.equal(sessions[0]!.phase, 'closed');
+  assert.equal(sessions[0]!.custody, 'released');
+  options.nativeStop.assertNativeAbsent();
+  if (openCode) {
+    const history = await checkpoint(options.root, sessions[0]!, 'opencode');
+    const attachments = record(options.evidence.nativeChatAttachments);
+    const imageBytes = await readFile(join(options.root, 'native-chat-attachment-inputs', String(record(attachments.preparedImage).filename)));
+    assert.ok(history.history.toString('utf8').includes(imageBytes.toString('base64')),
+      'original native durable history retains the exact prepared PNG before cold readback');
+    attachments.nativeHistory = { nativeSessionId: history.nativeSession,
+      sha256: history.historySha256, byteLength: history.history.length };
+  }
+  step({ assertion: 'exact Native PID absent and Runtime closed/released before any app Quit' });
+  assert.deepEqual(model.failures, []);
+  assert.ok(model.observations.every((item) => item.requestedModel === (openCode ? 'TEST-model' : 'claude-opus-4-6')));
+  if (options.model) assert.ok(options.model.observations.every((item) => item.requestedEffort === 'medium'));
+  if (nativeNextPromptUi) {
+    const proof = record(options.evidence.nativeNextPromptUi);
+    const sampled = options.model?.suggestionRequests ?? [];
+    const qualified = sampled.filter(sample => sample.turn !== 'NATIVE_TEAM_ONE')
+      .map(sample => sample.turn).sort();
+    assert.deepEqual(qualified, [
+      ...(extendedNativeNextPromptUi ? ['NATIVE_TEAM_FIVE'] : []),
+      ...(nativeNextPromptEditGuards ? ['NATIVE_TEAM_SIX', 'NATIVE_TEAM_SEVEN'] : []),
+      ...(nativeNextPromptShiftTab ? ['NATIVE_TEAM_EIGHT'] : []),
+      'NATIVE_TEAM_FOUR', 'NATIVE_TEAM_THREE', 'NATIVE_TEAM_TWO',
+    ].sort(), 'all post-warm-up human turns each produce exactly one real native suggestion');
+    assert.ok(sampled.length <= (nativeNextPromptShiftTab ? 8 : nativeNextPromptEditGuards ? 7 : extendedNativeNextPromptUi ? 5 : 4),
+      'warm-up can optionally produce at most one native suggestion');
+    assert.equal(Array.isArray(proof.screenshots) ? proof.screenshots.length : 0,
+      nativeNextPromptShiftTab ? 7 : nativeNextPromptEditGuards ? 6 : extendedNativeNextPromptUi ? 4 : 3,
+      'each actual Electron row has a screenshot');
+    assert.equal(proof.shiftTabPreserved, true);
+    if (nativeNextPromptShiftTab) assert.equal(proof.shiftTabWithVisibleOffer, true);
+    if (extendedNativeNextPromptUi) assert.equal(proof.imePreserved, true);
+    if (nativeNextPromptEditGuards) {
+      assert.equal(proof.attachmentInvalidation, true);
+      assert.equal(proof.chipInvalidation, true);
+    }
+    assert.deepEqual((proof.screenshots as Record<string, unknown>[]).map(shot => [shot.theme, shot.compact]),
+      [['dark', false], ['dark', false], ['dark', false], ...(extendedNativeNextPromptUi ? [['light', true]] : []),
+        ...(nativeNextPromptEditGuards ? [['light', false], ['light', false]] : []),
+        ...(nativeNextPromptShiftTab ? [['light', false]] : [])]);
+    options.evidence.nativeNextPromptUi = {
+      ...proof, status: 'PASS', originalHumanInputs: inputIds.length,
+      nativeSdkSamples: sampled.length, qualifiedSamples: qualified.length,
+      noAutoSend: true, originalNativeCustodyReleased: true,
+    };
+  }
+  options.evidence.conversationUiProof = {
+    ...record(options.evidence.conversationUiProof),
+    status: 'PASS',
+    incomingIds,
+    taskId: task.id,
+    nativeInputs: inputIds.length,
+    nativeChildAbsentBeforeQuit: true,
+    custody: 'released',
+    effectiveModel: openCode ? 'test-local/TEST-model' : 'claude-opus-4-6',
+    ...(openCode ? { nativeGeneration: 'v2' } : { effectiveEffort: 'medium' }),
+  };
+}

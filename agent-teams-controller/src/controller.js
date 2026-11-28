@@ -13,6 +13,8 @@ const appRouting = require('./internal/appRouting.js');
 const workSync = require('./internal/workSync.js');
 const groupChats = require('./internal/groupChats.js');
 const agentBlocks = require('./internal/agentBlocks.js');
+const taskStartNotification = require('./internal/taskStartNotification.js');
+const actionModeInstructions = require('./internal/actionModeInstructions.js');
 const taskCompletionClaim = require('./internal/taskCompletionClaim.js');
 const reviewFlow = require('./internal/reviewFlow.js');
 const {
@@ -62,6 +64,9 @@ module.exports = {
     isTaskCompletionClaimText: taskCompletionClaim.isTaskCompletionClaimText,
   },
   protocols: {
+    buildTaskStartNotification: taskStartNotification.buildTaskStartNotification,
+    buildActionModeProtocol: actionModeInstructions.buildActionModeProtocol,
+    buildActionModeAgentBlock: actionModeInstructions.buildActionModeAgentBlock,
     buildChatVisualizationProtocolText,
     buildChatVisualizationRefreshInstruction,
     buildActionModeProtocolText: tasks.buildActionModeProtocolText,

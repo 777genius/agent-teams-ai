@@ -1,0 +1,144 @@
+{
+  "result": "APPROVE_ACTUAL_FAILURE_REPORTING_ONLY",
+  "reviewedAtUTC": "2026-11-15T23:30:11.532501+00:00",
+  "stage": "K",
+  "head": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+  "tree": "de63f46beda4d0aba7c0ff79e8b3f0b330a377f0",
+  "parents": [
+    "fdd6d0317a90a9ae78e121a319b6fe1c068f00f1",
+    "27b1acf48278dcd0fb348c626696eac2dc64de73"
+  ],
+  "provenance": {
+    "initialApiObject": "9ec6a5e321a5ac58f3738a4b8ff35aeb3633c618",
+    "initialBasis": "Root reconstructed the complete recorder stdout from the complete retained tool result while original local records were inaccessible. That was not then an independent original-file readback.",
+    "subsequentOriginalReadback": "After root-confirmed environment recovery this reviewer reopened complete original metadata, preflight, live binding, empty log and both output inventories. Original metadata is byte-identical to the earlier API reconstruction; no original record was replaced.",
+    "originalReadbackExact": true
+  },
+  "actual": {
+    "stage": "K",
+    "commandName": "K-host-build",
+    "sourceHead": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+    "sourceTree": "de63f46beda4d0aba7c0ff79e8b3f0b330a377f0",
+    "parents": [
+      "fdd6d0317a90a9ae78e121a319b6fe1c068f00f1",
+      "27b1acf48278dcd0fb348c626696eac2dc64de73"
+    ],
+    "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/packages/legacy-agent-host",
+    "argv": [
+      "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+      "node_modules/@typescript/native/bin/tsc",
+      "-p",
+      "tsconfig.json"
+    ],
+    "startedAtUTC": "2026-11-15T23:20:30.331017+00:00",
+    "finishedAtUTC": "2026-11-15T23:20:32.119250+00:00",
+    "elapsedSeconds": 1.788209571997868,
+    "exitCode": -9,
+    "launchError": null,
+    "log": {
+      "bytes": 0,
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "preflight": {
+      "bytes": 144191,
+      "blob": "431597074dfd64d3b0034bc2134b3ef97e26cbce",
+      "sha256": "1c02d4c714299c0335a413486b230df78e5e743edad7b31393a1588d0eb759ba"
+    },
+    "manifest": {
+      "bytes": 223781,
+      "blob": "9ee92856321b14011122258e39e638ec1ca862b1",
+      "sha256": "3ee139e0911084f4a37bf944ef8594b8a80e72068f4a131be264ce731099037b"
+    },
+    "recorder": {
+      "bytes": 21172,
+      "blob": "7766822c39ed7581c1f8d883d34e33069e3170ac",
+      "sha256": "599f2e5c57cb57afa53e9666d57ccc087c242ac0ba362bffa3e2edb10ea1906b"
+    },
+    "bindings": {
+      "bytes": 3213,
+      "blob": "22eefb047f14c9c3d2c3095531b0d98e52aba5cf",
+      "sha256": "070a7e982913cecad93f261bf62693f7fbbefb0d53186124200c24878bfa18ff"
+    },
+    "postflightExact": true,
+    "postflightError": null,
+    "selectedSourceCount": 136,
+    "hostSourceCount": 618,
+    "ledgerTrackedCount": 119,
+    "selectedDependencyCount": 175,
+    "newHostBuildPerformed": true,
+    "ledgerBuildPerformed": false,
+    "ledgerReusedFromDOnly": true,
+    "nonBuildOutputBytesPreserved": false,
+    "outputInventoryBefore": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/validation/K-host-build-outputs-before.json",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+    },
+    "outputInventoryAfter": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/validation/K-host-build-outputs-after.json",
+      "bytes": 280944,
+      "blob": "897c958cbb8e80120c22670e44614931f6436ba2",
+      "sha256": "babd0e295fbb1c79a3710f808bf6418f1b9e249f29085ee2d7a604ce72721dc8"
+    },
+    "builtOutputsCountAfter": 1446,
+    "nodeVersion": "v24.21.0",
+    "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "nodeVersionEvidence": "Exact captured binary identity joined to retained D/I Node24.21.0 records; no Node invocation while preparing this manifest.",
+    "nativeOrGraphicalQualification": false,
+    "providerAcceptanceQualification": false
+  },
+  "independentJoins": {
+    "metadataMatchesOriginalAndRecoveredStdout": true,
+    "allRawReferencesMatch": true,
+    "originalPreflightAndBindingsReadCompletely": true,
+    "publishedRecorderManifestBytesExact": true,
+    "canonicalArgvAndCwdExact": true,
+    "publishedSourceTupleAnd46PathsExact": true,
+    "sourceLeafCount": 9937,
+    "unchangedLeafCount": 9891,
+    "selectedSourceCount": 136,
+    "hostSourceCount": 618,
+    "ledgerTrackedCount": 119,
+    "uniqueSourceFilesRehashed": 856,
+    "selectedDependenciesRehashed": 175,
+    "originalProofFilesRehashed": 81,
+    "capturedNodeBinaryRehashedWithoutInvocation": true,
+    "sourceAndWorktreeCleanBeforeAfter": true,
+    "oldDInventoryRows": 1446,
+    "oldHostOutputRows": 1230,
+    "ledgerOutputRows": 216,
+    "outputBytes": 6207302,
+    "allCurrentOutputsMatchRecordedBeforeAfterAndOriginalD": true,
+    "recordsForOtherElevenCommandsAbsent": true
+  },
+  "remainingCommandsNotRun": [
+    "host-test-types",
+    "scripts-types",
+    "team-tests",
+    "focused-vitest",
+    "diagnostic-consumers",
+    "helpers",
+    "scoped-fast-lint",
+    "size",
+    "architecture",
+    "workflow-yaml",
+    "diff"
+  ],
+  "interpretation": {
+    "negativeNine": "Python subprocess return code -9 records termination by signal9/SIGKILL; no cause is attributed.",
+    "postflightExact": "Confirms the recorded source/dependency/proof checks completed, not compiler success.",
+    "newHostBuildPerformed": "The recorder assigns this on entering host-build with no launchError; it means attempted invocation, not successful compilation or fresh products.",
+    "nonBuildOutputBytesPreserved": "The recorder sets this false for host-build by command classification. It does not contradict exact before/after inventory equality.",
+    "oldOutputEquality": "The sampled complete before/after products remain original D bytes; they do not qualify changed K Host sources.",
+    "remainingCommands": "Every later manifest command requires host-build exit0 and postflightExact; root stopped after the first failure, and only first-command raw records exist."
+  },
+  "limitations": [
+    "No build, compiler, test, provider, native or graphical command was rerun for this review. Only file reads/hashes and read-only Git queries were used.",
+    "No kernel/cgroup cause, OOM attribution, successful fresh Host build or K test count is inferred. Later resource availability cannot establish the historical cause.",
+    "No historical dedicated backend/workspace137 outcome is retried or reclassified.",
+    "No latest incoming35/71/1f, native, graphical or packaged qualification is transferred.",
+    "Any further execution venue/stage needs its separately reviewed authorization; this evidence does not waive gates."
+  ]
+}

@@ -1,3 +1,5 @@
+export type { CustomTeamTemplateSnapshotReader } from '../core/application/ports';
+export { OwnerRoutedTeamConfigurationSnapshotAdapter } from './adapters/output/OwnerRoutedTeamConfigurationSnapshotAdapter';
 /**
  * Public main-process entrypoint for the custom-team-templates feature.
  *

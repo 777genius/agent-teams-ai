@@ -2,6 +2,14 @@ import type { CustomTemplateSourceTeamSnapshot } from '../domain/templateSourceS
 
 export type { CustomTeamTemplateStorageGateway } from '../../contracts';
 
+/** Trusted Main-only source admission; never accepted from a renderer or persisted. */
+export interface CustomTeamTemplateSourceAdmission {
+  identity: string;
+  assertCurrent(): void;
+  /** Fresh lifecycle/configuration check for this snapshot, without rebinding its source. */
+  verifyCurrent(): Promise<void>;
+}
+
 /**
  * Outcome of reading one source team's authoritative saved configuration.
  *
@@ -11,7 +19,12 @@ export type { CustomTeamTemplateStorageGateway } from '../../contracts';
  * attributed to a single consistent state.
  */
 export type CustomTeamTemplateSnapshotReadOutcome =
-  | { status: 'available'; snapshot: CustomTemplateSourceTeamSnapshot; revision: string }
+  | {
+      status: 'available';
+      snapshot: CustomTemplateSourceTeamSnapshot;
+      revision: string;
+      sourceAdmission?: CustomTeamTemplateSourceAdmission;
+    }
   | { status: 'sourceUnavailable'; sourceTeamName: string }
   | { status: 'configurationChanged'; sourceTeamName: string };
 

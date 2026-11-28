@@ -25,6 +25,8 @@ const READ_TIMEOUT_MS = 5_000;
 const MAX_RUNS_PER_SCHEDULE = 50;
 
 export class JsonScheduleRepository implements ScheduleRepository {
+  private metadataWrites: Promise<unknown> = Promise.resolve();
+
   private get basePath(): string {
     return getSchedulesBasePath();
   }
@@ -59,44 +61,50 @@ export class JsonScheduleRepository implements ScheduleRepository {
     return schedules.filter((s) => s.teamName === teamName);
   }
 
-  async saveSchedule(schedule: Schedule): Promise<void> {
-    const filePath = this.schedulesFilePath;
-    // All schedule IDs share one JSON array; atomic rename alone cannot protect its read-modify-write.
-    await withFileLock(
-      filePath,
-      async () => {
-        const schedules = await this.readJsonFile<Schedule[]>(filePath, []);
-        const idx = schedules.findIndex((s) => s.id === schedule.id);
-        if (idx >= 0) {
-          schedules[idx] = schedule;
-        } else {
-          schedules.push(schedule);
-        }
-        await this.writeSchedulesFile(filePath, schedules);
-      },
-      { preventLiveOwnerTakeover: true }
-    );
+  async saveSchedule(schedule: Schedule, options?: { mustExist: true }): Promise<void> {
+    await this.writeMetadata(async (filePath) => {
+      const schedules = await this.readJsonFile<Schedule[]>(filePath, [], true);
+      const idx = schedules.findIndex((s) => s.id === schedule.id);
+      if (idx < 0 && options?.mustExist)
+        throw new Error(`Schedule no longer exists: ${schedule.id}`);
+      if (idx >= 0) schedules[idx] = schedule;
+      else schedules.push(schedule);
+      await this.writeSchedulesFile(filePath, schedules);
+    });
   }
 
-  async deleteSchedule(id: string): Promise<void> {
-    const filePath = this.schedulesFilePath;
-    await withFileLock(
-      filePath,
-      async () => {
-        const schedules = await this.readJsonFile<Schedule[]>(filePath, []);
-        const filtered = schedules.filter((s) => s.id !== id);
-        if (filtered.length !== schedules.length) {
-          await this.writeSchedulesFile(filePath, filtered);
-        }
-      },
-      { preventLiveOwnerTakeover: true }
-    );
-    // Clean up the same profile even if the configured root changed while waiting for the lock.
-    const basePath = path.dirname(filePath);
+  async deleteSchedule(id: string, onCommitted?: () => void | Promise<void>): Promise<void> {
+    const { cleanup, basePath } = await this.writeMetadata(async (filePath) => {
+      const schedules = await this.readJsonFile<Schedule[]>(filePath, [], true);
+      const filtered = schedules.filter((s) => s.id !== id);
+      if (filtered.length !== schedules.length) await this.writeSchedulesFile(filePath, filtered);
+      // Fence admission at commit, but do not hold metadata writes during native cleanup.
+      return { cleanup: onCommitted?.(), basePath: path.dirname(filePath) };
+    });
+    await cleanup;
+    // Cleanup belongs to the profile whose metadata was deleted, even after a root change.
     const runsFile = path.join(basePath, 'runs', `${id}.json`);
     await fs.promises.unlink(runsFile).catch(() => undefined);
     const logsPath = path.join(basePath, 'logs', id);
     await fs.promises.rm(logsPath, { recursive: true, force: true }).catch(() => undefined);
+  }
+
+  async updateSchedule(
+    id: string,
+    update: (current: Schedule) => Schedule | null
+  ): Promise<Schedule | null> {
+    return this.writeMetadata(async (filePath) => {
+      const schedules = await this.readJsonFile<Schedule[]>(filePath, [], true);
+      const idx = schedules.findIndex((schedule) => schedule.id === id);
+      const current = schedules[idx];
+      if (!current) return null;
+      const updated = update(current);
+      if (!updated) return null;
+      if (updated.id !== id) throw new Error('Schedule update changed its identity');
+      schedules[idx] = updated;
+      await this.writeSchedulesFile(filePath, schedules);
+      return updated;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -119,6 +127,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
   }
 
   async saveRun(run: ScheduleRun): Promise<void> {
+    const filePath = this.runsFilePath(run.scheduleId);
     const runs = await this.readRunsFile(run.scheduleId);
     const idx = runs.findIndex((r) => r.id === run.id);
     if (idx >= 0) {
@@ -128,7 +137,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
     }
     // Enforce max limit
     const trimmed = runs.slice(0, MAX_RUNS_PER_SCHEDULE);
-    await this.writeRunsFile(run.scheduleId, trimmed);
+    await atomicWriteAsync(filePath, JSON.stringify(trimmed, null, 2));
   }
 
   async pruneOldRuns(scheduleId: string, keepCount: number): Promise<number> {
@@ -152,8 +161,17 @@ export class JsonScheduleRepository implements ScheduleRepository {
   // Internal I/O
   // ---------------------------------------------------------------------------
 
-  private async readSchedulesFile(): Promise<Schedule[]> {
-    return this.readJsonFile<Schedule[]>(this.schedulesFilePath, []);
+  private writeMetadata<T>(action: (filePath: string) => Promise<T>): Promise<T> {
+    const filePath = this.schedulesFilePath;
+    const write = this.metadataWrites.then(() =>
+      withFileLock(filePath, () => action(filePath), { preventLiveOwnerTakeover: true })
+    );
+    this.metadataWrites = write.catch(() => undefined);
+    return write;
+  }
+
+  private async readSchedulesFile(requireReadable = false): Promise<Schedule[]> {
+    return this.readJsonFile<Schedule[]>(this.schedulesFilePath, [], requireReadable);
   }
 
   private async writeSchedulesFile(filePath: string, schedules: Schedule[]): Promise<void> {
@@ -161,14 +179,19 @@ export class JsonScheduleRepository implements ScheduleRepository {
   }
 
   private async readRunsFile(scheduleId: string): Promise<ScheduleRun[]> {
-    return this.readJsonFile<ScheduleRun[]>(this.runsFilePath(scheduleId), []);
+    // Missing history is empty; unreadable history may still own pending work.
+    return this.readJsonFile<ScheduleRun[]>(this.runsFilePath(scheduleId), [], true);
   }
 
   private async writeRunsFile(scheduleId: string, runs: ScheduleRun[]): Promise<void> {
     await atomicWriteAsync(this.runsFilePath(scheduleId), JSON.stringify(runs, null, 2));
   }
 
-  private async readJsonFile<T>(filePath: string, defaultValue: T): Promise<T> {
+  private async readJsonFile<T>(
+    filePath: string,
+    defaultValue: T,
+    requireReadable = false
+  ): Promise<T> {
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), READ_TIMEOUT_MS);
@@ -185,6 +208,7 @@ export class JsonScheduleRepository implements ScheduleRepository {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         return defaultValue;
       }
+      if (requireReadable) throw error;
       logger.warn(
         `Failed to read ${filePath}: ${error instanceof Error ? error.message : String(error)}`
       );

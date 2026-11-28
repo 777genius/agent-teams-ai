@@ -34,6 +34,7 @@ import {
   binaryLooksLikeOpenCode,
   formatCommandForDisplay,
   getOutputPreview,
+  isCommandTimeoutMessage,
   outputLooksLikeOpenCodeCliHelp,
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
@@ -54,8 +55,12 @@ import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelReques
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
   sanitizeRuntimeProviderModelTestResponse,
-  sanitizeRuntimeProviderText,
 } from './runtimeProviderModelTestBoundary';
+import {
+  getCopyableOAuthAuthorizationUrl,
+  isSafeOAuthAuthorizationUrl,
+  sanitizeOAuthInstructions,
+} from './runtimeProviderOAuthPresentation';
 
 import type {
   RuntimeProviderManagementCancelModelLoadInput,
@@ -99,8 +104,6 @@ const MAX_MODEL_RESPONSE_CACHE_ENTRIES = 32;
 const RUNTIME_PROVIDER_OAUTH_EVENT_PREFIX = '@@agent-teams-runtime-provider-oauth@@';
 const OAUTH_OPERATION_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const OAUTH_EVENT_IDENTITY_FIELD_LIMIT = 256;
-const OAUTH_EVENT_INSTRUCTIONS_LIMIT = 1_000;
-const OAUTH_INSTRUCTIONS_URL_PATTERN = /https?:\/\/[^\s<>"']+/gi;
 const RUNTIME_PROVIDER_ERROR_CODES = new Set<RuntimeProviderManagementErrorDto['code']>([
   'unsupported-runtime',
   'unsupported-action',
@@ -428,18 +431,6 @@ function isRuntimeProviderModelTestResultPayload(value: unknown): boolean {
   return isRecord(value) && hasArrayField(value, 'diagnostics');
 }
 
-function sanitizeOAuthInstructions(value: string): string | null {
-  const sanitized = sanitizeRuntimeProviderText(value)
-    .replace(OAUTH_INSTRUCTIONS_URL_PATTERN, '[authorization link hidden]')
-    .trim();
-  if (!sanitized) {
-    return null;
-  }
-  return sanitized.length > OAUTH_EVENT_INSTRUCTIONS_LIMIT
-    ? `${sanitized.slice(0, OAUTH_EVENT_INSTRUCTIONS_LIMIT).trimEnd()}...`
-    : sanitized;
-}
-
 function formatNonJsonCliOutputError(input: {
   context: RuntimeProviderCommandContext;
   stdout?: string | null;
@@ -588,11 +579,6 @@ function formatCommandExecutionError(input: {
       hints,
     },
   };
-}
-
-function isCommandTimeoutMessage(value: string): boolean {
-  const normalized = value.toLowerCase();
-  return normalized.includes('timed out') || normalized.includes('timeout');
 }
 
 function formatCommandTimeoutError(input: {
@@ -976,45 +962,6 @@ function readSpawnOutputSnapshot(
     stdout: readBoundedSpawnOutput(stdout, { includeTruncationMarker: true }),
     stderr: readBoundedSpawnOutput(stderr, { includeTruncationMarker: true }),
   };
-}
-
-function isSafeOAuthAuthorizationUrl(value: string): boolean {
-  if (!value || value.length > 8_192) {
-    return false;
-  }
-  try {
-    const url = new URL(value);
-    if (url.username || url.password) {
-      return false;
-    }
-    if (url.protocol === 'https:') {
-      return true;
-    }
-    return (
-      url.protocol === 'http:' &&
-      (url.hostname === '127.0.0.1' || url.hostname === 'localhost' || url.hostname === '::1')
-    );
-  } catch {
-    return false;
-  }
-}
-
-function getCopyableOAuthAuthorizationUrl(providerId: string, value: string): string | null {
-  if (providerId !== 'github-copilot') {
-    return null;
-  }
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' &&
-      url.hostname === 'github.com' &&
-      url.pathname.replace(/\/$/, '') === '/login/device' &&
-      !url.username &&
-      !url.password
-      ? value
-      : null;
-  } catch {
-    return null;
-  }
 }
 
 function parseOAuthAuthorizationEvent(
@@ -2347,6 +2294,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   async testModel(
     input: RuntimeProviderManagementTestModelInput
   ): Promise<RuntimeProviderManagementModelTestResponse> {
+    if (input.runtimeId !== 'opencode')
+      throw new Error('Claude model tests require the selected native backend.');
     const requestGroupId = input.requestGroupId?.trim() || null;
     const controller = this.beginModelTestRequest(requestGroupId);
     try {
@@ -2358,7 +2307,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           projectPath
         );
       }
-
       const args = appendProjectPathArgs(
         [
           'runtime',

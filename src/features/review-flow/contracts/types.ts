@@ -1,3 +1,5 @@
+import type { TeamReadUnavailable } from '@shared/types/team';
+
 /**
  * Who gives final acceptance after AI review.
  * - agent_approval: the reviewer approves; the task goes to Approved.
@@ -50,6 +52,8 @@ export interface ReviewFlowOverview {
   overrides: TeamReviewFlowOverrides;
   /** Teams whose saved review-flow settings are invalid. Resetting them to the default repairs them. */
   unreadableTeams: string[];
+  /** Captured owners/teams whose settings could not be observed; never imply inheritance. */
+  unavailable?: TeamReadUnavailable[];
   /** Every team with separate history per project, keyed by team name. */
   projectTeams: Record<string, ProjectTeamReviewFlow>;
 }

@@ -25,13 +25,17 @@ import {
   type TeamGroupChatsFeature,
 } from '@features/team-group-chats/main';
 import { registerTokenUsageHttp, type TokenUsageFeatureFacade } from '@features/token-usage/main';
-import { registerUserAttentionHttp, type UserAttentionFeatureFacade } from '@features/user-attention/main';
+import {
+  registerUserAttentionHttp,
+  type UserAttentionFeatureFacade,
+} from '@features/user-attention/main';
 import {
   registerWorkspaceTrustHttp,
   type WorkspaceTrustStatusFeatureFacade,
 } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
+import { registerHttpAgentBackend } from './agentBackend';
 import { registerConfigRoutes } from './config';
 import { registerCrossTeamRoutes } from './crossTeam';
 import { registerEventRoutes } from './events';
@@ -59,6 +63,7 @@ import type {
   TeamHttpDataApi,
   TeamHttpHandlerApis,
 } from '../services/team/contracts/TeamProvisioningApis';
+import type { HttpAgentBackendScope } from './agentBackend';
 import type { CrossTeamHttpApi } from './crossTeam';
 import type { ProjectContextHttpHooks } from './teams/projectContextHttp';
 import type { DesktopExternalAgentConnection } from '@features/external-agent-connection/main';
@@ -70,6 +75,7 @@ import type { FastifyInstance } from 'fastify';
 const logger = createLogger('HTTP:routes');
 
 export interface HttpServices {
+  agentBackend?: HttpAgentBackendScope;
   projectScanner: ProjectScanner;
   sessionParser: SessionParser;
   subagentResolver: SubagentResolver;
@@ -105,6 +111,7 @@ export function registerHttpRoutes(
   services: HttpServices,
   sshModeSwitchCallback: (mode: 'local' | 'ssh') => Promise<void>
 ): void {
+  if (services.agentBackend) registerHttpAgentBackend(app, services.agentBackend);
   services.externalAgentConnection?.registerHttp(app);
   if (services.teamGroupChatsFeature)
     registerTeamGroupChatsHttp(app, services.teamGroupChatsFeature);

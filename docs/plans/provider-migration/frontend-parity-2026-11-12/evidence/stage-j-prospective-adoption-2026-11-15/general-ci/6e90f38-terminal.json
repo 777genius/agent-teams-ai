@@ -1,0 +1,148 @@
+{
+  "kind": "Exact decoded GitHub workflow-jobs wrapper data; terminal source-specific observation",
+  "head": "6e90f38155f5a8edf57b0336b6d79e4ca60c110b",
+  "run": 43768057449,
+  "observedNoLaterThanUTC": "2026-11-15T22:20:57Z",
+  "apiWrapper": "github_fetch_workflow_run_jobs; latest attempt first page only",
+  "rawWire": false,
+  "partialWorkOrCancellationCauseInferred": false,
+  "result": {
+    "jobs": [
+      {
+        "id": 132977507092,
+        "name": "plan",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977508601,
+        "name": "Stage 1 source Desktop (${{ matrix.label }})",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977508729,
+        "name": "Stage 1 process tuple diagnostic (unqualified)",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977508855,
+        "name": "Stage 1 current-tuple process and packed qualification",
+        "status": "completed",
+        "conclusion": "skipped",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977773933,
+        "name": "Full qualification",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977773990,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata Windows smoke' || 'Task change ledger Windows smoke'",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977773994,
+        "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata lint') || 'lint') }} (${{ matrix.scope }})",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774016,
+        "name": "Focused documentation and asset validation",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774034,
+        "name": "${{ (((github.event_name == 'pull_request') && (github.event.action == 'edited') && (((needs.plan.result != 'success') || (needs.plan.outputs.metadata != 'false'))) && 'Metadata test') || 'test') }} (${{ matrix.shard }}/4)",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774166,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata validate' || 'validate'",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774221,
+        "name": "github.event_name == 'pull_request' && github.event.action == 'edited' && (needs.plan.result != 'success' || needs.plan.outputs.metadata != 'false') && 'Metadata fast feedback' || 'Fast feedback'",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774238,
+        "name": "macOS DMG artwork end-to-end",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774318,
+        "name": "Retained OpenCode V1 and Host V2 original Desktop",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774554,
+        "name": "Renderer source validation",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      },
+      {
+        "id": 132977774610,
+        "name": "Codex login Desktop (Linux x64)",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "run_id": 43768057449,
+        "logs_url": null,
+        "steps": null
+      }
+    ]
+  }
+}

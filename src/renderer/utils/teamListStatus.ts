@@ -5,6 +5,7 @@ export type TeamStatus =
   | 'idle'
   | 'provisioning'
   | 'offline'
+  | 'unknown'
   | 'partial_failure'
   | 'partial_skipped'
   | 'partial_pending';
@@ -43,7 +44,8 @@ export function resolveTeamStatus(
   aliveTeams: string[],
   currentProgress: TeamProvisioningProgress | null,
   leadActivityByTeam: Partial<Record<string, LeadActivityState>>,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  aliveKnown = true
 ): TeamStatus {
   if (currentProgress && ACTIVE_PROVISIONING_STATES.has(currentProgress.state)) {
     return 'provisioning';
@@ -61,7 +63,7 @@ export function resolveTeamStatus(
     return 'offline';
   }
 
-  if (aliveTeams.includes(teamName)) {
+  if (aliveKnown && aliveTeams.includes(teamName)) {
     return leadActivity === 'active' ? 'active' : 'idle';
   }
 
@@ -82,9 +84,14 @@ export function resolveTeamStatus(
     return leadActivity === 'active' ? 'active' : 'idle';
   }
 
-  return 'offline';
+  return aliveKnown ? 'offline' : 'unknown';
 }
 
 export function isTeamListStatusRunning(status: TeamStatus): boolean {
-  return status !== 'offline' && status !== 'partial_failure' && status !== 'partial_pending';
+  return (
+    status !== 'unknown' &&
+    status !== 'offline' &&
+    status !== 'partial_failure' &&
+    status !== 'partial_pending'
+  );
 }

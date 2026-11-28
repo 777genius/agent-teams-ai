@@ -1,4 +1,6 @@
 import type {
+  CapturedTeamReadiness,
+  CreatedTeamReadiness,
   TeamProvisioningPrepareResult,
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
@@ -20,6 +22,10 @@ export interface ProviderPrepareDiagnosticsCachedSnapshot {
 }
 
 export interface ProviderPrepareDiagnosticsResult {
+  createdTeamReadiness?: CreatedTeamReadiness;
+  createdTeamDraftSignature?: string;
+  capturedTeamReadiness?: CapturedTeamReadiness;
+  capturedTeamDraftSignature?: string;
   status: ProviderPrepareCheckStatus;
   details: string[];
   warnings: string[];

@@ -1,8 +1,9 @@
-import { isReviewFlow, MAX_REVIEW_FLOW_PROMPT_LENGTH } from '@features/review-flow';
+import { isReviewFlow } from '@features/review-flow';
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { createLogger } from '@shared/utils/logger';
+import { validateKanbanSafetyState } from 'agent-teams-controller';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -42,47 +43,6 @@ function sanitizeColumnOrder(raw: unknown): KanbanState['columnOrder'] | undefin
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-/** Validate before the tolerant projection can discard evidence used by automatic work selection. */
-function validateSafetyState(value: unknown, teamName: string): void {
-  const record = (item: unknown): item is Record<string, unknown> =>
-    item !== null && typeof item === 'object' && !Array.isArray(item);
-  const invalid = (): never => {
-    throw new Error('Kanban safety state is corrupt');
-  };
-  if (!record(value) || !record(value.tasks)) return invalid();
-  if (
-    value.teamName !== undefined &&
-    (typeof value.teamName !== 'string' ||
-      value.teamName.trim().toLowerCase() !== teamName.trim().toLowerCase())
-  )
-    return invalid();
-  if (
-    value.reviewers !== undefined &&
-    (!Array.isArray(value.reviewers) ||
-      value.reviewers.some((name) => typeof name !== 'string' || !name.trim()))
-  )
-    return invalid();
-  if (value.reviewFlow !== undefined && !isReviewFlow(value.reviewFlow)) return invalid();
-  if (
-    value.reviewFlowPrompt !== undefined &&
-    (typeof value.reviewFlowPrompt !== 'string' ||
-      value.reviewFlow === undefined || // a prompt only exists as part of a team override
-      value.reviewFlowPrompt.trim().length > MAX_REVIEW_FLOW_PROMPT_LENGTH)
-  )
-    return invalid();
-  for (const [taskId, task] of Object.entries(value.tasks)) {
-    if (
-      !taskId.trim() ||
-      !record(task) ||
-      !isValidColumn(task.column) ||
-      typeof task.movedAt !== 'string' ||
-      !Number.isFinite(Date.parse(task.movedAt)) ||
-      (task.reviewer !== undefined && task.reviewer !== null && typeof task.reviewer !== 'string')
-    )
-      return invalid();
-  }
-}
-
 export class TeamKanbanManager {
   async getState(teamName: string, options: { strict?: boolean } = {}): Promise<KanbanState> {
     const statePath = this.getStatePath(teamName);
@@ -114,7 +74,7 @@ export class TeamKanbanManager {
       if (options.strict) throw new Error('Kanban safety state is corrupt');
       return createDefaultState(teamName);
     }
-    if (options.strict) validateSafetyState(parsed, teamName);
+    if (options.strict) validateKanbanSafetyState(parsed, teamName);
     const sanitizedTasks: KanbanState['tasks'] = {};
     const reviewFlowPrompt =
       typeof parsed.reviewFlowPrompt === 'string' ? parsed.reviewFlowPrompt.trim() : '';
@@ -172,6 +132,7 @@ export class TeamKanbanManager {
   }
 
   async updateTask(teamName: string, taskId: string, patch: UpdateKanbanPatch): Promise<void> {
+    if (patch.op === 'disapprove') throw new Error('Use the explicit taskBoard Disapprove action');
     const state = await this.getState(teamName, { strict: true });
 
     if (patch.op === 'remove' || patch.op === 'request_changes') {

@@ -1,0 +1,29 @@
+{
+  "status": "SCOPED_PASS",
+  "date": "2026-10-23",
+  "jobId": "22bf9b4463e7c061ebce71a01187cc68",
+  "rawStatus": "PASS",
+  "rawReceiptSha256": "189e6716acd6a276e5508c5654cb9ea1253e82067bd9fbc3adf4e785bdd28d8f",
+  "localEvidence": ".artifacts/provider-migration/p6-skills-ui-attempt5",
+  "scope": "Existing Skills Import/Create/Edit/Delete dialogs and real Main/Host filesystem management path in an isolated TEST profile",
+  "accepted": [
+    "Import review previews binary/hidden warnings and exact destination without target or journal writes",
+    "Changed source is rejected before effects; new review applies exact version2 bytes and preserves unmanaged files and empty directories",
+    "Original Create and Edit review/confirm controls persist actual SKILL.md changes",
+    "Original OS Trash callback completes original staged inode; replacement directory at the old name survives",
+    "Pre-staged original UNKNOWN trash remains held across two existing UI confirmations without changed bytes or journal",
+    "Actual local ServiceContext replacement through existing config API invalidates the original review grant; stale confirm creates no target or journal mutation"
+  ],
+  "journal": { "total": 5, "completedActualUiMutations": 4, "originalHeldIntent": 1 },
+  "nativeTrashReplacementSurvived": true,
+  "retention": { "files": 2154, "sourcePinsBeforeAndAfter": 1193, "electronBundles": 14, "sourceOrBundleMismatches": [], "missing": [], "emptyTestDirectoriesPreserved": true },
+  "visualInspection": {
+    "status": "Root inspected retained existing Edit, completed Trash and stale-context screenshots; raw pending-inspection marker remains unchanged",
+    "editSha256": "93e937477afd90ec32ee8a822e1fcdb5935582a8d03fcd17ec82139af3be1f29",
+    "trashSha256": "3bf787329bef3282370c75ecfeeb2d3df70a49dbd306f96ed7a98fee19f4dadf",
+    "staleContextSha256": "352082e7dadc95bf1d5691cf32e75eeea41c5c3911e7015a25061570dfe5b785"
+  },
+  "cleanup": { "capturedGroup": 7692, "remaining": [], "appExitCode": 0, "appSignalCode": null, "capturedHostAbsent": true },
+  "priorFailures": "Original startup/port failures and atomic-publication read failure retained separately; this uses fresh TEST identities, with no original action replay",
+  "excluded": ["native agent execution", "provider auth/status qualification", "Plugins and MCP extension workflows", "native folder picker", "ambient Trash inventory", "forced unknown native callback", "full M15", "Stage2"]
+}

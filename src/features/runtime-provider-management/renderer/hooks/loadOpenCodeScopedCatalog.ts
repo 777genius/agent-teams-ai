@@ -1,6 +1,9 @@
 import { api } from '@renderer/api';
 
 import { loadOpenCodeScopedCatalog as loadScopedCatalog } from '../../core/application/loadOpenCodeScopedCatalog';
+
+import type { RuntimeProviderManagementApi } from '../../contracts';
+
 export {
   MODEL_CATALOG_FRESHNESS_MS,
   normalizeModelResponseDiagnostics,
@@ -10,10 +13,12 @@ export function loadOpenCodeScopedCatalog(
   projectPath: string | null,
   requestGroupId: string,
   isCurrentRequest: () => boolean,
-  refresh = true
+  refresh = true,
+  loadModels: RuntimeProviderManagementApi['loadModels'] = (request) =>
+    api.runtimeProviderManagement.loadModels(request)
 ) {
   return loadScopedCatalog(
-    (request) => api.runtimeProviderManagement.loadModels(request),
+    loadModels,
     sourceProviderId,
     projectPath,
     requestGroupId,

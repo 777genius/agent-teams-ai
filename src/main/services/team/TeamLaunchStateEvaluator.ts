@@ -460,6 +460,7 @@ function normalizeLaunchIdentity(
     raw.catalogSource === 'anthropic-models-api' ||
     raw.catalogSource === 'anthropic-compatible-api' ||
     raw.catalogSource === 'app-server' ||
+    raw.catalogSource === 'claude-sdk' ||
     raw.catalogSource === 'static-fallback' ||
     raw.catalogSource === 'runtime' ||
     raw.catalogSource === 'unavailable'

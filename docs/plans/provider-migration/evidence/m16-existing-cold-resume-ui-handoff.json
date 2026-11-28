@@ -1,0 +1,54 @@
+{
+  "status": "PASS",
+  "scope": "Existing Launch/Stop, guarded Quit, same-profile cold app/Host startup, explicit checkpoint Resume, new Composer input and second Stop.",
+  "originalJobId": "e8fb59ed9bc83b1c85964a5d5ee4d64b",
+  "retentionJobId": "cc6adfb5347fe6bb6faea91108da0dc0",
+  "providerArchiveSha256": "00b440b4bddc5a3fc3a5cf735b4ead6446ec605cb332db08cc956b07e947aa19",
+  "nativeInputs": {
+    "count": 2,
+    "eachTerminal": "succeeded",
+    "technicalGenerationChanged": true,
+    "sameProductLaunchAndMember": true,
+    "priorNativeHistoryInResumedRequest": true,
+    "resumeDoesNotSendLaunchPrompt": true
+  },
+  "model": {
+    "selected": "claude-opus-4-6",
+    "effort": "medium",
+    "steps": 11,
+    "failures": [],
+    "inference": "localhost fixture with actual pinned Claude CLI/SDK"
+  },
+  "productEffects": {
+    "file": "ONE then TWO, exactly once each",
+    "originalTaskPreserved": true,
+    "originalRepliesVisible": true
+  },
+  "stopAndCleanup": {
+    "bothClosedReleasedBeforeAppCleanup": true,
+    "firstGuardedQuitExitCode": 0,
+    "secondAppExitCode": 0,
+    "appSignals": null,
+    "remainingProcesses": [],
+    "capturedHostAbsent": true,
+    "writerReleased": true
+  },
+  "retention": {
+    "complete": true,
+    "workflowQualified": true,
+    "files": 2477,
+    "sha256": "60546d2d4fedc01cb3b3b96b35414dc547419e1cd8092d5014d0f59f914df5fc",
+    "localRoot": "/private/tmp/TEST-native-cold-resume-retainer-_t45acvz/retained-e8fb59ed9bc83b1c85964a5d5ee4d64b",
+    "provenanceLimit": "Host/dependency trees are frozen retention snapshots; entry/source/startup bundle pins are independently verified."
+  },
+  "testCorrection": "Shared target lookup now observes inherited fieldset disabledness before one original click. No production UI change.",
+  "priorFailedOutcomesPreserved": true,
+  "excluded": [
+    "vendor authentication/inference",
+    "multi-member Resume",
+    "automatic app.relaunch",
+    "live Team Relaunch",
+    "full Stage1"
+  ],
+  "visualReview": "Original chat shows both native replies and existing Team/Tasks controls; screenshot inspected."
+}

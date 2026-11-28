@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <string>
+#include <system_error>
 #include <vector>
 
 // Independent outer authority for only this disposable gate. Emergency cleanup is FAIL,
@@ -86,9 +87,21 @@ int wmain(int argc,wchar_t** argv) {
   if(process.hProcess||!rootExited||!zero(job)) { CloseHandle(job); return 101; }
   if(!CloseHandle(job)) return 102;
   // Destructive sandbox cleanup follows fresh zero membership plus original-root exit.
+  // GetTempPathW/GetTempFileNameW selected this fully qualified sandbox. Its Node
+  // descendants can exceed MAX_PATH; use the same root in the extended namespace.
+  std::wstring cleanupSandbox=sandbox;
+  if(sandbox.rfind(L"\\\\?\\",0)!=0&&sandbox.rfind(L"\\\\.\\",0)!=0)
+    cleanupSandbox=sandbox.rfind(L"\\\\",0)==0 ? L"\\\\?\\UNC\\"+sandbox.substr(2) : L"\\\\?\\"+sandbox;
   std::error_code error;
-  std::filesystem::remove_all(sandbox,error);
-  if(error) return 103;
+  std::filesystem::remove_all(cleanupSandbox,error);
+  if(error) {
+    const char* category=&error.category()==&std::system_category()?"system":
+      &error.category()==&std::generic_category()?"generic":"other";
+    std::printf("{\"gateController\":\"sandbox-cleanup-error\",\"rootExitCode\":%lu,\"emergency\":%s,"
+      "\"errorCode\":%d,\"category\":\"%s\"}\n",code,emergency?"true":"false",error.value(),category);
+    std::fflush(stdout);
+    return 103;
+  }
   std::printf("{\"gateController\":\"%s\",\"rootExitCode\":%lu,\"activeProcesses\":0}\n",
     emergency?"emergency-fail":"drained",code);
   return !emergency&&code==0?0:104;

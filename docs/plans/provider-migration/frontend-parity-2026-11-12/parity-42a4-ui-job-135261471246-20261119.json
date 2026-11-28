@@ -1,0 +1,551 @@
+{
+  "schemaVersion": 1,
+  "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "runId": 44434982606,
+  "jobId": 135261471246,
+  "event": "pull_request",
+  "runAttempt": 1,
+  "result": "FAIL",
+  "scope": "Original exact42a4 OpenCode V2 active Quit scenario failed during sandbox setup at a runtime-open unknown/observation deadline boundary, before its Composer/inference/queued-input/Quit business journey.",
+  "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261471246",
+  "failedSteps": [
+    {
+      "name": "Exercise original OpenCode V2 native Desktop journey",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 34,
+      "started_at": "2026-11-19T02:39:38Z",
+      "completed_at": "2026-11-19T02:44:58Z"
+    },
+    {
+      "name": "Verify original V2 journey receipts, source binding and cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 37,
+      "started_at": "2026-11-19T02:44:58Z",
+      "completed_at": "2026-11-19T02:45:02Z"
+    }
+  ],
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261471246,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-19 02:46:32 UTC",
+    "bytes": 241507,
+    "sha256": "0e30d27000efb9f460ab2b84fdba4fe68c6f2df9fc91b24fc87eb8e15e8151f3",
+    "computedGitBlobSha": "88b82e8c5ee5b461b688c57d3ca7597a17484363",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471246-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471246-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true,
+    "publishedBlobSha": "88b82e8c5ee5b461b688c57d3ca7597a17484363",
+    "exactReadback": true
+  },
+  "originalArtifact": {
+    "phase": "permanently-retired",
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "jobId": 135261471246,
+    "artifactId": 14492858820,
+    "bytes": 284155,
+    "sha256": "dd9b20f2cd59722c2f760608655fd32ff67db15a611f6198f670c11b9357d483",
+    "file": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/42a4-quit-active-14492858820.zip",
+    "originalUploadPinsMatch": true,
+    "endpointRetired": true,
+    "rawResponsePersistedBeforeDecode": true,
+    "rawDownloadResponseLocalOnly": true,
+    "members": 23
+  },
+  "originalReceipt": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492858820/TEST-desktop-backend-l7fyfg/desktop-backend-receipt.json",
+    "bytes": 782757,
+    "sha256": "ef5b83a46fcf8610cc9f4a4967838ee67a0d2c73c3d4f1861b021ce99c40e642",
+    "computedGitBlobSha": "4990382d9f7096963eb202ad2770f9fe123d5271"
+  },
+  "failure": "Original OpenCode setup observation deadline expired",
+  "failureSource": {
+    "kind": "assertion",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:46:12",
+      "scripts/legacy-agent-host/desktop-native-stop-fixture.ts:221:5",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:401:21",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+    ]
+  },
+  "originalModel": {
+    "observations": [],
+    "probes": [
+      {
+        "requestedModel": "TEST-model"
+      }
+    ],
+    "failures": [],
+    "inference": "Local scripted model only; actual embedded OpenCode V2 executes all tools"
+  },
+  "startupOutcome": {
+    "elapsedMs": 47896,
+    "matchingMainFound": true,
+    "appExitCode": null,
+    "appSignalCode": null,
+    "spawnError": false
+  },
+  "discoveryReadiness": {
+    "attempts": 1,
+    "transient": []
+  },
+  "selectedSources": {
+    "beforeCount": 1899,
+    "afterCount": 1899,
+    "equal": true
+  },
+  "nativeLaunchResponse": {
+    "ok": true,
+    "value": {
+      "launchId": "TEST-run-TEST-desktop-backend-l7fyfg",
+      "rosterRevision": "6357330dd7742cb8f4cd058c2dc7ab66a6886780591608026db1d2cd1b3c5399",
+      "observedAtMs": 1795056243889,
+      "startedAtMs": 1795056243810,
+      "status": "pending",
+      "ready": 0,
+      "expected": 1,
+      "retryCapability": "same-binding-no-allocation-only",
+      "admission": {
+        "commandId": "TEST-explicit-sandbox-setup-launch",
+        "sourceRosterRevision": "566c4f5691623f79e98b0902c61f1cfc4e82575f3c6f7ff307fd09de67f2bcdd"
+      },
+      "members": [
+        {
+          "memberId": "alice-id",
+          "generation": "1",
+          "attemptId": "initial-7e12e701e4b2b97d8e39f95790c5d6e33b2afa49a5b56c991a0f1a8673793e65",
+          "status": "pending-bootstrap",
+          "nativeReady": false,
+          "usable": false,
+          "controlAvailable": false,
+          "noAllocation": false,
+          "reason": "opening"
+        }
+      ]
+    }
+  },
+  "nativeConfiguredPreparation": {
+    "commandId": "TEST-explicit-sandbox-setup-launch",
+    "consumed": 1,
+    "probe": {
+      "requestedModel": "TEST-model"
+    }
+  },
+  "lastNativeLaunchProgressResponse": {
+    "ok": true,
+    "value": {
+      "launchId": "TEST-run-TEST-desktop-backend-l7fyfg",
+      "rosterRevision": "6357330dd7742cb8f4cd058c2dc7ab66a6886780591608026db1d2cd1b3c5399",
+      "observedAtMs": 1795056295311,
+      "startedAtMs": 1795056243810,
+      "status": "pending",
+      "ready": 0,
+      "expected": 1,
+      "retryCapability": "same-binding-no-allocation-only",
+      "admission": {
+        "commandId": "TEST-explicit-sandbox-setup-launch",
+        "sourceRosterRevision": "566c4f5691623f79e98b0902c61f1cfc4e82575f3c6f7ff307fd09de67f2bcdd"
+      },
+      "members": [
+        {
+          "memberId": "alice-id",
+          "generation": "1",
+          "attemptId": "initial-7e12e701e4b2b97d8e39f95790c5d6e33b2afa49a5b56c991a0f1a8673793e65",
+          "status": "unknown",
+          "nativeReady": false,
+          "usable": false,
+          "controlAvailable": false,
+          "noAllocation": false,
+          "reason": "custody-unresolved"
+        }
+      ]
+    }
+  },
+  "originalRuntimeSession": {
+    "pin": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492858820/TEST-desktop-backend-l7fyfg/hoststore/runtime-sessions/0edd75328bec04a52172a10c1df92ed1c00a8b4b4cc7b25f4213c55d420709b2/104ba0a2a57775f51725b5a60ec32c781192d04335e9c2a85fa08eca66f8bd69.json",
+      "bytes": 1159,
+      "sha256": "2a1fde5efbfa888beb02c9b4eb67367223e7e152e211fcf3f81d5f63307d4996",
+      "computedGitBlobSha": "7222625b1f27789073d45cc52c75e588c2af6465"
+    },
+    "value": {
+      "schemaVersion": 1,
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-l7fyfg",
+        "teamId": "TEST-desktop-team",
+        "runId": "TEST-run-TEST-desktop-backend-l7fyfg",
+        "memberId": "alice-id",
+        "generation": "1"
+      },
+      "profileId": "TEST-desktop-profile-TEST-desktop-backend-l7fyfg",
+      "config": {
+        "tenantId": "TEST-desktop-owner-TEST-desktop-backend-l7fyfg",
+        "projectId": "TEST-project-TEST-desktop-backend-l7fyfg",
+        "sessionId": "TEST-native-opencode-v2",
+        "generation": 1,
+        "configRevision": "launch-19148b7073ec8d9c4d6a0b97fcab3f2eba03c88a38056f51079040da012b5812",
+        "requiredCapabilities": [
+          "text",
+          "tools"
+        ]
+      },
+      "openFingerprint": "d0841c5f22b35360df3ce56d4340c48513ed6050b9369a9a9f28dc76d920f21f",
+      "hostIncarnation": "43ae7129-becf-4e47-9801-5e16fbce6534",
+      "phase": "held",
+      "sealed": true,
+      "custody": "unknown",
+      "nativeReady": false,
+      "inputs": [],
+      "interactions": [],
+      "conversation": {
+        "sequence": 0,
+        "digest": "e76d900fb2362b7b9e582e913fc9c54bd01a03d0e2bdfa5296ef3b2ea9d05013",
+        "gaps": []
+      },
+      "activitySequence": 3,
+      "diagnostic": "open-unknown"
+    },
+    "qualification": "Final original artifact state, not an atomic process census."
+  },
+  "originalLaunchJournal": {
+    "pin": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492858820/TEST-desktop-backend-l7fyfg/hoststore/teams/test-desktop-backend/.host-owner/launches/237d933654c869641a16f336e825084613b96c5e199237e0cbc082ade5697749.json",
+      "bytes": 5382,
+      "sha256": "e4a2894e80a3fe17c97a1cd6ac3fb9ce2e07b861a59713bb2464807745ab5259",
+      "computedGitBlobSha": "3c1f7bec327f8f3fc8065a98df89982908e32aed"
+    },
+    "value": {
+      "schemaVersion": 1,
+      "definition": {
+        "launchId": "TEST-run-TEST-desktop-backend-l7fyfg",
+        "rosterRevision": "6357330dd7742cb8f4cd058c2dc7ab66a6886780591608026db1d2cd1b3c5399",
+        "rosterScope": {
+          "projectId": "TEST-project-TEST-desktop-backend-l7fyfg",
+          "workspaceId": "TEST-workspace-TEST-desktop-backend-l7fyfg",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-run-TEST-desktop-backend-l7fyfg",
+          "memberId": "human",
+          "generation": "1"
+        },
+        "members": [
+          {
+            "memberId": "alice-id",
+            "binding": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-l7fyfg",
+              "teamId": "TEST-desktop-team",
+              "runId": "TEST-run-TEST-desktop-backend-l7fyfg",
+              "memberId": "alice-id",
+              "generation": "1"
+            },
+            "configurationDigest": "880197774d4af49a6a9b1663d3f86eb21c540a6302383c21565fa8552d2b1c84",
+            "contextDigest": "a32330edb175fd9fab0ae8f2d8def16817e2566e9c3c57ac43ba8b24d2774734",
+            "configRevision": "launch-19148b7073ec8d9c4d6a0b97fcab3f2eba03c88a38056f51079040da012b5812",
+            "skipped": false,
+            "timeoutMs": 120000,
+            "runtimeGeneration": 1,
+            "baseConfigurationDigest": "d92ef319217d667ad920ee4083b4be349a96df03e953aee6aca77e8e0cbeba33"
+          }
+        ]
+      },
+      "fingerprint": "c89e76cc02fe06fe86e6be79c4f1bc9f3bdadd5b87e651ff3059519139f16517",
+      "members": [
+        {
+          "memberId": "alice-id",
+          "currentAttemptId": "initial-7e12e701e4b2b97d8e39f95790c5d6e33b2afa49a5b56c991a0f1a8673793e65",
+          "attempts": [
+            {
+              "attemptId": "initial-7e12e701e4b2b97d8e39f95790c5d6e33b2afa49a5b56c991a0f1a8673793e65",
+              "hostIncarnation": "43ae7129-becf-4e47-9801-5e16fbce6534",
+              "startedAtMs": 1795056243879,
+              "deadlineMs": 1795056363879,
+              "claimed": true,
+              "status": "unknown",
+              "reason": "custody-unresolved",
+              "nativeReady": false,
+              "contextApplied": false,
+              "everReady": false,
+              "usable": false,
+              "controlAvailable": false,
+              "noAllocation": false
+            }
+          ]
+        }
+      ],
+      "retries": [],
+      "readiness": {
+        "schemaVersion": 1,
+        "groups": [
+          {
+            "commandId": "action-probe-6a488595dc77b84fd4798f782408907e7e68fd4cf371421cb8953c78824fa810",
+            "profileId": "team-probe-880197774d4af49a6a9b1663d3f86eb21c540a6302383c21565fa8552d2b1c84",
+            "configRevision": "team-probe-880197774d4af49a6a9b1663d3f86eb21c540a6302383c21565fa8552d2b1c84",
+            "context": "d035de93786f207b6d3b8866035da3cfcd54cb3b73be56db6fdbceaca66bb49c",
+            "fingerprint": "18104d6627e1192def1c0113d55241b839effe10865cd37cf7759c2d0c9d5b1b",
+            "selectionDigest": "b6cc79ab12dd25e74dd9b9ad209570eeead4ddbd197382f8e53568e83c5f20e4",
+            "resourceId": "5ba16f466c2c9fc5b3a4bbf3db79275367b80fa7a3cf5f10c4b9f526790ffdcd",
+            "purpose": "native-local-readiness-v1",
+            "expiresAt": 1795056269948,
+            "preparationDigest": "3db0337843d90ff515ecfb3be0b97cb7ce5a64f308ad41b0233fea720c1613bf",
+            "mechanismDigest": "f987060462396147304c861b383042ae46a7f3540614719421c9db97be2479dd"
+          }
+        ],
+        "consumers": [
+          {
+            "consumerId": "18729f412f74cb609d90578a79a314a815eb4c05d5e45d9a9fc6f05117217049",
+            "memberId": "alice-id",
+            "actionId": "TEST-explicit-sandbox-setup-launch",
+            "actorDigest": "206e6c50fe78803e84152a64366d58efd825c1cc5fc5dc54bac37b926b35fe87",
+            "inputDigest": "877058589e55aedcad872000ad8f84c1b0a73093cb5639be794c1a7d3b18b339",
+            "binding": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-l7fyfg",
+              "teamId": "TEST-desktop-team",
+              "runId": "TEST-run-TEST-desktop-backend-l7fyfg",
+              "memberId": "alice-id",
+              "generation": "1"
+            },
+            "sourceAttemptId": "initial-7e12e701e4b2b97d8e39f95790c5d6e33b2afa49a5b56c991a0f1a8673793e65",
+            "baseConfigurationDigest": "d92ef319217d667ad920ee4083b4be349a96df03e953aee6aca77e8e0cbeba33",
+            "configurationDigest": "880197774d4af49a6a9b1663d3f86eb21c540a6302383c21565fa8552d2b1c84",
+            "configRevision": "launch-19148b7073ec8d9c4d6a0b97fcab3f2eba03c88a38056f51079040da012b5812",
+            "cutoff": 1795056269948,
+            "groupCommandId": "action-probe-6a488595dc77b84fd4798f782408907e7e68fd4cf371421cb8953c78824fa810",
+            "disposition": "retired"
+          }
+        ]
+      },
+      "preparation": {
+        "commandId": "TEST-explicit-sandbox-setup-launch",
+        "sourceRosterRevision": "566c4f5691623f79e98b0902c61f1cfc4e82575f3c6f7ff307fd09de67f2bcdd",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "configuration": {
+              "model": "test-local/TEST-model",
+              "permissions": "bypass"
+            },
+            "configurationDigest": "880197774d4af49a6a9b1663d3f86eb21c540a6302383c21565fa8552d2b1c84",
+            "baseConfigurationDigest": "d92ef319217d667ad920ee4083b4be349a96df03e953aee6aca77e8e0cbeba33",
+            "configRevision": "launch-19148b7073ec8d9c4d6a0b97fcab3f2eba03c88a38056f51079040da012b5812"
+          }
+        ],
+        "fingerprint": "bcd8f379c0b17073eb7f5ca9e938a67056c820613fdfd1525d97e1d1d91d3a35"
+      },
+      "startCommandId": "TEST-explicit-sandbox-setup-launch",
+      "sourceRosterRevision": "6357330dd7742cb8f4cd058c2dc7ab66a6886780591608026db1d2cd1b3c5399",
+      "startedAtMs": 1795056243810
+    }
+  },
+  "retainedDiagnostics": {
+    "pin": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492858820/TEST-desktop-backend-l7fyfg/userData/logs/app-errors.ndjson",
+      "bytes": 55795,
+      "sha256": "c436f243572726fabb785ad69e612ef30a1a74df0c3b2a79a47ba1da04f863d3",
+      "computedGitBlobSha": "e5c74b3a69848ad02933fb80ee91e06724acb53b"
+    },
+    "recordCount": 219,
+    "runtimeOpenRefusals": [
+      {
+        "v": 1,
+        "t": "2026-11-19T02:44:30.413Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "Host:RuntimeOpen",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "Runtime open refusal {\"profileHash\":\"df9481536d891fcf4a18490420fd37a3d1ae92c6e070b7764da8e89792818b88\",\"configurationHash\":\"3010b2b8278235e8ed1fa3f7866cecaa98c24e5f57220495e1b242ed593d72a5\",\"source\":\"factory\",\"phase\":\"driver-open\",\"category\":\"unknown\",\"observedAtMs\":1795056270411,\"hostPid\":9437}"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-19T02:44:30.413Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "Host:RuntimeOpen",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "Runtime open refusal {\"profileHash\":\"df9481536d891fcf4a18490420fd37a3d1ae92c6e070b7764da8e89792818b88\",\"configurationHash\":\"3010b2b8278235e8ed1fa3f7866cecaa98c24e5f57220495e1b242ed593d72a5\",\"source\":\"runtime\",\"phase\":\"driver-open\",\"category\":\"unknown\",\"observedAtMs\":1795056270412,\"hostPid\":9437}"
+      }
+    ],
+    "metadataRelease": [
+      {
+        "v": 1,
+        "t": "2026-11-19T02:42:18.889Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "Host:OpenCodeMetadata",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "OpenCode metadata stage {\"profileHash\":\"ead44e92e01e3b58a30d3851bfd2834cc3165256fedf9bb06bb5b0b0a79adcf7\",\"mode\":\"provider\",\"providerHash\":\"0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a\",\"pid\":12625,\"stage\":\"released\",\"startIdentityHash\":\"5d49c255dae9824ea96e51b125cb2c6e37421aaf841d7cc3ffce7b531597e865\",\"hostPid\":9437}"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-19T02:44:56.240Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "Host:OpenCodeMetadata",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "OpenCode metadata stage {\"profileHash\":\"56da4f35b7793ac24e8fdc2d503b1eee592911152ceb11aa2c68bc1a4e172cc8\",\"mode\":\"provider\",\"providerHash\":\"0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a\",\"pid\":14509,\"stage\":\"released\",\"startIdentityHash\":\"4243e82366b271f15af0e99d4dfd35ad130e2497ae402865993e0cfba6683cf4\",\"hostPid\":9437}"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-19T02:44:56.282Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "Host:OpenCodeMetadata",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "OpenCode metadata stage {\"profileHash\":\"ead44e92e01e3b58a30d3851bfd2834cc3165256fedf9bb06bb5b0b0a79adcf7\",\"mode\":\"directory\",\"providerHash\":null,\"pid\":13502,\"stage\":\"released\",\"startIdentityHash\":\"8b57c2d08f83cd0eb1b473270b3d684e210abec220957e40f3bf0ab12ae47c3c\",\"hostPid\":9437}"
+      }
+    ],
+    "selectedShutdown": [
+      {
+        "v": 1,
+        "t": "2026-11-19T02:44:56.422Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "App",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "Shutdown stop all teams took 2ms; OpenCode lane stops confirmed=0 unconfirmed=0 pending=0 capturedStopAuthority=false"
+      },
+      {
+        "v": 1,
+        "t": "2026-11-19T02:44:56.513Z",
+        "level": "diagnostic",
+        "process": "main",
+        "namespace": "OpenCodeLoopbackRuntimeRelease",
+        "appVersion": "2.18.7",
+        "platform": "darwin",
+        "message": "[OpenCode] opencode_loopback_runtime_release_skipped phase=app_shutdown reason=no_launch_owned_runtime_evidence"
+      }
+    ],
+    "qualification": "Original refusal diagnostics identify driver-open/category unknown. They do not expose the underlying driver exception, which remains unknown."
+  },
+  "postFailureRenderer": {
+    "readyState": "complete",
+    "uiDidInit": true,
+    "focused": true,
+    "visibility": "visible",
+    "passiveInputCount": 0,
+    "store": {
+      "teamsLoading": false,
+      "globalTasksLoading": false,
+      "globalTasksInitialized": true,
+      "globalTaskCount": 1,
+      "selectedTeamName": null,
+      "selectedRawMemberCapabilities": {
+        "source": "unavailable",
+        "state": "unavailable"
+      },
+      "provisioning": [],
+      "globalTaskDetail": null,
+      "paneTabs": []
+    },
+    "dialogs": [],
+    "tabs": []
+  },
+  "operations": [],
+  "nativeQuitProofPresent": false,
+  "cleanup": {
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 8174,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "shell-env",
+          "allowed": true,
+          "argc": 2,
+          "flags": [
+            "-lic"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification."
+    }
+  },
+  "boundaries": {
+    "reached": [
+      "Original app startup and discovery",
+      "Configured model preparation consumed once with one original probe",
+      "One sandbox setup launch accepted as pending-bootstrap/opening",
+      "Original factory/runtime driver-open refusals category unknown retained"
+    ],
+    "firstUnfulfilled": "Setup native readiness remained pending/ready0, member unknown/custody-unresolved until setup observation deadline expired.",
+    "notReached": [
+      "Original Composer inputs",
+      "Held business inference and durably queued second input",
+      "Intended active Quit business journey",
+      "Cold active Quit readback"
+    ],
+    "unknown": [
+      "Underlying driver-open exception behind unknown category",
+      "Physical custody/release outcome for any business runtime allocation",
+      "Captured Host cleanup qualification: capturedHostObserved false, capturedHostAbsent null"
+    ]
+  },
+  "limits": [
+    "Bare setup deadline text is not treated as the root cause.",
+    "No failure cause is inherited from earlier heads or Resume/Review.",
+    "Failure cleanup acknowledgement and empty wrapper-group remaining[] do not establish captured Host absence.",
+    "No visual audit of failure PNG performed.",
+    "No real Claude/Codex vendor execution."
+  ]
+}

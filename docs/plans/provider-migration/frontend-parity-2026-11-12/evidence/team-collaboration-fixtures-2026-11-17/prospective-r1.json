@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-plan78-root-r1",
+  "at": "2026-11-17T04:17:43.212953+00:00",
+  "decision": "PROPOSE_EXACT_EXISTING_TEAM_AND_COLLABORATION_FIXTURE_CORRECTIONS",
+  "parent": "e6bcf9629f2c99c69433d69778ebb6586dc3d134",
+  "parentTree": "5874030a0e521500b3fa3e75c278b60157440550",
+  "primary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "plan": {
+    "bytes": 5050,
+    "physicalLines": 22,
+    "gitBlob": "372b9b5dfe47c5f1578e1c954fd5704d62162c62",
+    "sha256": "9818f41da0b0d60fb7a9d27cc7842c4df3843c54cd399207a063b8d6bdb4d42d"
+  },
+  "sourceCut": [
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "preimage": {
+        "bytes": 207380,
+        "physicalLines": 3928,
+        "gitBlob": "331ed90ca8996b09daee62f4bcad2fcda6080b04",
+        "sha256": "97a9c3e63c4c6db21bd9c665b555a99c26ea30c651eeeadaab946e933cb376bb"
+      },
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/team-contracts-5c55-r2/reference/packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "selections": [
+        {
+          "selectedOldText": "  const callBegin = \"        await poll(async () => { view = await first.rpc(team, 'runtime.read',\";",
+          "selectedNewText": "  const callBegin = \"        await poll(async () => { view = await epoch.rpc(team, 'runtime.read',\";",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "    const {poll,first,team,image,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline}=environment;",
+          "selectedNewText": "    const {poll,epoch,team,action,runtimeDigest,readiness,readinessStarted,performance,memberReadinessDeadline}=environment;",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "    run: () => run({ team: 0, image: 'A', runtimeDigest, readiness, readinessStarted: input.now,",
+          "selectedNewText": "    run: () => run({ team: 0, action: 'A', runtimeDigest, readiness, readinessStarted: input.now,",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "      }, first: { rpc: async (team: number, method: string, command: string, payload: unknown) => {",
+          "selectedNewText": "      }, epoch: { rpc: async (team: number, method: string, command: string, payload: unknown) => {",
+          "exactOccurrenceCount": 1
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "preimage": {
+        "bytes": 16555,
+        "physicalLines": 199,
+        "gitBlob": "97e14385a298a38a9b81b8805dc3f6d2da66545c",
+        "sha256": "8340911817fb4228e8d948425a1f85796fba16d244b6763b04e307ed6f290713"
+      },
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/collaboration-preflight-5c55/reference/scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts",
+      "selections": [
+        {
+          "selectedOldText": "  const team = profile.teams[0]!;\n",
+          "selectedNewText": "  const team = profile.teams[0]!;\n  const claudeModel = 'TEST-claude-sonnet';\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "providerId: 'anthropic', model: 'sonnet', effort: 'low'",
+          "selectedNewText": "providerId: 'anthropic', model: claudeModel, effort: 'low'",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "model: provider === 'claude' ? 'sonnet' : 'TEST-model'",
+          "selectedNewText": "model: provider === 'claude' ? claudeModel : 'TEST-model'",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "savedModel: 'sonnet', installer: undefined",
+          "selectedNewText": "savedModel: claudeModel, installer: undefined",
+          "exactOccurrenceCount": 1
+        }
+      ]
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "preimage": {
+        "bytes": 34520,
+        "physicalLines": 383,
+        "gitBlob": "d954e614c6cb9053808a9490914f52c046c98c71",
+        "sha256": "988d0bc40ed2a90f7589cf80a57e14d2713ff49bc54bd2542266de4b9a9f1323"
+      },
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/collaboration-preflight-5c55/reference/scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts",
+      "selections": [
+        {
+          "selectedOldText": ".filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes('sonnet'));",
+          "selectedNewText": ".filter(e=>e.textContent.includes('Optional launch settings')&&e.textContent.includes(${literal(fixture.emulatedRuntime.savedModel)}));",
+          "exactOccurrenceCount": 1
+        }
+      ]
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "preimage": {
+        "bytes": 142416,
+        "physicalLines": 1776,
+        "gitBlob": "5160de39d0fc93eeeb559b885840ec23d059dff5",
+        "sha256": "a5ac2611c60107b1370a048249f398e1c8c539b82c01f0a176ea530f2eeff43b"
+      },
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/collaboration-preflight-5c55/reference/.github/workflows/host-emulated-acceptance.yml",
+      "selections": [
+        {
+          "selectedOldText": "['anthropic', 'sonnet'], ['codex', 'TEST-model']",
+          "selectedNewText": "['anthropic', 'TEST-claude-sonnet'], ['codex', 'TEST-model']",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]",
+          "selectedNewText": "['anthropic', 'TEST-claude-sonnet', 'low'], ['codex', 'TEST-model', undefined]",
+          "exactOccurrenceCount": 1
+        }
+      ]
+    }
+  ],
+  "sourceAfterimagesCreated": false,
+  "evidence": {
+    "team": {
+      "run": 44008164473,
+      "job": 133788425580,
+      "logSha256": "c6a7b0b4b00991a3a2750e37a6492a13b8d0c3da13ea5d4710a0dd8945fad0c9",
+      "r2Sha256": "38fc34455ba9456741354728a3f2de1a2ed8424a430af3dd794cee0c7853c6a5",
+      "dataSha256": "9be81f201408b29ca0b3b521e4913e87a3e1fbfa2c03741fa916a99fd1eb3ff4",
+      "rootFullR2AndDataRead": true,
+      "firstFailure": "Unique caller marker split length1, expected2 at3725 before target logic",
+      "counts": {
+        "tests": 179,
+        "pass": 171,
+        "fail": 8
+      },
+      "typedAndDesktopStagesReached": false
+    },
+    "collaboration": {
+      "run": 44008164473,
+      "job": 133788425418,
+      "logSha256": "4a5742bc585a1576e98074282805957c8bd89343bb3e4822454334ef8fb7d758",
+      "zipSha256": "176e775cbb413de4f2dbaddbf6b13805e07e750096bbbebccec75c8a76d12439",
+      "receiptSha256": "9c65dfa438f5c28f624779cc171a650f8a62b2cb6e54f387393eeba02bcfe4c5",
+      "pngSha256": "1bb12810676d5a0efb505780a4898d7367bcbf264778a200a4cae5f8a7b2e231",
+      "rootPngViewed": true,
+      "actualFailure": "UI read timed out: original mixed launch preflight; no mutation retry",
+      "launchClickReached": false,
+      "sourcePinsBeforeAfterEqual": 1815,
+      "cleanup": "App exit0/null and group/observed peers absent; capturedHostObserved=false, capturedHostAbsent=null",
+      "otherObservedBlocksUnresolved": [
+        "Codex catalog-refresh",
+        "runtime-unavailable",
+        "auth host.held",
+        "Task read crossed mutation boundary"
+      ]
+    },
+    "packagedMacos": {
+      "job": 133807385121,
+      "receiptSha256": "b377677204133fa7fbee829596f47ea98956207d00b2911a400b50590cf64769",
+      "pngSha256": "793341c20db6916877b004b58f0c58a0ad5e140eace50b77019e590d907224e1",
+      "scope": "Additional observed shared-runtime-fixture sonnet mismatch; Plan77 selected correction, no new Plan78 source change and no relaunch success claim"
+    }
+  },
+  "unchangedSourceJoins": {
+    "scenario": "9cdcd52b268695af3b5fc78c5420bf427a8779ce",
+    "peer": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+    "producer": "c0bd14811e8cd76dd34bcf42afac2785769e37ad",
+    "availability": "ac6e66775bd5efaf81cecb9a2f22a3437b4343ad"
+  },
+  "protected": [
+    "Every original eight-case semantic assertion and unique-marker count",
+    "Real source poll/caller/standalone body and original15s/absolute/25ms/error/capture/cleanup behavior",
+    "Collaboration UI original90s preflight and all subsequent business/effect/cleanup/no-replay assertions",
+    "Workflow counts/providers/effort/probe provenance and every job/condition/command",
+    "Plan77 exact2corrections and every other parent leaf",
+    "Production source/dependencies/rosters/caps",
+    "Useful current5c original CI jobs",
+    "Plan40 A/B and original historicalP10/genuine/native boundaries"
+  ],
+  "requiredReview": [
+    "Independent original failure/source joins and exact4path cut",
+    "Existing fixture shared model and explicit original UI consumer",
+    "Independent workflow durable-probe expectations",
+    "Full current-parent leaf/closure preservation",
+    "No source afterimages before actual-documentary R2"
+  ],
+  "execution": "none; original resulting-head gates remain required",
+  "publication": "existing delivery branch only; ordinary immediate CAS; primary waits fresh complete useful-job guard",
+  "documentaryPaths": {
+    "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/78-team-collaboration-fixtures-2026-11-17.md",
+    "r1": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-collaboration-fixtures-2026-11-17/prospective-r1.json",
+    "r2": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/team-collaboration-fixtures-2026-11-17/prospective-r2.json"
+  },
+  "documentaryPathsAbsentAtParent": true,
+  "deliveryBranch": "fix/frontend-parity-e2e-bounds-20261116",
+  "primaryBranch": "fix/frontend-parity-completion-20261113",
+  "baseBranch": "feat/provider-host-frontend-parity-20261112",
+  "completeParentMerkleObjects": 1728,
+  "completeParentLeaves": 11223
+}

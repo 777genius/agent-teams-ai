@@ -41,6 +41,7 @@ vi.mock('@renderer/store', () => ({
 vi.mock('@renderer/store/slices/teamSlice', () => ({
   getCurrentProvisioningProgressForTeam: () => storeState.progress,
   selectTeamDataForName: () => storeState.selectedTeamData,
+  selectTeamIsAliveForName: () => undefined,
   selectTeamMemberSnapshotsForName: () => storeState.selectedTeamData.members,
   selectResolvedMembersForTeamName: () => storeState.selectedTeamData.members,
 }));

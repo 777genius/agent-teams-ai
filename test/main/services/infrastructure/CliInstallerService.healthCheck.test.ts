@@ -71,6 +71,8 @@ vi.mock('http', () => ({
 }));
 
 import { CliInstallerService } from '@main/services/infrastructure/CliInstallerService';
+import { createDefaultProviderStatus } from '@main/services/runtime/providerStatusCheckContract';
+import type { CliInstallationStatus } from '@shared/types';
 
 describe('CliInstallerService health check', () => {
   let service: CliInstallerService;
@@ -111,4 +113,55 @@ describe('CliInstallerService health check', () => {
     expect(status.installedVersion).toBe('2.1.100');
     expect(status.launchError).toBeNull();
   });
+});
+
+it('selected Native status bypasses fork discovery/probes, uncaptured cache and fork installation', async () => {
+  const initial: CliInstallationStatus = {
+    flavor: 'agent_teams_orchestrator',
+    displayName: 'TEST Host',
+    supportsSelfUpdate: false,
+    showVersionDetails: false,
+    showBinaryPath: false,
+    installed: true,
+    installedVersion: 'TEST-build',
+    binaryPath: null,
+    latestVersion: null,
+    updateAvailable: false,
+    authLoggedIn: false,
+    authStatusChecking: false,
+    authMethod: null,
+    providers: [createDefaultProviderStatus('opencode')],
+  };
+  execCliMock.mockClear();
+  resolveBinaryMock.mockClear();
+  const native = {
+    getStatus: vi.fn(async () => ({
+      ...initial,
+      displayName: 'TEST Native Host',
+      installed: true,
+      installedVersion: 'TEST-build',
+      binaryPath: null,
+      supportsSelfUpdate: false,
+    })),
+    getProviderStatus: vi.fn(async () => ({
+      ...initial.providers[0]!,
+      providerId: 'opencode' as const,
+    })),
+    verifyProviderModels: vi.fn(async () => ({
+      ...initial.providers[0]!,
+      providerId: 'opencode' as const,
+    })),
+  };
+  const service = new CliInstallerService(Date.now, native);
+  expect(service.usesNativeStatus()).toBe(true);
+  expect((await service.getStatus()).displayName).toBe('TEST Native Host');
+  await service.getProviderStatus('opencode', { projectPath: '/TEST/project' });
+  await service.verifyProviderModels('opencode');
+  expect(native.getProviderStatus).toHaveBeenCalledWith('opencode', {
+    projectPath: '/TEST/project',
+  });
+  expect(service.getLatestStatusSnapshot()).toBeNull();
+  await expect(service.install()).rejects.toThrow('selected Host');
+  expect(execCliMock).not.toHaveBeenCalled();
+  expect(resolveBinaryMock).not.toHaveBeenCalled();
 });

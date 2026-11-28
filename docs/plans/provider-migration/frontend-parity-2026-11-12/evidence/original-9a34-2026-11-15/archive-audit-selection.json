@@ -1,0 +1,172 @@
+{
+  "source": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "artifact": {
+    "id": 14177425297,
+    "name": "host-emulated-linux-x64-9a34bb28de0a0deee2eecc42099fd9500563eb1b-selection",
+    "size_in_bytes": 1313131,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177425297",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14177425297/zip",
+    "expired": false,
+    "created_at": "2026-11-15T19:34:20Z",
+    "expires_at": "2026-11-29T19:34:19Z",
+    "updated_at": "2026-11-15T19:34:20Z",
+    "digest": "sha256:589928f41d1f04b9159b78ebe59d4733728c2a711be2d55a4de29478934b18e5",
+    "workflow_run": {
+      "id": 43751070830,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+    }
+  },
+  "zip": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-selection-linux.zip",
+  "bytes": 1313131,
+  "sha256": "589928f41d1f04b9159b78ebe59d4733728c2a711be2d55a4de29478934b18e5",
+  "crc": "pass",
+  "uniquePaths": true,
+  "safePaths": true,
+  "symlinks": false,
+  "extraction": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/selection",
+  "files": [
+    {
+      "path": "TEST-desktop-backend-45n6WZ/desktop-app.log",
+      "bytes": 25419,
+      "sha256": "a5f0751b88cec888d8f7b9a44b63a057bb769025514fe9381fefccad3934f686"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 14107,
+      "sha256": "f716b40f230cca1276648816a26450ce400c2875ad30c7a1f3ee7778b6059ca6"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/desktop-backend-receipt.json",
+      "bytes": 763173,
+      "sha256": "9d916b96224f0bbc3a43b8d41a04c943512221d78f7ba600d520015a080db202"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/desktop-descriptor.json",
+      "bytes": 2635,
+      "sha256": "ce0ba5a8795ac21de15d5fe40e47f71ed1511ec3358867096aa4def28569cfd4"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/host-profile.json",
+      "bytes": 7388,
+      "sha256": "3403110ebb687576c0ddf4dba6083e0715876b65639f60d2700bd1320d675266"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/management-commands/47ea48b43c8322ec993cf92961bb6646595e4ead3f089ce7d21927fe69b7399d.json",
+      "bytes": 929,
+      "sha256": "17201bad980d86c93df178e3a08c5825ac7b658d3ff7c9db02af6c731327c87f"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/management-commands/ec2bd86caa9efae43b3d50fb1652429273d2c5aa38be7c81cd9ca6f403cbe178.json",
+      "bytes": 904,
+      "sha256": "c7a0c57f7afda7aa5e050ef511547457731b6eb35242d6e1f853e8d38851af9e"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/management-commands/f0805a6fab93ab3897f6000c75b27cac9c7b58c0571a170d5263424e3da0ab09.json",
+      "bytes": 923,
+      "sha256": "28d7ddb5cc978aa7d2b26960cc0b019aa4112af4e600f24c81936e5c3da2e40c"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/runtime-checkpoints/cp1-5ddeaece148dcffaddca6dbe6b698d97bf2520fecbecdf21368bba0263f9e572.json",
+      "bytes": 1894,
+      "sha256": "62899752704c89d7ad6544ab9fcbc630bcff0d39a8e41771834e2d12ccb815e6"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/runtime-checkpoints/cp1-eab72031a5ab295d7a23b009f176ca93006c30096d362f240f6b61e06b1db4f3.json",
+      "bytes": 2318,
+      "sha256": "cdf44d05bcde96e490879dea60cc20fb0341f50ec7e4bf37cbcfb0aa4139194e"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "bytes": 453,
+      "sha256": "08009adb258939ba62ad17861b77dd5680c1a65bbb7244b490665f5157736f54"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "bytes": 202,
+      "sha256": "0f3e379a04f024c8a98deffd2d5a8beb203ac7baf1401e549fcef9018915099c"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/sentinel-invocations.ndjson",
+      "bytes": 96,
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-a-launch.png",
+      "bytes": 102112,
+      "sha256": "def57b5654e092a4ce7d78a9895861a44a3c65de9759c3e29b1bea0d580d2abc"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-a-survived.png",
+      "bytes": 114733,
+      "sha256": "7efb135fbb8ec32156501e0ae2797c10c4d73c4b143a54907fd77535a8d70bee"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-completed.png",
+      "bytes": 118998,
+      "sha256": "8f8fc137e25612a55ec4cd9a90ee4ace4c4c94168ba9cbf065db269dbbc44fd6"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-b-launch.png",
+      "bytes": 98125,
+      "sha256": "7e95366f1e0a253afaae2d2fcb9c4aea45823631563ec40c9895259ce4651368"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-effects.json",
+      "bytes": 20005,
+      "sha256": "a4c1c9230a8f2b49e83e2e0ae5a7b9a859a868ec7498929ccdf7e08eb7e2da4f"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-reloaded.png",
+      "bytes": 111069,
+      "sha256": "aeb4b9798e65abfeb53498334bbab94dda8ca9e82bd04152d24f5ceb1f8e39a5"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-selected.png",
+      "bytes": 102682,
+      "sha256": "ccefcb8d97b2264a2ac19a22465e3a95d72e19b637e446b31116879de6889dae"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-emulated-selection-stopped.png",
+      "bytes": 118210,
+      "sha256": "318693ded1617ba12218e002d83d9a5d46ed7013a979013ac84e277ce1e019e9"
+    },
+    {
+      "path": "TEST-desktop-backend-45n6WZ/ui-seed-receipt.json",
+      "bytes": 2335,
+      "sha256": "4b790edd8475510a137531d2f8bafdd3832b7f876eaa92d19f3eab5c7930ce1a"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-7laqct/linux-child-exec/linux-child-exec",
+      "bytes": 790608,
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-7laqct/linux-child-exec/manifest.json",
+      "bytes": 2408,
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-emulated-selection-ui.log",
+      "bytes": 225,
+      "sha256": "d769a0d40b0f512194721c0b1074ad06c9eda0633127f49af9f387ea582597aa"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "bytes": 1803,
+      "sha256": "b1f3b223f49d4a93d14a770fe8744e073aaeeee5556dcc0bc17c9dbed9200c7c"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271,
+      "sha256": "e4c7d61ca119e12c4023cd51dd134a4af78f22259b3b65db3a9ed7307642a1c7"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "bytes": 1050,
+      "sha256": "9aa3048bf0ec2dbab80cc971eb273deeb04e0ba4216c1d71e61fb308145ad35d"
+    }
+  ]
+}

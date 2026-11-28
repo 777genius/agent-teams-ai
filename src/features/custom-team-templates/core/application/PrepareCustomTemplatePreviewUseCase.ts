@@ -104,6 +104,13 @@ export class PrepareCustomTemplatePreviewUseCase {
     }
 
     const conflict = await this.findNameConflict(preview.preview.name);
+    try {
+      read.sourceAdmission?.assertCurrent();
+      await read.sourceAdmission?.verifyCurrent();
+      read.sourceAdmission?.assertCurrent();
+    } catch {
+      return { status: 'sourceUnavailable', sourceTeamName: request.sourceTeamName };
+    }
     if (conflict === 'unavailable') {
       return { status: 'storageUnavailable' };
     }
@@ -115,18 +122,19 @@ export class PrepareCustomTemplatePreviewUseCase {
     let state;
     try {
       state = this.deps.previewStore.issue({
-      sourceTeamName: read.snapshot.sourceTeamName,
-      templateId: this.deps.hasher.deriveTemplateId({
-        contentHash,
+        sourceTeamName: read.snapshot.sourceTeamName,
+        ...(read.sourceAdmission ? { sourceAdmission: read.sourceAdmission } : {}),
+        templateId: this.deps.hasher.deriveTemplateId({
+          contentHash,
+          nameKey: nameValidation.normalizedKey,
+          description: preview.preview.description ?? null,
+        }),
+        name: preview.preview.name,
         nameKey: nameValidation.normalizedKey,
-        description: preview.preview.description ?? null,
-      }),
-      name: preview.preview.name,
-      nameKey: nameValidation.normalizedKey,
-      ...(preview.preview.description ? { description: preview.preview.description } : {}),
-      canonicalContent: preview.preview.canonicalContent,
-      contentHash,
-    });
+        ...(preview.preview.description ? { description: preview.preview.description } : {}),
+        canonicalContent: preview.preview.canonicalContent,
+        contentHash,
+      });
     } catch (error) {
       if (error instanceof CustomTemplatePreviewCapacityError) {
         return { status: 'storageUnavailable' };

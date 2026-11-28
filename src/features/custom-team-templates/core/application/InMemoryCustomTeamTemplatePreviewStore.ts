@@ -1,3 +1,5 @@
+import type { CustomTeamTemplateSourceAdmission } from './ports';
+
 /**
  * Bounded in-memory store for prepared previews.
  *
@@ -23,6 +25,8 @@ export class CustomTemplatePreviewCapacityError extends Error {}
 export interface CustomTeamTemplatePreviewStateInput {
   /** Team the projection was read from; a token can never be re-pointed at another team. */
   sourceTeamName: string;
+  /** Original trusted owner/context; equal portable content cannot replace this source. */
+  sourceAdmission?: CustomTeamTemplateSourceAdmission;
   /** Stable id shared by the confirmed create and every retry of it. */
   templateId: string;
   /** Validated display name, capitalization preserved. */
@@ -140,7 +144,8 @@ export class InMemoryCustomTeamTemplatePreviewStore {
   constructor(private readonly options: InMemoryCustomTeamTemplatePreviewStoreOptions) {
     this.ttlMs = options.ttlMs ?? DEFAULT_CUSTOM_TEMPLATE_PREVIEW_TTL_MS;
     this.capacity = options.capacity ?? DEFAULT_CUSTOM_TEMPLATE_PREVIEW_CAPACITY;
-    if (!Number.isInteger(this.capacity) || this.capacity < 1) throw new RangeError('Invalid preview capacity');
+    if (!Number.isInteger(this.capacity) || this.capacity < 1)
+      throw new RangeError('Invalid preview capacity');
   }
 
   /** Retains one preview and returns the state (including its opaque token). */
@@ -152,7 +157,10 @@ export class InMemoryCustomTeamTemplatePreviewStore {
       // unresolved operation, even if it has expired or is the oldest entry.
       const entries = [...this.entries];
       const candidate =
-        entries.find(([token, state]) => state.confirmedSave && !state.hasUnresolvedWrite && !this.inFlightSaves.has(token)) ??
+        entries.find(
+          ([token, state]) =>
+            state.confirmedSave && !state.hasUnresolvedWrite && !this.inFlightSaves.has(token)
+        ) ??
         entries.find(([token, state]) => !state.confirmedSave && !this.inFlightSaves.has(token));
       if (!candidate) {
         throw new CustomTemplatePreviewCapacityError('All retained template saves are unresolved');
@@ -265,7 +273,11 @@ export class InMemoryCustomTeamTemplatePreviewStore {
    */
   /** Atomically fences a save against concurrent confirmations and unresolved writers. */
   tryBeginSave(token: string): boolean {
-    if (!this.entries.has(token) || this.inFlightSaves.has(token) || this.hasUnresolvedWrite(token)) {
+    if (
+      !this.entries.has(token) ||
+      this.inFlightSaves.has(token) ||
+      this.hasUnresolvedWrite(token)
+    ) {
       return false;
     }
     this.inFlightSaves.add(token);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 
 import {
@@ -30,8 +31,11 @@ export function useOpenCodeLocalModelSetup({
   actionByRoute: Record<string, OpenCodeLocalModelSetupActionState>;
   addAndTest: (target: OpenCodeLocalModelSetupTarget) => Promise<void>;
 } {
+  const retained = useRetainedLegacyLaunch();
+  const management = retained?.management;
   const normalizedProjectPath = projectPath?.trim() ?? '';
-  const activeScopeRef = useRef(normalizedProjectPath);
+  const activeScopeKey = JSON.stringify([retained?.choice.scopeId, normalizedProjectPath]);
+  const activeScopeRef = useRef(activeScopeKey);
   const mountedRef = useRef(true);
   const inFlightActionsRef = useRef(new Set<string>());
   const autoSelectContextRef = useRef({ key: autoSelectContextKey, revision: 0 });
@@ -48,10 +52,10 @@ export function useOpenCodeLocalModelSetup({
   }, [autoSelectContextKey]);
 
   useEffect(() => {
-    if (activeScopeRef.current === normalizedProjectPath) return;
-    activeScopeRef.current = normalizedProjectPath;
+    if (activeScopeRef.current === activeScopeKey) return;
+    activeScopeRef.current = activeScopeKey;
     setActionByRoute({});
-  }, [normalizedProjectPath]);
+  }, [activeScopeKey]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -63,6 +67,7 @@ export function useOpenCodeLocalModelSetup({
   const addAndTest = useCallback(
     async (target: OpenCodeLocalModelSetupTarget): Promise<void> => {
       const actionScope = normalizedProjectPath;
+      const actionIdentity = activeScopeKey;
       if (!actionScope) {
         setActionByRoute((current) => ({
           ...current,
@@ -71,7 +76,7 @@ export function useOpenCodeLocalModelSetup({
         return;
       }
 
-      const actionKey = `${actionScope}\0${target.modelRoute}`;
+      const actionKey = `${actionIdentity}\0${target.modelRoute}`;
       if (inFlightActionsRef.current.has(actionKey)) return;
       inFlightActionsRef.current.add(actionKey);
       const autoSelectRevision = autoSelectContextRef.current.revision;
@@ -85,13 +90,13 @@ export function useOpenCodeLocalModelSetup({
         target,
         dependencies: {
           configureLocalProvider: (input) =>
-            api.runtimeProviderManagement.configureLocalProvider(input),
-          prepareProvisioning: (...args) => api.teams.prepareProvisioning(...args),
+            (management ?? api.runtimeProviderManagement).configureLocalProvider(input),
+          prepareProvisioning: retained?.prepareProvisioning ?? api.teams.prepareProvisioning,
         },
         onConfigured: () => onConfigured(actionScope),
       });
       inFlightActionsRef.current.delete(actionKey);
-      if (!mountedRef.current || activeScopeRef.current !== actionScope) return;
+      if (!mountedRef.current || activeScopeRef.current !== actionIdentity) return;
 
       setActionByRoute((current) => ({
         ...current,
@@ -104,7 +109,16 @@ export function useOpenCodeLocalModelSetup({
         onReady(target.modelRoute);
       }
     },
-    [addingMessage, chooseProjectMessage, normalizedProjectPath, onConfigured, onReady]
+    [
+      activeScopeKey,
+      addingMessage,
+      chooseProjectMessage,
+      management,
+      normalizedProjectPath,
+      onConfigured,
+      onReady,
+      retained,
+    ]
   );
 
   return { actionByRoute, addAndTest };

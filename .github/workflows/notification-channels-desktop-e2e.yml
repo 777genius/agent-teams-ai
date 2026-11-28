@@ -67,6 +67,9 @@ jobs:
           printf 'Verified @thinwrap/notifications@1.2.0 integrity: %s\n' "$actual"
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Both Electron and standalone consume the Host's built workspace exports.
+      - name: Build isolated Host before application startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Ensure Electron binary
         id: electron-install
         continue-on-error: true

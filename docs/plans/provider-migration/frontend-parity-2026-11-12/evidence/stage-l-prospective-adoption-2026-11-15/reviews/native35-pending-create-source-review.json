@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-11-15T23:02:45.942937+00:00",
+  "reviewType": "independent read-only source and original evidence boundary review; no execution",
+  "verdict": "APPROVE bounded TEST-only two-leaf correction for prospective adoption; no resulting-source native PASS",
+  "sourceBefore": "27b1acf48278dcd0fb348c626696eac2dc64de73",
+  "sourceAfter": "35cbd6e99b620e9b41802af936143d900f5e2aca",
+  "leaves": [
+    {
+      "path": "tools/owned-process-broker/debugServiceTest.h",
+      "before": {
+        "bytes": 7264,
+        "lines": 153,
+        "gitBlob": "9edcec8fffca780706cbde634c35d7929552f9f6",
+        "sha256": "e2ad167bf03a8c4566d720a8bc23d9fff274971b2523397f02ac766d89d8944a"
+      },
+      "after": {
+        "bytes": 7271,
+        "lines": 153,
+        "gitBlob": "f8a03669780c34de68010184ad6ca03a8440a2e4",
+        "sha256": "ec0665d1f6289492ea103bce13821c2a06847a2599396c8b47de21dde4e4f2a4"
+      },
+      "changed": true
+    },
+    {
+      "path": "tools/owned-process-broker/nativeDebugServiceScenario.ts",
+      "before": {
+        "bytes": 19603,
+        "lines": 317,
+        "gitBlob": "f8eb84e20fb323e5838b918a7934853785ab9ee5",
+        "sha256": "c37a7f0a4f2ded01700e9cb93e25fcdacd25e363b61c374c375b3ad493c80b27"
+      },
+      "after": {
+        "bytes": 20067,
+        "lines": 325,
+        "gitBlob": "e3cb3ac88b3b46c8935f64bc2f2b0060e163676b",
+        "sha256": "3da229429f0dfa6c53449078a1b8125715130be2165986f2d4cc1fab31a53951"
+      },
+      "changed": true
+    },
+    {
+      "path": "tools/owned-process-broker/serviceScopes.h",
+      "before": {
+        "bytes": 15888,
+        "lines": 376,
+        "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06"
+      },
+      "after": {
+        "bytes": 15888,
+        "lines": 376,
+        "gitBlob": "ab432fc33f763ee28ed406f8c33e7064fb023169",
+        "sha256": "cc6b60ac08081c1d14201391e912b1062967dadc25d4633b5329e9524550fb06"
+      },
+      "changed": false
+    },
+    {
+      "path": "tools/owned-process-broker/serviceDebugLoop.h",
+      "before": {
+        "bytes": 4891,
+        "lines": 93,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3"
+      },
+      "after": {
+        "bytes": 4891,
+        "lines": 93,
+        "gitBlob": "77fb69ac5dfc6eddbd71a273fa1baca1ef5f9298",
+        "sha256": "b31ecf2118e467b07bb973736920b10109a03c831a2cc72364c1abdb8973a8d3"
+      },
+      "changed": false
+    },
+    {
+      "path": "tools/owned-process-broker/broker.cpp",
+      "before": {
+        "bytes": 25929,
+        "lines": 530,
+        "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3"
+      },
+      "after": {
+        "bytes": 25929,
+        "lines": 530,
+        "gitBlob": "e975eb78a3096150ffe6e4b6409aeaadf8e2fb3e",
+        "sha256": "c9b35397e4beb534a9a4298b6a6b7c8c8745571381b69b3301ab3b60fccd6dc3"
+      },
+      "changed": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "before": {
+        "bytes": 17444,
+        "lines": 324,
+        "gitBlob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+      },
+      "after": {
+        "bytes": 17444,
+        "lines": 324,
+        "gitBlob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+        "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+      },
+      "changed": false
+    },
+    {
+      "path": "packages/legacy-agent-host/src/owned-process/codec.ts",
+      "before": {
+        "bytes": 10420,
+        "lines": 260,
+        "gitBlob": "7a2aedea1413e3c2af3be85889451bd015534d79",
+        "sha256": "c3a069b4f4d5bf65366b4ca9007f2fb77042d24cd251a40af66170ac66d63dc0"
+      },
+      "after": {
+        "bytes": 10420,
+        "lines": 260,
+        "gitBlob": "7a2aedea1413e3c2af3be85889451bd015534d79",
+        "sha256": "c3a069b4f4d5bf65366b4ca9007f2fb77042d24cd251a40af66170ac66d63dc0"
+      },
+      "changed": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateContext.ts",
+      "before": {
+        "bytes": 7278,
+        "lines": 192,
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+      },
+      "after": {
+        "bytes": 7278,
+        "lines": 192,
+        "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+        "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+      },
+      "changed": false
+    },
+    {
+      "path": "tools/owned-process-broker/nativeGateDiagnostics.ts",
+      "before": {
+        "bytes": 6380,
+        "lines": 220,
+        "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+        "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237"
+      },
+      "after": {
+        "bytes": 6380,
+        "lines": 220,
+        "gitBlob": "22cf67a484f0a2a5a2b89639e38515cc0242a21a",
+        "sha256": "d963accfadeb14a93fd5d7e2b934a409212cca40e678b452d011c4a579f29237"
+      },
+      "changed": false
+    }
+  ],
+  "inverseExact": {
+    "typescript": true,
+    "cppTestBarrier": true
+  },
+  "sourceDeltas": {
+    "debugServiceTest.h": "+2/-2;153 lines unchanged",
+    "nativeDebugServiceScenario.ts": "+11/-3;317 to325 lines"
+  },
+  "reasoning": [
+    "The existing product absent predicate is rootExited && active==0 && queryError==0. With the unchanged zero query-error guard, the new TypeScript disjunction is exactly its complement.",
+    "All warm-scope observe() calls keep their active>0 oracle. Only the single post-dispatch service-race observation opts out, and immediately asserts the full pending predicate.",
+    "The C++ TEST barrier independently rechecks the original selected scope and exact child membership/terminationDispatched through testOriginalDispatch; it still rejects full original absence.",
+    "Production Stop, retained root/Job HANDLE custody, registration, settlement, current-PID and retirement implementation are byte-identical. No process/name/PID adoption or new control authority is added.",
+    "Both pending Stop-reply checks, early Settle refusal, both inherited registration refusals, original final root-exit plus zero Job membership, all three witnesses, retired-ID/replay refusals, adjacent/provider HANDLE survival and absent child user-effect remain byte-identical.",
+    "One new synchronous console.error contains only five closed decoded/scalar fields. It introduces no native/RPC query, listener, retry, timer or deadline extension. Its I/O overhead remains charged to unchanged work; it is not atomic with future Stop settlement and delivery is not guaranteed."
+  ],
+  "diagnosticRow": {
+    "fields": [
+      "rootExited",
+      "activeProcesses",
+      "queryError",
+      "dispatchError",
+      "stopReplied"
+    ],
+    "maximumSerializedBytesIncludingNewlineAfterUnchangedZeroErrorGuards": 134,
+    "runtimeByteCapAdded": false,
+    "closedDomain": "booleans and decoded uint32; errors already equal0"
+  },
+  "originalEvidence": {
+    "armJobId": 132984523065,
+    "artifactId": 14184765230,
+    "archive": {
+      "bytes": 15521,
+      "lines": 106,
+      "gitBlob": "93085b1fce45bd16313fb65eaa784fc0a3c61648",
+      "sha256": "5b1e4ddc8988dca12e90842b144a5f0cb7e2a72ad66ab04c1e75343f3294031f"
+    },
+    "jobLog": {
+      "bytes": 174712,
+      "lines": 1400,
+      "gitBlob": "289565387470d2af23fd44fb6d49cf456c60ae89",
+      "sha256": "7097e606f569d6ac5563adb9076a585081e8cc95408d22b58d50b9c3911306f3"
+    },
+    "firstFailure": "nativeDebugServiceScenario.ts:199 observe invoked at239, service-race after original dispatch barrier; activeProcesses>0 was false after exact identity/error guards",
+    "retainedFacts": "activeProcesses==0 is source-derived from the decoded uint32 domain and failed assertion; rootExited, Stop ACK and full selected native observation were not retained",
+    "limits": [
+      "No proof that old27b Stop ACK or retirement occurred early.",
+      "No proof from the old record that the newly admitted rootExited=false/active==0 case actually occurred.",
+      "No Windows-specific interleaving or duration is inferred from absent data.",
+      "Physical final containment does not qualify natural witness completion or the service-race acceptance path."
+    ]
+  },
+  "execution": "No tests/build/compiler/native/provider commands run by reviewer; resulting-source original Windows compile/runtime gates remain mandatory."
+}

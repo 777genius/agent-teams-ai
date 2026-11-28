@@ -1,0 +1,21 @@
+{
+  "result": "APPROVE_RECOVERABILITY",
+  "role": "root independent original9e UI bundle complete byte/recovery review",
+  "archive": {
+    "bytes": 5616707,
+    "blob": "7e80a86094c5bc2e4ea6aa4540c132f0129e75a6",
+    "sha256": "0349314448bf95729f524cf2810212f467bce78396c3477e83efbaa425b79992"
+  },
+  "outerMembers": 22,
+  "originalPayloads": 20,
+  "originalPayloadBytes": 6529474,
+  "originalZIPs": 3,
+  "fullOriginalFilesByteMatched": true,
+  "all116DerivativesRecoveredAndComparedToOriginal": true,
+  "safeUniqueCRC": true,
+  "originalPNGs": 91,
+  "scannedTextPayloads": 44,
+  "signedTransportURLsFound": 0,
+  "qualification": "Source9e only; original UI audit/visual limits remain. No M qualification or project execution.",
+  "observedUtc": "2026-11-16T00:21:18.927042+00:00"
+}

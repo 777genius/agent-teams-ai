@@ -1,4 +1,7 @@
-import { parseTeamLaunchFreshness } from '@main/services/team/TeamLaunchFreshness';
+import {
+  getTeamLaunchFreshnessPath,
+  parseTeamLaunchFreshness,
+} from '@main/services/team/TeamLaunchFreshness';
 import { createPersistedLaunchSnapshot } from '@main/services/team/TeamLaunchStateEvaluator';
 import {
   getTeamLaunchStatePath,
@@ -45,6 +48,20 @@ function snapshot(updatedAt = '2026-01-01T00:00:00.000Z'): PersistedTeamLaunchSn
     },
     updatedAt,
   });
+}
+
+function ownedSoloSnapshot(): PersistedTeamLaunchSnapshot {
+  return {
+    ...createPersistedLaunchSnapshot({
+      teamName: 'demo',
+      expectedMembers: [],
+      leadSessionId: 'solo-session',
+      launchPhase: 'finished',
+      members: {},
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }),
+    publicationRunId: 'solo-run',
+  };
 }
 
 function writeStopMarkerOnDisk(teamName: string): void {
@@ -562,6 +579,150 @@ describe('TeamLaunchStateStore', () => {
     expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
     expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(true);
   });
+
+  it('acknowledges an owned finished solo launch only with its freshness and cannot reopen its Stop', async () => {
+    const freshnessPath = getTeamLaunchFreshnessPath('demo');
+    let finishFreshness!: () => void;
+    const freshnessWrite = new Promise<void>((resolve) => {
+      finishFreshness = resolve;
+    });
+    mocks.atomicWriteAsync.mockImplementation(async (target: string, content: string) => {
+      if (target === freshnessPath) await freshnessWrite;
+      await fs.promises.writeFile(target, content);
+    });
+    const store = new TeamLaunchStateStore();
+    const current = ownedSoloSnapshot();
+    const options = {
+      ownedSoloLaunch: true,
+      runId: 'solo-run',
+      isAuthorized: () => true,
+      authorizesNewRun: () => true,
+    };
+    let settled = false;
+    const writing = store.write('demo', current, options).then((result) => {
+      settled = true;
+      return result;
+    });
+    try {
+      await vi.waitFor(() => expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(3));
+      expect(settled).toBe(false);
+      expect(fs.existsSync(freshnessPath)).toBe(false);
+    } finally {
+      finishFreshness();
+    }
+
+    await expect(writing).resolves.toBe(true);
+    expect(mocks.atomicWriteAsync.mock.calls.map(([target]) => target)).toEqual([
+      getTeamLaunchStatePath('demo'),
+      getTeamLaunchSummaryPath('demo'),
+      freshnessPath,
+    ]);
+    const persisted = await store.read('demo');
+    expect(persisted).toMatchObject({
+      version: 2,
+      publicationRunId: 'solo-run',
+      leadSessionId: 'solo-session',
+      launchPhase: 'finished',
+      expectedMembers: [],
+      members: {},
+    });
+    expect(persisted?.members).toEqual({});
+    expect(JSON.parse(fs.readFileSync(getTeamLaunchSummaryPath('demo'), 'utf8'))).toMatchObject({
+      publicationRunId: 'solo-run',
+      updatedAt: current.updatedAt,
+    });
+    expect(
+      parseTeamLaunchFreshness('demo', JSON.parse(fs.readFileSync(freshnessPath, 'utf8')))
+    ).toEqual({
+      version: 1,
+      teamName: 'demo',
+      kind: 'launch',
+      runId: 'solo-run',
+    });
+    expect(mocks.atomicWriteAsync).toHaveBeenNthCalledWith(
+      3,
+      freshnessPath,
+      expect.any(String),
+      expect.objectContaining({
+        beforeCommit: expect.any(Function),
+        durability: 'strict',
+        syncDirectory: true,
+      })
+    );
+
+    await store.markStopped('demo');
+    mocks.atomicWriteAsync.mockClear();
+    await expect(store.write('demo', current, options)).resolves.toBe(false);
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    expect(await store.read('demo')).toBeNull();
+    expect(await store.isStopped('demo')).toBe(true);
+  });
+
+  it('does not let an ordinary finished solo snapshot initialize freshness or lift Stop', async () => {
+    mocks.atomicWriteAsync.mockImplementation(async (target: string, content: string) => {
+      await fs.promises.writeFile(target, content);
+    });
+    const store = new TeamLaunchStateStore();
+    const current = ownedSoloSnapshot();
+    const options = { runId: 'solo-run', isAuthorized: () => true, authorizesNewRun: () => true };
+
+    await expect(store.write('demo', current, options)).resolves.toBe(true);
+    expect(mocks.atomicWriteAsync.mock.calls.map(([target]) => target)).toEqual([
+      getTeamLaunchStatePath('demo'),
+      getTeamLaunchSummaryPath('demo'),
+    ]);
+    expect(fs.existsSync(getTeamLaunchFreshnessPath('demo'))).toBe(false);
+
+    writeStopMarkerOnDisk('demo');
+    mocks.atomicWriteAsync.mockClear();
+    await expect(store.write('demo', current, options)).resolves.toBe(false);
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    expect(await store.isStopped('demo')).toBe(true);
+  });
+
+  it.each([
+    {
+      name: 'foreign run',
+      current: { ...ownedSoloSnapshot(), publicationRunId: 'foreign-run' },
+      options: {},
+    },
+    {
+      name: 'malformed session',
+      current: { ...ownedSoloSnapshot(), leadSessionId: ' solo-session ' },
+      options: {},
+    },
+    {
+      name: 'nonempty roster',
+      current: { ...ownedSoloSnapshot(), expectedMembers: ['Builder'] },
+      options: {},
+    },
+    {
+      name: 'missing owner authorization',
+      current: ownedSoloSnapshot(),
+      options: { isAuthorized: undefined },
+    },
+    {
+      name: 'refused new-run authority',
+      current: ownedSoloSnapshot(),
+      options: { authorizesNewRun: () => false },
+    },
+  ])(
+    'refuses an owned solo publication with $name before writing',
+    async ({ current, options }) => {
+      await expect(
+        new TeamLaunchStateStore().write('demo', current, {
+          ownedSoloLaunch: true,
+          runId: 'solo-run',
+          isAuthorized: () => true,
+          authorizesNewRun: () => true,
+          ...options,
+        })
+      ).resolves.toBe(false);
+      expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+      expect(fs.existsSync(getTeamLaunchStatePath('demo'))).toBe(false);
+      expect(fs.existsSync(getTeamLaunchFreshnessPath('demo'))).toBe(false);
+    }
+  );
 
   it('lifts the stop marker when a real launch publishes an active snapshot', async () => {
     writeStopMarkerOnDisk('demo');

@@ -1,0 +1,498 @@
+{
+  "schema": "original-v2-windows-x64-evidence/v1",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "reviewer": "/root/native_failures",
+  "officialJobsApi": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/v2-jobs-0310.json",
+    "sha256": "27cdaefa35039cbec461a3a26a907666ea86cb775290d12093266d3e663af629"
+  },
+  "jobState": {
+    "status": "completed",
+    "conclusion": "success",
+    "completedAt": null,
+    "runId": 43795234721,
+    "runHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "runAttempt": 1
+  },
+  "hostSourceAudit": {
+    "path": "host-source-N608efb-git-audit.json",
+    "bytes": 163123,
+    "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+    "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+  },
+  "sourceLeavesRead": [
+    {
+      "path": ".github/workflows/opencode-v2-stage1-preflight.yml",
+      "bytes": 36013,
+      "blob": "2f557dd4b74806e6a444c46656af07b52bc0fb4e",
+      "sha256": "fddd1aface758ef115a5e904151cb61dd78dca04d8f52fb99f4326ddaff53a14"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v2-embedded-host.native.ts",
+      "bytes": 33259,
+      "blob": "e4fd10d1c969bb5bf8a75e9789599a04dc0fc190",
+      "sha256": "e7a295816da293ff4e26a775f898f1bc144ece55e995c3d05bed8e543f2803ff"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/opencode-v1-version-source.ts",
+      "bytes": 9765,
+      "blob": "78cb6f0026821785b1d0c0c1ad21ddfe76cdaee4",
+      "sha256": "0ff252732bedb1807cf428370e41628922a4d719090f479a41f25117d7227979"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01"
+    }
+  ],
+  "windowsV2": [
+    {
+      "artifact": 14194840850,
+      "job": 133062438882,
+      "rawJob": {
+        "path": "v2-win32-x64/job-133062438882.log",
+        "bytes": 89327,
+        "blob": "453a5e16ab67e80851fd47be4b442c1f3228a5cd",
+        "sha256": "8dd1f64ac7e4dc57f89d23aeac046d4fe695f71b15781a9d05f595db21be2c47"
+      },
+      "inputReceipt": {
+        "path": "v2-win32-x64/extracted/opencode-v2-embedded-inputs.json",
+        "bytes": 780,
+        "blob": "aaf147b4bce577e96259e6b7c4e133b9e7a4b35e",
+        "sha256": "5453053cc216f3e7d88b314a91d3edcc0155fb0a2bae5c5944960ca719844046"
+      },
+      "inputs": {
+        "kind": "TEST_NATIVE_V2_EMBEDDED_INPUTS",
+        "status": "READY",
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "platform": "win32-x64",
+        "nodeVersion": "v24.21.0",
+        "productQualified": false,
+        "stage": "prepared",
+        "baseArchiveSha256": "fafa3d891922cb3a5df6d1bd7dec80cc105352c619b39e298761657add677f49",
+        "runtimeSource": "e13edcd3d4ffbecc0272ae30195cc6b15b710ee7",
+        "bun": {
+          "path": "D:\\a\\agent-teams-ai\\agent-teams-ai\\resources\\runtime\\bun\\bun.exe",
+          "sha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+          "version": "1.4.3"
+        },
+        "supportArchiveSha256": "9cea106d78a0482a0ea8bd05b0a7cb44c604fcf4f6de3fdac5549a5ba552787c",
+        "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628"
+      },
+      "originalCustodyReceipt": {
+        "path": "v2-win32-x64/extracted/opencode-v2-windows-custody.json",
+        "bytes": 907,
+        "blob": "b191b3b7c6a633db47c75e77f1c88b066a2e2b2e",
+        "sha256": "21a9e05861376784020a142b67037578153b029f521b499fbe635c69ac98131b"
+      },
+      "originalCustody": {
+        "kind": "TEST_WINDOWS_ORIGINAL_JOB_CUSTODY",
+        "status": "PASS",
+        "cleanup": true,
+        "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+        "platform": "win32-x64",
+        "nodeVersion": "v24.21.0",
+        "bunSha256": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+        "manifestSha256": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+        "hostBuild": {
+          "hostSourceDigest": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+          "hostDistDigest": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+          "providerDigest": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267"
+        },
+        "productQualified": false,
+        "desktopQualified": false,
+        "captureBeforeInput": true,
+        "descendantSurvivedRootExit": true,
+        "originalJobCleanup": "confirmed",
+        "neighborSurvivedTargetStop": true,
+        "neighborJobCleanup": "confirmed"
+      },
+      "originalNodeCommandSummaries": [
+        {
+          "tests": 58,
+          "pass": 57,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 1
+        },
+        {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0
+        },
+        {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0
+        },
+        {
+          "tests": 1,
+          "pass": 1,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0
+        }
+      ],
+      "totalPass": 60,
+      "originalSkips": 1,
+      "manualAndAuto": [
+        {
+          "status": "PASS",
+          "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+          "platform": "win32-x64",
+          "version": "2.1.4",
+          "approvalMode": "manual",
+          "nodeVersion": "v24.21.0",
+          "modelSelection": {
+            "providerId": "TEST-local",
+            "modelId": "TEST-model-B",
+            "variant": "high"
+          },
+          "configurationSelection": {
+            "scope": "project",
+            "original": "project-A",
+            "later": "project-B"
+          },
+          "preferencesSelection": {
+            "nativeDefault": "TEST-local/TEST-model",
+            "appDefault": "TEST-local/TEST-model-B"
+          },
+          "digests": {
+            "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+            "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "hostSource": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+            "hostDist": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+            "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+            "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+          },
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "cleanup": true,
+          "phaseElapsedMs": {
+            "original_host_embedded_native_and_mcp_ready": 34059,
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 121477,
+            "changed_project_config_did_not_retarget_running_native_session": 121477,
+            "original_uploaded_PNG_native_image_inference_and_public_readback": 121477,
+            "checkpoint_and_original_host_native_cleanup_confirmed": 122168,
+            "cold_host_restored_native_history_without_model_or_tool_replay": 151345
+          },
+          "elapsedMs": 152573,
+          "cancelled": false,
+          "inputObservation": {
+            "reads": 408,
+            "last": {
+              "phase": "allocated",
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true,
+              "sealed": false,
+              "diagnostic": null,
+              "inputs": [
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                },
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                }
+              ],
+              "interactions": [
+                {
+                  "kind": "permission",
+                  "phase": "resolved"
+                },
+                {
+                  "kind": "permission",
+                  "phase": "resolved"
+                }
+              ]
+            }
+          },
+          "launchObservation": {
+            "openElapsedMs": 28276,
+            "afterOpen": {
+              "available": true,
+              "status": "ready",
+              "reason": "context-applied",
+              "elapsedSinceAttemptMs": 27429,
+              "capturedTimeoutMs": 120000,
+              "claimed": true,
+              "nativeReady": true,
+              "contextApplied": true,
+              "everReady": true,
+              "usable": true,
+              "controlAvailable": true,
+              "noAllocation": false
+            }
+          },
+          "failureCode": null,
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "modelFailures": [],
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "receipt": {
+            "path": "v2-win32-x64/extracted/opencode-v2-embedded-host.json",
+            "bytes": 95069,
+            "blob": "a52a63ea637e3d1957c4c734b841e638e59a1079",
+            "sha256": "3f51bd0a342007e60bb2537f1116f5813209b74fdd28c17e4dc5579caa7cd840"
+          },
+          "passiveTrace": {
+            "rows": 254,
+            "events": {
+              "child-spawn": 1,
+              "child-ready": 1,
+              "request": 105,
+              "response": 104,
+              "request-send-headers": 15,
+              "request-body-sent": 15,
+              "response-end": 12,
+              "trace-limit": 1
+            },
+            "last": {
+              "epoch": 1,
+              "event": "trace-limit",
+              "atMs": 46034,
+              "child": null,
+              "request": null,
+              "route": null,
+              "method": null,
+              "durationMs": null,
+              "status": null,
+              "contentEncoding": null,
+              "stage": null,
+              "code": null,
+              "exitCode": null,
+              "signal": null
+            },
+            "completeNativeEventHistory": false
+          },
+          "originalHostCpuKeys": [
+            "epoch",
+            "scope",
+            "status",
+            "rawDiscarded",
+            "samplingIntervalUs",
+            "profileDurationUs",
+            "sampledUs",
+            "unsampledUs",
+            "nodeCount",
+            "sampleCount",
+            "attribution",
+            "categories",
+            "teamWriterDetails",
+            "namespaceFenceDetails",
+            "teamWriterCallers",
+            "fileBytes",
+            "fileOverLimit"
+          ]
+        },
+        {
+          "status": "PASS",
+          "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+          "platform": "win32-x64",
+          "version": "2.1.4",
+          "approvalMode": "auto",
+          "nodeVersion": "v24.21.0",
+          "modelSelection": {
+            "providerId": "TEST-local",
+            "modelId": "TEST-model-B",
+            "variant": "high"
+          },
+          "configurationSelection": {
+            "scope": "project",
+            "original": "project-A",
+            "later": "project-B"
+          },
+          "preferencesSelection": {
+            "nativeDefault": "TEST-local/TEST-model",
+            "appDefault": "TEST-local/TEST-model-B"
+          },
+          "digests": {
+            "bun": "095db4abae203d42f29fdec26da4a882fcde6333cdd84e40c0c7828c0cf543f6",
+            "manifest": "b15576ab97dca04f002f3b07972e49290f0933e0f66c51b7332703a5b76ad628",
+            "node": "ba4e6d110e8c1592a1ecd390f6b05f3da124b13871a5be62b341a07a853c6c32",
+            "hostSource": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+            "hostDist": "2bf4a98b1ee3d93e2d22cca4b93e4b75349ecf0a79d67165369da6daa5fe9b07",
+            "provider": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+            "windowsShell": "38f4384643b3fa0de714d2367b712c2e0fa1c89e2cfd131ae6b831ad962b1033"
+          },
+          "steps": [
+            "original_host_embedded_native_and_mcp_ready",
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once",
+            "changed_project_config_did_not_retarget_running_native_session",
+            "original_uploaded_PNG_native_image_inference_and_public_readback",
+            "checkpoint_and_original_host_native_cleanup_confirmed",
+            "cold_host_restored_native_history_without_model_or_tool_replay"
+          ],
+          "cleanup": true,
+          "phaseElapsedMs": {
+            "original_host_embedded_native_and_mcp_ready": 33931,
+            "native_model_tool_effect_permission_mcp_task_and_reply_completed_once": 101339,
+            "changed_project_config_did_not_retarget_running_native_session": 101339,
+            "original_uploaded_PNG_native_image_inference_and_public_readback": 101339,
+            "checkpoint_and_original_host_native_cleanup_confirmed": 101991,
+            "cold_host_restored_native_history_without_model_or_tool_replay": 130338
+          },
+          "elapsedMs": 131296,
+          "cancelled": false,
+          "inputObservation": {
+            "reads": 335,
+            "last": {
+              "phase": "allocated",
+              "custody": "owned",
+              "nativeReady": true,
+              "attached": true,
+              "sealed": false,
+              "diagnostic": null,
+              "inputs": [
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                },
+                {
+                  "phase": "terminal",
+                  "terminal": "succeeded"
+                }
+              ],
+              "interactions": []
+            }
+          },
+          "launchObservation": {
+            "openElapsedMs": 28225,
+            "afterOpen": {
+              "available": true,
+              "status": "ready",
+              "reason": "context-applied",
+              "elapsedSinceAttemptMs": 27336,
+              "capturedTimeoutMs": 120000,
+              "claimed": true,
+              "nativeReady": true,
+              "contextApplied": true,
+              "everReady": true,
+              "usable": true,
+              "controlAvailable": true,
+              "noAllocation": false
+            }
+          },
+          "failureCode": null,
+          "hosts": [
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            },
+            {
+              "exitCode": 0,
+              "signalCode": null,
+              "stdoutValid": true
+            }
+          ],
+          "modelOrigin": "localhost-scripted",
+          "modelRequests": 11,
+          "coordination": {
+            "status": "unqualified",
+            "cleanup": null
+          },
+          "modelFailures": [],
+          "vendorAuthQualified": false,
+          "desktopQualified": false,
+          "releaseQualified": false,
+          "receipt": {
+            "path": "v2-win32-x64/extracted/opencode-v2-embedded-host-auto.json",
+            "bytes": 94881,
+            "blob": "8ef15bc27a12c2858a86d664433f50bcd63637e1",
+            "sha256": "41b7a8b87bf3afcb26f4ce687e7cda4e01bdb2680c5cf40d3a95c8796ccc8d40"
+          },
+          "passiveTrace": {
+            "rows": 254,
+            "events": {
+              "child-spawn": 1,
+              "child-ready": 1,
+              "request": 105,
+              "response": 104,
+              "request-send-headers": 15,
+              "request-body-sent": 15,
+              "response-end": 12,
+              "trace-limit": 1
+            },
+            "last": {
+              "epoch": 1,
+              "event": "trace-limit",
+              "atMs": 45697,
+              "child": null,
+              "request": null,
+              "route": null,
+              "method": null,
+              "durationMs": null,
+              "status": null,
+              "contentEncoding": null,
+              "stage": null,
+              "code": null,
+              "exitCode": null,
+              "signal": null
+            },
+            "completeNativeEventHistory": false
+          },
+          "originalHostCpuKeys": [
+            "epoch",
+            "scope",
+            "status",
+            "rawDiscarded",
+            "samplingIntervalUs",
+            "profileDurationUs",
+            "sampledUs",
+            "unsampledUs",
+            "nodeCount",
+            "sampleCount",
+            "attribution",
+            "categories",
+            "teamWriterDetails",
+            "namespaceFenceDetails",
+            "teamWriterCallers",
+            "fileBytes",
+            "fileOverLimit"
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Original source608efb N Windows x64 manual/automatic native flow only; no transfer to other architectures or historical sources.",
+    "Controlled localhost-scripted OpenCode2.1.4, not real vendor authentication or desktop/release qualification.",
+    "The254-row passive traces end at trace-limit and are not a complete event or cleanup chronology; the physical custody and cleanup receipt assertions remain separate.",
+    "Coordination remains unqualified with cleanup:null in both original full-flow receipts.",
+    "The619-source Git CRLF digest independently matches both manual/automatic receipts; hostDist and provider equality are original harness assertions, not reviewer rebuilt output.",
+    "No tests, compilers, provider/native actors, reruns, cancellation or ref changes performed."
+  ]
+}

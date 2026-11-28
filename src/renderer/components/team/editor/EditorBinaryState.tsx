@@ -29,8 +29,16 @@ export const EditorBinaryState = ({
   }
 
   if (previewType === 'document') {
-    return <Suspense fallback={null}><DocumentPreview key={filePath} filePath={filePath} size={size}
-      fallback={<EditorBinaryPlaceholder filePath={filePath} fileName={fileName} size={size} />} /></Suspense>;
+    return (
+      <Suspense fallback={null}>
+        <DocumentPreview
+          key={filePath}
+          filePath={filePath}
+          size={size}
+          fallback={<EditorBinaryPlaceholder filePath={filePath} fileName={fileName} size={size} />}
+        />
+      </Suspense>
+    );
   }
 
   return <EditorBinaryPlaceholder filePath={filePath} fileName={fileName} size={size} />;

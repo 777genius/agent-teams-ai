@@ -9,6 +9,7 @@
  */
 
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
+import { readOriginalRuntimeScope } from '@main/services/runtime/OriginalRuntimeScope';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
 import { createManagedGitEnv } from '@main/utils/managedGit';
 import { getAutoDetectedClaudeBasePath, getClaudeBasePath } from '@main/utils/pathDecoder';
@@ -16,6 +17,7 @@ import { getCachedShellEnv, getShellPreferredHome } from '@main/utils/shellEnv';
 import { userInfo } from 'os';
 
 export function buildEnrichedEnv(binaryPath?: string | null): NodeJS.ProcessEnv {
+  const processEnv = readOriginalRuntimeScope()?.processEnv ?? process.env;
   const shellEnv = getCachedShellEnv();
   const home = getShellPreferredHome();
   let osUsername = '';
@@ -26,8 +28,8 @@ export function buildEnrichedEnv(binaryPath?: string | null): NodeJS.ProcessEnv 
   }
   const user =
     shellEnv?.USER?.trim() ||
-    process.env.USER?.trim() ||
-    process.env.USERNAME?.trim() ||
+    processEnv.USER?.trim() ||
+    processEnv.USERNAME?.trim() ||
     osUsername ||
     '';
 
@@ -38,18 +40,20 @@ export function buildEnrichedEnv(binaryPath?: string | null): NodeJS.ProcessEnv 
   const configDir = getClaudeBasePath();
   const isCustomConfigDir = configDir !== getAutoDetectedClaudeBasePath();
 
-  return createManagedGitEnv(applyAgentTeamsIdentityEnv({
-    ...process.env,
-    ...(shellEnv ?? {}),
-    HOME: home,
-    USERPROFILE: home,
-    PATH: buildMergedCliPath(binaryPath),
-    ...(isCustomConfigDir ? { CLAUDE_CONFIG_DIR: configDir } : {}),
-    ...(user
-      ? {
-          USER: user,
-          LOGNAME: shellEnv?.LOGNAME?.trim() || process.env.LOGNAME?.trim() || user,
-        }
-      : {}),
-  }));
+  return createManagedGitEnv(
+    applyAgentTeamsIdentityEnv({
+      ...processEnv,
+      ...(shellEnv ?? {}),
+      HOME: home,
+      USERPROFILE: home,
+      PATH: buildMergedCliPath(binaryPath),
+      ...(isCustomConfigDir ? { CLAUDE_CONFIG_DIR: configDir } : {}),
+      ...(user
+        ? {
+            USER: user,
+            LOGNAME: shellEnv?.LOGNAME?.trim() || processEnv.LOGNAME?.trim() || user,
+          }
+        : {}),
+    })
+  );
 }

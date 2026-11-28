@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt4.tar.gz",
+  "archiveSha256": "0dda4ec4f1a6c6cb42a304f2b8c56dec711b7339ecce221b5bd860c2f5a56008",
+  "manifestSha256": "ef1910d5ec975358833986dd74d07a33a2d6cb3187420696821ef83562d4f0d2",
+  "receiptSha256": "fa27801dd54a24b3e808a581856dcf971e09b5ac683132dd33b16d1fde1f0995",
+  "fileCount": 19,
+  "stage": "/private/tmp/TEST-p5-desktop-ui-attempt4-legqk_tj",
+  "result": "INCOMPLETE before first ordinary UI click; actual startup target found at78157ms, renderer remained Preparing workspace; captured group31416 retired SIGTERM, no Host/business commands, no retry."
+}

@@ -1,0 +1,111 @@
+{
+  "sourceHead": "e9bfd4518bc30218a32fc1999fa04cf5e8ace74e",
+  "sourceTree": "7b4e4636a7708b0f1b8d596b8b2637bdaad821c5",
+  "parents": [
+    "da0cf77f42ba92ca17af07f3c8377ef4a27d4614",
+    "c28f1aa890c909c7b981254c5e30b874cbc84287"
+  ],
+  "selectedSources": 32,
+  "hostSources": 615,
+  "dependencies": 17,
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "reusedOutputs": 1446,
+  "newBuildPerformed": false,
+  "headCleanAtReview": true,
+  "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "commands": [
+    {
+      "name": "E-runtime-red",
+      "metadata": {
+        "bytes": 2735,
+        "blob": "c8c6017ac2b2bb686d9467cc8da9310ffe060ec7",
+        "sha256": "47e45ea23d069b161622d66c230c01a59249af9c33cc33120fe3c7f532afb144"
+      },
+      "preflight": {
+        "bytes": 19138,
+        "blob": "2a83b6afbaed5db37be39b3907bbf0b16332799c",
+        "sha256": "5e6cff2d2f15699dc4549787932cbb6a4a215ef4def8d0c204dbd49ddf139a8d"
+      },
+      "log": {
+        "bytes": 9993,
+        "blob": "f755173c9522c79891d6ede7a112f3f0fb1b8d93",
+        "sha256": "7df6a5d364a492c63536f7e3c93687eb313f9c01a3b1c88aa5e25832160c5670"
+      },
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "--test-concurrency=1",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts"
+      ],
+      "startedAtUTC": "2026-11-15T21:18:31.969066+00:00",
+      "finishedAtUTC": "2026-11-15T21:18:41.881800+00:00",
+      "elapsedSeconds": 9.91271015899838,
+      "exitCode": 1,
+      "counts": {
+        "tests": 44,
+        "pass": 38,
+        "fail": 6,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "failureNames": [
+        "source Codex readiness refuses an expired absolute deadline before its first read after the poll handoff",
+        "source Codex readiness refuses a ready result delivered after its original deadline despite a handoff pause",
+        "source standalone refuses expiry during the poll handoff after Start consumed its captured recipe budget",
+        "source standalone refuses a completed result delivered after the captured absolute deadline",
+        "source codex standalone preserves the original fresh capture check after successful completion",
+        "source claude standalone preserves the original fresh capture check after successful completion"
+      ],
+      "postflightExact": true
+    },
+    {
+      "name": "E-journal-red",
+      "metadata": {
+        "bytes": 3193,
+        "blob": "ac3e082818d1447f1521ed973a442133f9bee074",
+        "sha256": "cbba2a27b06a51149fd24d9dc669161b986fc042ae3c67fd16a0549e44ce2274"
+      },
+      "preflight": {
+        "bytes": 20364,
+        "blob": "6ab9710ef5dc4e525ea4d4b10b02d9679f64e55d",
+        "sha256": "19995b9c9d52407ad065847828dd326668e95009561cb761872ad0e1d41db8ac"
+      },
+      "log": {
+        "bytes": 14645,
+        "blob": "cb2c77b8154b051a0009cef4ddefb047561b4584",
+        "sha256": "24067417b0406975b2f8698f166c64f54e7aa1b8287c9fdb521c957f1fadb51e"
+      },
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "--test",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+        "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+        "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+        "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+      ],
+      "startedAtUTC": "2026-11-15T21:19:23.704164+00:00",
+      "finishedAtUTC": "2026-11-15T21:19:30.396319+00:00",
+      "elapsedSeconds": 6.6920826279965695,
+      "exitCode": 1,
+      "counts": {
+        "tests": 115,
+        "pass": 112,
+        "fail": 3,
+        "skipped": 0,
+        "cancelled": 0
+      },
+      "failureNames": [
+        "original peer observation validates no-child-failure before returning without children",
+        "original peer observation validates no-child-malformed before returning without children",
+        "original peer observation validates no-child-late before returning without children"
+      ],
+      "postflightExact": true
+    }
+  ],
+  "conclusion": "APPROVE actual six Runtime and three journal semantic RED failures. No setup/unrelated failure; assertions after each failed assert.rejects are unexecuted. Both Selection cases actually PASS. Local isolated source only; no native/UI or incoming a02/76 qualification.",
+  "reviewerProjectExecutions": 0
+}

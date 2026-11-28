@@ -743,10 +743,11 @@ async function verifyCopyProviderMode(providerlessName: string): Promise<void> {
       await waitFor(async () => {
         const source = await evaluate(
           active,
-          async (name: string) =>
-            (
-              await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list()
-            ).find((team) => team.teamName === name),
+          async (name: string) => {
+            const teams = await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list();
+            if (!Array.isArray(teams)) throw new Error('Expected a complete original Team list');
+            return teams.find((team) => team.teamName === name);
+          },
           [testCase.source]
         );
         return source && !source.pendingCreate ? source : false;
@@ -899,11 +900,11 @@ async function copyPrompt(
 ): Promise<void> {
   const active = getClient();
   await openMenu('Teams');
-  const before = await evaluate(active, async () =>
-    (await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list())
-      .map((team) => team.teamName)
-      .sort()
-  );
+  const before = await evaluate(active, async () => {
+    const teams = await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list();
+    if (!Array.isArray(teams)) throw new Error('Expected a complete original Team list');
+    return teams.map((team) => team.teamName).sort();
+  });
   await button('[data-testid="external-agent-prompt-open"]', true);
   await waitFor(
     () => evaluate(active, () => Boolean(document.getElementById('external-agent-task'))),
@@ -1189,11 +1190,11 @@ async function copyPrompt(
       ),
     'prompt dialog closed'
   );
-  const after = await evaluate(active, async () =>
-    (await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list())
-      .map((team) => team.teamName)
-      .sort()
-  );
+  const after = await evaluate(active, async () => {
+    const teams = await (window as unknown as { electronAPI: HarnessApi }).electronAPI.teams.list();
+    if (!Array.isArray(teams)) throw new Error('Expected a complete original Team list');
+    return teams.map((team) => team.teamName).sort();
+  });
   assert.deepEqual(after, before, 'Copy must not create local teams');
 }
 async function settingsSnapshot(

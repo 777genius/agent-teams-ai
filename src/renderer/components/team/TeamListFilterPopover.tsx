@@ -48,6 +48,8 @@ interface TeamListFilterPopoverProps {
   selectedProjectPath: string | null;
   teams: TeamSummary[];
   aliveTeams: string[];
+  incomplete?: boolean;
+  aliveKnown?: boolean;
   onFilterChange: (filter: TeamListFilterState) => void;
   onProjectChange: (projectPath: string | null) => void;
 }
@@ -57,6 +59,8 @@ export const TeamListFilterPopover = ({
   selectedProjectPath,
   teams,
   aliveTeams,
+  incomplete = false,
+  aliveKnown = true,
   onFilterChange,
   onProjectChange,
 }: TeamListFilterPopoverProps): React.JSX.Element => {
@@ -144,7 +148,15 @@ export const TeamListFilterPopover = ({
               <span className="flex items-center gap-1.5">
                 <span className="size-1.5 rounded-full bg-emerald-400" />
                 {t('list.status.running')}
-                <span className="text-[var(--color-text-muted)]">({runningCount})</span>
+                <span className="text-[var(--color-text-muted)]">
+                  (
+                  {!aliveKnown
+                    ? t('list.aggregate.unknown')
+                    : incomplete
+                      ? t('list.aggregate.loadedCount', { count: runningCount })
+                      : runningCount}
+                  )
+                </span>
               </span>
             </label>
             {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Radix Checkbox renders a button, not a native input */}
@@ -156,7 +168,15 @@ export const TeamListFilterPopover = ({
               <span className="flex items-center gap-1.5">
                 <span className="size-1.5 rounded-full bg-zinc-500" />
                 {t('list.status.offline')}
-                <span className="text-[var(--color-text-muted)]">({offlineCount})</span>
+                <span className="text-[var(--color-text-muted)]">
+                  (
+                  {!aliveKnown
+                    ? t('list.aggregate.unknown')
+                    : incomplete
+                      ? t('list.aggregate.loadedCount', { count: offlineCount })
+                      : offlineCount}
+                  )
+                </span>
               </span>
             </label>
           </div>

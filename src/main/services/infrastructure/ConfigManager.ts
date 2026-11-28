@@ -10,6 +10,10 @@
  */
 
 import { normalizeAppLocalePreference } from '@features/localization';
+import {
+  type NativeNextPromptFlag,
+  withNativeNextPromptFlags,
+} from '@features/native-prompt-suggestions/main';
 import { NOTIFICATION_DESKTOP_ROUTABLE_EVENTS } from '@features/notification-channels/contracts';
 import { DEFAULT_TEAM_RUNTIME_RECOVERY_CONFIG } from '@features/team-runtime-recovery/contracts';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
@@ -21,6 +25,7 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { migrateLegacyConfigPath } from './configPathMigration';
 import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
@@ -46,39 +51,6 @@ function getDefaultConfigPath(): string {
 
 function applyConfiguredClaudeRootPath(claudeRootPath: string | null): void {
   setClaudeBasePathOverride(getAppliedElectronDevClaudeRootOverride() ?? claudeRootPath);
-}
-
-function migrateLegacyConfigPath(currentPath: string, legacyPaths: string[]): string {
-  if (fs.existsSync(currentPath)) {
-    return currentPath;
-  }
-
-  const legacyPath = selectLegacyConfigPath(legacyPaths);
-  if (!legacyPath) {
-    return currentPath;
-  }
-
-  try {
-    fs.mkdirSync(path.dirname(currentPath), { recursive: true });
-    fs.copyFileSync(legacyPath, currentPath, fs.constants.COPYFILE_EXCL);
-    return currentPath;
-  } catch {
-    return fs.existsSync(currentPath) ? currentPath : legacyPath;
-  }
-}
-
-function selectLegacyConfigPath(legacyPaths: string[]): string | null {
-  const existingPaths = legacyPaths.filter((candidatePath) => fs.existsSync(candidatePath));
-  return existingPaths.find(isReadableJsonObjectFile) ?? existingPaths[0] ?? null;
-}
-
-function isReadableJsonObjectFile(filePath: string): boolean {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed);
-  } catch {
-    return false;
-  }
 }
 
 // ===========================================================================
@@ -298,11 +270,11 @@ export interface ProviderConnectionsConfig {
     authMode: ProviderConnectionAuthMode;
     fastModeDefault: boolean;
     compatibleEndpoint: AnthropicCompatibleEndpointConfig;
-  };
+  } & NativeNextPromptFlag;
   codex: {
     preferredAuthMode: CodexAccountAuthMode;
     customProvider: CodexCustomProviderConfig;
-  };
+  } & NativeNextPromptFlag;
 }
 
 export interface DisplayConfig {
@@ -406,6 +378,7 @@ const DEFAULT_CONFIG: AppConfig = {
     anthropic: {
       authMode: 'auto',
       fastModeDefault: false,
+      nativeNextPromptSuggestionsEnabled: true,
       compatibleEndpoint: {
         enabled: false,
         baseUrl: '',
@@ -413,6 +386,7 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     codex: {
       preferredAuthMode: 'auto',
+      nativeNextPromptSuggestionsEnabled: true,
       customProvider: {
         enabled: false,
         baseUrl: '',
@@ -553,7 +527,6 @@ export class ConfigManager {
     );
   }
 
-
   /**
    * Gets the singleton instance of ConfigManager.
    */
@@ -568,7 +541,6 @@ export class ConfigManager {
   static resetInstance(): void {
     ConfigManager.instance = null;
   }
-
 
   /**
    * Loads configuration from disk.
@@ -657,9 +629,13 @@ export class ConfigManager {
         enabled: loadedNotifications.enabled ?? DEFAULT_CONFIG.notifications.enabled,
         soundEnabled: loadedNotifications.soundEnabled ?? DEFAULT_CONFIG.notifications.soundEnabled,
         desktopDisabledEvents: Array.isArray(loadedNotifications.desktopDisabledEvents)
-          ? [...new Set(loadedNotifications.desktopDisabledEvents.filter((event) =>
-              (NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event)
-            ))]
+          ? [
+              ...new Set(
+                loadedNotifications.desktopDisabledEvents.filter((event) =>
+                  (NOTIFICATION_DESKTOP_ROUTABLE_EVENTS as readonly string[]).includes(event)
+                )
+              ),
+            ]
           : [],
         ignoredRegex: loadedNotifications.ignoredRegex ?? DEFAULT_CONFIG.notifications.ignoredRegex,
         ignoredRepositories:
@@ -733,24 +709,28 @@ export class ConfigManager {
         maxAttempts: Math.min(5, Math.max(1, Math.round(loadedRecovery.maxAttempts ?? 2))),
       },
       general: mergedGeneral,
-      providerConnections: {
-        anthropic: {
-          ...DEFAULT_CONFIG.providerConnections.anthropic,
-          ...(loaded.providerConnections?.anthropic ?? {}),
-          compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
-            loaded.providerConnections?.anthropic?.compatibleEndpoint
-          ),
+      providerConnections: withNativeNextPromptFlags(
+        {
+          anthropic: {
+            ...DEFAULT_CONFIG.providerConnections.anthropic,
+            ...(loaded.providerConnections?.anthropic ?? {}),
+            compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
+              loaded.providerConnections?.anthropic?.compatibleEndpoint
+            ),
+          },
+          codex: {
+            preferredAuthMode: normalizeCodexPreferredAuthMode(
+              loaded.providerConnections?.codex?.preferredAuthMode,
+              (loaded.providerConnections?.codex as { authMode?: unknown } | undefined)?.authMode
+            ),
+            customProvider: normalizeCodexCustomProviderConfig(
+              loaded.providerConnections?.codex?.customProvider
+            ),
+          },
         },
-        codex: {
-          preferredAuthMode: normalizeCodexPreferredAuthMode(
-            loaded.providerConnections?.codex?.preferredAuthMode,
-            (loaded.providerConnections?.codex as { authMode?: unknown } | undefined)?.authMode
-          ),
-          customProvider: normalizeCodexCustomProviderConfig(
-            loaded.providerConnections?.codex?.customProvider
-          ),
-        },
-      },
+        loaded.providerConnections,
+        DEFAULT_CONFIG.providerConnections
+      ),
       runtime: {
         providerBackends: {
           ...DEFAULT_CONFIG.runtime.providerBackends,
@@ -786,7 +766,6 @@ export class ConfigManager {
   private deepClone<T>(obj: T): T {
     return JSON.parse(JSON.stringify(obj)) as T;
   }
-
 
   /**
    * Gets the full configuration object.
@@ -867,28 +846,32 @@ export class ConfigManager {
 
     if (section === 'providerConnections') {
       const connectionUpdate = data as Partial<ProviderConnectionsConfig>;
-      return {
-        ...connectionUpdate,
-        anthropic: {
-          ...this.config.providerConnections.anthropic,
-          ...(connectionUpdate.anthropic ?? {}),
-          compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
-            connectionUpdate.anthropic?.compatibleEndpoint,
-            this.config.providerConnections.anthropic.compatibleEndpoint
-          ),
+      return withNativeNextPromptFlags(
+        {
+          ...connectionUpdate,
+          anthropic: {
+            ...this.config.providerConnections.anthropic,
+            ...(connectionUpdate.anthropic ?? {}),
+            compatibleEndpoint: normalizeAnthropicCompatibleEndpointConfig(
+              connectionUpdate.anthropic?.compatibleEndpoint,
+              this.config.providerConnections.anthropic.compatibleEndpoint
+            ),
+          },
+          codex: {
+            preferredAuthMode: normalizeCodexPreferredAuthMode(
+              connectionUpdate.codex?.preferredAuthMode,
+              (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode,
+              this.config.providerConnections.codex.preferredAuthMode
+            ),
+            customProvider: normalizeCodexCustomProviderConfig(
+              connectionUpdate.codex?.customProvider,
+              this.config.providerConnections.codex.customProvider
+            ),
+          },
         },
-        codex: {
-          preferredAuthMode: normalizeCodexPreferredAuthMode(
-            connectionUpdate.codex?.preferredAuthMode,
-            (connectionUpdate.codex as { authMode?: unknown } | undefined)?.authMode,
-            this.config.providerConnections.codex.preferredAuthMode
-          ),
-          customProvider: normalizeCodexCustomProviderConfig(
-            connectionUpdate.codex?.customProvider,
-            this.config.providerConnections.codex.customProvider
-          ),
-        },
-      } as unknown as Partial<AppConfig[K]>;
+        connectionUpdate,
+        this.config.providerConnections
+      ) as unknown as Partial<AppConfig[K]>;
     }
 
     if (!Object.prototype.hasOwnProperty.call(data, 'claudeRootPath')) {

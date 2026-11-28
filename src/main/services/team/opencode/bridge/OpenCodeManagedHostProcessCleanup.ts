@@ -2,10 +2,10 @@ import {
   listRuntimeProcessTableForCurrentPlatform,
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
+import { execFileTextWithLinuxChildLaunch as execFileText } from '@main/utils/linuxChildLaunch';
 import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
 import { readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
-import { execFile, type ExecFileException } from 'child_process';
 
 import {
   OPENCODE_APP_PROFILE_FRAGMENT_KEY,
@@ -150,8 +150,12 @@ export async function cleanupManagedOpenCodeServeProcesses(
     budget && budget.remainingMs() === 0 ? Promise.resolve(null) : readStartTimeImpl(pid);
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = (baseUrl: string): Promise<string | null> =>
-    budget && budget.remainingMs() === 0 ? Promise.resolve(null) :
-      (options.readServeHostConfig ?? ((url) => readOpenCodeServeHostConfig(url, budget?.capMs(1_000))))(baseUrl);
+    budget && budget.remainingMs() === 0
+      ? Promise.resolve(null)
+      : (
+          options.readServeHostConfig ??
+          ((url) => readOpenCodeServeHostConfig(url, budget?.capMs(1_000)))
+        )(baseUrl);
   const killProcess = options.killProcess;
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
   const sleepMs = options.sleepMs ?? sleep;
@@ -175,10 +179,14 @@ export async function cleanupManagedOpenCodeServeProcesses(
 
     if (budget && budget.remainingMs() < 5_000) {
       result.candidates.push({
-        pid: row.pid, ppid: row.ppid, action: 'failed',
+        pid: row.pid,
+        ppid: row.ppid,
+        action: 'failed',
         reason: 'startup cleanup budget exhausted; manual retry required',
       });
-      result.diagnostics.push(`Unprocessed managed host candidate pid=${row.pid}: budget exhausted`);
+      result.diagnostics.push(
+        `Unprocessed managed host candidate pid=${row.pid}: budget exhausted`
+      );
       continue;
     }
     const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
@@ -391,11 +399,18 @@ export async function cleanupManagedOpenCodeServeProcesses(
       };
 
       const confirmTargetIdentity = async (): Promise<boolean> => {
-        const confirmed = budget ? await confirmCandidateIdentity() === 'confirmed' :
-          Number.isFinite(startedAtMs) && startedAtMs !== null &&
-          (await readStartTimeMs(row.pid)) === startedAtMs;
-        return canAdmit() && confirmed && (!budget || (budget.remainingMs() >= 5_000 &&
-          !(options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid))));
+        const confirmed = budget
+          ? (await confirmCandidateIdentity()) === 'confirmed'
+          : Number.isFinite(startedAtMs) &&
+            startedAtMs !== null &&
+            (await readStartTimeMs(row.pid)) === startedAtMs;
+        return (
+          canAdmit() &&
+          confirmed &&
+          (!budget ||
+            (budget.remainingMs() >= 5_000 &&
+              !(options.mode === 'orphaned' && row.ppid > 0 && isProcessAlive(row.ppid))))
+        );
       };
 
       const identityBeforeDispose = await confirmCandidateIdentity();
@@ -653,7 +668,10 @@ async function disposeOpenCodeServeHost(baseUrl: string): Promise<void> {
   }
 }
 
-async function readOpenCodeServeHostConfig(baseUrl: string, timeoutMs = 1_000): Promise<string | null> {
+async function readOpenCodeServeHostConfig(
+  baseUrl: string,
+  timeoutMs = 1_000
+): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -694,31 +712,4 @@ function isNativeProcessAlive(pid: number): boolean {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function execFileText(
-  command: string,
-  args: string[],
-  timeout: number,
-  maxBuffer: number
-): Promise<string | null> {
-  return new Promise((resolve) => {
-    execFile(
-      command,
-      args,
-      {
-        encoding: 'utf8',
-        timeout,
-        maxBuffer,
-        windowsHide: true,
-      },
-      (error: ExecFileException | null, stdout: string | Buffer) => {
-        if (error) {
-          resolve(null);
-          return;
-        }
-        resolve(String(stdout));
-      }
-    );
-  });
 }

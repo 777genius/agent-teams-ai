@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-plan77-root-r1",
+  "at": "2026-11-17T03:32:55.500250Z",
+  "decision": "PROPOSE_EXACT_TWO_TEST_LINE_CORRECTIONS_ONLY",
+  "parent": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "parentTree": "c8a560d3ac23a5e17c45ad8b0f0aec299eaa163d",
+  "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "plan": {
+    "bytes": 4474,
+    "physicalLines": 24,
+    "gitBlob": "e3e2db5a50eb5e5bede240dad4dd58fa20b1aa51",
+    "sha256": "2bc4415f45fd21457b8677ab132dea7b047cb2f32b8d1ed421c899057273f7be"
+  },
+  "sourceCut": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "preimage": {
+        "bytes": 38349,
+        "physicalLines": 540,
+        "gitBlob": "8fb3cb0f34230df7849fe5efa23dddf1f39db191",
+        "sha256": "2eae7d76d521671c9a14c3abff142d9cd787f18fc94bf78f02ef3faf6547e105"
+      },
+      "selectedOldText": "      if (opened.state !== 'fulfilled') throw opened.error;\n",
+      "selectedNewText": "",
+      "exactOccurrenceCount": 1
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "preimage": {
+        "bytes": 22082,
+        "physicalLines": 281,
+        "gitBlob": "a9d725fbe11278dd98611b49d570c19d80684087",
+        "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd"
+      },
+      "selectedOldText": "provider === 'claude' ? 'sonnet' : 'TEST-model'",
+      "selectedNewText": "provider === 'claude' ? 'TEST-claude-sonnet' : 'TEST-model'",
+      "exactOccurrenceCount": 1
+    }
+  ],
+  "sourceAfterimagesCreated": false,
+  "evidence": {
+    "windows": {
+      "run": 44008164538,
+      "job": 133788424969,
+      "logSha256": "9d0b764aeecdf663acac9626ee3efe384050feef02b8e18772d7f59cf92a9543",
+      "diagnostic": "TS2339 nativeEmulatedOwnerLossScenario.ts(361,54): Property error does not exist on type never",
+      "nativeScenarioReached": false
+    },
+    "claude": {
+      "run": 44008164473,
+      "job": 133788425778,
+      "logSha256": "454a3026a73b4816a78355d512903fe68a7935b66c5c64a321a2b357736e4f6a",
+      "receiptSha256": "ba63cb192b689d3656c707be8f830b666580ccb4ddba8280d3d1417b1fe3840b",
+      "actualFailure": "UI read timed out: original preflight completes; no mutation retry",
+      "uiBlob": "c4cfe890e68024f758001878d8d77ea5e72bbab7",
+      "launchClickReached": false,
+      "businessCommands": 0,
+      "separateCatalogRefreshMessageUnresolved": true,
+      "processGroupRemaining": [],
+      "appExitCode": 0,
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null
+    }
+  },
+  "peer": {
+    "path": "tools/owned-process-broker/fixtures/claudeProviderPeer.mjs",
+    "blob": "920b40fa594f7aa65e11d1ec1f31d2aa69581a01",
+    "modelAcceptanceLine": 86,
+    "catalogLines": [
+      170,
+      171
+    ],
+    "advertisedAlias": "sonnet",
+    "resolvedModel": "TEST-claude-sonnet",
+    "sourceUnchanged": true
+  },
+  "protected": [
+    "original assert.equal fulfilled and nativeReady assertions",
+    "W05 original actions/counters/no-replay/unknown/failure/cleanup",
+    "finite/runtime/model/management provenance",
+    "same shared model variable and all existing consumers",
+    "other provider branches",
+    "original preflight90s, all other budgets and route gates",
+    "all roster entries and source-size caps",
+    "useful current5c55 jobs",
+    "all current production source and dependencies",
+    "genuine-provider prohibition, Plan40 and historicalP10 inputs"
+  ],
+  "requiredReview": [
+    "exact current producer mapping and coupled consumers",
+    "unchanged membership/genuine provider semantics",
+    "all two-path preservation boundaries",
+    "no source afterimage before actual documentary R2"
+  ],
+  "execution": "none; resulting-head original CI required",
+  "publication": "existing delivery branch only; ordinary immediate CAS; primary waits fresh useful-job guard",
+  "documentaryPaths": {
+    "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/77-observed-test-corrections-2026-11-17.md",
+    "r1": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/observed-test-corrections-2026-11-17/prospective-r1.json",
+    "r2": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/observed-test-corrections-2026-11-17/prospective-r2.json"
+  },
+  "documentaryPathsAbsentAtParent": true,
+  "deliveryBranch": "fix/frontend-parity-e2e-bounds-20261116",
+  "primaryBranch": "fix/frontend-parity-completion-20261113",
+  "baseBranch": "feat/provider-host-frontend-parity-20261112"
+}

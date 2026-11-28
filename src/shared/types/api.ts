@@ -7,11 +7,17 @@
  * Shared between preload and renderer processes.
  */
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
-import type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
+import type {
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
+  WslClaudeRootCandidate,
+} from './claudeRoot';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
+import type { DesktopShellApi } from './desktopShell';
 import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
 import type { ApiKeysAPI, McpCatalogAPI, PluginCatalogAPI, SkillsCatalogAPI } from './extensions';
+import type { IpcResult } from './ipc';
 import type {
   AppConfig,
   DetectedError,
@@ -55,6 +61,7 @@ import type {
   UpdateSchedulePatch,
 } from './schedule';
 import type { SshAPI } from './ssh';
+import type { MemberStatsResult } from './team';
 import type {
   AddTaskCommentRequest,
   AttachmentFileData,
@@ -74,10 +81,7 @@ import type {
   KanbanColumnId,
   LeadActivitySnapshot,
   LeadContextUsageSnapshot,
-  MemberFullStats,
-  MemberLogSummary,
   MemberSpawnStatusesSnapshot,
-  OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
   QueuedUserMessagesSnapshot,
   RetryFailedOpenCodeSecondaryLanesResult,
@@ -88,10 +92,12 @@ import type {
   TaskComment,
   TaskFieldUpdates,
   TeamAgentRuntimeSnapshot,
+  TeamAggregateReadResult,
   TeamChangeEvent,
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamCreateConfigRequest,
+  TeamCreateConfigResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamForceStopResult,
@@ -101,6 +107,7 @@ import type {
   TeamMessageNotificationData,
   TeamProvisioningModelCheckRequest,
   TeamProvisioningModelVerificationMode,
+  TeamProvisioningPrepareContext,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -110,14 +117,23 @@ import type {
   TeamWorktreeGitStatus,
   ToolApprovalEvent,
   ToolApprovalFileContent,
+  ToolApprovalReadScope,
   ToolApprovalSettings,
   UpdateKanbanPatch,
 } from './team';
+import type {
+  HostTaskActivityView,
+  HostTaskExactLogs,
+  HostTaskLogDetailResult,
+  HostTaskLogStream,
+} from './teamActivity';
 import type { TeamDefinitionEditApi, TeamDefinitionEditsTransport } from './teamDefinitionEdit';
 import type { TeamMemberRestartResult } from './teamMemberRestart';
+import type { TeamMessageDeliveryApi } from './teamMessageDelivery';
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
+import type { AgentBackendElectronApi, TeamSessionsApi } from '@features/agent-backend/contracts';
 import type { AnnouncementsApi } from '@features/announcements/contracts';
 import type { AppCloseCoordinationElectronApi } from '@features/app-close-coordination/contracts';
 import type {
@@ -139,6 +155,7 @@ import type {
   MemberWorkSyncStatusRequest,
   MemberWorkSyncTeamMetrics,
 } from '@features/member-work-sync/contracts';
+import type { NativeNextPromptApi } from '@features/native-prompt-suggestions/contracts';
 import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { OrganizationsElectronApi } from '@features/organizations/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
@@ -171,7 +188,11 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
-export type { ClaudeRootFolderSelection, ClaudeRootInfo, WslClaudeRootCandidate } from './claudeRoot';
+export type {
+  ClaudeRootFolderSelection,
+  ClaudeRootInfo,
+  WslClaudeRootCandidate,
+} from './claudeRoot';
 export type {
   SentryTelemetryContext,
   SentryTelemetryStatus,
@@ -430,10 +451,12 @@ export interface TeamsAPI
     TeamMemberSettingsApi,
     TeamReadLegacyApi,
     TeamProjectContextViewApi,
-    TeamDefinitionEditApi {
+    TeamMessageDeliveryApi,
+    TeamDefinitionEditApi,
+    TeamSessionsApi {
   definitionEdits?: TeamDefinitionEditsTransport;
   readRecovery?: TeamReadRecoveryApi;
-  list: () => Promise<TeamSummary[]>;
+  list: () => Promise<TeamAggregateReadResult<TeamSummary>>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
   setChangePresenceTracking: (teamName: string, enabled: boolean) => Promise<void>;
   setToolActivityTracking: (teamName: string, enabled: boolean) => Promise<void>;
@@ -451,12 +474,15 @@ export interface TeamsAPI
     selectedModels?: string[],
     limitContext?: boolean,
     modelVerificationMode?: TeamProvisioningModelVerificationMode,
-    selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+    selectedModelChecks?: TeamProvisioningModelCheckRequest[],
+    context?: TeamProvisioningPrepareContext
   ) => Promise<TeamProvisioningPrepareResult>;
   getWorktreeGitStatus: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   createInitialGitCommit: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   createTeam: (request: TeamCreateRequest) => Promise<TeamCreateResponse>;
+  /** Raw existing Create IPC result preserves the finite refusal through contextBridge. */
+  createTeamResult?: (request: TeamCreateRequest) => Promise<IpcResult<TeamCreateResponse>>;
   getProvisioningStatus: (runId: string) => Promise<TeamProvisioningProgress>;
   getLaunchFailureDiagnostics: (
     teamName: string,
@@ -464,10 +490,6 @@ export interface TeamsAPI
   ) => Promise<TeamLaunchFailureDiagnosticsBundle>;
   cancelProvisioning: (runId: string) => Promise<void>;
   sendMessage: (teamName: string, request: SendMessageRequest) => Promise<SendMessageResult>;
-  getOpenCodeRuntimeDeliveryStatus: (
-    teamName: string,
-    messageId: string
-  ) => Promise<OpenCodeRuntimeDeliveryStatus | null>;
   createTask: (teamName: string, request: CreateTaskRequest) => Promise<TeamTask>;
   getTask: (teamName: string, taskId: string) => Promise<TeamTaskWithKanban | null>;
   requestReview: (teamName: string, taskId: string) => Promise<void>;
@@ -497,29 +519,38 @@ export interface TeamsAPI
     memberName: string,
     messageIds: readonly string[]
   ) => Promise<DiscardQueuedUserMessagesResult>;
-  createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
-  getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
-  getTaskActivity: (teamName: string, taskId: string) => Promise<BoardTaskActivityEntry[]>;
+  createConfig: (request: TeamCreateConfigRequest) => Promise<void | TeamCreateConfigResponse>;
+  /** Raw existing save-only Create result retains only the finite refusal proof. */
+  createConfigResult?: (
+    request: TeamCreateConfigRequest
+  ) => Promise<IpcResult<void | TeamCreateConfigResponse>>;
+  getTaskActivity: (
+    teamName: string,
+    taskId: string
+  ) => Promise<BoardTaskActivityEntry[] | HostTaskActivityView>;
   getTaskActivityDetail: (
     teamName: string,
     taskId: string,
     activityId: string
-  ) => Promise<BoardTaskActivityDetailResult>;
+  ) => Promise<BoardTaskActivityDetailResult | HostTaskLogDetailResult>;
   getTaskLogStreamSummary: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamSummary>;
-  getTaskLogStream: (teamName: string, taskId: string) => Promise<BoardTaskLogStreamResponse>;
+  getTaskLogStream: (
+    teamName: string,
+    taskId: string
+  ) => Promise<BoardTaskLogStreamResponse | HostTaskLogStream>;
   getTaskExactLogSummaries: (
     teamName: string,
     taskId: string
-  ) => Promise<BoardTaskExactLogSummariesResponse>;
+  ) => Promise<BoardTaskExactLogSummariesResponse | HostTaskExactLogs>;
   getTaskExactLogDetail: (
     teamName: string,
     taskId: string,
     exactLogId: string,
     expectedSourceGeneration: string
-  ) => Promise<BoardTaskExactLogDetailResult>;
-  getMemberStats: (teamName: string, memberName: string) => Promise<MemberFullStats>;
+  ) => Promise<BoardTaskExactLogDetailResult | HostTaskLogDetailResult>;
+  getMemberStats: (teamName: string, memberName: string) => Promise<MemberStatsResult>;
   launchTeam: (request: TeamLaunchRequest) => Promise<TeamLaunchResponse>;
-  getAllTasks: () => Promise<GlobalTask[]>;
+  getAllTasks: () => Promise<TeamAggregateReadResult<GlobalTask>>;
   addTaskComment: (
     teamName: string,
     taskId: string,
@@ -533,7 +564,11 @@ export interface TeamsAPI
   getProjectBranch: (projectPath: string) => Promise<string | null>;
   setProjectBranchTracking: (projectPath: string, enabled: boolean) => Promise<void>;
   getAttachments: (teamName: string, messageId: string) => Promise<AttachmentFileData[]>;
-  killProcess: (teamName: string, pid: number) => Promise<void>;
+  killProcess: (
+    teamName: string,
+    pid: number,
+    captured?: import('./team').CapturedTeamProcessStop
+  ) => Promise<void>;
   getLeadActivity: (teamName: string) => Promise<LeadActivitySnapshot>;
   getLeadContext: (teamName: string) => Promise<LeadContextUsageSnapshot>;
   getMemberSpawnStatuses: (teamName: string) => Promise<MemberSpawnStatusesSnapshot>;
@@ -544,7 +579,8 @@ export interface TeamsAPI
   restartMember: (
     teamName: string,
     memberName: string,
-    expectedSecondary?: boolean
+    expectedSecondary?: boolean,
+    captured?: import('./teamMemberRestart').CapturedHostFailedMemberRetry
   ) => Promise<TeamMemberRestartResult>;
   skipMemberForLaunch: (teamName: string, memberName: string) => Promise<void>;
   softDeleteTask: (teamName: string, taskId: string) => Promise<void>;
@@ -600,7 +636,10 @@ export interface TeamsAPI
   validateCliArgs: (rawArgs: string) => Promise<CliArgsValidationResult>;
   onToolApprovalEvent: (callback: (event: unknown, data: ToolApprovalEvent) => void) => () => void;
   updateToolApprovalSettings: (teamName: string, settings: ToolApprovalSettings) => Promise<void>;
-  readFileForToolApproval: (filePath: string) => Promise<ToolApprovalFileContent>;
+  readFileForToolApproval: (
+    filePath: string,
+    approval?: ToolApprovalReadScope
+  ) => Promise<ToolApprovalFileContent>;
 }
 
 export interface MemberWorkSyncElectronApi {
@@ -828,11 +867,13 @@ export interface ReviewAPI {
 /** Complete Electron API exposed to the renderer process via preload script. */
 export interface ElectronAPI
   extends
+    AgentBackendElectronApi,
     RecentProjectsElectronApi,
     UserAttentionApi,
     CodexAccountElectronApi,
     TokenUsageElectronApi,
-    ProjectFolderElectronApi {
+    ProjectFolderElectronApi,
+    DesktopShellApi {
   teamGroupChats: TeamGroupChatsAPI;
   customTeamTemplates: CustomTeamTemplatesApi;
   reviewFlow: ReviewFlowElectronApi;
@@ -922,29 +963,6 @@ export interface ElectronAPI
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
   onTodoChange: (callback: (event: FileChangeEvent) => void) => () => void;
 
-  // Shell operations
-  openPath: (
-    targetPath: string,
-    projectRoot?: string,
-    userSelectedFromDialog?: boolean
-  ) => Promise<{ success: boolean; error?: string }>;
-  showInFolder: (filePath: string) => Promise<void>;
-  openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
-  getDiscordMemberCount: () => Promise<{ count: number | null; error?: string }>;
-
-  // Window controls (when title bar is hidden, e.g. Windows / Linux)
-  windowControls: {
-    minimize: () => Promise<void>;
-    maximize: () => Promise<void>;
-    close: () => Promise<void>;
-    isMaximized: () => Promise<boolean>;
-    isFullScreen: () => Promise<boolean>;
-    relaunch: () => Promise<void>;
-  };
-
-  /** Subscribe to fullscreen changes (e.g. to remove macOS traffic light padding in fullscreen) */
-  onFullScreenChange: (callback: (isFullScreen: boolean) => void) => () => void;
-
   // Updater API
   updater: UpdaterAPI;
 
@@ -991,6 +1009,9 @@ export interface ElectronAPI
 
   // Member log stream API
   memberLogStream: MemberLogStreamApi;
+
+  // Optional until the captured Host advertises this native feature.
+  nativePromptSuggestions?: NativeNextPromptApi;
 
   // Organization map API
   organizations: OrganizationsElectronApi;

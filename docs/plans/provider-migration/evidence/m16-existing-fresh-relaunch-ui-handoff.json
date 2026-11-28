@@ -1,0 +1,60 @@
+{
+  "status": "PASS",
+  "scope": "Existing desktop Launch/Stop/settings reload, then fresh Launch of the stopped Team and second Stop.",
+  "freshConversations": 2,
+  "nativeInputs": {
+    "count": 2,
+    "eachTerminal": "succeeded",
+    "onePerConversation": true,
+    "newRunPrincipalAndGeneration": true,
+    "sameProductMember": true,
+    "checkpointRestoreUsed": false
+  },
+  "model": {
+    "selected": "claude-opus-4-6",
+    "effort": "medium",
+    "steps": 11,
+    "secondConversationSteps": 3,
+    "secondConversationContainsPriorTurn": false,
+    "contextEffective": true,
+    "failures": [],
+    "inference": "deterministic localhost fixture using actual pinned native CLI/SDK"
+  },
+  "productEffects": {
+    "file": "ONE then TWO, exactly once each",
+    "originalCompletedTaskRetained": true,
+    "canonicalReplyCounts": {
+      "REPLY_NATIVE_ONE": 1,
+      "REPLY_NATIVE_TWO": 1
+    },
+    "bothRepliesPhysicallyVisibleViaExistingChat": true
+  },
+  "stopAndCleanup": {
+    "bothRunsClosedReleasedBeforeAppCleanup": true,
+    "secondStopOriginalControl": true,
+    "secondNativeChildrenPhysicallyAbsentBeforeQuit": true,
+    "appExitCode": 0,
+    "appSignal": null,
+    "hostObservedAndAbsent": true,
+    "originalAndLateProcessGroupsEmpty": true,
+    "writerReleased": true
+  },
+  "retention": {
+    "complete": true,
+    "startupSourceAndBundlePinsVerified": true,
+    "pinnedFiles": 2417,
+    "durableCopyByteVerified": true
+  },
+  "excluded": [
+    "Native checkpoint Resume and cold same-profile Resume.",
+    "Live-Team Relaunch or automatic application relaunch.",
+    "Real vendor authentication/inference or user project.",
+    "Natural application Quit acceptance and full Stage1."
+  ],
+  "provenanceLimit": "Host and installed dependency whole trees are frozen retention snapshots; original entry/source/startup bundle pins retain their actual execution witnesses.",
+  "originalJobId": "58a872dd28848f268117a5c0e0589dba",
+  "retentionJobId": "be2809c9e6d0cb40fdb04c8aeddf0ad4",
+  "retentionSha256": "c8761b959d85bec6daf8acb0a6ca4e970d94c6fddcc573be5dd5780632b31015",
+  "ignoredEvidenceRoot": ".artifacts/provider-migration/native-relaunch-ui-20261024-attempt2",
+  "providerArchiveSha256": "066ab48bef0704f9e90e4aa2f12ddd86b607b4aedb70d98a29e4a26cfc0be36a"
+}

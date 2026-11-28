@@ -27,4 +27,5 @@ export interface KanbanState {
 export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
+  | { op: 'disapprove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };

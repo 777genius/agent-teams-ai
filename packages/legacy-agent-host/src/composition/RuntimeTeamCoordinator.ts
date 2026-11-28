@@ -1,0 +1,799 @@
+import { executeCapturedRuntimeControl } from './executeCapturedRuntimeControl.js';
+import { executeLiveRosterMembership } from './executeLiveRosterMembership.js';
+import type { LiveRosterOperation } from './executeLiveRosterMembership.js';
+import type { CaptureModelReadinessTransfer, LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
+import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
+import { readGroupRuntime, selectCurrentGroupEntry } from './readGroupRuntime.js';
+import type { MemberInputCapture } from './createRuntimeMemberProviderFactory.js';
+import type { TeamMcpGroupPort } from '../mcp/groupChatTools.js';
+import { runtimeLaunchMembers } from './runtimeLaunchMembers.js';
+import { createRuntimeNativeMemberCreation } from './createRuntimeNativeMemberCreation.js';
+import type {
+  NativeMemberModelPreflight,
+  RetainedNativeLaunch,
+} from './createRuntimeNativeMemberCreation.js';
+import { createRuntimeWorkSyncWake } from './createRuntimeWorkSyncWake.js';
+import { createRuntimeMemberProviderFactory } from './createRuntimeMemberProviderFactory.js';
+import { captureMemberProcessOrigin } from './captureRuntimeProcessOrigin.js';
+import { executeRuntimeMemberAction } from './executeRuntimeMemberAction.js';
+import type { RuntimeMemberActionOperation } from './executeRuntimeMemberAction.js';
+import type { NativeMemberActionSource } from './nativeMemberActionAdmission.js';
+import type { createHostWorkSyncComposition } from './createHostWorkSyncComposition.js';
+import { createRuntimeLifecyclePorts, closeRuntimeEntries } from './createRuntimeLifecyclePorts.js';
+import { executeRuntimeLaunch } from './executeRuntimeLaunch.js';
+import type {
+  RuntimeLaunchAsyncOperation,
+  RuntimeLaunchSyncOperation,
+  RuntimeLaunchOperation,
+} from './executeRuntimeLaunch.js';
+import { createTeamContextPreparation } from './createTeamContextPreparation.js';
+import { prepareNativeSessionCommand, nativeSessionCommandAuthorized } from './nativeSessionCommandAdmission.js';
+import { publishNativeCommandOutput } from './publishNativeCommandOutput.js';
+import { projectRuntimeMember } from './projectRuntimeMember.js';
+import type { ProcessCustody } from './processCustody.js';
+import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
+import type { TeamMcpCrossTeamPort } from '../mcp/nativeCrossTeamContracts.js';
+import { createRuntimeTeamReadViews } from './createRuntimeTeamReadViews.js';
+import { readEntryActivitySources, isRetainedActivityBinding } from './runtimeActivitySources.js';
+import type { TeamConversationReadPort } from '../team/ownerMessageReads.js';
+import { HostInteractionControls } from './HostInteractionControls.js';
+import { createMemberEntry, installRuntimeCaptureEntries } from './createMemberEntry.js';
+import { captureInitialRuntimeMemberAdmission } from './initialRuntimeModelAdmission.js';
+import { projectRuntimeActivity } from './runtimeActivityProjection.js';
+import { installRuntimeTeamLaunch } from './createRuntimeTeamLaunch.js';
+import { RuntimeTeamCaptures } from './RuntimeTeamCaptures.js';
+import { runtimeCaptureSourceSchema, runtimeCaptureSourceSelections } from './runtimeCaptureSource.js';
+import type { RuntimeRecipeSources } from './runtimeSourceContracts.js';
+import { ToolEvidenceWindows } from '../evidence/ToolEvidenceWindows.js';
+import { captureTeamModelProbeSelection, isCurrentCapturedTeam } from './savedTeamModelProbe.js';
+import { assertCapturedRosterCurrent, assertRosterEditable, readCapturedProviderAuthority, readCreatedLaunchAdmission } from './teamRoster.js';
+import type { TeamModelProbeSelection } from './teamLaunchModelProbe.js';
+import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
+import { TeamLaunchError } from '../team-launch/contracts.js';
+import { randomUUID } from 'node:crypto';
+
+import { FileRuntimeStore } from '../adapters/runtime/FileRuntimeStore.js';
+import { RuntimeOwner } from '../runtime/RuntimeOwner.js';
+import { MAX_RUNTIME_INPUT_BYTES, RuntimeOwnerError } from '../runtime/contracts.js';
+import { createRuntimeDeliveryPort, preflightMemberInput } from './runtimeDeliveryPort.js';
+import type { TeamInputPreflight } from '../team/ports.js';
+import { normalizeBinding, runtimeDigest } from '../runtime/identity.js';
+
+import type { TeamHostProfile } from './TeamHost.js';
+import type { JsonValue } from '../contracts.js';
+import type { RuntimeBinding, RuntimeSessionRecord } from '../runtime/contracts.js';
+import type {
+  RuntimeActivityCursor,
+  RuntimeActivityFeed,
+  RuntimeActivitySnapshot,
+} from '../runtime/activityContracts.js';
+
+import type { HostedTeam, MemberEntry } from './MemberEntry.js';
+export type { HostedTeam } from './MemberEntry.js';
+
+/** Actual Team + Runtime + D composition, without a second input queue or native protocol parser. */
+export class RuntimeTeamCoordinator {
+  private readonly entries = new Map<string, MemberEntry>();
+  private readonly runtime: RuntimeOwner;
+  private readonly readViews: ReturnType<typeof createRuntimeTeamReadViews>;
+  private readonly interactionControls: HostInteractionControls;
+  private readonly launches = new Map<string, TeamLaunchOwner>();
+  private readonly retainedLaunches = new Map<string, RetainedNativeLaunch>();
+  private readonly capturedTeams = new Map<string, HostedTeam>();
+  private readonly captures: RuntimeTeamCaptures;
+  private readonly hostIncarnation = randomUUID();
+  private readonly evidenceWindows = new ToolEvidenceWindows();
+  private readonly opening = new Set<Promise<unknown>>();
+  private pumping: Promise<void> | undefined;
+  private readonly workSyncWake: ReturnType<typeof createRuntimeWorkSyncWake>;
+  private dirty = false;
+  private sealed = false;
+
+  constructor(
+    private readonly options: {
+      profile: TeamHostProfile;
+      sources?: RuntimeRecipeSources;
+      modelReadiness?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget' | 'admitTeamProbeProfile'>;
+      teams: ReadonlyMap<string, HostedTeam>;
+      assertWriter(): void;
+      processCustody?: ProcessCustody;
+      retainedWindowsLaunch?: HostWindowsLaunch;
+      workSync?: ReturnType<typeof createHostWorkSyncComposition>;
+      nativeMemberModelPreflight?: NativeMemberModelPreflight;
+      groups?(
+        entry: MemberEntry,
+        capture: MemberInputCapture,
+        current: () => boolean
+      ): TeamMcpGroupPort;
+      crossTeam?(
+        team: HostedTeam,
+        principalId: string,
+        binding: RuntimeBinding,
+        isCurrent: () => boolean
+      ): TeamMcpCrossTeamPort;
+    } & Pick<
+      Parameters<typeof createRuntimeMemberProviderFactory>[0],
+      'createProvider' | 'promptSuggestionProviders' | 'onPromptSuggestion'
+    >
+  ) {
+    const store = new FileRuntimeStore(options.profile.owner.storageRoot);
+    const initialProfile = options.profile.runtime?.initialModelAdmissions?.length
+      ? structuredClone(options.profile) : undefined;
+    this.captures = new RuntimeTeamCaptures({
+      profile: options.profile,
+      hostIncarnation: this.hostIncarnation,
+      ...(options.modelReadiness ? { modelReadiness: options.modelReadiness } : {}),
+      ...(options.sources ? { sources: options.sources } : {}),
+      ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
+      teams: options.teams,
+      assertCurrent: () => {
+        options.assertWriter();
+        if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+      },
+      readRuntimeSiblings: binding => store.fenced(binding, transaction => transaction.siblings()),
+      install: (team, profiles, mode, liveReadinessCapture) => installRuntimeCaptureEntries({
+        root: options.profile.owner.storageRoot, ownerId: options.profile.owner.ownerId,
+        entries: this.entries, install: (selected, entries, active, prepare) =>
+          this.installLaunch(selected, entries, active, prepare, liveReadinessCapture),
+      }, team, profiles, mode),
+    });
+    this.captures.prepareRestore();
+    for (const baseProfile of options.profile.runtime?.members ?? []) {
+      const team = options.teams.get(baseProfile.teamId);
+      if (!team) throw new RuntimeOwnerError('invalid');
+      if (!this.captures.available(baseProfile.teamId)) continue;
+      const entry = createMemberEntry({
+        root: options.profile.owner.storageRoot,
+        ownerId: options.profile.owner.ownerId,
+        team,
+        baseProfile,
+      });
+      const key = this.key(entry.binding);
+      const initial = initialProfile && captureInitialRuntimeMemberAdmission(initialProfile, entry);
+      if (initial) entry.initialModelAdmission = initial;
+      if (this.entries.has(key)) throw new RuntimeOwnerError('invalid');
+      this.entries.set(key, entry);
+    }
+    if (
+      new Set([...this.entries.values()].map((entry) => runtimeDigest(entry.config))).size !==
+      this.entries.size
+    )
+      throw new RuntimeOwnerError('invalid');
+    this.runtime = new RuntimeOwner({
+      store,
+      maxInputBytes: MAX_RUNTIME_INPUT_BYTES, maxQueuedInputBytes: MAX_RUNTIME_INPUT_BYTES,
+      inputPreflight: input => this.preflightInput(input),
+      checkpoints: store,
+      events: store,
+      profileId: options.profile.owner.profileId,
+      hostIncarnation: this.hostIncarnation,
+      driverFactory: createRuntimeMemberProviderFactory({
+        entries: this.entries,
+        assertWriter: () => options.assertWriter(),
+        assertProviderAuthority: (entry, onCurrent) => this.assertProviderAuthority(entry, onCurrent),
+        captureProcessOrigin: entry => captureMemberProcessOrigin(options.profile, entry, options.sources),
+        storageRoot: options.profile.owner.storageRoot,
+        profileId: options.profile.owner.profileId,
+        principalId: options.profile.principalId,
+        hostIncarnation: this.hostIncarnation,
+        windows: this.evidenceWindows,
+        ...(options.modelReadiness ? { modelReadiness: options.modelReadiness } : {}),
+        readinessLaunch: entry => this.retainedLaunches.get(runtimeDigest({
+          teamId: entry.binding.teamId, launchId: entry.binding.runId }))?.launch,
+        ...(options.processCustody ? { processCustody: options.processCustody } : {}),
+        ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
+        ...(options.createProvider ? { createProvider: options.createProvider } : {}),
+        ...(options.promptSuggestionProviders?.length && options.onPromptSuggestion ? { promptSuggestionProviders: options.promptSuggestionProviders, onPromptSuggestion: options.onPromptSuggestion } : {}),
+        groups: (entry, capture, current) => options.groups?.(entry, capture, current),
+        crossTeam: (entry, isCurrent) =>
+          options.crossTeam?.(entry.team, entry.profile.principalId, entry.delivery, isCurrent),
+        workSync: (entry, captureSource, delivery) =>
+          options.workSync?.member({
+            teamId: entry.delivery.teamId,
+            teamName: entry.delivery.teamName,
+            owner: entry.team.owner,
+            providerId: entry.profile.provider === 'claude' ? 'anthropic' : entry.profile.provider,
+            sourceRevision: runtimeDigest({ binding: entry.binding, configuration: entry.config }),
+            captureSource,
+            delivery,
+          }),
+        settleDeliveries: async (entry, assertOriginal) => {
+          assertOriginal();
+          this.assertCurrent(entry);
+          await entry.team.owner.resumeDeliveries(this.deliveryPort());
+          assertOriginal();
+          this.assertCurrent(entry);
+          await this.runtime.dispatchNext(entry.binding);
+          assertOriginal();
+          this.assertCurrent(entry);
+        },
+        nativeCreation: (entry, captureSource) => ({
+          invoke: (operation, raw) =>
+            createRuntimeNativeMemberCreation({
+              profile: options.profile,
+              retainedLaunches: this.retainedLaunches,
+              entries: this.entries,
+              runtime: this.runtime,
+              ...(options.retainedWindowsLaunch ? { retainedWindowsLaunch: options.retainedWindowsLaunch } : {}),
+              ...(options.nativeMemberModelPreflight
+                ? { preflight: options.nativeMemberModelPreflight }
+                : {}),
+              assertCurrent: () => {
+                options.assertWriter();
+                if (this.sealed) throw new RuntimeOwnerError('hold');
+              },
+              trackOpening: (pending) => this.trackOpening(pending),
+            })(entry, operation, raw, captureSource(true)),
+        }),
+        nativeActions: (entry, captureSource) => ({
+          invoke: (operation, commandId, raw) => {
+            const source = captureSource(true);
+            return this.executeMemberAction(
+              entry.binding.teamId,
+              operation,
+              commandId,
+              raw,
+              source
+            );
+          },
+        }),
+        isSealed: () => this.sealed,
+        beforeTeamAuthority: (entry) => {
+          this.options.assertWriter();
+          this.captures.assertAvailable(entry.binding.teamId);
+        },
+        assertCurrent: (entry) => this.assertCurrent(entry),
+        captureInteractions: (entry) => this.interactionControls.capture(entry),
+        readRuntime: (binding) => this.runtime.readCapturedSession(binding),
+        readCheckpoint: (reference, request) => this.runtime.readCheckpoint(reference, request),
+        observe: (binding, sessionRef, activity) =>
+          this.runtime.observeProviderActivity(binding, sessionRef, activity),
+        observeProcessOutput: (binding, config, observation, assertAuthority) =>
+          this.runtime.observeProcessOutput(binding, config, observation, assertAuthority),
+        onProgress: (entry) => {
+          try { if (!this.sealed) publishNativeCommandOutput(entry, this.runtime); } catch { /* Original output remains recoverable. */ }
+          this.kick();
+        },
+      }),
+      checkpointBeforeClose: (binding, sessionRef) => {
+        const entry = this.entries.get(this.key(binding));
+        if (!entry || runtimeDigest(entry.binding) !== runtimeDigest(binding))
+          return { ok: false, code: 'unavailable' };
+        return entry.provider?.checkpointBeforeClose?.(sessionRef);
+      },
+      authorize: (binding, action, intent) => {
+        options.assertWriter();
+        const entry =
+          this.entries.get(this.key(binding)) ??
+          (action === 'read'
+            ? [...this.entries.values()].find(
+                (candidate) =>
+                  candidate.binding.teamId === binding.teamId &&
+                  candidate.binding.runId === binding.runId &&
+                  candidate.binding.memberId === binding.memberId
+              )
+            : undefined);
+        if (!entry) return false;
+        if (intent) return entry.team.owner.authorizeDeliveryIntent(intent, action) &&
+          ((action !== 'admit' && action !== 'dispatch') || nativeSessionCommandAuthorized(entry, intent));
+        return (
+          entry.team.owner.authorizeMemberBinding(binding, action) ||
+          (action === 'read' &&
+            isRetainedActivityBinding(binding, entry, this.retainedLaunches) &&
+            entry.team.owner.withLaunchAuthority(
+              options.profile.principalId,
+              'read',
+              () => true
+            )) ||
+          ((action === 'read' || action === 'control') &&
+            entry.team.owner.authorizeRuntimeAccess(options.profile.principalId, binding, action))
+        );
+      },
+      ...createTeamContextPreparation({
+        entries: this.entries,
+        storageRoot: options.profile.owner.storageRoot,
+        principalId: options.profile.principalId,
+        assertCurrent: (entry) => this.assertCurrent(entry),
+      }),
+      canDispatch: (binding) => {
+        const entry = this.entries.get(this.key(binding));
+        return (
+          !!entry?.provider?.isReady() &&
+          this.isCurrent(entry) &&
+          !!this.launches
+            .get(entry.profile.teamId)
+            ?.canWork(entry.profile.memberId, entry.provider.initialContextEvidence?.())
+        );
+      },
+    });
+    this.readViews = createRuntimeTeamReadViews({
+      teams: options.teams, principalId: options.profile.principalId,
+      entries: this.entries, launches: this.launches, retainedLaunches: this.retainedLaunches,
+      runtime: this.runtime,
+      assertWriter: () => options.assertWriter(),
+      assertAvailable: teamId => this.captures.assertAvailable(teamId),
+      isCurrent: entry => this.isCurrent(entry),
+      isSealed: () => this.sealed,
+    });
+    this.workSyncWake = createRuntimeWorkSyncWake({
+      entries: this.entries,
+      isCurrent: (entry) => this.isCurrent(entry),
+      isSealed: () => this.sealed,
+    });
+    this.interactionControls = new HostInteractionControls({
+      runtime: this.runtime,
+      principalId: options.profile.principalId,
+      assertCurrent: (entry) => this.assertCurrent(entry),
+      kick: () => this.kick(),
+    });
+    for (const team of options.teams.values()) {
+      const entries = [...this.entries.values()].filter((entry) => entry.team === team);
+      if (entries.length) this.installLaunch(team, entries, true);
+    }
+    this.captures.restore();
+  }
+
+  private installLaunch(
+    team: HostedTeam,
+    entries: MemberEntry[],
+    active: boolean,
+    prepare = false,
+    liveReadinessCapture?: Parameters<TeamLaunchOwner['admitModelReadinessCapture']>[0]
+  ): void {
+    installRuntimeTeamLaunch({
+      profile: this.options.profile, runtime: this.runtime, hostIncarnation: this.hostIncarnation,
+      ...(this.options.sources ? { sources: this.options.sources } : {}),
+      registry: this.entries, retainedLaunches: this.retainedLaunches,
+      capturedTeams: this.capturedTeams, launches: this.launches,
+      ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
+      isCurrent: entry => this.isCurrent(entry), isSealed: () => this.sealed,
+      assertWriter: () => this.options.assertWriter(),
+      trackOpening: pending => this.trackOpening(pending), onProgress: () => this.kick(),
+    }, team, entries, active, prepare, liveReadinessCapture);
+  }
+
+  hasCurrentCapture(teamId: string): boolean {
+    this.captures.assertAvailable(teamId);
+    return isCurrentCapturedTeam(this.capturedTeams.get(teamId));
+  }
+
+  readLaunchAdmission(teamId: string, launchId: string, commandId: string) {
+    const selected = this.readRetainedLaunch(teamId, launchId);
+    if (!selected) throw new TeamLaunchError('hold', 'capture-unavailable');
+    return readCreatedLaunchAdmission({ selected, commandId, runtime: this.runtime,
+      entries: [...this.entries.values()] });
+  }
+
+  readModelReadinessCapture(teamId: string, input: Parameters<TeamLaunchOwner['readModelReadinessCapture']>[0]) {
+    return this.readRetainedLaunch(teamId, input.launchId)
+      ?.launch.readModelReadinessCapture(input) ?? null;
+  }
+
+  private readRetainedLaunch(teamId: string, launchId: string) {
+    this.captures.assertAvailable(teamId);
+    this.options.assertWriter();
+    if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+    return this.retainedLaunches.get(runtimeDigest({ teamId, launchId }));
+  }
+
+  executeLiveRoster(input: LiveRosterOperation) {
+    return executeLiveRosterMembership({
+      profile: this.options.profile, ...(this.options.sources ? { sources: this.options.sources } : {}),
+      ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
+      teams: this.options.teams, capturedTeams: this.capturedTeams, retainedLaunches: this.retainedLaunches,
+      entries: this.entries, runtime: this.runtime, hostIncarnation: this.hostIncarnation,
+      assertCurrent: teamId => {
+        this.options.assertWriter(); this.captures.assertAvailable(teamId);
+        if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+      },
+      assertRosterEditable: (teamId, members) => this.assertRosterEditable(teamId, members),
+      trackOpening: pending => this.trackOpening(pending), onProgress: () => this.kick(),
+    }, input);
+  }
+
+  private async trackOpening<T>(pending: Promise<T>): Promise<T> {
+    this.opening.add(pending);
+    try {
+      return await pending;
+    } finally {
+      this.opening.delete(pending);
+    }
+  }
+
+  async executeMemberAction(
+    teamId: string,
+    operation: RuntimeMemberActionOperation | 'retry',
+    commandId: string,
+    raw: unknown,
+    nativeSource?: NativeMemberActionSource,
+    readiness?: LocalModelReadinessAction
+  ) {
+    this.captures.assertAvailable(teamId);
+    return executeRuntimeMemberAction(
+      {
+        ...(nativeSource ? { nativeSource } : {}),
+        ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
+        captureProcessOrigin: entry => captureMemberProcessOrigin(this.options.profile, entry, this.options.sources),
+        retainedLaunches: this.retainedLaunches,
+        entries: this.entries,
+        runtime: this.runtime,
+        principalId: this.options.profile.principalId,
+        assertCurrent: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
+        isSealed: () => this.sealed,
+      },
+      teamId,
+      operation,
+      commandId,
+      raw,
+      readiness
+    );
+  }
+
+  executeLaunch(
+    teamId: string,
+    operation: RuntimeLaunchAsyncOperation,
+    commandId: string,
+    raw: unknown,
+    readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
+  ): Promise<JsonValue>;
+  executeLaunch(
+    teamId: string,
+    operation: RuntimeLaunchSyncOperation,
+    commandId: string,
+    raw: unknown,
+    readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
+  ): JsonValue;
+  executeLaunch(
+    teamId: string,
+    operation: RuntimeLaunchOperation,
+    commandId: string,
+    raw: unknown,
+    readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
+  ): JsonValue | Promise<JsonValue>;
+  executeLaunch(
+    teamId: string,
+    operation: RuntimeLaunchOperation,
+    commandId: string,
+    raw: unknown,
+    readiness?: CaptureModelReadinessTransfer | LocalModelReadinessAction
+  ): JsonValue | Promise<JsonValue> {
+    this.captures.assertAvailable(teamId);
+    return executeRuntimeLaunch(
+      {
+        profile: this.options.profile,
+        hostIncarnation: this.hostIncarnation,
+        ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
+        ...(this.options.sources ? { sources: this.options.sources } : {}),
+        teams: this.options.teams,
+        capturedTeams: this.capturedTeams,
+        launches: this.launches,
+        retainedLaunches: this.retainedLaunches,
+        entries: this.entries,
+        runtime: this.runtime,
+        capture: (id, command, value, transfer) =>
+          this.trackOpening(this.captures.capture(id, command, value, transfer)),
+        hasCurrentCapture: (id) => this.hasCurrentCapture(id),
+        isSealed: () => this.sealed,
+        assertCurrent: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
+      },
+      teamId,
+      operation,
+      commandId,
+      raw,
+      readiness
+    );
+  }
+
+  captureLaunchModelProbe(
+    teamId: string,
+    input: TeamModelProbeSelection,
+    action: 'start' | 'read' | 'cancel'
+  ) {
+    this.captures.assertAvailable(teamId);
+    return captureTeamModelProbeSelection({
+      profile: this.options.profile,
+      ...(this.options.sources ? { sources: this.options.sources } : {}),
+      team: this.options.teams.get(teamId),
+      capturedTeam: this.capturedTeams.get(teamId),
+      launch: this.launches.get(teamId),
+      entries: [...this.entries.values()],
+      runtime: this.runtime,
+      retainedLaunches: this.retainedLaunches,
+      input,
+      action,
+      assertCurrent: () => {
+        this.options.assertWriter();
+        this.captures.assertAvailable(teamId);
+        if (this.sealed) throw new TeamLaunchError('hold', 'sealed');
+      },
+    });
+  }
+
+  /** Private composition evidence; this does not select current sources or expose private recipes over RPC. */
+  readLaunchSourceSelections(teamId: string, launchId: string) {
+    const selected = this.readRetainedLaunch(teamId, launchId);
+    if (!selected) throw new TeamLaunchError('hold', 'capture-source-unavailable');
+    return selected.team.capture === undefined ? [] :
+      runtimeCaptureSourceSelections(runtimeCaptureSourceSchema.parse(selected.team.capture));
+  }
+
+  /** Prove original resources released before changing their saved product settings. */
+  assertRosterEditable(
+    teamId: string,
+    members: readonly import('../team/contracts.js').TeamMember[]
+  ): void {
+    this.options.assertWriter();
+    this.captures.assertAvailable(teamId);
+    if (this.sealed) throw new RuntimeOwnerError('hold');
+    for (const { team, launch, entries } of this.retainedLaunches.values()) {
+      if (team.definition.binding.teamId !== teamId) continue;
+      assertRosterEditable({
+        members: runtimeLaunchMembers(team, entries),
+        launch,
+        runtime: this.runtime,
+        entries,
+      });
+    }
+    if (members.some((row) => row.delivery) && !this.capturedTeams.has(teamId))
+      throw new RuntimeOwnerError('hold');
+  }
+
+  /** Seal before awaiting provider/control cleanup, including factories still opening. */
+  seal(): void {
+    this.sealed = true;
+    this.interactionControls.seal();
+    this.dirty = false;
+    for (const { launch } of this.retainedLaunches.values()) launch.seal();
+    for (const entry of this.entries.values()) entry.provider?.seal();
+  }
+
+  async settleTeamCommands(teamId: string): Promise<void> {
+    this.captures.assertAvailable(teamId);
+    if (this.sealed) throw new RuntimeOwnerError('hold');
+    const team = this.options.teams.get(teamId);
+    if (!team) throw new RuntimeOwnerError('invalid');
+    await team.owner.resumeTaskCommands(this.deliveryPort());
+  }
+
+  kick(): void {
+    if (this.sealed) return;
+    this.dirty = true;
+    if (this.pumping) return;
+    this.pumping = Promise.resolve()
+      .then(async () => {
+        while (this.dirty && !this.sealed) {
+          this.dirty = false;
+          for (const launch of this.launches.values()) {
+            try {
+              launch.refresh();
+            } catch {
+              /* Original roster/custody debt remains held. */
+            }
+          }
+          for (const team of this.options.teams.values()) {
+            if (this.sealed) break;
+            if (!this.captures.available(team.definition.binding.teamId)) continue;
+            try {
+              await team.owner.resumeTaskCommands(this.deliveryPort());
+              if (this.sealed) break;
+              await team.owner.resumeDeliveries(this.deliveryPort());
+            } catch {
+              /* Durable pending/held obligations remain with their original owner. */
+            }
+          }
+          await this.interactionControls.pump(this.entries.values());
+          for (const entry of this.entries.values()) {
+            if (this.sealed) break;
+            try {
+              publishNativeCommandOutput(entry, this.runtime);
+              const current = this.runtime.readSession(entry.binding);
+              if (
+                current.attached &&
+                current.record?.nativeReady &&
+                current.record.phase === 'allocated'
+              )
+                await this.runtime.dispatchNext(entry.binding);
+              await entry.settleWorkSync?.();
+            } catch {
+              /* A busy/held/revoked member never falls back to another runtime. */
+            }
+          }
+        }
+      })
+      .finally(() => {
+        this.pumping = undefined;
+        if (this.dirty && !this.sealed) this.kick();
+      });
+  }
+
+  groupRun(teamId: string, memberName: string) {
+    this.captures.assertAvailable(teamId);
+    const team = this.options.teams.get(teamId);
+    const binding = team?.owner
+      .crossTeamIdentity(this.options.profile.principalId)
+      .members.find((member) => member.name === memberName)?.delivery;
+    return readGroupRuntime({
+      entry: selectCurrentGroupEntry(this.entries.values(), binding),
+      read: (binding) => this.runtime.readSession(binding),
+      current: (entry) => !this.sealed && this.isCurrent(entry),
+    });
+  }
+  crossTeamActiveInputs(binding: RuntimeBinding) {
+    this.captures.assertAvailable(binding.teamId);
+    const entry = this.entries.get(this.key(binding));
+    if (!entry || !this.isCurrent(entry)) return [];
+    const { record, attached } = this.runtime.readSession(binding);
+    if (
+      !attached ||
+      !record ||
+      record.sealed ||
+      record.phase !== 'allocated' ||
+      record.custody !== 'owned'
+    )
+      return [];
+    return record.inputs
+      .filter((input) => input.phase === 'claimed' || input.phase === 'consumed')
+      .map((input) => structuredClone(input.intent));
+  }
+
+  readLead(teamId: string, kind: 'activity' | 'context'): JsonValue {
+    return this.readViews.lead(teamId, kind);
+  }
+
+  readTeamActivity(teamId: string, kind: 'logs' | 'stats', raw: unknown): JsonValue {
+    return this.readViews.activity(teamId, kind, raw);
+  }
+
+  readonly readConversation: TeamConversationReadPort = (capture, mode) =>
+    this.readViews.conversation(capture, mode);
+
+  async execute(teamId: string, operation: string, raw: unknown, commandId?: string,
+    readiness?: LocalModelReadinessAction): Promise<JsonValue> {
+    this.captures.assertAvailable(teamId);
+    return executeCapturedRuntimeControl(
+      {
+        teams: this.options.teams,
+        hostIncarnation: this.hostIncarnation,
+        retainedLaunches: this.retainedLaunches,
+        ...(this.options.modelReadiness ? { modelReadiness: this.options.modelReadiness } : {}),
+        captureProcessOrigin: entry => captureMemberProcessOrigin(this.options.profile, entry, this.options.sources),
+        capturedTeams: this.capturedTeams,
+        entries: this.entries,
+        launches: this.launches,
+        runtime: this.runtime,
+        interactionControls: this.interactionControls,
+        principalId: this.options.profile.principalId,
+        isSealed: () => this.sealed,
+        assertWriter: () => { this.options.assertWriter(); this.captures.assertAvailable(teamId); },
+        kick: () => this.kick(),
+        dispatchSettled: () => this.pumping,
+        closeEndpoint: (entry) => this.closeEndpoint(entry),
+        rekey: (before, current) => {
+          this.entries.delete(this.key(before));
+          this.entries.set(this.key(current.binding), current);
+        },
+        projection: (entry, record, binding) => this.projection(entry, record, binding),
+        activityProjection: (entry, source, requested) =>
+          this.activityProjection(entry, source, requested),
+      },
+      teamId,
+      operation,
+      raw,
+      commandId,
+      readiness
+    );
+  }
+
+  assertNativeMessage(teamId: string, command: import('../team/contracts.js').TeamCommand) {
+    this.captures.assertAvailable(teamId);
+    this.options.assertWriter();
+    const team = this.options.teams.get(teamId);
+    if (!team || this.sealed) throw new RuntimeOwnerError('hold');
+    return prepareNativeSessionCommand({
+      team, entries: this.entries.values(), runtime: this.runtime,
+      activityEntries: entry => readEntryActivitySources(entry, this.retainedLaunches, true),
+      principalId: this.options.profile.principalId,
+      launch: () => this.launches.get(teamId)?.read(),
+      isCurrent: entry => this.isCurrent(entry),
+      assertCurrent: () => {
+        this.options.assertWriter();
+        if (this.sealed) throw new RuntimeOwnerError('hold');
+      },
+    }, command);
+  }
+
+  private activityProjection(
+    entry: MemberEntry,
+    source: RuntimeActivityFeed | RuntimeActivitySnapshot,
+    requested?: RuntimeActivityCursor
+  ): JsonValue {
+    return projectRuntimeActivity({
+      memberId: entry.profile.memberId,
+      source,
+      nativeReady: 'latest' in source && !!entry.provider?.isReady() && this.isCurrent(entry),
+      ...(requested ? { requested } : {}),
+    });
+  }
+
+  async close(): Promise<void> {
+    this.seal();
+    await closeRuntimeEntries({
+      runtime: this.runtime, entries: this.entries, opening: this.opening,
+      ...(this.pumping ? { pumping: this.pumping } : {}),
+      disposeWake: () => this.workSyncWake.dispose(),
+      closeEndpoint: entry => this.closeEndpoint(entry),
+      assertUnavailableReleased: () => this.captures.assertUnavailableReleased(),
+    });
+  }
+
+  private projection(
+    entry: MemberEntry,
+    record: RuntimeSessionRecord | undefined,
+    binding = entry.binding
+  ): JsonValue {
+    return projectRuntimeMember({
+      entry,
+      record,
+      binding,
+      runtime: this.runtime,
+      isCurrent: () => this.isCurrent(entry),
+    });
+  }
+  /** Trusted original trash cleanup; never registered as a Runtime RPC. */
+  lifecyclePorts() {
+    return createRuntimeLifecyclePorts({
+      runtime: this.runtime,
+      entries: this.entries,
+      delivery: this.deliveryPort(),
+      assertWriter: this.options.assertWriter,
+      assertAvailable: binding => this.captures.assertAvailable(binding.teamId),
+      ...(this.options.modelReadiness ? { readiness: { retainedLaunches: this.retainedLaunches,
+        probes: this.options.modelReadiness.probes } } : {}),
+      closeEndpoint: (entry) => this.closeEndpoint(entry),
+    });
+  }
+  preflightInput(input: Parameters<TeamInputPreflight>[0]): boolean {
+    const entry = this.entries.get(this.key(input.binding));
+    if (!entry) throw new RuntimeOwnerError('forbidden');
+    return preflightMemberInput({ entry, storageRoot: this.options.profile.owner.storageRoot,
+      input, assertCurrent: () => this.assertCurrent(entry, false) });
+  }
+  private deliveryPort() {
+    return createRuntimeDeliveryPort(this.runtime, binding => this.captures.assertAvailable(binding.teamId));
+  }
+  private key(binding: RuntimeBinding): string {
+    return runtimeDigest(normalizeBinding(binding));
+  }
+  private isCurrent(entry: MemberEntry): boolean {
+    try {
+      this.assertCurrent(entry);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  private assertCurrent(entry: MemberEntry, requireLiveEndpoint = true): void {
+    this.options.assertWriter();
+    this.captures.assertAvailable(entry.binding.teamId);
+    assertCapturedRosterCurrent(entry.team, entry.profile.principalId);
+    if (
+      this.sealed ||
+      (requireLiveEndpoint && entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs) ||
+      !entry.team.owner.authorizeMemberBinding(entry.binding, 'dispatch')
+    )
+      throw new RuntimeOwnerError('forbidden');
+  }
+  private assertProviderAuthority(entry: MemberEntry,
+    onCurrent?: Parameters<typeof readCapturedProviderAuthority>[3]): 'current' | 'roster-not-applicable' {
+    this.options.assertWriter();
+    this.captures.assertAvailable(entry.binding.teamId);
+    if (this.sealed ||
+      (entry.endpointExpiresAtMs !== undefined && Date.now() >= entry.endpointExpiresAtMs))
+      throw new RuntimeOwnerError('forbidden');
+    return readCapturedProviderAuthority(entry.team, entry.profile.principalId, entry.binding, onCurrent);
+  }
+  private async closeEndpoint(entry: MemberEntry): Promise<void> {
+    entry.endpoint?.revoke();
+    await entry.endpoint?.close();
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "status": "SCOPED_NATIVE_CLAUDE_PDF_PASS_RETAINED",
+  "scope": "Stage1 §9 selected Claude PDF path: actual SDK/CLI document/source.base64/application/pdf on original second DM, canonical public bytes warm/cold; Host/native proof, no UI",
+  "actualRun": {
+    "jobId": "c4803f32b825d47d2b2f8eaef6d16e5c",
+    "exitCode": 0,
+    "signal": null,
+    "originalRoot": "/Volumes/Transcend/dev/TEST-claude-native-pdf-prep-rr_2u9f6/future-run/tmp/TEST-native-claude-host-XYLThN",
+    "hostSourceSha256": "5684e52ddb682709f668609be23fa6c5f9d664b2b9a994932ee66b59ec30990a",
+    "hostDistSha256": "22fb90ea37fe75075af12d4a198003bbd7b2df844348bad642dc0b03a4e2acea",
+    "providerArchiveSha256": "2aa5d730d6ed8c237b3d94a84ea462c49f773a69b20344e04fa486a99fcfbaae",
+    "spiArchiveSha256": "2a6e0e2cc61d7513b6de352d5cc7e2dba6ade8749e76fb4558520b1ea99bbf2e",
+    "sdkVersion": "0.3.305",
+    "sdkModuleSha256": "c8d3e6cf794501c9b2dad3199762e4594e7b890e8ce76f957e9d748e02680bb1",
+    "nativeCliSha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f",
+    "fixtureSources": {
+      "test": "e96c18616dadb5a4715598bbd64b27d77ca0bca5a6a34648860766365d7e4342",
+      "model": "4a88cf9433b2dd9b7e5fab656cc97e69a8215ddc8ae80a1c3337ccd90f24f7ea",
+      "pdf": "a7b89337672e9580138d87a2cd47f748b8e894557b656ab7d1830b1208e8076e",
+      "helper": "a39f9c112530ec8e4d6b3f78fedf3634d10d6d35f23502243f1cb54217f09297"
+    }
+  },
+  "effects": {
+    "originalBusinessInputs": 2,
+    "originalInputTerminals": [
+      "succeeded",
+      "succeeded"
+    ],
+    "modelObservations": 11,
+    "modelFailures": [],
+    "selectedModel": "claude-opus-4-6",
+    "selectedEffort": "medium",
+    "pdf": {
+      "messageId": "human-native-two",
+      "sha256": "b68de0aed59787410cbdbc3040bdeac362fb7ec9210896066c07b1e4e0cc942c",
+      "byteLength": 589,
+      "sourceType": "base64",
+      "mediaType": "application/pdf",
+      "nativeDocumentObservations": 1,
+      "titleMatchesOriginalArtifactId": true,
+      "nativeBytesMatchCanonicalBlob": true,
+      "fixture": "Valid one-page PDF1.4, Catalog/Pages/Page/Helvetica/content stream, xref/trailer; strict parser independently verified in preparation"
+    },
+    "warmAndColdPublicAttachmentReads": 2,
+    "coldHost": {
+      "newActualHost": true,
+      "runtimeOpenFrames": 0,
+      "sameOriginalMessageRead": true,
+      "pinnedOriginalFixtureAssertsExactWarmColdBytesAndNoNativeResubmission": true
+    },
+    "originalRuntimeStop": {
+      "successfulFrames": 1,
+      "phase": "closed",
+      "custody": "released"
+    },
+    "originalHostExitCodes": [
+      0,
+      0
+    ],
+    "originalHostSignalCodes": [
+      null,
+      null
+    ],
+    "cleanupConfirmed": true,
+    "cleanupLimit": "Original Runtime/Host receipt fields only; independent whole-tree process absence and original M19 SDK release not claimed"
+  },
+  "retention": {
+    "collectorJobId": "c9dae840278047ca8cb0e53121f01ac8",
+    "collectorExitCode": 0,
+    "files": 2170,
+    "collectionErrors": [],
+    "qualificationErrors": [],
+    "retainedRoot": "/Volumes/Transcend/dev/TEST-claude-native-pdf-prep-rr_2u9f6/retained-native-pdf-claude-c4803f32b825d47d2b2f8eaef6d16e5c",
+    "manifestSha256": "54ab03c05ac120c01d4a0da9c92053a4c1b40e73e88679ec575e7441b8b9b954",
+    "originalRawReceiptSha256": "6aa8e63ba62196a4156423a0e64dfa4352269526ab7c3e027e316a340cac1f23",
+    "originalJobStateSha256": "19c481a2ff7c9e90605854228427045b49b9ea61cd2d965e2bdcf880aff615c3",
+    "collectorSha256": "6e9807d65d3ba88c01ab8113875f069c084f30c826473bd54a1347b2f67382e5"
+  },
+  "notClaimed": [
+    "PDF UI upload/preview/native picker",
+    "vendor authentication/inference",
+    "all MIME/provider/model/OS coverage",
+    "Read tool or filename workaround",
+    "independent whole-tree cleanup or original M19 SDK release",
+    "whole Stage1/M13",
+    "Stage2/V2/release"
+  ]
+}

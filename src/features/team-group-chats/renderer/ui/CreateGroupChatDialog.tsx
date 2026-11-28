@@ -102,7 +102,7 @@ export const CreateGroupChatDialog = ({
             <Label
               htmlFor={`group-member-${id}-${encodeURIComponent(member.name)}`}
               key={member.name}
-              className="flex cursor-pointer items-center gap-3 rounded px-2 hover:bg-[var(--color-surface-raised)] focus-within:bg-[var(--color-surface-raised)] focus-within:ring-1 focus-within:ring-blue-500/50"
+              className="flex cursor-pointer items-center gap-3 rounded px-2 focus-within:bg-[var(--color-surface-raised)] focus-within:ring-1 focus-within:ring-blue-500/50 hover:bg-[var(--color-surface-raised)]"
             >
               <Checkbox
                 id={`group-member-${id}-${encodeURIComponent(member.name)}`}
@@ -132,7 +132,10 @@ export const CreateGroupChatDialog = ({
             </Label>
           ))}
         </div>
-        <Label htmlFor={`group-auto-${id}`} className="flex cursor-pointer items-center gap-2 text-sm">
+        <Label
+          htmlFor={`group-auto-${id}`}
+          className="flex cursor-pointer items-center gap-2 text-sm"
+        >
           <Checkbox
             id={`group-auto-${id}`}
             checked={autoIncludeNewMembers}

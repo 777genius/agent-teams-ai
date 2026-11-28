@@ -22,6 +22,13 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock('@renderer/api', () => ({
+  reviewApiForTeam: (teamName: string, origin: { taskId?: string }) => ({
+    getTaskChanges: (...args: Parameters<ReviewAPI['getTaskChanges']>) => {
+      expect(teamName).toBe(args[0]);
+      expect(origin).toEqual({ taskId: args[1] });
+      return hoisted.getTaskChanges(...args);
+    },
+  }),
   api: {
     teams: {
       onTeamChange: vi.fn(() => vi.fn()),
@@ -235,6 +242,7 @@ import { createTaskDetailSessionFixture } from './taskDetailSessionFixture';
 
 import type { TaskDetailDialogProps } from '@renderer/components/team/dialogs/TaskDetailDialog';
 import type { AppState } from '@renderer/store/types';
+import type { ReviewAPI } from '@shared/types/api';
 
 function renderDialog(props: Omit<TaskDetailDialogProps, 'sessionController' | 'projectPath'>) {
   const controller = createTaskDetailSessionFixture(props.task?.id ?? 'missing');

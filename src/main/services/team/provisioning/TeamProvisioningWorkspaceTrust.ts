@@ -158,9 +158,9 @@ export async function collectWorkspaceTrustWorkspaces(input: {
     if (gitRoot === undefined) {
       const resolvedGitRoot = await input.ports.resolveGitRoot(cwd);
       const realGitRoot = resolvedGitRoot ? await input.ports.realpath(resolvedGitRoot) : null;
-      gitRoot = realGitRoot
-        ? await input.ports.resolveCanonicalGitRoot(realGitRoot)
-        : resolvedGitRoot;
+      // A root that disappeared or cannot be resolved is not trust evidence.
+      // Never promote the earlier unverified spelling after a failed realpath.
+      gitRoot = realGitRoot ? await input.ports.resolveCanonicalGitRoot(realGitRoot) : null;
       gitRootCache.set(cwd, gitRoot);
     }
     candidates.push(

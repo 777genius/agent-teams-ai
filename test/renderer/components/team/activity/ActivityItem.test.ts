@@ -139,6 +139,28 @@ describe('ActivityItem compact header preview', () => {
     vi.unstubAllGlobals();
   });
 
+  it('keeps hook order when the same mounted message changes between ordinary and system presentation', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const message: InboxMessage = { from: 'alice', messageId: 'TEST-same-row', text: 'Original message',
+      timestamp: '2026-11-25T00:00:00.000Z', read: true, source: 'inbox' };
+    const render = async (text: string) => act(async () => {
+      root.render(React.createElement(ActivityItem, { message: { ...message, text }, teamName: 'TEST-team' }));
+    });
+    try {
+      await render(message.text);
+      expect(host.textContent).toContain('Original message');
+      await render(JSON.stringify({ type: 'shutdown_request' }));
+      expect(host.textContent).toContain('Shutdown requested');
+      await render('Updated original message');
+      expect(host.textContent).toContain('Updated original message');
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('uses the sidebar unread tint for a newly highlighted message', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
@@ -463,20 +485,24 @@ describe('ActivityItem compact header preview', () => {
       read: true,
       source: 'lead_process',
     };
+    const toggled: string[] = [];
+    function OriginalCard() {
+      const [collapsed, setCollapsed] = React.useState(true);
+      return React.createElement(ActivityItem, {
+        message,
+        teamName: 'my-team',
+        memberColor: 'green',
+        compactHeader: true,
+        collapseMode: 'managed',
+        isCollapsed: collapsed,
+        canToggleCollapse: true,
+        collapseToggleKey: 'message-key',
+        onToggleCollapse: (key) => { toggled.push(key); setCollapsed(false); },
+      });
+    }
 
     await act(async () => {
-      root.render(
-        React.createElement(ActivityItem, {
-          message,
-          teamName: 'my-team',
-          memberColor: 'green',
-          compactHeader: true,
-          collapseMode: 'managed',
-          isCollapsed: true,
-          canToggleCollapse: true,
-          collapseToggleKey: 'message-key',
-        })
-      );
+      root.render(React.createElement(OriginalCard));
       await Promise.resolve();
     });
 
@@ -497,6 +523,18 @@ describe('ActivityItem compact header preview', () => {
     expect(accent?.style.backgroundColor).toBe('#22c55e');
     expect(accent?.parentElement?.className).toContain('relative');
     expect((accent?.parentElement as HTMLElement | null)?.style.backgroundImage).toBe('');
+
+    const card = host.querySelector('article.activity-timeline-card');
+    expect(card?.getAttribute('data-expanded')).toBe('false');
+    const header = card?.firstElementChild;
+    expect(header?.getAttribute('role')).toBe('button');
+    await act(async () => {
+      header?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(toggled).toEqual(['message-key']);
+    expect(card?.getAttribute('data-expanded')).toBe('true');
+    expect(host.querySelector('.line-clamp-2')).toBeNull();
+    expect(host.querySelector('[data-markdown-renderer="full"]')?.textContent).toContain(summary);
 
     await act(async () => {
       root.unmount();

@@ -1,0 +1,116 @@
+import { z } from "zod";
+import { defineTool } from "./toolDefinition.js";
+import type { BoundTool } from "./toolDefinition.js";
+import type { TeamMcpConnection } from "./contracts.js";
+
+const id = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
+const name = z.string().min(1).max(128);
+const cursor = z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/);
+export const taskInventorySchema = z.strictObject({
+  owner: name.optional(),
+  status: z.enum(["pending", "in_progress", "completed"]).optional(),
+  reviewState: z.enum(["none", "review", "needsFix", "reviewed", "approved"]).optional(),
+  kanbanColumn: z.enum(["review", "approved"]).optional(),
+  relatedTo: id.optional(),
+  blockedBy: id.optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  cursor: cursor.optional(),
+});
+
+/** Current bound Team only. No tool argument selects owner, root, actor or Runtime. */
+export function createReadMcpTools(
+  reads: NonNullable<TeamMcpConnection["readQueries"]>,
+  readKanbanPage?: (cursor?: string) => unknown,
+): BoundTool[] {
+  const empty = z.strictObject({});
+  const briefingPages = " Oversized results use briefing-chunk: read all pages with the same options and nextCursor, concatenate chunk strings in part order, then JSON.parse the complete JSON string to recover the full briefing. Apply the briefing and mandatory member rules only after all pages are read. If state changes invalidate a cursor, restart from the first page.";
+  return [
+    ...(reads.memberBriefing
+      ? [
+          {
+            ...defineTool(
+              'member_briefing',
+              'Read durable member rules and current canonical Task queue as this authenticated actor.' + briefingPages,
+              z.strictObject({ includeActiveProcesses: z.boolean().optional(), cursor: cursor.optional() }),
+              ({ includeActiveProcesses, cursor }) =>
+                reads.memberBriefing!({ includeActiveProcesses: includeActiveProcesses !== false },
+                  cursor === undefined ? {} : { cursor }),
+              false
+            ),
+            asynchronous: true as const,
+          },
+        ]
+      : []),
+    defineTool(
+      "team_get",
+      "Read a bounded Team page. Continue with nextCursor; taskParts indexes identify pieces of the same task whose history arrays concatenate in part order.",
+      z.strictObject({
+        cursor: z.string().regex(/^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/).optional(),
+      }),
+      ({ cursor }) => reads.getTeam(cursor),
+      false,
+    ),
+    defineTool(
+      "kanban_get",
+      "Read canonical board state for this captured Team. Large boards return signed nextCursor pages; merge tasks and columnOrder entries across pages.",
+      z.strictObject({ cursor: cursor.optional() }),
+      ({ cursor }) => {
+        if (readKanbanPage) return readKanbanPage(cursor);
+        if (cursor !== undefined) throw new Error('Kanban pagination unavailable');
+        return reads.getKanbanState();
+      },
+      false,
+    ),
+    defineTool(
+      "kanban_list_reviewers",
+      "Read the canonical configured review roster.",
+      empty,
+      () => reads.listReviewers(),
+      false,
+    ),
+    defineTool(
+      "task_get_comment",
+      "Read one canonical comment and its Task context. For large results, follow nextCursor and concatenate JSON chunks in part order, then parse the complete JSON.",
+      z.strictObject({ taskId: id, commentId: id, cursor: cursor.optional() }),
+      ({ taskId, commentId, cursor }) => reads.getTaskComment(taskId, commentId, cursor),
+      false,
+    ),
+    defineTool(
+      "task_list",
+      "Read compact canonical active inventory (default 50, maximum 200) with conjunctive filters; use task_briefing for the working queue. Oversized results use task-inventory-chunk: follow nextCursor with the same filters and limit, concatenate chunk strings in part order, then parse the complete JSON array. The final page completes only this selected limit window.",
+      taskInventorySchema,
+      ({ cursor, ...input }) =>
+        reads.listTaskInventory({
+          ...Object.fromEntries(
+            Object.entries(input).filter(([, value]) => value !== undefined),
+          ),
+          limit: input.limit ?? 50,
+        }, cursor),
+      false,
+    ),
+    {
+      ...defineTool(
+        "task_briefing",
+        "Read the canonical operational Task queue. memberName is a configured read target; omitted uses the captured actor." + briefingPages,
+        z.strictObject({ memberName: id.optional(), cursor: cursor.optional() }),
+        ({ memberName, cursor }) => reads.taskBriefing(memberName, cursor === undefined ? {} : { cursor }),
+        false,
+      ),
+      asynchronous: true,
+    },
+    {
+      ...defineTool(
+        "lead_briefing",
+        "Read the canonical operational lead queue, not native context or transcript metrics." + briefingPages,
+        z.strictObject({ cursor: cursor.optional() }),
+        ({ cursor }) => reads.leadBriefing(cursor === undefined ? {} : { cursor }),
+        false,
+      ),
+      asynchronous: true,
+    },
+  ];
+}

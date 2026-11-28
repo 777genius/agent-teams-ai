@@ -1,3 +1,5 @@
+const { createReviewDisapproval } = require('./reviewDisapproval.js');
+const kanbanStore = require('./kanbanStore.js');
 const kanban = require('./kanban.js');
 const { createReviewHumanActions } = require('./reviewHumanActions.js');
 const { createLeadSignoff } = require('./reviewLeadSignoff.js');
@@ -69,6 +71,7 @@ function getLatestReviewRequestedReviewer(task) {
     if (
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_disapproved' ||
       e.type === 'review_completed' ||
       e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
@@ -133,17 +136,18 @@ function closeReviewIntervals(task, timestamp = new Date().toISOString()) {
   return changed;
 }
 
-function resolveKnownActorName(context, value, label) {
+function resolveKnownActorName(context, value, label, allowTrustedUser = false) {
   const actor = typeof value === 'string' && value.trim() ? value.trim() : '';
   if (!actor) return null;
+  if (allowTrustedUser && actor === 'user' && context.allowUserMessageSender === true) return actor;
   return runtimeHelpers.assertExplicitTeamMemberName(context.paths, actor, label, {
     allowLeadAliases: true,
   });
 }
 
-function tryResolveKnownActorName(context, value, label) {
+function tryResolveKnownActorName(context, value, label, allowTrustedUser = false) {
   try {
-    return resolveKnownActorName(context, value, label);
+    return resolveKnownActorName(context, value, label, allowTrustedUser);
   } catch {
     return null;
   }
@@ -159,6 +163,7 @@ function resolveActorIdentityKey(context, value) {
 }
 
 function isLeadActor(context, value) {
+  if (value === 'user' && context.allowUserMessageSender === true) return true;
   const key = normalizeActorKey(value);
   const resolvedKey = resolveActorIdentityKey(context, value);
   const leadKey = normalizeActorKey(runtimeHelpers.inferLeadName(context.paths));
@@ -181,7 +186,7 @@ function assertMatchesAssignedReviewer(context, task, actor, actionName) {
 
 function getReviewStartActor(context, task, flags) {
   if (typeof flags.from === 'string' && flags.from.trim()) {
-    const actor = resolveKnownActorName(context, flags.from, 'review actor');
+    const actor = resolveKnownActorName(context, flags.from, 'review actor', true);
     assertMatchesAssignedReviewer(context, task, actor, 'start review');
     return actor;
   }
@@ -212,6 +217,7 @@ function getLatestReviewStartedActor(task) {
     if (
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_disapproved' ||
       e.type === 'review_completed' ||
       e.type === 'human_approved' ||
       (e.type === 'status_changed' &&
@@ -225,11 +231,12 @@ function getLatestReviewStartedActor(task) {
 }
 
 function getReviewDecisionActor(context, task, flags, actionName) {
-  const explicit = resolveKnownActorName(context, flags.from, 'review actor');
+  const explicit = resolveKnownActorName(context, flags.from, 'review actor', true);
   const startedActor = tryResolveKnownActorName(
     context,
     getLatestReviewStartedActor(task),
-    'review actor'
+    'review actor',
+    true
   );
   const assignedReviewer = tryResolveKnownActorName(
     context,
@@ -276,6 +283,7 @@ function getLatestReviewLifecycleEvent(task) {
       e.type === 'review_requested' ||
       e.type === 'review_changes_requested' ||
       e.type === 'review_approved' ||
+      e.type === 'review_disapproved' ||
       e.type === 'review_completed' ||
       e.type === 'human_approved' ||
       e.type === 'review_started'
@@ -310,11 +318,7 @@ function startReview(context, taskId, flags = {}) {
       const existingActor =
         typeof latestReviewEvent.actor === 'string' ? latestReviewEvent.actor.trim() : '';
       const existingActorValid = existingActor
-        ? Boolean(
-            runtimeHelpers.resolveExplicitTeamMemberName(context.paths, existingActor, {
-              allowLeadAliases: true,
-            })
-          )
+        ? Boolean(tryResolveKnownActorName(context, existingActor, 'review actor', true))
         : false;
       const assignedReviewer = tryResolveKnownActorName(
         context,
@@ -322,6 +326,7 @@ function startReview(context, taskId, flags = {}) {
         'reviewer'
       );
       const existingMatchesAssigned =
+        isLeadActor(context, existingActor) ||
         !assignedReviewer ||
         (existingActorValid &&
           resolveActorIdentityKey(context, existingActor) ===
@@ -411,7 +416,7 @@ function requestReview(context, taskId, flags = {}) {
     }
 
     const nextFrom =
-      resolveKnownActorName(context, flags.from, 'review requester') ||
+      resolveKnownActorName(context, flags.from, 'review requester', true) ||
       resolveKnownActorName(context, 'team-lead', 'review requester');
     const rawReviewer = getReviewer(context, flags);
     const nextReviewer = rawReviewer
@@ -471,6 +476,7 @@ function requestReview(context, taskId, flags = {}) {
       from,
       text: buildReviewRequestMessage({
         teamName: context.teamName, task, reviewRequestId, humanApproval, reviewFlowPrompt,
+        boundTaskTools: context.boundTaskTools,
       }),
       summary: `Review request for #${task.displayId || task.id}`,
       source: 'system_notification',
@@ -483,6 +489,7 @@ function requestReview(context, taskId, flags = {}) {
   return task;
 }
 
+const disapproveReview = createReviewDisapproval({ getEffectiveReviewState, closeReviewIntervals });
 
 const leadSignoff = createLeadSignoff({
   isLeadActor, resolveActorIdentityKey, getLatestReviewRequestEvent, closeReviewIntervals, warnNonCritical,
@@ -574,7 +581,9 @@ function approveReview(context, taskId, flags = {}) {
   try {
     const approvedTask = tasks.getTask(context, taskId);
     const history = Array.isArray(approvedTask.historyEvents) ? approvedTask.historyEvents : [];
-    const approval = [...history].reverse().find((event) => event && event.type === 'review_approved');
+    const approval = [...history]
+      .reverse()
+      .find((event) => event && event.type === 'review_approved');
     tasks.notifyUnblockedOwners(context, approvedTask, { reviewCycleId: approval && approval.id });
   } catch (error) {
     warnNonCritical('[review] dependency approval notification failed', error);
@@ -740,6 +749,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
 
 module.exports = {
   approveReview,
+  disapproveReview,
   approveAsHuman,
   completeReview,
   requestReview,

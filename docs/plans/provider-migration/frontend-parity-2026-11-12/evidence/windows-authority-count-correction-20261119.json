@@ -1,0 +1,348 @@
+{
+  "schemaVersion": 1,
+  "kind": "EXPLICIT_DERIVED_AUTHORITY_COUNT_CORRECTION",
+  "evidenceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+  "publishedIndexHead": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+  "correctedField": "originalBoundedAudits[windows-x64-a81340c-callback-audit.json].record.currentBoundaries.allocation",
+  "previousAuditSha256": "83e8c745662fbc36121acb26f3181c53675553f7d9e982ea32399674c5ed70d1",
+  "correctedAllocationNamespaceValidations": 5,
+  "breakdown": {
+    "captureTeamAccountReadOuter": 2,
+    "assertExecutionAllowed": 1,
+    "captureRuntimeControlAuthorityReadGrant": 1,
+    "authorizeRuntimeAccess": 1
+  },
+  "scopeDistinction": "The literal four in the separate LiveRoster regression remains correct. The default allocation regression compares actual baseline and current counts, both five; no test failure or product regression is implied.",
+  "originalTimingReceiptUnchanged": true,
+  "originalSourceChecksUnchanged": true,
+  "correctedAudit": {
+    "name": "windows-x64-a81340c-callback-audit.json",
+    "bytes": 10351,
+    "sha256": "9a2beae44a6790636b6aad5219ac88c27da9d0bf0806ab8282853b187064d817",
+    "record": {
+      "schemaVersion": 1,
+      "kind": "bounded-readonly-original-readiness-callback-audit",
+      "recordedAt": "2026-11-19T19:33:10.739141+00:00",
+      "sourceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+      "run": 44596089349,
+      "job": 135814632127,
+      "originalAudit": "/workspace/scratch/f45fed8e9067/audit1192/windows-x64-a81340c-audit.json",
+      "originalAuditSha256": "cda1e505511dc747e11675f8194f6e6a578cb7c2686a5cb4eb495be8a55b3041",
+      "artifact": {
+        "id": 14566347090,
+        "bytes": 70735,
+        "sha256": "e542493786ce0feca64a4340d171bba8b44bf39a845f8556375a40006dcc4931",
+        "hashMatchesGitHub": true
+      },
+      "observed": {
+        "firstRefusalPhase": "consumer/cutoff",
+        "reason": "held",
+        "afterOriginalCutoffMs": 15,
+        "currentCalls": {
+          "count": 24,
+          "totalMs": 10257,
+          "maxMs": 544,
+          "lastMs": 21,
+          "truncated": false,
+          "regions": {
+            "initialAuthorityCount": 24,
+            "initialAuthorityMs": 383,
+            "readConsumerCount": 24,
+            "readConsumerMs": 120,
+            "referenceCount": 23,
+            "referenceMs": 9405,
+            "finalAuthorityCount": 23,
+            "finalAuthorityMs": 364,
+            "referenceAccountCount": 23,
+            "referenceAccountMs": 5316,
+            "referenceAccountAuthorityCount": 23,
+            "referenceAccountAuthorityMs": 4847,
+            "referenceAccountProviderCount": 23,
+            "referenceAccountProviderMs": 2128,
+            "referenceAccountAllocationCount": 23,
+            "referenceAccountAllocationMs": 2714
+          }
+        },
+        "nativeNextRefusal": "resume/current-false at after-owner",
+        "cleanup": true,
+        "allOriginalHandlesAbsent": true
+      },
+      "sourceDerivedCounts": {
+        "branch": "Original initial Team-A start; configured-key V1 member inspection with explicit TEST apiKey and no selected Restart/live-membership source.",
+        "perCompleteCurrentInspection": 11,
+        "perAccountInspection": 8,
+        "completeReferenceAndAccountIntervals": 23,
+        "accountCompositeCallbacks": 184,
+        "allCompositeCallbacks": 254,
+        "lastInspection": "One original initial-authority callback then read-consumer, refused by original cutoff before reference.",
+        "observedCountMeaning": "Provider/Allocation Count23 each count containing account intervals; they do not count nested callbacks.",
+        "averageAccountCompositeCallbackMs": 26.342391304347824,
+        "averageProviderCallbackMs": 11.565217391304348,
+        "averageAllocationCallbackMs": 14.75,
+        "qualification": "Counts derived from pinned original source branch and already-existing controlled regression; no new native measurement or test run."
+      },
+      "hierarchy": {
+        "referenceShareOfCurrent": 0.9169347762503656,
+        "accountShareOfReference": 0.5652312599681021,
+        "authorityShareOfAccount": 0.9117757712565839,
+        "allocationShareOfAccountAuthority": 0.559933979781308,
+        "providerShareOfAccountAuthority": 0.43903445430162985,
+        "authorityResidualMs": 5,
+        "referenceOutsideAccountMs": 4089,
+        "note": "Nested durations overlap; do not add them to derive elapsed time. Five milliseconds residual includes wrapper work and per-region rounding; it is not independently timed."
+      },
+      "comparison": {
+        "previousHead": "fbc77ea6b9a35f4be640d7b1e103b992a3f3a45e",
+        "previousCurrentCalls": {
+          "count": 22,
+          "totalMs": 9994,
+          "maxMs": 525,
+          "lastMs": 457,
+          "truncated": false,
+          "regions": {
+            "initialAuthorityCount": 22,
+            "initialAuthorityMs": 380,
+            "readConsumerCount": 22,
+            "readConsumerMs": 140,
+            "referenceCount": 22,
+            "referenceMs": 9146,
+            "finalAuthorityCount": 21,
+            "finalAuthorityMs": 330,
+            "referenceAccountCount": 22,
+            "referenceAccountMs": 5174,
+            "referenceAccountAuthorityCount": 22,
+            "referenceAccountAuthorityMs": 4705
+          }
+        },
+        "previousAccountCallbacks": 176,
+        "previousAverageAccountCompositeCallbackMs": 26.732954545454547,
+        "previousFirstRefusal": "probe-expiry after cutoff+214ms, inside final reference inspection",
+        "currentFirstRefusal": "consumer cutoff+15ms, before next reference inspection",
+        "verdict": "New split localizes allocation56.0%/provider43.9% within account-authority cost; no causal performance improvement or per-callback214ms claim follows from two independent runs."
+      },
+      "route": [
+        "nativeEmulatedSourceScenario publishesA, saves roster and captures new TEST-capture-A",
+        "Original Main BackendOwnerRouter team.launch.start with original readiness origin/budget",
+        "TeamLaunchOwner.startMember obtains default captureAuthority",
+        "createRuntimeTeamLaunch.open original readFreshMemberSource has no selected restart/live source for freshA",
+        "RuntimeOwner.openSession→allocate forwards original default authority unchanged",
+        "factory readiness order remains captured identity→provider authority→allocation authority→captured identity"
+      ],
+      "currentBoundaries": {
+        "provider": "Current captured-roster path already one physical Team fence; original writer/availability prelude remains outside. RuntimeTeamCaptures.assertAvailable is a map check, not a Runtime store read.",
+        "allocation": "Default createRuntimeTeamLaunch captureAuthority already shares original execution/control checks under one captured Team fence; six direct state reads/five namespace validations retained (outer fence two, nested execution, control-grant and runtime-access one each).",
+        "generic": "Factory signature also accepts Restart/live allocation callbacks that can read separate Launch-store. Currentness or Runtime callbacks must not be moved wholesale beneath Team lock."
+      },
+      "conclusion": "No additional small safe optimization proven. Allocation is larger but both leaves are material and already use one physical Team fence per callback on the original default path. Preserve upcoming publication; no blanket locking, cached facts, omitted checks, new deadlines or retry.",
+      "possibleSeparateDesign": "Reducing physical fence publications further would require an explicit trusted default-only Team-safe allocation contract with lock-order and original-observation proof. That is a separately reviewed architectural change, not justified as a local generic wrapper by these timing fields.",
+      "sourceLineEndingCheck": {
+        "timingWindowsCrLfSha256": "d792030f433318cd80151793c57559ae8a66b3128c228863804de0c779216c02",
+        "matchesOriginalArtifactSourcePin": true
+      },
+      "files": [
+        {
+          "path": "packages/legacy-agent-host/src/diagnostics/modelReadinessTiming.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "edc825eac6842bca7e3ac6c484522628a8f80721330dbaad4e89c9ebf08bb60b"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "efde0ea4b66359293f8a9ce0d3554ae3d58fe72995af8b78289230185922a65b"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "5d619150e1bc507a65d2971084ea33776edb6f0944fd7d0abf7e252e2450e79e"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "51b2e2f1d685214c430b105dd777e74f8a185b1244c2acecb7b3262267fadc6b"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "98b2636d6d296cc05a7eb5eb46c966367425a0d12ff59b517fe0697dc73f7fd7"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/runtimeControlAuthority.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "89a5d0db706145a8300b49e54c9add7f17bca41579e3a65a55658a97c5e9ef53"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "9496e03c3b78466d84fa54a9854f2531cef733937c45ab174132def8f4faecf2"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "83040d2af471a9e886510cef4e1e896d8ada3009290f1cab8c648f683bf1863e"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "2e1751eeabd373b1b52432a662255d1c092f64a42a1a1eee7dcd581b8efe6c86"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/runtime/RuntimeOwner.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "b62e758155cdbd20a4759e1d41c1e678b652d391f40185952317eccb7ebc2821"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "0a2b1bdfbd8745b9b9f6c30fa0eb71cb87f7d037d0b16e828ed91018d80546cf"
+        },
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "e59a83c3f54699d2006254c52f59c7ec913ed8d450f58e866dacbf1d6105e70a"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+          "sourceCommit": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+          "sha256": "31cb1c9d5190d5ae9f9ba6d8640ad5b1f6116cd1f5721ddc4f6b96cc058b6f8d"
+        }
+      ],
+      "actions": {
+        "sourceEdits": false,
+        "testsBuildsNative": false,
+        "ciQueriesDownloadsOrReruns": false,
+        "defaultMainReleaseChanges": false
+      },
+      "correction": {
+        "preimageSha256": "83e8c745662fbc36121acb26f3181c53675553f7d9e982ea32399674c5ed70d1",
+        "field": "currentBoundaries.allocation",
+        "reason": "Read-only call-graph recount corrected namespace validations from four to five; all original timing and receipt evidence unchanged."
+      }
+    }
+  },
+  "independentCallGraphReview": {
+    "name": "windows-x64-default-pair-independent-r1.json",
+    "bytes": 5867,
+    "sha256": "233942f1b7998778279007a9de18e9026a510a879be95a5e122814e99dfe8641",
+    "record": {
+      "kind": "independent read-only R1 of provisional default-provider/allocation Team pair sharing",
+      "reviewHead": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+      "inputAudit": {
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/windows-x64-a81340c-callback-audit.json",
+        "sha256": "9a2beae44a6790636b6aad5219ac88c27da9d0bf0806ab8282853b187064d817"
+      },
+      "verdict": "NOT READY: reject current provisional split for implementation under preserved early-refusal/lock-scope requirements; arithmetic alone is valid on closed-positive path",
+      "countCorrection": {
+        "defaultCurrentNamespaceValidations": 5,
+        "components": {
+          "outerCaptureTeamAccountRead": 2,
+          "executionNested": 1,
+          "capturedControlReadGrantNested": 1,
+          "runtimeAccessNested": 1
+        },
+        "defaultPriorNamespaceValidations": 5,
+        "priorComponents": {
+          "executionOuter": 2,
+          "controlReadGrantOuter": 2,
+          "runtimeAccessNested": 1
+        },
+        "directDefaultStateReads": 6,
+        "closedProviderNamespaceValidations": 3,
+        "closedProviderStateReads": 1,
+        "positivePair": {
+          "beforePhysicalPublications": 2,
+          "proposedPhysicalPublications": 1,
+          "beforeNamespaceValidations": 8,
+          "proposedNamespaceValidations": 8,
+          "beforeStateReads": 7,
+          "proposedStateReads": 8
+        },
+        "existingDefaultRegression": "runtime-control-authority.test.ts:196 compares actual namespace count to prior baseline, without literal4; both are5.",
+        "distinctFourCheckRegression": "runtime-team-host.test.ts:1245 is LiveRoster original+execution chain, not default captureAuthority; its4 remains consistent."
+      },
+      "findings": [
+        {
+          "severity": "blocking design issue",
+          "site": "RuntimeTeamCoordinator.ts:786",
+          "finding": "The apparent captureMemberProviderAuthority prelude is incomplete: options.assertProviderAuthority also checks writer, availability, sealed and endpoint expiry before its own Team leaf. Enclosing this whole remaining callback moves these original checks beneath a new outer Team lock. Sealed/expired original entry may now publish a lock before its former early refusal.",
+          "requiredBeforeAnyNewProposal": "An explicitly separated trusted coordinator prelude and closed Team-only leaf; do not duplicate checks or treat count preservation as original-order preservation."
+        },
+        {
+          "severity": "blocking design issue",
+          "site": "captureMemberProviderAuthority.ts:64",
+          "finding": "roster-not-applicable must not silently enclose generic/fallback currentness in the new Team fence. Refined exit-before-fallback avoids that but adds an outer read/publication on fallback and changes grant/refusal precedence.",
+          "requiredBeforeAnyNewProposal": "Specify and review fallback behavior plus added outer principal read. No ready minimal fix currently demonstrated."
+        },
+        {
+          "severity": "scope issue",
+          "site": "createRuntimeTeamLaunch.ts:108",
+          "finding": "restoreSession receives the captured default assertAuthority unchanged; only the fresh-member path replaces it with a new wrapper. Marking all default callbacks would therefore also mark selected restore.",
+          "requiredBeforeAnyNewProposal": "Explicitly prove or exclude restore eligibility. Do not claim generic/restart/live/restore coverage is unchanged solely because a fresh-member wrapper is unmarked."
+        }
+      ],
+      "preservedUnknown": "No native timing benefit, TTL success, safe capability implementation or authority contract approval is established by this R1.",
+      "reviewedFiles": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeTeamLaunch.ts",
+          "sha256": "51b2e2f1d685214c430b105dd777e74f8a185b1244c2acecb7b3262267fadc6b"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/captureTeamAccountRead.ts",
+          "sha256": "98b2636d6d296cc05a7eb5eb46c966367425a0d12ff59b517fe0697dc73f7fd7"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/runtimeControlAuthority.ts",
+          "sha256": "89a5d0db706145a8300b49e54c9add7f17bca41579e3a65a55658a97c5e9ef53"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/captureMemberProviderAuthority.ts",
+          "sha256": "5d619150e1bc507a65d2971084ea33776edb6f0944fd7d0abf7e252e2450e79e"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+          "sha256": "2ee5eed3ca66ec4a79fac706958911fea7fcfa83919443ded20a5ca2c8e8f190"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+          "sha256": "9496e03c3b78466d84fa54a9854f2531cef733937c45ab174132def8f4faecf2"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/adapters/team/TeamOwnerStore.ts",
+          "sha256": "8bc480a376b5d950c964f12ba94b87ea94d7bf95b48d5fc38380e8fb2cc188d6"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/team/TeamOwner.ts",
+          "sha256": "83040d2af471a9e886510cef4e1e896d8ada3009290f1cab8c648f683bf1863e"
+        },
+        {
+          "path": "packages/legacy-agent-host/src/team-launch/TeamLaunchOwner.ts",
+          "sha256": "2e1751eeabd373b1b52432a662255d1c092f64a42a1a1eee7dcd581b8efe6c86"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/runtime-control-authority.test.ts",
+          "sha256": "321bfc99f1a86a71f12039cf2d2e461f2121f8c3bc23d90a489b4c816e75e21a"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/member-provider-authority.test.ts",
+          "sha256": "0df2db5bf2b08465c9a5bfe4d86c79835e8206697a9a7fa5e4dbaea12d149976"
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "sha256": "998f923a7e046a10609186fc335d5156a7d98d032d042432eda5c8ce695a4ead"
+        }
+      ],
+      "actions": {
+        "sourceEdits": false,
+        "testsBuildsNative": false,
+        "CIQueriesDownloads": false,
+        "docsIndexRefChanges": false
+      }
+    }
+  },
+  "implementationChange": false,
+  "qualification": "This corrects derived prose only. The rejected pair-sharing proposal is not approved or implemented."
+}

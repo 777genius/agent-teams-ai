@@ -1,0 +1,23 @@
+{
+  "sourceBlob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+  "bytes": 17444,
+  "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5",
+  "lines": 324,
+  "inverseExact": true,
+  "helperStartLine": 46,
+  "helper": "static std::wstring wow64Command() {\n  // Resolve the documented API-set contract with one bounded module lifetime.\n  const auto module=LoadLibraryExW(L\"api-ms-win-core-wow64-l1-1-1.dll\",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);\n  if(!module) return {};\n  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(\n    GetProcAddress(module,\"GetSystemWow64Directory2W\"));\n  wchar_t path[MAX_PATH]{};\n  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;\n  const bool closed=FreeLibrary(module)!=FALSE;\n  if(!closed||!length||length>=MAX_PATH) return {};\n  return std::wstring(path)+L\"\\\\cmd.exe\";\n}",
+  "preimage": "43603d29138a5c43547f46099c5dad39d3d75815",
+  "noSourceApplied": true,
+  "sourceCommit": "bb48cb81493fbadb8b1e451ba5c35d7bc8488952",
+  "sourceParent": "6e90f38155f5a8edf57b0336b6d79e4ca60c110b",
+  "documentationCommit": "462845722260dfd91111c37cb66fc54a01a3ecb7",
+  "sourceBeforeDocumentation": true,
+  "delta": {
+    "path": "tools/owned-process-broker/nativeFixture.cpp",
+    "additions": 8,
+    "deletions": 2
+  },
+  "classification": "Independent source R2 only; prospective fresh canonical adoption required; no executed compiler/native result",
+  "reviewNote": "bb48-api-set-prospective-review.md",
+  "patch": "@@ -44,9 +44,15 @@ static bool prerequisiteFailure(PrerequisiteStage stage,const DWORD* result=null\n   std::fflush(stdout); return false;\n }\n static std::wstring wow64Command() {\n+  // Resolve the documented API-set contract with one bounded module lifetime.\n+  const auto module=LoadLibraryExW(L\"api-ms-win-core-wow64-l1-1-1.dll\",nullptr,LOAD_LIBRARY_SEARCH_SYSTEM32);\n+  if(!module) return {};\n+  const auto directory=reinterpret_cast<decltype(&GetSystemWow64Directory2W)>(\n+    GetProcAddress(module,\"GetSystemWow64Directory2W\"));\n   wchar_t path[MAX_PATH]{};\n-  const auto length=GetSystemWow64Directory2W(path,MAX_PATH,IMAGE_FILE_MACHINE_I386);\n-  if(!length||length>=MAX_PATH) return {};\n+  const auto length=directory?directory(path,MAX_PATH,IMAGE_FILE_MACHINE_I386):0;\n+  const bool closed=FreeLibrary(module)!=FALSE;\n+  if(!closed||!length||length>=MAX_PATH) return {};\n   return std::wstring(path)+L\"\\\\cmd.exe\";\n }\n static bool wow64Startup() {"
+}

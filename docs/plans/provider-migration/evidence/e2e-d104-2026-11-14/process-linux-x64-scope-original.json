@@ -1,0 +1,53 @@
+{
+  "kind": "TEST_HOST_PROCESS_FIXTURE_ACCEPTANCE",
+  "status": "PASS",
+  "sourceHead": "d10409d1887d6a81955adcfad5c10d4a7596d0dc",
+  "platform": "linux-x64",
+  "nodeVersion": "v24.21.0",
+  "controlledContracts": true,
+  "retainedMainTransport": true,
+  "posixProcessGroups": true,
+  "native": [
+    {
+      "log": "linux-node24.log",
+      "scope": "original Linux pidfs and retained pidfd",
+      "receipt": {
+        "directory": "/home/runner/work/_temp/TEST-process-node24-43527078455/artifact",
+        "manifestSha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+        "actor": "/home/runner/work/_temp/TEST-process-node24-43527078455/registered-process-actor",
+        "completed": true,
+        "cleaned": true,
+        "automaticAndWarm": true,
+        "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+        "libc": {
+          "family": "glibc",
+          "minimumVersion": "2.33"
+        },
+        "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+      }
+    },
+    {
+      "log": "linux-electron.log",
+      "scope": "original Linux pidfs and retained pidfd",
+      "receipt": {
+        "directory": "/home/runner/work/_temp/TEST-process-electron-43527078455/artifact",
+        "manifestSha256": "b9e4d9e8546a22a3d3b1b0cfcd81f395761210023b3c1c62a766b83f44718555",
+        "actor": "/home/runner/work/_temp/TEST-process-electron-43527078455/registered-process-actor",
+        "completed": true,
+        "cleaned": true,
+        "automaticAndWarm": true,
+        "binarySha256": "a87f180ab69d9b5fa20129bb98ace265da0d49d00d4fa8c661857bdc8528a217",
+        "libc": {
+          "family": "glibc",
+          "minimumVersion": "2.33"
+        },
+        "scope": "Linux automatic custody and retained pidfd native/Host proof; SDK, Desktop and older ABI remain separate"
+      }
+    }
+  ],
+  "nativeProviderRuntimeQualified": false,
+  "darwinNativeRegistrationQualified": false,
+  "posixExecutableAdmissionQualified": false,
+  "desktopQualified": false,
+  "releaseQualified": false
+}

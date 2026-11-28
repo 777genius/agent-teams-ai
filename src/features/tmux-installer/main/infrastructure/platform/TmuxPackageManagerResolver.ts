@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFileWithLinuxChildLaunch } from '@main/utils/linuxChildLaunch';
 
 import type { LinuxPlatformInfo } from './TmuxPlatformResolver';
 import type { TmuxInstallStrategy } from '@features/tmux-installer/contracts';
@@ -111,7 +111,7 @@ export class TmuxPackageManagerResolver {
     timeout: number
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
-      execFile(command, args, { env, timeout }, (error, stdout, stderr) => {
+      execFileWithLinuxChildLaunch(command, args, { env, timeout }, (error, stdout, stderr) => {
         if (error) {
           reject(error instanceof Error ? error : new Error(`Failed to run locator ${command}`));
           return;

@@ -1,0 +1,847 @@
+{
+  "schemaVersion": 1,
+  "kind": "Original030WindowsX64OpenCodeSourceFirstRefusal",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "runId": 44407826280,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "job": {
+    "id": 135167669547,
+    "run_id": 44407826280,
+    "workflow_name": "Host process fixture acceptance",
+    "head_branch": "fix/frontend-parity-completion-20261113",
+    "run_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/runs/44407826280",
+    "run_attempt": 1,
+    "node_id": "CR_kwDORVTEtM8AAAAfeJ71Kw",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/jobs/135167669547",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826280/job/135167669547",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-18T22:03:44Z",
+    "started_at": "2026-11-18T23:09:22Z",
+    "completed_at": "2026-11-18T23:16:57Z",
+    "name": "Host process fixtures (win32-x64)",
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1,
+        "started_at": "2026-11-18T23:09:23Z",
+        "completed_at": "2026-11-18T23:09:24Z"
+      },
+      {
+        "name": "Enable Windows long paths",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2,
+        "started_at": "2026-11-18T23:09:24Z",
+        "completed_at": "2026-11-18T23:09:25Z"
+      },
+      {
+        "name": "Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3,
+        "started_at": "2026-11-18T23:09:25Z",
+        "completed_at": "2026-11-18T23:09:43Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4,
+        "started_at": "2026-11-18T23:09:43Z",
+        "completed_at": "2026-11-18T23:09:52Z"
+      },
+      {
+        "name": "Select the pinned package manager with bundled Corepack",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5,
+        "started_at": "2026-11-18T23:09:52Z",
+        "completed_at": "2026-11-18T23:10:01Z"
+      },
+      {
+        "name": "Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6,
+        "started_at": "2026-11-18T23:10:01Z",
+        "completed_at": "2026-11-18T23:10:29Z"
+      },
+      {
+        "name": "Bind exact source and actual process tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7,
+        "started_at": "2026-11-18T23:10:29Z",
+        "completed_at": "2026-11-18T23:10:29Z"
+      },
+      {
+        "name": "Install frozen workspace without Desktop postinstall",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8,
+        "started_at": "2026-11-18T23:10:29Z",
+        "completed_at": "2026-11-18T23:11:04Z"
+      },
+      {
+        "name": "Build existing controller and Host",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9,
+        "started_at": "2026-11-18T23:11:04Z",
+        "completed_at": "2026-11-18T23:11:16Z"
+      },
+      {
+        "name": "Verify process contracts and retained Main Host transport",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10,
+        "started_at": "2026-11-18T23:11:16Z",
+        "completed_at": "2026-11-18T23:13:01Z"
+      },
+      {
+        "name": "Verify original POSIX Node and shell lifecycle fixtures",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 11,
+        "started_at": "2026-11-18T23:13:01Z",
+        "completed_at": "2026-11-18T23:13:01Z"
+      },
+      {
+        "name": "Prepare pinned Electron for native process fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12,
+        "started_at": "2026-11-18T23:13:01Z",
+        "completed_at": "2026-11-18T23:13:01Z"
+      },
+      {
+        "name": "Verify Linux Node exec descriptor closure under both original parents",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13,
+        "started_at": "2026-11-18T23:13:01Z",
+        "completed_at": "2026-11-18T23:13:01Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14,
+        "started_at": "2026-11-18T23:13:01Z",
+        "completed_at": "2026-11-18T23:13:01Z"
+      },
+      {
+        "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15,
+        "started_at": "2026-11-18T23:13:01Z",
+        "completed_at": "2026-11-18T23:13:01Z"
+      },
+      {
+        "name": "Build original Windows product broker and C++ fixtures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 16,
+        "started_at": "2026-11-18T23:13:01Z",
+        "completed_at": "2026-11-18T23:13:49Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Host Node",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 17,
+        "started_at": "2026-11-18T23:13:49Z",
+        "completed_at": "2026-11-18T23:14:00Z"
+      },
+      {
+        "name": "Qualify original Windows Job and control under Electron Node",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 18,
+        "started_at": "2026-11-18T23:14:00Z",
+        "completed_at": "2026-11-18T23:14:10Z"
+      },
+      {
+        "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 19,
+        "started_at": "2026-11-18T23:14:10Z",
+        "completed_at": "2026-11-18T23:14:59Z"
+      },
+      {
+        "name": "Qualify original codex source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 20,
+        "started_at": "2026-11-18T23:14:59Z",
+        "completed_at": "2026-11-18T23:15:53Z"
+      },
+      {
+        "name": "Qualify original claude source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 21,
+        "started_at": "2026-11-18T23:15:53Z",
+        "completed_at": "2026-11-18T23:16:26Z"
+      },
+      {
+        "name": "Qualify original opencode source A B with TEST peer",
+        "status": "completed",
+        "conclusion": "failure",
+        "number": 22,
+        "started_at": "2026-11-18T23:16:26Z",
+        "completed_at": "2026-11-18T23:16:51Z"
+      },
+      {
+        "name": "Require completed original platform receipts and unchanged source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23,
+        "started_at": "2026-11-18T23:16:51Z",
+        "completed_at": "2026-11-18T23:16:51Z"
+      },
+      {
+        "name": "Preserve original process evidence including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24,
+        "started_at": "2026-11-18T23:16:51Z",
+        "completed_at": "2026-11-18T23:16:53Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 46,
+        "started_at": "2026-11-18T23:16:53Z",
+        "completed_at": "2026-11-18T23:16:53Z"
+      },
+      {
+        "name": "Post Run actions/setup-node@v7.0.0",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 47,
+        "started_at": "2026-11-18T23:16:53Z",
+        "completed_at": "2026-11-18T23:16:53Z"
+      },
+      {
+        "name": "Post Run actions/checkout@v7.0.1",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 48,
+        "started_at": "2026-11-18T23:16:53Z",
+        "completed_at": "2026-11-18T23:16:55Z"
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 49,
+        "started_at": "2026-11-18T23:16:55Z",
+        "completed_at": "2026-11-18T23:16:55Z"
+      }
+    ],
+    "check_run_url": "https://api.github.com/repos/777genius/agent-teams-ai/check-runs/135167669547",
+    "labels": [
+      "windows-2022"
+    ],
+    "runner_id": 1000395346,
+    "runner_name": "GitHub Actions 1000395346",
+    "runner_group_id": 0,
+    "runner_group_name": "GitHub Actions"
+  },
+  "rawLog": {
+    "jobId": 135167669547,
+    "requestedAt": "2026-11-18T23:20:55.153874+00:00",
+    "status": "captured-permanently-retired",
+    "localPath": "/workspace/scratch/c714f5bce554/ci-current-030/job-135167669547-terminal.log",
+    "sha256": "30c9105b813856ab4432e813f987004290fa07e11113b096f34cb65628197845",
+    "bytes": 443513,
+    "gitBlob": "4383da21a4abc00db3a0da05facbc5745dbbb158",
+    "exactImmutableReadback": true
+  },
+  "assertion": "Original source Team readiness",
+  "precedingSourceGates": {
+    "20": {
+      "name": "Qualify original codex source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 20,
+      "started_at": "2026-11-18T23:14:59Z",
+      "completed_at": "2026-11-18T23:15:53Z"
+    },
+    "21": {
+      "name": "Qualify original claude source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 21,
+      "started_at": "2026-11-18T23:15:53Z",
+      "completed_at": "2026-11-18T23:16:26Z"
+    },
+    "22": {
+      "name": "Qualify original opencode source A B with TEST peer",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 22,
+      "started_at": "2026-11-18T23:16:26Z",
+      "completed_at": "2026-11-18T23:16:51Z"
+    }
+  },
+  "firstRefusalAndCleanupRecords": [
+    {
+      "line": 2206,
+      "record": {
+        "kind": "TEST_SOURCE_READINESS",
+        "provider": "opencode",
+        "source": {
+          "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+          "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+        },
+        "image": "A",
+        "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+        "readCount": 63,
+        "elapsedMs": 15021.232800000002,
+        "lastRuntimeRead": {
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "memberId": "alice-id",
+          "generation": "capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5",
+          "phase": "held",
+          "sealed": false,
+          "custody": "unknown",
+          "nativeReady": false,
+          "attached": false,
+          "diagnostic": "open-unknown"
+        }
+      }
+    },
+    {
+      "line": 2207,
+      "record": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "opencode",
+        "mainEpoch": "ea98a628-2c9b-4d03-a1fb-8725543b4a05",
+        "jobSlot": 0,
+        "source": null,
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": true,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.9256999999997788,
+            "firstStartMs": 1826.1633000000002,
+            "lastEndMs": 1827.089
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 59.20179999999982,
+            "firstStartMs": 1837.8884000000003,
+            "lastEndMs": 1897.0902
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 17.551300000000083,
+            "firstStartMs": 1922.6073999999999,
+            "lastEndMs": 1940.1587
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.175000000000182,
+            "firstStartMs": 2230.1396,
+            "lastEndMs": 2231.3146
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.3584000000000742,
+            "firstStartMs": 2234.4562,
+            "lastEndMs": 2234.8146
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.3670999999999367,
+            "firstStartMs": 2236.0324,
+            "lastEndMs": 2238.3995
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.09069999999974243,
+            "firstStartMs": 1832.0228000000002,
+            "lastEndMs": 1832.1135
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.5496000000002823,
+            "firstStartMs": 1834.5589,
+            "lastEndMs": 1835.1085000000003
+          }
+        },
+        "firstCloseEntryMs": 21882.0731
+      }
+    },
+    {
+      "line": 2208,
+      "record": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "opencode",
+        "mainEpoch": "ea98a628-2c9b-4d03-a1fb-8725543b4a05",
+        "jobSlot": 1,
+        "source": {
+          "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+          "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": true,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.34760000000005675,
+            "firstStartMs": 3859.4488,
+            "lastEndMs": 3859.7964
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 86.57460000000083,
+            "firstStartMs": 3870.1207999999997,
+            "lastEndMs": 3956.6954000000005
+          },
+          "resume": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 53.75959999999941,
+            "firstStartMs": 3981.7011,
+            "lastEndMs": 4035.4606999999996
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 17.742599999999584,
+            "firstStartMs": 5259.2649,
+            "lastEndMs": 5277.0075
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.09389999999984866,
+            "firstStartMs": 5277.9352,
+            "lastEndMs": 5278.0291
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 1.8967000000002372,
+            "firstStartMs": 5278.5511,
+            "lastEndMs": 5280.4478
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.07440000000042346,
+            "firstStartMs": 3866.5607,
+            "lastEndMs": 3866.6351000000004
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.20499999999992724,
+            "firstStartMs": 3868.1947,
+            "lastEndMs": 3868.3997
+          }
+        },
+        "firstCloseEntryMs": 21882.0731
+      }
+    },
+    {
+      "line": 2209,
+      "record": {
+        "kind": "TEST_SOURCE_CLEANUP",
+        "provider": "opencode",
+        "mainEpoch": "ea98a628-2c9b-4d03-a1fb-8725543b4a05",
+        "jobSlot": 2,
+        "source": {
+          "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+          "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+        },
+        "rootCaptured": true,
+        "witnessCaptured": true,
+        "resumed": false,
+        "stopped": true,
+        "drained": true,
+        "released": true,
+        "originalHandleAbsent": false,
+        "custodyTimings": {
+          "allocate": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.19070000000101572,
+            "firstStartMs": 11175.2769,
+            "lastEndMs": 11175.4676
+          },
+          "prepare": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 72.01059999999961,
+            "firstStartMs": 14587.847099999999,
+            "lastEndMs": 14659.8577
+          },
+          "resume": {
+            "calls": 0,
+            "settled": 0,
+            "returned": 0,
+            "totalMs": 0,
+            "firstStartMs": null,
+            "lastEndMs": null
+          },
+          "stop": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 18.152600000001257,
+            "firstStartMs": 18036.1112,
+            "lastEndMs": 18054.2638
+          },
+          "drain": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.0672999999987951,
+            "firstStartMs": 18064.6293,
+            "lastEndMs": 18064.6966
+          },
+          "release": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 2.0333000000027823,
+            "firstStartMs": 18065.2087,
+            "lastEndMs": 18067.242000000002
+          }
+        },
+        "stagingTimings": {
+          "launch-chunk": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.10950000000048021,
+            "firstStartMs": 12175.564699999999,
+            "lastEndMs": 12175.674200000001
+          },
+          "launch-commit": {
+            "calls": 1,
+            "settled": 1,
+            "returned": 1,
+            "totalMs": 0.3022000000000844,
+            "firstStartMs": 13170.641599999999,
+            "lastEndMs": 13170.943800000001
+          }
+        },
+        "firstCloseEntryMs": 21882.0731
+      }
+    },
+    {
+      "line": 2210,
+      "record": {
+        "kind": "TEST_SOURCE_FIRST_REFUSAL",
+        "provider": "opencode",
+        "diagnostic": {
+          "status": "observed",
+          "observations": [
+            {
+              "kind": "reference",
+              "commandDigest": "a5242402bfa9267ded3f1e03963598971710f7344ac074fbbded9395b2646628",
+              "contextDigest": "a6e8a7526c74337fb047f9225aa82c6280323fd1419fb73ff2bfb15f01ec1b86",
+              "phase": "probe-expiry",
+              "reason": "held",
+              "probeCutoff": 1795043806863,
+              "probeNow": 1795043807078,
+              "scopeCutoff": null,
+              "scopeNow": null,
+              "preparationCutoff": null,
+              "preparationNow": null,
+              "ordinal": 1,
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "source": {
+                "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+                "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+              }
+            },
+            {
+              "kind": "consumer",
+              "actionDigest": "0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d",
+              "groupDigest": "df475f82618cf4798a11235e94bea7d05c777493d1b61ecfa2b79180a4c02d86",
+              "bindingDigest": "76d1156ad9d46ce16e605119ecdbd65771913d5d882d6c600632fb28c1af88ab",
+              "consumerId": "68c7093856a9645baeeab8afa74c4f9ef6975e567c786ccbb43212d0b94df4da",
+              "phase": "reference",
+              "reason": "threw",
+              "cutoff": 1795043806863,
+              "observedAt": 1795043806679,
+              "currentCalls": {
+                "count": 24,
+                "totalMs": 10730,
+                "maxMs": 495,
+                "lastMs": 422,
+                "truncated": false,
+                "regions": {
+                  "initialAuthorityCount": 24,
+                  "initialAuthorityMs": 383,
+                  "readConsumerCount": 24,
+                  "readConsumerMs": 98,
+                  "referenceCount": 24,
+                  "referenceMs": 9882,
+                  "finalAuthorityCount": 23,
+                  "finalAuthorityMs": 369,
+                  "referenceAccountCount": 24,
+                  "referenceAccountMs": 5630,
+                  "referenceAccountAuthorityCount": 24,
+                  "referenceAccountAuthorityMs": 5185
+                }
+              },
+              "ordinal": 2,
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "source": {
+                "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+                "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+              }
+            },
+            {
+              "kind": "native",
+              "capability": "1a411a82-0ee1-4e7a-9c68-9e84f2949b97",
+              "phase": "resume",
+              "reason": "current-false",
+              "dispatched": true,
+              "staged": true,
+              "rootCaptured": true,
+              "deadlineExpired": null,
+              "checkSite": "after-owner",
+              "ordinal": 3,
+              "mainEpoch": "ea98a628-2c9b-4d03-a1fb-8725543b4a05",
+              "jobSlot": 2,
+              "source": {
+                "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+                "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+              }
+            },
+            {
+              "kind": "opencode-open",
+              "bindingDigest": "76d1156ad9d46ce16e605119ecdbd65771913d5d882d6c600632fb28c1af88ab",
+              "phase": "native-ready",
+              "reason": "threw",
+              "ordinal": 4,
+              "launchId": "faed95fc-2132-54f1-aad3-c38a59bc4a41",
+              "source": {
+                "sourceId": "6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34",
+                "revision": "48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "line": 2211,
+      "record": {
+        "kind": "TEST_SOURCE_READINESS_OBSERVATIONS",
+        "provider": "opencode",
+        "runtimeProjection": {
+          "status": "observed",
+          "atomicWithFailure": false,
+          "viewDigest": "2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2",
+          "bindingMatches": true,
+          "recordReady": false,
+          "providerReady": null,
+          "ownerCurrent": null,
+          "nativeReady": false
+        },
+        "codexReadinessObservation": {
+          "status": "unknown",
+          "reason": "missing-invalid-overflow-conflicting-or-unjoined"
+        }
+      }
+    },
+    {
+      "line": 2232,
+      "record": {
+        "gateController": "drained",
+        "rootExitCode": 1,
+        "activeProcesses": 0
+      }
+    },
+    {
+      "line": 2233,
+      "record": {
+        "kind": "TEST_SOURCE_CONTROLLER_EXIT",
+        "provider": "opencode",
+        "exitCode": 104
+      }
+    }
+  ],
+  "rawExactTrace": [
+    {
+      "line": 2206,
+      "text": "2026-11-18T23:16:50.9381434Z {\"kind\":\"TEST_SOURCE_READINESS\",\"provider\":\"opencode\",\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"},\"image\":\"A\",\"launchId\":\"faed95fc-2132-54f1-aad3-c38a59bc4a41\",\"readCount\":63,\"elapsedMs\":15021.232800000002,\"lastRuntimeRead\":{\"viewDigest\":\"2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2\",\"memberId\":\"alice-id\",\"generation\":\"capture-8c4bb2ea-dc48-52bb-ae92-41d7dce103d5\",\"phase\":\"held\",\"sealed\":false,\"custody\":\"unknown\",\"nativeReady\":false,\"attached\":false,\"diagnostic\":\"open-unknown\"}}\r\n"
+    },
+    {
+      "line": 2207,
+      "text": "2026-11-18T23:16:51.3244131Z {\"kind\":\"TEST_SOURCE_CLEANUP\",\"provider\":\"opencode\",\"mainEpoch\":\"ea98a628-2c9b-4d03-a1fb-8725543b4a05\",\"jobSlot\":0,\"source\":null,\"rootCaptured\":true,\"witnessCaptured\":true,\"resumed\":true,\"stopped\":true,\"drained\":true,\"released\":true,\"originalHandleAbsent\":true,\"custodyTimings\":{\"allocate\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.9256999999997788,\"firstStartMs\":1826.1633000000002,\"lastEndMs\":1827.089},\"prepare\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":59.20179999999982,\"firstStartMs\":1837.8884000000003,\"lastEndMs\":1897.0902},\"resume\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":17.551300000000083,\"firstStartMs\":1922.6073999999999,\"lastEndMs\":1940.1587},\"stop\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":1.175000000000182,\"firstStartMs\":2230.1396,\"lastEndMs\":2231.3146},\"drain\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.3584000000000742,\"firstStartMs\":2234.4562,\"lastEndMs\":2234.8146},\"release\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":2.3670999999999367,\"firstStartMs\":2236.0324,\"lastEndMs\":2238.3995}},\"stagingTimings\":{\"launch-chunk\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.09069999999974243,\"firstStartMs\":1832.0228000000002,\"lastEndMs\":1832.1135},\"launch-commit\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.5496000000002823,\"firstStartMs\":1834.5589,\"lastEndMs\":1835.1085000000003}},\"firstCloseEntryMs\":21882.0731}\r\n"
+    },
+    {
+      "line": 2208,
+      "text": "2026-11-18T23:16:51.3262090Z {\"kind\":\"TEST_SOURCE_CLEANUP\",\"provider\":\"opencode\",\"mainEpoch\":\"ea98a628-2c9b-4d03-a1fb-8725543b4a05\",\"jobSlot\":1,\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"},\"rootCaptured\":true,\"witnessCaptured\":true,\"resumed\":true,\"stopped\":true,\"drained\":true,\"released\":true,\"originalHandleAbsent\":false,\"custodyTimings\":{\"allocate\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.34760000000005675,\"firstStartMs\":3859.4488,\"lastEndMs\":3859.7964},\"prepare\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":86.57460000000083,\"firstStartMs\":3870.1207999999997,\"lastEndMs\":3956.6954000000005},\"resume\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":53.75959999999941,\"firstStartMs\":3981.7011,\"lastEndMs\":4035.4606999999996},\"stop\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":17.742599999999584,\"firstStartMs\":5259.2649,\"lastEndMs\":5277.0075},\"drain\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.09389999999984866,\"firstStartMs\":5277.9352,\"lastEndMs\":5278.0291},\"release\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":1.8967000000002372,\"firstStartMs\":5278.5511,\"lastEndMs\":5280.4478}},\"stagingTimings\":{\"launch-chunk\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.07440000000042346,\"firstStartMs\":3866.5607,\"lastEndMs\":3866.6351000000004},\"launch-commit\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.20499999999992724,\"firstStartMs\":3868.1947,\"lastEndMs\":3868.3997}},\"firstCloseEntryMs\":21882.0731}\r\n"
+    },
+    {
+      "line": 2209,
+      "text": "2026-11-18T23:16:51.3279941Z {\"kind\":\"TEST_SOURCE_CLEANUP\",\"provider\":\"opencode\",\"mainEpoch\":\"ea98a628-2c9b-4d03-a1fb-8725543b4a05\",\"jobSlot\":2,\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"},\"rootCaptured\":true,\"witnessCaptured\":true,\"resumed\":false,\"stopped\":true,\"drained\":true,\"released\":true,\"originalHandleAbsent\":false,\"custodyTimings\":{\"allocate\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.19070000000101572,\"firstStartMs\":11175.2769,\"lastEndMs\":11175.4676},\"prepare\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":72.01059999999961,\"firstStartMs\":14587.847099999999,\"lastEndMs\":14659.8577},\"resume\":{\"calls\":0,\"settled\":0,\"returned\":0,\"totalMs\":0,\"firstStartMs\":null,\"lastEndMs\":null},\"stop\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":18.152600000001257,\"firstStartMs\":18036.1112,\"lastEndMs\":18054.2638},\"drain\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.0672999999987951,\"firstStartMs\":18064.6293,\"lastEndMs\":18064.6966},\"release\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":2.0333000000027823,\"firstStartMs\":18065.2087,\"lastEndMs\":18067.242000000002}},\"stagingTimings\":{\"launch-chunk\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.10950000000048021,\"firstStartMs\":12175.564699999999,\"lastEndMs\":12175.674200000001},\"launch-commit\":{\"calls\":1,\"settled\":1,\"returned\":1,\"totalMs\":0.3022000000000844,\"firstStartMs\":13170.641599999999,\"lastEndMs\":13170.943800000001}},\"firstCloseEntryMs\":21882.0731}\r\n"
+    },
+    {
+      "line": 2210,
+      "text": "2026-11-18T23:16:51.4551975Z {\"kind\":\"TEST_SOURCE_FIRST_REFUSAL\",\"provider\":\"opencode\",\"diagnostic\":{\"status\":\"observed\",\"observations\":[{\"kind\":\"reference\",\"commandDigest\":\"a5242402bfa9267ded3f1e03963598971710f7344ac074fbbded9395b2646628\",\"contextDigest\":\"a6e8a7526c74337fb047f9225aa82c6280323fd1419fb73ff2bfb15f01ec1b86\",\"phase\":\"probe-expiry\",\"reason\":\"held\",\"probeCutoff\":1795043806863,\"probeNow\":1795043807078,\"scopeCutoff\":null,\"scopeNow\":null,\"preparationCutoff\":null,\"preparationNow\":null,\"ordinal\":1,\"launchId\":\"faed95fc-2132-54f1-aad3-c38a59bc4a41\",\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"}},{\"kind\":\"consumer\",\"actionDigest\":\"0999f35342307166abf6addfd3031950d31858d19f9b349ce1a23447a7d9253d\",\"groupDigest\":\"df475f82618cf4798a11235e94bea7d05c777493d1b61ecfa2b79180a4c02d86\",\"bindingDigest\":\"76d1156ad9d46ce16e605119ecdbd65771913d5d882d6c600632fb28c1af88ab\",\"consumerId\":\"68c7093856a9645baeeab8afa74c4f9ef6975e567c786ccbb43212d0b94df4da\",\"phase\":\"reference\",\"reason\":\"threw\",\"cutoff\":1795043806863,\"observedAt\":1795043806679,\"currentCalls\":{\"count\":24,\"totalMs\":10730,\"maxMs\":495,\"lastMs\":422,\"truncated\":false,\"regions\":{\"initialAuthorityCount\":24,\"initialAuthorityMs\":383,\"readConsumerCount\":24,\"readConsumerMs\":98,\"referenceCount\":24,\"referenceMs\":9882,\"finalAuthorityCount\":23,\"finalAuthorityMs\":369,\"referenceAccountCount\":24,\"referenceAccountMs\":5630,\"referenceAccountAuthorityCount\":24,\"referenceAccountAuthorityMs\":5185}},\"ordinal\":2,\"launchId\":\"faed95fc-2132-54f1-aad3-c38a59bc4a41\",\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"}},{\"kind\":\"native\",\"capability\":\"1a411a82-0ee1-4e7a-9c68-9e84f2949b97\",\"phase\":\"resume\",\"reason\":\"current-false\",\"dispatched\":true,\"staged\":true,\"rootCaptured\":true,\"deadlineExpired\":null,\"checkSite\":\"after-owner\",\"ordinal\":3,\"mainEpoch\":\"ea98a628-2c9b-4d03-a1fb-8725543b4a05\",\"jobSlot\":2,\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"}},{\"kind\":\"opencode-open\",\"bindingDigest\":\"76d1156ad9d46ce16e605119ecdbd65771913d5d882d6c600632fb28c1af88ab\",\"phase\":\"native-ready\",\"reason\":\"threw\",\"ordinal\":4,\"launchId\":\"faed95fc-2132-54f1-aad3-c38a59bc4a41\",\"source\":{\"sourceId\":\"6118b79a4da79b8dfe450d6ef13e77edc7d6b860cfbd4f60248735d5e46fdc34\",\"revision\":\"48dab57e822fff78c14d0e64cbcf6a51018c4111aabec02648eb976286bfcd86\"}}]}}\r\n"
+    },
+    {
+      "line": 2211,
+      "text": "2026-11-18T23:16:51.4573190Z {\"kind\":\"TEST_SOURCE_READINESS_OBSERVATIONS\",\"provider\":\"opencode\",\"runtimeProjection\":{\"status\":\"observed\",\"atomicWithFailure\":false,\"viewDigest\":\"2482152c872f99c40989051f1a3c09249dc8fb28fead0023e4d6a8c9bf5e39e2\",\"bindingMatches\":true,\"recordReady\":false,\"providerReady\":null,\"ownerCurrent\":null,\"nativeReady\":false},\"codexReadinessObservation\":{\"status\":\"unknown\",\"reason\":\"missing-invalid-overflow-conflicting-or-unjoined\"}}\r\n"
+    },
+    {
+      "line": 2212,
+      "text": "2026-11-18T23:16:51.5464642Z \u001b[31;1mnode:internal/modules/run_main:107\u001b[0m\r\n"
+    },
+    {
+      "line": 2213,
+      "text": "2026-11-18T23:16:51.5473795Z \u001b[31;1m    triggerUncaughtException(\u001b[0m\r\n"
+    },
+    {
+      "line": 2214,
+      "text": "2026-11-18T23:16:51.5490675Z \u001b[31;1m    ^\u001b[0m\r\n"
+    },
+    {
+      "line": 2215,
+      "text": "2026-11-18T23:16:51.5499160Z \u001b[31;1m\u001b[0m\r\n"
+    },
+    {
+      "line": 2216,
+      "text": "2026-11-18T23:16:51.5530028Z \u001b[31;1mAssertionError [ERR_ASSERTION]: Original source Team readiness\u001b[0m\r\n"
+    },
+    {
+      "line": 2217,
+      "text": "2026-11-18T23:16:51.5537093Z \u001b[31;1m    at poll (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:58:12)\u001b[0m\r\n"
+    },
+    {
+      "line": 2218,
+      "text": "2026-11-18T23:16:51.5543874Z \u001b[31;1m    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\u001b[0m\r\n"
+    },
+    {
+      "line": 2219,
+      "text": "2026-11-18T23:16:51.5551165Z \u001b[31;1m    at async launch (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:480:9)\u001b[0m\r\n"
+    },
+    {
+      "line": 2220,
+      "text": "2026-11-18T23:16:51.5558059Z \u001b[31;1m    at async nativeEmulatedSourceScenario (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedSourceScenario.ts:536:36)\u001b[0m\r\n"
+    },
+    {
+      "line": 2221,
+      "text": "2026-11-18T23:16:51.5564756Z \u001b[31;1m    at async main (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:401:7)\u001b[0m\r\n"
+    },
+    {
+      "line": 2222,
+      "text": "2026-11-18T23:16:51.5571530Z \u001b[31;1m    at async <anonymous> (D:\\a\\agent-teams-ai\\agent-teams-ai\\tools\\owned-process-broker\\nativeEmulatedProviderGate.ts:428:85) {\u001b[0m\r\n"
+    },
+    {
+      "line": 2223,
+      "text": "2026-11-18T23:16:51.5586253Z \u001b[31;1m  generatedMessage: false,\u001b[0m\r\n"
+    },
+    {
+      "line": 2224,
+      "text": "2026-11-18T23:16:51.5593152Z \u001b[31;1m  code: 'ERR_ASSERTION',\u001b[0m\r\n"
+    },
+    {
+      "line": 2225,
+      "text": "2026-11-18T23:16:51.5599901Z \u001b[31;1m  actual: false,\u001b[0m\r\n"
+    },
+    {
+      "line": 2226,
+      "text": "2026-11-18T23:16:51.5607426Z \u001b[31;1m  expected: true,\u001b[0m\r\n"
+    },
+    {
+      "line": 2227,
+      "text": "2026-11-18T23:16:51.5614503Z \u001b[31;1m  operator: '==',\u001b[0m\r\n"
+    },
+    {
+      "line": 2228,
+      "text": "2026-11-18T23:16:51.5621113Z \u001b[31;1m  diff: 'simple'\u001b[0m\r\n"
+    },
+    {
+      "line": 2229,
+      "text": "2026-11-18T23:16:51.5627619Z \u001b[31;1m}\u001b[0m\r\n"
+    },
+    {
+      "line": 2230,
+      "text": "2026-11-18T23:16:51.5634340Z \u001b[31;1m\u001b[0m\r\n"
+    },
+    {
+      "line": 2231,
+      "text": "2026-11-18T23:16:51.5640945Z \u001b[31;1mNode.js v24.21.0\u001b[0m\r\n"
+    },
+    {
+      "line": 2232,
+      "text": "2026-11-18T23:16:51.5643099Z {\"gateController\":\"drained\",\"rootExitCode\":1,\"activeProcesses\":0}\r\n"
+    },
+    {
+      "line": 2233,
+      "text": "2026-11-18T23:16:51.5775205Z {\"kind\":\"TEST_SOURCE_CONTROLLER_EXIT\",\"provider\":\"opencode\",\"exitCode\":104}\r\n"
+    }
+  ],
+  "interpretation": [
+    "OpenCode probe expiry observed before first-reference refusal propagates to consumer, native resume after-owner check and opencode-open.",
+    "Timing regions overlap and nest; they cannot be summed as disjoint wall time. Exact source timing units are assessed separately.",
+    "Later runtime projection is explicitly non-atomic with the failure and is not a causal proof.",
+    "All three cleanup rows stopped/drained/released true; handleAbsent true,false,false and resumed true,true,false are preserved.",
+    "Codex and Claude source gates succeeded in preceding steps; this OpenCode gate and whole job failed.",
+    "No timeout extension, retry, cache or causal fix is inferred from this receipt."
+  ]
+}

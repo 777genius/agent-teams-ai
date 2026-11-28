@@ -8,6 +8,8 @@ import type {
 } from '@shared/types';
 
 interface LaunchDialogBase {
+  retainedLegacyLaunch?: import('@features/agent-backend/renderer').RetainedLegacyLaunchChoice;
+  runtimeRunId?: string | null;
   memberSettingsDraft?: MemberSettingsRelaunchDraft;
   validateMemberSettings?: () => Promise<void>;
   open: boolean;
@@ -26,7 +28,7 @@ interface LaunchDialogLaunchMode extends LaunchDialogBase {
   provisioningError: string | null;
   clearProvisioningError?: (teamName?: string) => void;
   activeTeams?: ActiveTeamRef[];
-  onLaunch: (request: TeamLaunchRequest) => Promise<void>;
+  onLaunch: (request: TeamLaunchRequest) => Promise<unknown>;
 }
 
 interface LaunchDialogRelaunchMode extends LaunchDialogBase {
@@ -40,6 +42,9 @@ interface LaunchDialogRelaunchMode extends LaunchDialogBase {
     request: TeamLaunchRequest,
     members: TeamCreateRequest['members'],
     intent?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+    rosterMetadata?: Parameters<
+      typeof import('./teamRelaunchFlow').executeTeamRelaunch
+    >[0]['rosterMetadata'],
     onMembersSaved?: () => void
   ) => Promise<void>;
 }

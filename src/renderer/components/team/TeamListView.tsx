@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { SaveAsTemplateAction } from '@features/custom-team-templates/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
@@ -34,6 +34,10 @@ import {
 } from '@renderer/store/slices/teamSlice';
 import { selectRecentManagedTeams } from '@renderer/store/team/teamManagementNotices';
 import {
+  captureContextScopedRequestEpoch,
+  isContextScopedRequestEpochCurrent,
+} from '@renderer/store/utils/contextScopedRequestEpoch';
+import {
   getProjectSelectionResetState,
   getWorktreeNavigationState,
 } from '@renderer/store/utils/stateResetHelpers';
@@ -42,41 +46,36 @@ import {
   normalizePath,
   type TaskStatusCounts,
 } from '@renderer/utils/pathNormalize';
-import { getBaseName } from '@renderer/utils/pathUtils';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { buildPendingRuntimeSummaryCopy } from '@renderer/utils/teamLaunchSummaryCopy';
 import { isTeamListStatusRunning, resolveTeamStatus } from '@renderer/utils/teamListStatus';
-import {
-  Copy,
-  FolderOpen,
-  GitBranch,
-  Play,
-  RotateCcw,
-  Square,
-  Trash2,
-  UsersRound,
-} from 'lucide-react';
+import { isTeamReadUnavailable } from '@shared/utils/normalizeTeamAggregateRead';
+import { Copy, GitBranch, Play, RotateCcw, Square, Trash2, UsersRound } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { assignCreatedTeamToOrganization } from './dialogs/assignCreatedTeamToOrganization';
 import { CreateTeamPageLoadingFallback } from './dialogs/CreateTeamPageLoadingFallback';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
+import { useExistingTeamLaunchDialog } from './dialogs/useExistingTeamLaunchDialog';
+import { TeamAggregateReadNotice } from './TeamAggregateReadNotice';
 import { buildCopiedTeamMembers, generateUniqueName } from './teamCopyData';
 import { TeamDeleteButton } from './TeamDeleteButton';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { runTeamDeleteOnce } from './teamDeleteProgress';
 import { TeamEmptyState } from './TeamEmptyState';
+import {
+  folderName,
+  renderMemberNames,
+  renderTeamLaunchSummary,
+  renderTeamRecentPaths,
+} from './TeamListCardDetails';
 import { EMPTY_TEAM_FILTER } from './TeamListFilterPopover';
 import { TeamListHeader } from './TeamListHeader';
-import { renderMemberNames } from './teamListMemberNames';
 import { TeamListSkeleton } from './TeamListSkeleton';
 import { TeamManagementNotice } from './TeamManagementNotice';
 import {
   findTeamProjectSelectionTarget,
   resolveCreateTeamDefaultProjectPath,
-  resolveTeamLaunchDefaultProjectPath,
-  resolveTeamListProjectPermissionAlias,
   resolveTeamProjectSelection,
   resolveTeamsProjectNavigationPath,
   teamMatchesProjectSelection,
@@ -86,18 +85,12 @@ import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
-import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
+import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog.types';
 import type { TeamListFilterState } from './TeamListFilterPopover';
 import type { OrganizationPlacementSelection } from '@features/organizations/contracts';
 import type { TeamManagementCommittedChange } from '@features/team-prompt-management/contracts';
 import type { TeamStatus } from '@renderer/utils/teamListStatus';
-import type {
-  ResolvedTeamMember,
-  TeamCreateRequest,
-  TeamLaunchRequest,
-  TeamMemberSnapshot,
-  TeamSummary,
-} from '@shared/types';
+import type { TeamCreateRequest, TeamLaunchRequest, TeamSummary } from '@shared/types';
 
 const CreateTeamDialog = lazy(() =>
   import('./dialogs/CreateTeamDialog').then((m) => ({ default: m.CreateTeamDialog }))
@@ -109,95 +102,10 @@ const ImportTeamDialog = lazy(() =>
   import('@features/team-import/renderer').then((m) => ({ default: m.ImportTeamDialog }))
 );
 
+const EMPTY_ALIVE_TEAMS: string[] = [];
 const TEAM_SECTION_INITIAL_VISIBLE_COUNT = 24;
 const TEAM_SECTION_PAGE_SIZE = 24;
 
-function getRecentProjects(team: TeamSummary): string[] {
-  const history = team.projectPathHistory;
-  if (!history || history.length === 0) {
-    return team.projectPath ? [team.projectPath] : [];
-  }
-  return history.slice(-3).reverse();
-}
-
-function folderName(fullPath: string): string {
-  return getBaseName(fullPath) || fullPath;
-}
-
-function resolveLaunchDialogMembers(members: readonly TeamMemberSnapshot[]): ResolvedTeamMember[] {
-  return members.map((member) => {
-    return {
-      ...member,
-      status: member.currentTaskId ? 'active' : 'idle',
-      messageCount: 0,
-      lastActiveAt: null,
-    };
-  });
-}
-
-function resolveSavedLaunchDialogMembers(
-  members: TeamCreateRequest['members']
-): ResolvedTeamMember[] {
-  return members.map((member) => ({
-    ...member,
-    joinedAt: 0,
-    currentTaskId: null,
-    taskCount: 0,
-    messageCount: 0,
-    lastActiveAt: null,
-    status: 'idle' as const,
-  }));
-}
-
-function renderTeamRecentPaths(
-  team: TeamSummary,
-  status: TeamStatus,
-  matchesCurrentProject: boolean,
-  isLight: boolean,
-  selectedProjectPath: string | null
-): React.JSX.Element | null {
-  const recentPaths = getRecentProjects(team);
-  const visibleRecentPaths =
-    matchesCurrentProject && selectedProjectPath
-      ? recentPaths.filter((path) => normalizePath(path) !== normalizePath(selectedProjectPath))
-      : recentPaths;
-  if (visibleRecentPaths.length === 0) return null;
-  return (
-    <div className="mt-2 flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-      {matchesCurrentProject && !selectedProjectPath ? (
-        <span
-          className={`inline-flex items-center gap-1 truncate rounded-full px-2 py-0.5 text-[12px] font-medium ${
-            isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/15 text-emerald-400'
-          }`}
-        >
-          <FolderOpen size={12} className="shrink-0" />
-          {visibleRecentPaths.map((p, i) => (
-            <span key={p} title={p}>
-              {folderName(p)}
-              {i < visibleRecentPaths.length - 1 ? ', ' : ''}
-            </span>
-          ))}
-        </span>
-      ) : (
-        <>
-          <FolderOpen size={10} className="shrink-0" />
-          <span className="truncate">
-            {visibleRecentPaths.map((p, i) => (
-              <span key={p} title={p}>
-                {i === 0 && (status === 'active' || status === 'idle') ? (
-                  <span className="text-emerald-400">{folderName(p)}</span>
-                ) : (
-                  folderName(p)
-                )}
-                {i < visibleRecentPaths.length - 1 ? ', ' : ''}
-              </span>
-            ))}
-          </span>
-        </>
-      )}
-    </div>
-  );
-}
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
 interface ActiveTeamCardProps {
   managementChange?: TeamManagementCommittedChange;
@@ -210,6 +118,7 @@ interface ActiveTeamCardProps {
   currentProjectPath: string | null;
   branchName?: string;
   taskCounts?: TaskStatusCounts;
+  taskCountsUnknown: boolean;
   launchingTeamName: string | null;
   isStopping: boolean;
   onOpenTeam: (teamName: string, projectPath?: string) => void;
@@ -236,6 +145,7 @@ const ActiveTeamCard = ({
   currentProjectPath,
   branchName,
   taskCounts,
+  taskCountsUnknown,
   launchingTeamName,
   isStopping,
   onOpenTeam,
@@ -267,6 +177,7 @@ const ActiveTeamCard = ({
 
   return (
     <div
+      data-team-name={team.teamName}
       role="button"
       tabIndex={0}
       className="team-row-zebra-card group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border border-[var(--color-border)] p-4 transition-colors duration-200 hover:border-[var(--color-border-emphasis)]"
@@ -366,37 +277,7 @@ const ActiveTeamCard = ({
             {team.description || t('list.noDescription')}
           </p>
         </div>
-        {team.teamLaunchState === 'partial_pending' ? (
-          <p className="mt-2 text-[11px] text-amber-300">
-            {team.runtimeProcessPendingCount && team.runtimeProcessPendingCount > 0
-              ? buildPendingRuntimeSummaryCopy({
-                  confirmedCount: team.confirmedCount,
-                  expectedMemberCount: team.expectedMemberCount,
-                  memberCount: team.memberCount,
-                  runtimeProcessPendingCount: team.runtimeProcessPendingCount,
-                  includePeriod: true,
-                })
-              : t('list.partial.pending')}
-          </p>
-        ) : team.partialLaunchFailure || team.teamLaunchState === 'partial_failure' ? (
-          <p className="mt-2 text-[11px] text-amber-400">
-            {team.missingMembers?.length
-              ? t('detail.offline.partialMissing', {
-                  missing: team.missingMembers.length,
-                  expected: team.expectedMemberCount ?? team.missingMembers.length,
-                })
-              : t('detail.offline.partialFailed')}
-          </p>
-        ) : team.teamLaunchState === 'partial_skipped' ? (
-          <p className="mt-2 text-[11px] text-sky-300">
-            {team.skippedMembers?.length
-              ? t('list.partial.skippedWithCount', {
-                  count: team.skippedMembers.length,
-                  expected: team.expectedMemberCount ?? team.skippedMembers.length,
-                })
-              : t('list.partial.skipped')}
-          </p>
-        ) : null}
+        {renderTeamLaunchSummary(team, t)}
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
           {team.members && team.members.length > 0 ? (
             renderMemberNames(team.members)
@@ -412,7 +293,7 @@ const ActiveTeamCard = ({
         </div>
         <TeamBudgetProgress teamName={team.teamName} status={budgetStatus} />
         <div className="mt-auto">
-          <TeamTaskStatusSummary counts={taskCounts} />
+          <TeamTaskStatusSummary counts={taskCounts} unknown={taskCountsUnknown} />
           {renderTeamRecentPaths(team, status, matchesCurrentProject, isLight, currentProjectPath)}
         </div>
       </div>
@@ -447,15 +328,21 @@ export const TeamListView = memo(function TeamListView({
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<TeamListFilterState>(EMPTY_TEAM_FILTER);
   const [teamPriorityProjectPath, setTeamPriorityProjectPath] = useState<string | null>(null);
-  const [aliveTeams, setAliveTeams] = useState<string[]>([]);
+  const [aliveRead, setAliveRead] = useState<{
+    names: string[];
+    contextId: string;
+    epoch: number;
+  } | null>(null);
   const [teamSectionVisibleCountByKey, setTeamSectionVisibleCountByKey] = useState<
     Record<string, number>
   >({});
   const {
     teams,
+    teamsUnavailable = [],
+    activeContextId,
     teamsLoading,
     teamManagementNoticeByTeam,
-    teamsError,
+    teamsError = null,
     fetchTeams,
     openTab,
     openTeamTab,
@@ -464,6 +351,9 @@ export const TeamListView = memo(function TeamListView({
     permanentlyDeleteTeam,
     projects,
     globalTasks,
+    globalTasksUnavailable = [],
+    globalTasksError = null,
+    globalTasksInitialized,
     fetchAllTasks,
     repositoryGroups,
     selectedRepositoryId,
@@ -475,6 +365,8 @@ export const TeamListView = memo(function TeamListView({
   } = useStore(
     useShallow((s) => ({
       teams: s.teams,
+      teamsUnavailable: s.teamsUnavailable,
+      activeContextId: s.activeContextId,
       teamManagementNoticeByTeam: s.teamManagementNoticeByTeam,
       teamsLoading: s.teamsLoading,
       teamsError: s.teamsError,
@@ -486,6 +378,9 @@ export const TeamListView = memo(function TeamListView({
       permanentlyDeleteTeam: s.permanentlyDeleteTeam,
       projects: s.projects,
       globalTasks: s.globalTasks,
+      globalTasksUnavailable: s.globalTasksUnavailable,
+      globalTasksError: s.globalTasksError,
+      globalTasksInitialized: s.globalTasksInitialized,
       fetchAllTasks: s.fetchAllTasks,
       repositoryGroups: s.repositoryGroups,
       selectedRepositoryId: s.selectedRepositoryId,
@@ -520,6 +415,12 @@ export const TeamListView = memo(function TeamListView({
     }))
   );
   const canCreate = electronMode && connectionMode === 'local';
+  const aliveKnown =
+    aliveRead !== null &&
+    aliveRead.contextId === activeContextId &&
+    isContextScopedRequestEpochCurrent(aliveRead.epoch);
+  const aliveTeams = aliveKnown && aliveRead ? aliveRead.names : EMPTY_ALIVE_TEAMS;
+  const teamsIncomplete = teamsUnavailable.length > 0 || teamsError !== null;
   const provisioningState = useMemo(
     () => ({ currentProvisioningRunIdByTeam, provisioningRuns }),
     [currentProvisioningRunIdByTeam, provisioningRuns]
@@ -541,22 +442,25 @@ export const TeamListView = memo(function TeamListView({
     return synthetic.length > 0 ? [...teams, ...synthetic] : teams;
   }, [teams, provisioningTeamNames, provisioningSnapshotByTeam]);
 
-  const fetchAliveTeams = useCallback(async (): Promise<string[] | null> => {
+  const fetchAliveTeams = useCallback(async () => {
     if (!electronMode) return null;
+    const epoch = captureContextScopedRequestEpoch();
     try {
-      return await api.teams.aliveList();
+      const names = await api.teams.aliveList();
+      return useStore.getState().activeContextId === activeContextId &&
+        isContextScopedRequestEpochCurrent(epoch)
+        ? { names, contextId: activeContextId, epoch }
+        : null;
     } catch {
       return null;
     }
-  }, [electronMode]);
+  }, [activeContextId, electronMode]);
 
   // Fetch alive teams on mount and when teams list changes.
   useEffect(() => {
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-      }
+      if (!cancelled) setAliveRead(list);
     });
     return () => {
       cancelled = true;
@@ -581,9 +485,7 @@ export const TeamListView = memo(function TeamListView({
     if (!readyProgressRefreshKey) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-      }
+      if (!cancelled) setAliveRead(list);
     });
     return () => {
       cancelled = true;
@@ -594,9 +496,7 @@ export const TeamListView = memo(function TeamListView({
     if (!electronMode || !createPageOpen) return;
     let cancelled = false;
     void fetchAliveTeams().then((list) => {
-      if (!cancelled && list) {
-        setAliveTeams(list);
-      }
+      if (!cancelled) setAliveRead(list);
     });
     return () => {
       cancelled = true;
@@ -652,11 +552,14 @@ export const TeamListView = memo(function TeamListView({
           t.teamName,
           aliveTeams,
           getCurrentProvisioningProgressForTeam(provisioningState, t.teamName),
-          leadActivityByTeam
+          leadActivityByTeam,
+          undefined,
+          aliveKnown
         );
         const isRunning = isTeamListStatusRunning(status);
         if (filter.selectedStatuses.has('running') && isRunning) return true;
-        if (filter.selectedStatuses.has('offline') && !isRunning) return true;
+        if (filter.selectedStatuses.has('offline') && status !== 'unknown' && !isRunning)
+          return true;
         return false;
       });
     }
@@ -671,7 +574,8 @@ export const TeamListView = memo(function TeamListView({
         aliveTeams,
         getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
         leadActivityByTeam,
-        nowMs
+        nowMs,
+        aliveKnown
       );
     result = [...result].sort((a, b) => {
       // 1. Running teams first, including the short ready-before-alive-list gap.
@@ -697,6 +601,7 @@ export const TeamListView = memo(function TeamListView({
     searchQuery,
     currentProjectPath,
     aliveTeams,
+    aliveKnown,
     filter,
     provisioningState,
     leadActivityByTeam,
@@ -888,7 +793,7 @@ export const TeamListView = memo(function TeamListView({
       await teamStopControl.stopTeam(teamName, {
         refresh: async () => {
           const list = await fetchAliveTeams();
-          if (list) setAliveTeams(list);
+          setAliveRead(list);
         },
         onOutcome: (outcome, error) => {
           const success = outcome === 'stopped' || outcome === 'stopped_after_transport_error';
@@ -898,7 +803,10 @@ export const TeamListView = memo(function TeamListView({
             runtimeActive: true,
             errorClass: success ? 'none' : classifyAnalyticsError(error),
           });
-          if (success) setAliveTeams((prev) => prev.filter((name) => name !== teamName));
+          if (success)
+            setAliveRead(
+              (prev) => prev && { ...prev, names: prev.names.filter((name) => name !== teamName) }
+            );
         },
       });
     },
@@ -906,78 +814,17 @@ export const TeamListView = memo(function TeamListView({
   );
 
   const [launchingTeamName, setLaunchingTeamName] = useState<string | null>(null);
-  const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
-  const [launchDialogMode, setLaunchDialogMode] = useState<TeamLaunchDialogMode>('launch');
-  const [launchDialogTeamName, setLaunchDialogTeamName] = useState('');
-  const [launchDialogMembers, setLaunchDialogMembers] = useState<ResolvedTeamMember[]>([]);
-  const [launchDialogDefaultPath, setLaunchDialogDefaultPath] = useState<string | undefined>();
-  const [launchDialogProjectPermissionTeamName, setLaunchDialogProjectPermissionTeamName] =
-    useState<string | null | undefined>();
-  const launchRequestIdRef = useRef(0);
-
-  const handleLaunchTeam = useCallback(
-    async (
-      teamName: string,
-      projectPath: string | undefined,
-      mode: TeamLaunchDialogMode,
-      e: React.MouseEvent
-    ) => {
-      e.stopPropagation();
-      if (!projectPath) return;
-      const requestId = ++launchRequestIdRef.current;
-      const projectContextMode = teams.find(
-        (team) => team.teamName === teamName
-      )?.projectContextMode;
-      let permissionTeamName: string | null | undefined;
-      if (projectContextMode === 'per_project') {
-        try {
-          const context = await api.teams.getProjectContextView(teamName, projectPath);
-          permissionTeamName = resolveTeamListProjectPermissionAlias(
-            teamName,
-            projectPath,
-            context
-          );
-        } catch {
-          // An unverified project runtime never inherits auto-approval from the logical team.
-          permissionTeamName = null;
-        }
-      }
-      if (requestId !== launchRequestIdRef.current) return;
-      setLaunchDialogProjectPermissionTeamName(permissionTeamName);
-      try {
-        const data = await api.teams.getData(teamName, {
-          includeMemberBranches: false,
-        });
-        if (requestId !== launchRequestIdRef.current) return;
-        setLaunchDialogMode(mode);
-        setLaunchDialogTeamName(teamName);
-        setLaunchDialogMembers(resolveLaunchDialogMembers(data.members ?? []));
-        setLaunchDialogDefaultPath(
-          resolveTeamLaunchDefaultProjectPath(
-            useStore.getState().teamByName[teamName]?.projectContextMode,
-            projectPath,
-            data.config.projectPath
-          )
-        );
-        setLaunchDialogOpen(true);
-      } catch (err) {
-        // Draft teams (no config.json) throw TEAM_DRAFT — expected, use fallback
-        if (!(err instanceof Error && err.message.includes('TEAM_DRAFT'))) {
-          console.error('Failed to load team data for launch dialog:', err);
-        }
-        // Logical per-project teams have no native config.json. Recover their
-        // authored roster instead of opening a relaunch dialog with no members.
-        const saved = await api.teams.getSavedRequest(teamName).catch(() => null);
-        if (requestId !== launchRequestIdRef.current) return;
-        setLaunchDialogMode(mode);
-        setLaunchDialogTeamName(teamName);
-        setLaunchDialogMembers(resolveSavedLaunchDialogMembers(saved?.members ?? []));
-        setLaunchDialogDefaultPath(projectPath);
-        setLaunchDialogOpen(true);
-      }
-    },
-    [teams]
-  );
+  const {
+    launchDialogOpen,
+    setLaunchDialogOpen,
+    launchDialogMode,
+    launchDialogTeamName,
+    launchDialogMembers,
+    launchDialogDefaultPath,
+    launchDialogProjectPermissionTeamName,
+    retainedLegacyLaunch,
+    handleLaunchTeam,
+  } = useExistingTeamLaunchDialog(fetchTeams);
 
   const handleLaunchSubmit = useCallback(
     async (request: TeamLaunchRequest) => {
@@ -998,7 +845,8 @@ export const TeamListView = memo(function TeamListView({
     async (
       request: TeamLaunchRequest,
       members: TeamCreateRequest['members'],
-      _intent?: unknown,
+      memberSettingsRelaunch?: import('@shared/types').ReplaceMembersRequest['memberSettingsRelaunch'],
+      rosterMetadata?: Parameters<typeof executeTeamRelaunch>[0]['rosterMetadata'],
       onMembersSaved?: () => void
     ) => {
       setLaunchingTeamName(request.teamName);
@@ -1008,8 +856,11 @@ export const TeamListView = memo(function TeamListView({
           isTeamAlive: true,
           request,
           members,
+          memberSettingsRelaunch,
+          rosterMetadata,
           rosterReadOnly: launchDialogProjectPermissionTeamName !== undefined,
           onMembersSaved,
+          stopRun: api.teams.cancelProvisioning,
           stopTeam: async (nextTeamName) => {
             try {
               await api.teams.stop(nextTeamName);
@@ -1093,20 +944,32 @@ export const TeamListView = memo(function TeamListView({
 
   const handleCreateSubmit = useCallback(
     async (request: TeamCreateRequest, placement?: OrganizationPlacementSelection) => {
-      await createTeam(request);
+      const created = await createTeam(request);
+      const teamName = created.teamName ?? request.teamName;
+      if (created.launchStatus === 'unconfirmed')
+        await confirm({
+          mode: 'info',
+          title: t('create.partial.title', { defaultValue: 'Team saved' }),
+          message: t('create.partial.message', {
+            defaultValue:
+              'Launch was not confirmed. Open this team to check its status and launch it.',
+          }),
+          confirmLabel: t('create.partial.open', { defaultValue: 'Open team' }),
+        });
       await assignCreatedTeamToOrganization({
         placement,
-        teamName: request.teamName,
+        teamName,
         label: request.displayName || request.teamName,
         failureTitle: t('create.placementFailure.title', {
           defaultValue: 'Team created, not placed',
         }),
         failureMessage: t('create.placementFailure.message', {
-          teamName: request.teamName,
+          teamName,
           defaultValue: 'Assign this team from the Organization Map; do not create it again.',
         }),
         acknowledgeLabel: t('create.placementFailure.acknowledge', { defaultValue: 'Got it' }),
       });
+      return teamName;
     },
     [createTeam, t]
   );
@@ -1190,6 +1053,7 @@ export const TeamListView = memo(function TeamListView({
           mode="relaunch"
           open={launchDialogOpen}
           teamName={launchDialogTeamName}
+          retainedLegacyLaunch={retainedLegacyLaunch}
           projectPermissionTeamName={launchDialogProjectPermissionTeamName}
           rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}
           members={launchDialogMembers}
@@ -1205,6 +1069,7 @@ export const TeamListView = memo(function TeamListView({
           mode="launch"
           open={launchDialogOpen}
           teamName={launchDialogTeamName}
+          retainedLegacyLaunch={retainedLegacyLaunch}
           projectPermissionTeamName={launchDialogProjectPermissionTeamName}
           rosterReadOnly={launchDialogProjectPermissionTeamName !== undefined}
           members={launchDialogMembers}
@@ -1232,6 +1097,8 @@ export const TeamListView = memo(function TeamListView({
       projectPath={currentProjectPath}
       teams={teamsWithProvisioning}
       aliveTeams={aliveTeams}
+      aliveKnown={aliveKnown}
+      incomplete={teamsIncomplete}
       onProjectChange={handleProjectSelectionChange}
       onManagementApplied={handleManagementApplied}
       onManagementSettings={() => useStore.getState().openSettingsTab('externalAgentConnection')}
@@ -1273,6 +1140,9 @@ export const TeamListView = memo(function TeamListView({
         </div>
       );
     }
+    if (teamsIncomplete && teamsWithProvisioning.length === 0)
+      return <p className="py-8 text-sm text-text-muted">{t('list.aggregate.emptyTeams')}</p>;
+
     if (teamsWithProvisioning.length === 0) {
       return (
         <TeamEmptyState
@@ -1287,7 +1157,7 @@ export const TeamListView = memo(function TeamListView({
     if (filteredTeams.length === 0 && (searchQuery.trim() || hasActiveFilters)) {
       return (
         <div className="flex items-center justify-center py-12 text-sm text-[var(--color-text-muted)]">
-          {t('list.noMatches')}
+          {teamsIncomplete ? t('list.aggregate.emptyTeams') : t('list.noMatches')}
         </div>
       );
     }
@@ -1361,7 +1231,9 @@ export const TeamListView = memo(function TeamListView({
                         {section.title}
                       </h3>
                       <span className="rounded-full border border-[var(--color-border)] bg-[var(--color-surface-overlay)] px-1.5 py-0.5 text-[10px] font-medium leading-none text-[var(--color-text-secondary)]">
-                        {section.teams.length}
+                        {teamsIncomplete
+                          ? t('list.aggregate.loadedCount', { count: section.teams.length })
+                          : section.teams.length}
                       </span>
                     </div>
                   ) : null}
@@ -1372,7 +1244,9 @@ export const TeamListView = memo(function TeamListView({
                         team.teamName,
                         aliveTeams,
                         getCurrentProvisioningProgressForTeam(provisioningState, team.teamName),
-                        leadActivityByTeam
+                        leadActivityByTeam,
+                        undefined,
+                        aliveKnown
                       );
                       const teamColorSet = team.color
                         ? getTeamColorSet(team.color)
@@ -1397,6 +1271,11 @@ export const TeamListView = memo(function TeamListView({
                               : undefined
                           }
                           taskCounts={taskCountsByTeam.get(team.teamName)}
+                          taskCountsUnknown={
+                            !globalTasksInitialized ||
+                            globalTasksError !== null ||
+                            isTeamReadUnavailable(globalTasksUnavailable, team)
+                          }
                           launchingTeamName={launchingTeamName}
                           isStopping={teamStopControl.isStopping(team.teamName)}
                           onOpenTeam={openTeamTab}
@@ -1457,7 +1336,9 @@ export const TeamListView = memo(function TeamListView({
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-[var(--color-border)]" />
               <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-                {t('list.trash', { count: deletedFiltered.length })}
+                {t(teamsIncomplete ? 'list.aggregate.loadedTrash' : 'list.trash', {
+                  count: deletedFiltered.length,
+                })}
               </span>
               <div className="h-px flex-1 bg-[var(--color-border)]" />
             </div>
@@ -1540,6 +1421,17 @@ export const TeamListView = memo(function TeamListView({
           ) : (
             <>
               {renderHeader()}
+              <TeamAggregateReadNotice
+                surface="teams"
+                unavailable={teamsUnavailable}
+                error={teamsError}
+                loadedCount={teams.length}
+                loading={teamsLoading}
+                onRefresh={() => {
+                  void fetchTeams();
+                }}
+                onOpenTeam={openTeamTab}
+              />
               {renderContent()}
             </>
           )}

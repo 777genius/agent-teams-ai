@@ -1,0 +1,173 @@
+{
+  "kind": "ROOT_P10_B2_EXACT_PROSPECTIVE_SOURCE_SELECTION",
+  "status": "Selected for docs-first publication; no B2 source application or execution yet",
+  "preparedAgainst": {
+    "branch": "fix/frontend-parity-public-c2f5ff7c",
+    "head": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+    "tree": "4c63e84f53bb74886284b44cbcf5389d5545a890",
+    "leaves": 11060,
+    "readbacks": [
+      {
+        "head": "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+        "report": "b5de0e0f82b69bb060f5e443387388287dfd193b"
+      },
+      {
+        "head": "0d24f086d5fd412d7fb2e37c38f9864f2699a941",
+        "report": "8556eeb03ede8ff37cb93c4378d7703d5f02f9a5"
+      }
+    ],
+    "currentPreimagesVerified": true,
+    "freshRefLeaseRequiredImmediatelyBeforeCommit": true
+  },
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+    "before": {
+      "sha": "509311af179416e647f8571126746ab09333f5c0",
+      "bytes": 156904
+    },
+    "appendix": {
+      "sha": "a636d7f511e4f72a5e9354fc092ad25f49de15af",
+      "bytes": 18056
+    },
+    "after": {
+      "sha": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+      "bytes": 174960
+    },
+    "afterSha256": "0910ded3d5fc864d9b05a4dea4a7ddd4849e730aab5de22341d45f8d52801e03",
+    "prefixPreservedByteForByte": true,
+    "join": "Original full prefix directly followed by the reviewed section35 appendix; no other byte changes"
+  },
+  "exactSources": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.ts",
+      "before": "fad33b79cb0e6f780d1c2caf435b11e07c03bf87",
+      "after": "369505df3d6a37b5833550954f4ef2a1c501b342",
+      "bytes": 17743,
+      "lines": 269,
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "before": "507b2e4243e99a2285822ea8bce8103760c43022",
+      "after": "a910209438b29f04ea4a30f28e69620d98802183",
+      "bytes": 54340,
+      "lines": 727,
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-app.ts",
+      "before": "71cc2aa1c55540d027bdf321120e850cb650f0c3",
+      "after": "4f686cdb2c99ef4f04bb060041bf8ccf6f8601db",
+      "bytes": 49147,
+      "lines": 727,
+      "exactRoundtrip": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-model.test.ts",
+      "before": "053b6c09383aeae5186322b2e8b0b17fc8cd1021",
+      "after": "45f0d34a10f1928c0ecc7e102a5015188d193ccf",
+      "bytes": 14802,
+      "lines": 236,
+      "exactRoundtrip": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "before": "478323fbcb60bc0b0f29c0e430fdb3d001d0a456",
+      "after": "4e4554ec3330d0c06b0736e861348d7279511361",
+      "bytes": 199733,
+      "lines": 2927,
+      "exactRoundtrip": true
+    }
+  ],
+  "review": {
+    "authorPackage": "56bc875e024b46e7fe1404ec610d843ddaca98a1",
+    "patch": "00113be820c82452468f40c43e18833aba9aab72",
+    "independentR2": "0c257763f82542e570f85197ab452d782c196fc6",
+    "decision": "APPROVE_EXACT_SOURCE_AND_PROSPECTIVE_R1_PROSE"
+  },
+  "selectedCorrections": [
+    "Both new read-only Git checks use the same closed donor environment",
+    "Each existing attachment read checks its unique actual header and may physically Expand once before the same PNG oracle",
+    "Existing same-row wait returns null for valid pending/accepted states and requires deliveredUserMessageId before responded success"
+  ],
+  "preserved": {
+    "incomingSource": [
+      "1951c2354e91fcdf6fc8d6ae5143ba0448b6dbd1",
+      "1ef2c16ae547129e6b6ab5c47e03caa6b3f169df",
+      "0d24f086d5fd412d7fb2e37c38f9864f2699a941"
+    ],
+    "otherCurrentLeaves": "Every current leaf outside the named documentary changes, then exactly the five reviewed source paths",
+    "originalBudgets": {
+      "nativeTestMs": 900000,
+      "jobMinutes": 30,
+      "donorStopMs": 60000,
+      "ordinaryQuitMs": 45000
+    },
+    "sourceLimit": 800,
+    "onePhysicalBusinessSend": true,
+    "noNewModulesJobsOrMandatoryRedCycle": true,
+    "noLocalProjectCompilerLintTestBuildNativeGuiOrProviderExecution": true,
+    "realClaudeCodexExecutionForbidden": true,
+    "pr": {
+      "number": 1192,
+      "remainDraft": true,
+      "remainOpen": true,
+      "originalBasePreserved": true
+    },
+    "noManualActionDispatchRerunCancel": true,
+    "original0158": "Original 0.0.158 coexistence and source-selection paths remain byte-preserved"
+  },
+  "evidence": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/manifest.json",
+      "sha": "33e812c165e45b6797409bc3f8fb52bb8a06882f",
+      "bytes": 8181,
+      "sha256": "4d91cd3d3b8ce1c2b8a88cf4c12249b6860c09794798be9ff313b5e34e794740"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/source-manifest.json",
+      "sha": "b50e84079f0a4bf352417eedf2196cb2437944eb",
+      "bytes": 6056,
+      "sha256": "24a0cb750b4dd2c1ee160a62aae51c9896574a889185dc0b03a5b34f7863c51a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/candidate.patch",
+      "sha": "00113be820c82452468f40c43e18833aba9aab72",
+      "bytes": 63740,
+      "sha256": "f703b2b8aa75e0b4064d9c21024d72c45fe1c1d8130cba2fc45c374cf2042d6f"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/validation-proposal.json",
+      "sha": "7c5eb5f63ea90077df09a36062cbb7e7adbaaf57",
+      "bytes": 4761,
+      "sha256": "41bf745cdd4a8d732d96825e8a52fc7fbfd61de5bc001cc20bcfb55f0c25e5ec"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/preservation-proof.json",
+      "sha": "a1d27c3e70fcb3c5519c11a5210f35ac6abf54bb",
+      "bytes": 15394,
+      "sha256": "68b77dc2f68d2c13bc2534ad60116ad42935f344b6238074bfce47824ea939e0"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/source-reference-index.json",
+      "sha": "64799967e6d0a83b70f8720fee334d23388fd528",
+      "bytes": 7302,
+      "sha256": "054999ec4830b412e9d5af6daf5fc7a26a5703dba36b7d54e951dadfb391344d"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/donor-4a-task-review-2026-11-16/source-r2.json",
+      "sha": "0c257763f82542e570f85197ab452d782c196fc6",
+      "bytes": 24855,
+      "sha256": "e9f9d2b3495bc11727260a03de43878a54185ef30f699223f25e3b4ea4c9434c"
+    }
+  ],
+  "reconstructability": "The canonical exact unified patch and original published source blobs reconstruct all five candidate afterimages; complete source-images/review-package containers remain inert retained review inputs. Their identities are pinned in the independent R2. Actual source blobs become canonical only after the separate published-R1 R2 gate.",
+  "publicationSequence": [
+    "Publish only the complete selected P10 append and documentary evidence; commit then immediate expected-SHA ordinary push",
+    "Read back complete published document bytes, exact ancestry and whole tree; obtain independent actual published-R1 binding R2",
+    "Apply exactly the five reviewed source afterimages, commit then immediate expected-SHA ordinary push; full source/tree readback",
+    "Preserve useful primary jobs; fresh complete six-cohort/ref/PR guard immediately before any primary fast-forward",
+    "Use unchanged original resulting-source CI and inspect real effects/cleanup; no existing old-head PASS transfer"
+  ],
+  "qualification": "Implemented candidate only. Original resulting-source strict types/lint, HTTP model contract, genuine old donor tools/Task Changes/PNG, retained current/cold and original cleanup/receipt corpus gates remain mandatory. P08/P09/import/release/vendor boundaries are unchanged."
+}

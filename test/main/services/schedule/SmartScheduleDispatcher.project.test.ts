@@ -1,10 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { join } from 'node:path';
+
+import { HostSmartScheduleRuntimeAdapter } from '@features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter';
+import { captureHostProjectScheduleContext } from '@features/agent-backend/main/application/captureHostProjectScheduleContext';
+import { captureHostScheduleTarget, restoreHostScheduleTarget } from '@features/agent-backend/main/application/captureHostScheduleTarget';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   SmartScheduleDispatcher,
   type SmartScheduleRuntimePort,
 } from '../../../../src/main/services/schedule/SmartScheduleDispatcher';
+import { capturedHostTeamReadsFixture } from '../../../features/agent-backend/fixtures/capturedHostTeamReadsFixture';
 
+import type { BackendProjectContextSnapshot } from '@features/agent-backend/contracts/projectContext';
+import type { CapturedHostScheduleTarget } from '@features/agent-backend/main/application/captureHostScheduleTarget';
+import type { DesktopBackendFeature } from '@features/agent-backend/main/composition/DesktopBackendFeature';
 import type {
   Schedule,
   TeamAgentRuntimeSnapshot,
@@ -72,6 +81,7 @@ function makePort(alive: boolean): SmartScheduleRuntimePort {
     getSavedRequest: vi.fn(async (team: string) =>
       team === COPY ? saved : team === LOGICAL ? { ...saved, teamName: LOGICAL } : null
     ),
+    hasLaunchConfig: vi.fn(async (team: string) => team === COPY || team === LOGICAL),
     hasRunnableConfig: vi.fn(async (team: string) => team === COPY),
     hasActiveOwnedTask: vi.fn(() => false),
     getPreviousRuns: vi.fn(async () => []),
@@ -240,4 +250,91 @@ describe('SmartScheduleDispatcher for a per-project team', () => {
     expect(outcome.kind).toBe('one_shot');
     expect(port.runOneShot).toHaveBeenCalledTimes(1);
   });
+});
+
+const hostFixtures: ReturnType<typeof capturedHostTeamReadsFixture>[] = [];
+afterEach(() => { for (const f of hostFixtures.splice(0)) f.dispose(); });
+
+/** Real saved rosters and original binding captures; project transport/runtime observations are finite ports. */
+async function hostProjectFixture(alive: boolean) {
+  const f = capturedHostTeamReadsFixture(); hostFixtures.push(f);
+  const logical = f.addTeam({ name: 'logical', projectContextMode: 'per_project' });
+  const projectPath = join(f.root, 'TEST-history');
+  const child = f.addTeam({ name: 'history', projectContext: {
+    logicalHandleId: logical.connection.handle.handleId, workContextId: 'TEST-history-context', projectPath,
+  } });
+  const feature = f.feature as DesktopBackendFeature;
+  const identity = await captureHostScheduleTarget(feature, f.scope.contextId, logical.key,
+    { isCurrent: f.scope.isCurrent });
+  const original = await restoreHostScheduleTarget(feature, logical.key, identity, f.scope.isCurrent);
+  const view: BackendProjectContextSnapshot = { kind: 'team-project-context',
+    view: { mode: 'per_project', state: 'ready', executionTeamName: child.key,
+      workContextId: 'TEST-history-context', projectPath },
+    histories: [{ executionTeamName: child.key, workContextId: 'TEST-history-context', projectPath }],
+  };
+  const invoke = vi.fn<CapturedHostScheduleTarget['invoke']>(async request => {
+    if (request.operation === 'team.project-context.read') return { ok: true, value: view };
+    if (request.operation === 'team.project-context.prepare') return { ok: true, value: {
+      ...view, prepared: { executionHandle: child.connection.handle,
+        rosterCommandId: 'TEST-original-project-roster', sourceRevision: logical.human.readRoster().revision },
+    } };
+    return original.invoke(request);
+  });
+  const target = { ...original, invoke };
+  const project = (await captureHostProjectScheduleContext({ feature, logical: target,
+    projectPath, runId: 'TEST-original-run' }))!;
+  const run = vi.fn(async () => ({ stdout: '', stderr: '', exitCode: 0, summary: 'TEST result', durationMs: 1 }));
+  const adapter = new HostSmartScheduleRuntimeAdapter({ target, selection: logical.key,
+    project, runId: 'TEST-original-run', getPreviousRuns: async () => [], runOneShot: run });
+  vi.spyOn(adapter, 'isTeamLaunching').mockResolvedValue(false);
+  vi.spyOn(adapter, 'isTeamBusy').mockResolvedValue(false);
+  vi.spyOn(adapter, 'isTeamAlive').mockResolvedValue(alive);
+  const request = { runId: 'TEST-original-run', config: { cwd: projectPath, prompt: 'TEST original input' } };
+  return { f, logical, child, feature, target, project, projectPath, invoke, adapter, run, request };
+}
+
+it.each([true, false])('retains the original standalone project target when selected history live=%s', async alive => {
+  const f = await hostProjectFixture(alive);
+  await expect(f.adapter.runOneShot(f.request)).resolves.toMatchObject({ exitCode: 0 });
+  expect(f.run).toHaveBeenCalledExactlyOnceWith(f.request, f.child.human.readRoster().revision,
+    expect.objectContaining({ target: expect.objectContaining({ handleId: f.child.connection.handle.handleId,
+      ownerResourceRef: f.logical.connection.ownerResourceRef }) }));
+  const prepares = f.invoke.mock.calls.filter(([request]) => request.operation === 'team.project-context.prepare');
+  expect(prepares).toHaveLength(alive ? 0 : 1);
+  if (!alive) expect(prepares[0]?.[0]).toEqual({ operation: 'team.project-context.prepare',
+    commandId: 'TEST-original-run:project', payload: { projectPath: f.projectPath,
+      expectedRevision: f.logical.human.readRoster().revision } });
+  expect(f.f.router.request.mock.calls.every(([, request]) => request.method === 'team.roster.read')).toBe(true);
+});
+
+it('refuses standalone dispatch after original owner revocation during repeated project admission', async () => {
+  const f = await hostProjectFixture(true), resolve = f.project.resolve.bind(f.project);
+  let resolutions = 0;
+  vi.spyOn(f.project, 'resolve').mockImplementation(async () => {
+    const result = await resolve();
+    if (++resolutions === 2) f.f.revokeContext();
+    return result;
+  });
+  await expect(f.adapter.runOneShot(f.request)).rejects.toThrow('Original scheduled team is unavailable');
+  expect(f.run).not.toHaveBeenCalled();
+  expect(f.invoke.mock.calls.some(([request]) => request.operation === 'team.project-context.prepare')).toBe(false);
+});
+
+it('does not admit a changed project folder or a replacement child owner', async () => {
+  const f = await hostProjectFixture(false);
+  await expect(captureHostProjectScheduleContext({ feature: f.feature, logical: f.target,
+    projectPath: f.projectPath, folderChange: { from: f.projectPath, cwd: join(f.f.root, 'TEST-other') } }))
+    .rejects.toThrow('The project of a schedule can not be changed');
+  f.child.connection.ownerResourceRef = 'TEST-replacement-owner';
+  await expect(f.project.resolve()).rejects.toThrow('Scheduled project owner changed');
+  expect(f.run).not.toHaveBeenCalled();
+});
+
+it('retains one project preparation and rejects a different definition for the original occurrence', async () => {
+  const f = await hostProjectFixture(false), revision = f.logical.human.readRoster().revision;
+  const first = await f.project.prepare(revision), repeated = await f.project.prepare(revision);
+  expect(repeated).toBe(first);
+  expect(first.rosterCommandId).toBe('TEST-original-project-roster');
+  expect(() => f.project.prepare('TEST-different-revision')).toThrow('Original scheduled project definition changed');
+  expect(f.invoke.mock.calls.filter(([request]) => request.operation === 'team.project-context.prepare')).toHaveLength(1);
 });

@@ -1,4 +1,4 @@
-import { protocols } from 'agent-teams-controller';
+import { createController, protocols } from 'agent-teams-controller';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -141,6 +141,49 @@ describe('NativeAppManagedBootstrapContextBuilder', () => {
       MAX_NATIVE_BOOTSTRAP_TOTAL_CONTEXT_CHARS
     );
     expect(result.diagnostics.warning).toMatch(/Large native team startup context/);
+  });
+
+  it('retains an explicit recovery instruction when a long workflow hides the task queue', async () => {
+    const teamName = 'truncated-native-briefing-sandbox';
+    const members = [
+      {
+        name: 'alice',
+        providerId: 'codex' as const,
+        role: 'Developer',
+        workflow: 'Workflow requirements. '.repeat(2000) + 'REQUIRED_WORKFLOW_TAIL',
+      },
+    ];
+    await new TeamMembersMetaStore().writeMembers(teamName, members);
+    const controller = createController({ teamName, claudeDir: tempClaudeRoot });
+    controller.taskBoard.createTask({
+      subject: 'REQUIRED_ASSIGNED_TASK',
+      owner: 'alice',
+      createdBy: 'alice',
+    });
+    const completeBriefing = await controller.taskBoard.memberBriefing('alice', {
+      runtimeProvider: 'codex',
+      includeActiveProcesses: false,
+      includeChatVisualizationProtocol: false,
+    });
+    expect(completeBriefing).toContain('REQUIRED_WORKFLOW_TAIL');
+    expect(completeBriefing).toContain('REQUIRED_ASSIGNED_TASK');
+
+    const specs = await buildNativeAppManagedBootstrapSpecs({
+      teamName,
+      cwd: '/tmp/workspace',
+      members,
+    });
+    const spec = specs.get('alice')!;
+    expect(spec.contextText.length).toBeLessThanOrEqual(24000);
+    expect(spec.contextText).not.toContain('REQUIRED_WORKFLOW_TAIL');
+    expect(spec.contextText).not.toContain('REQUIRED_ASSIGNED_TASK');
+    expect(spec.contextText).toContain('[truncated startup briefing]');
+    expect(spec.contextText).toContain('before acting on real work, call member_briefing once');
+    expect(spec.contextText).toContain('task_briefing as the current working queue');
+    expect(spec.contextText).toContain('do not start work or send messages');
+    expect(spec.contextText).toContain('Team: truncated-native-briefing-sandbox\nMember: alice');
+    expect(spec.contextText.endsWith('</agent_teams_native_bootstrap_context>')).toBe(true);
+    expect(spec.contextHash).toBe(hashNativeBootstrapText(spec.contextText));
   });
 
   it('retains own workflow and action-mode rules when a colleague has an oversized role', async () => {

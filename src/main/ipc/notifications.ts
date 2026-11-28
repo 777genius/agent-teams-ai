@@ -21,8 +21,9 @@ import {
   type GetNotificationsResult,
   NotificationManager,
 } from '../services';
+import { validateNotificationTeamSelection } from '../services/infrastructure/notificationTeamSelection';
 
-import { coercePageLimit, validateNotificationId, validateTeamName } from './guards';
+import { coercePageLimit, validateNotificationId } from './guards';
 
 const logger = createLogger('IPC:notifications');
 
@@ -149,7 +150,7 @@ function handleSetViewedTeam(_event: IpcMainInvokeEvent, teamName: string | null
       manager.setViewedTeamName(null);
       return true;
     }
-    const validated = validateTeamName(teamName);
+    const validated = validateNotificationTeamSelection(teamName);
     if (!validated.valid) {
       logger.error(
         `notifications:setViewedTeam rejected: ${validated.error ?? 'Invalid teamName'}`

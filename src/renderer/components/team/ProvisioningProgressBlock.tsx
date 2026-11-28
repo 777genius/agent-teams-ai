@@ -20,6 +20,10 @@ import {
 import { MarkdownViewer } from '../chat/viewers/MarkdownViewer';
 
 import { CliLogsRichView } from './CliLogsRichView';
+import {
+  formatLaunchFailureArtifactCopy,
+  formatOptionalValue,
+} from './provisioningLaunchDiagnosticsCopy';
 import { DISPLAY_STEPS } from './provisioningSteps';
 import { StepProgressBar } from './StepProgressBar';
 
@@ -164,13 +168,6 @@ function redactProvisioningDiagnosticsCopy(text: string): string {
     .replace(SECRET_VALUE_PATTERN, '[redacted]');
 }
 
-function formatOptionalValue(value: string | number | null | undefined): string {
-  if (value === null || value === undefined || value === '') {
-    return '(none)';
-  }
-  return String(value);
-}
-
 function formatBooleanValue(value: boolean | null | undefined): string {
   if (value === null || value === undefined) {
     return '(unknown)';
@@ -269,49 +266,6 @@ function formatMemberDiagnosticsCopy(
     return '(none)';
   }
   return JSON.stringify(items, null, 2);
-}
-
-function formatLaunchFailureArtifactCopy(
-  bundle: TeamLaunchFailureDiagnosticsBundle | null | undefined,
-  error?: string | null
-): string {
-  if (error) {
-    return `Failed to read launch failure artifact bundle: ${error}`;
-  }
-  if (!bundle) {
-    return '(none)';
-  }
-
-  const parts = [
-    `teamName: ${bundle.teamName}`,
-    `runId: ${formatOptionalValue(bundle.runId)}`,
-    `latestPath: ${bundle.latestPath}`,
-    `artifactDirectory: ${formatOptionalValue(bundle.artifactDirectory)}`,
-    `manifestPath: ${formatOptionalValue(bundle.manifestPath)}`,
-    '',
-    'classification:',
-    bundle.classification ? JSON.stringify(bundle.classification, null, 2) : '(none)',
-    '',
-    'bootstrapTransportBreadcrumb:',
-    bundle.bootstrapTransportBreadcrumb
-      ? JSON.stringify(bundle.bootstrapTransportBreadcrumb, null, 2)
-      : '(none)',
-    '',
-    'files:',
-  ];
-
-  for (const file of bundle.files) {
-    parts.push(
-      '',
-      `--- ${file.label}`,
-      `path: ${file.path}`,
-      file.issue ? `issue: ${file.issue}` : 'issue: (none)',
-      'content:',
-      file.content?.trim() || '(empty)'
-    );
-  }
-
-  return parts.join('\n');
 }
 
 function formatArtifactManifestSummary(manifest: Record<string, unknown> | null): string {

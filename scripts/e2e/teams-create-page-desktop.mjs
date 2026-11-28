@@ -3,8 +3,9 @@
 // team/project, exercises Back/resume, tab switches, process restart, copy and
 // config-only creation, and verifies launch still opens its original dialog.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { errorMonitor } from 'node:events';
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import { createServer } from 'node:net';
@@ -15,12 +16,23 @@ import { fileURLToPath } from 'node:url';
 
 import WebSocket from 'ws';
 
+import { processes } from './opencode-diagnostics/platform.mjs';
+import { extendOwnedHistory, remainingOwned } from './teams-create-page-owned-processes.mjs';
+import {
+  observeScheduleTeamSelection,
+  prepareScheduleOptionClick,
+  scheduleOptionObservationSource,
+} from './teams-create-page-schedule-observation.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '../..');
 const appLogTail = [];
 const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
+let appCdpPort = null;
+let windowsOwnedHistory = [];
+const windowsTeardowns = [];
 let mainInspectorWebSocketUrl = null;
 let expectedMainInspectorPort = null;
 let cdp = null;
@@ -39,6 +51,73 @@ function rememberAppLog(chunk, stream) {
   appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 200) appLogTail.splice(0, appLogTail.length - 200);
 }
+
+function createProcessFailureObservation() {
+  const methods = new Set([
+    'Runtime.evaluate', 'Runtime.callFunctionOn', 'Runtime.enable', 'Log.enable', 'Page.enable',
+    'Input.dispatchMouseEvent', 'Input.dispatchKeyEvent', 'Input.insertText', 'Page.captureScreenshot',
+    'Emulation.setDeviceMetricsOverride', 'Emulation.clearDeviceMetricsOverride',
+  ]);
+  const signals = new Set(['SIGABRT', 'SIGBUS', 'SIGFPE', 'SIGILL', 'SIGINT', 'SIGKILL', 'SIGSEGV', 'SIGTERM']);
+  const codes = new Set(['ENOENT', 'EACCES', 'EPERM', 'ENOMEM', 'E2BIG', 'EINVAL']);
+  const events = [];
+  let launch = 0, eventsCapped = false, recordingFailed = false;
+  const note = (event, owner, fields = () => ({})) => {
+    try {
+      if (events.length >= 16) { eventsCapped = true; return; }
+      const at = Date.now();
+      events.push({ event, launch: owner, at: Number.isSafeInteger(at) && at >= 0 ? at : null, ...fields() });
+    } catch { recordingFailed = true; /* Observation cannot replace the original outcome. */ }
+  };
+  return {
+    begin() {
+      launch = Number.isSafeInteger(launch) && launch < 65535 ? launch + 1 : null;
+      note('launcher-spawn', launch); return launch;
+    },
+    owner() { return launch; },
+    method(value) { return methods.has(value) ? value : null; },
+    exit(owner, code, signal) {
+      note('launcher-exit', owner, () => ({
+        code: Number.isSafeInteger(code) && code >= -2147483648 && code <= 4294967295 ? code : null,
+        signal: signals.has(signal) ? signal : null,
+      }));
+    },
+    error(owner, error) {
+      note('launcher-error', owner, () => {
+        const code = Object.getOwnPropertyDescriptor(error ?? {}, 'code')?.value;
+        return { code: codes.has(code) ? code : null };
+      });
+    },
+    closed(owner, pending) {
+      note('cdp-close', owner, () => {
+        const pendingMethods = [];
+        for (const entry of pending.values()) {
+          if (pendingMethods.length >= 8) break;
+          pendingMethods.push(methods.has(entry.method) ? entry.method : null);
+        }
+        return { pendingCount: Math.min(pending.size, 65535), pendingMethods,
+          pendingMethodsCapped: pending.size > pendingMethods.length };
+      });
+    },
+    primary(error) {
+      note('primary-failure', launch, () => {
+        const message = Object.getOwnPropertyDescriptor(error ?? {}, 'message')?.value;
+        const method = typeof message === 'string' && message.startsWith('CDP command timed out: ')
+          ? message.slice('CDP command timed out: '.length) : null;
+        return { kind: message === 'CDP connection closed' ? 'cdp-closed' :
+          methods.has(method) ? 'cdp-timeout' : 'other', method: methods.has(method) ? method : null };
+      });
+    },
+    cleanup() { note('cleanup-started', launch); },
+    write() {
+      try {
+        const json = JSON.stringify({ schemaVersion: 1, events, eventsCapped, recordingFailed });
+        if (json.length <= 8192) process.stderr.write('CREATE_PAGE_PROCESS_DIAGNOSTIC ' + json + '\n');
+      } catch { /* Preserve the original error and exit status if diagnostics cannot be written. */ }
+    },
+  };
+}
+const processFailureObservation = createProcessFailureObservation();
 
 // Use an explicit, available port: electron-vite treats --inspect=0 as disabled.
 async function findFreeInspectorPort() {
@@ -87,12 +166,16 @@ async function seedFixture() {
       root, process.platform === 'win32' ? 'fixture-runtime-deny.cmd' : 'fixture-runtime-deny.cjs'
     ),
     runtimeLedgerPath: path.join(root, 'fixture-runtime-ledger.ndjson'),
+    providerLedgerPath: path.join(root, 'fixture-provider-ledger.ndjson'),
+    providerCliPaths: {},
+    codexHome: path.join(root, 'codex-home'),
     deliveryRuntimeVersion: runtimeLock.version,
   };
   for (const key of [
     'claudeRoot',
     'userDataRoot',
     'claudeConfigDir',
+    'codexHome',
     'multimodelDataHome',
     'multimodelCacheHome',
     'xdgConfigHome',
@@ -133,6 +216,44 @@ async function seedFixture() {
     await chmod(fixture.runtimeScriptPath, 0o755);
   }
   await writeFile(fixture.runtimeLedgerPath, '');
+  // Native installer/account checks do not use the orchestrator override.
+  // Fence them with explicit TEST metadata peers and a private managed-source seed.
+  await writeFile(fixture.providerLedgerPath, '', { flag: 'wx', mode: 0o600 });
+  for (const [provider, version] of [
+    ['codex', 'codex-cli 0.164.0'], ['claude', '2.1.0 (Claude Code)'],
+  ]) {
+    const script = path.join(root, `fixture-${provider}-deny.cjs`);
+    const wrapper = process.platform === 'win32' ? script.replace(/\.cjs$/u, '.cmd') : script;
+    await writeFile(script, `#!${nodeBinary}\n'use strict';\n` +
+      `const fs = require('node:fs');\n` +
+      `const args = process.argv.slice(2);\n` +
+      `const accepted = args.length === 1 && args[0] === '--version';\n` +
+      `fs.appendFileSync(${JSON.stringify(fixture.providerLedgerPath)}, JSON.stringify({ provider: ${JSON.stringify(provider)}, kind: accepted ? 'version' : 'refused', args }) + '\\n');\n` +
+      `if (accepted) { process.stdout.write(${JSON.stringify(version + '\n')}); process.exit(0); }\n` +
+      `process.stderr.write(${JSON.stringify('TEST ' + provider + ' refuses non-version commands\n')}); process.exit(77);\n`,
+      { flag: 'wx', mode: 0o700 });
+    if (process.platform === 'win32')
+      await writeFile(wrapper, `@echo off\r\n"${nodeBinary}" "${script}" %*\r\n`, { flag: 'wx' });
+    else await chmod(script, 0o700);
+    for (const [args, status, stdout] of [
+      [['--version'], 0, version + '\n'], [['TEST-forbidden-native-command'], 77, ''],
+    ]) {
+      const observed = spawnSync(nodeBinary, [script, ...args], {
+        cwd: fixture.projectPath, encoding: 'utf8', timeout: 5000, windowsHide: true,
+      });
+      assert.equal(observed.error, undefined); assert.equal(observed.signal, null);
+      assert.equal(observed.status, status); assert.equal(observed.stdout, stdout);
+    }
+    fixture.providerCliPaths[provider] = wrapper;
+  }
+  // This is initial TEST configuration, not an installed vendor package or Host receipt.
+  // The installer status path ignores CODEX_CLI_PATH and would otherwise scan ambient PATH.
+  await json(path.join(fixture.userDataRoot, 'data/runtimes/codex/current.json'), {
+    schemaVersion: 1, rootVersion: '0.164.0', platformVersion: '0.164.0',
+    platformTarget: `TEST-${process.platform}-${process.arch}`,
+    binaryPath: fixture.providerCliPaths.codex, integrity: 'TEST-finite-metadata-only',
+    installedAt: new Date().toISOString(),
+  });
   await writeFile(path.join(fixture.projectPath, 'README.md'), '# Disposable Teams Creation Page E2E\n');
   const member = {
     name: fixture.memberName,
@@ -248,6 +369,9 @@ async function startApp(fixture) {
     AGENT_TEAMS_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH: fixture.runtimeWrapperPath,
+    CODEX_CLI_PATH: fixture.providerCliPaths.codex,
+    CLAUDE_CLI_PATH: fixture.providerCliPaths.claude,
+    CODEX_HOME: fixture.codexHome,
     AGENT_TEAMS_DISABLE_SOURCEMAPS: '1',
     pnpm_config_verify_deps_before_run: 'false',
   };
@@ -267,11 +391,19 @@ async function startApp(fixture) {
       env,
     }
   );
+  const observationOwner = processFailureObservation.begin();
+  appProcess.on(errorMonitor, error => processFailureObservation.error(observationOwner, error));
   appProcessGroupId = appProcess.pid;
   appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
   appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
+  if (windows) {
+    const initial = processes().find((value) => value.pid === appProcess.pid);
+    assert(initial?.birth, 'Cannot pin the disposable Windows launcher PID/birth');
+    windowsOwnedHistory = [initial];
+  }
   const exitedBeforeRenderer = new Promise((_, reject) => {
     appProcess.once('exit', (code, signal) => {
+      processFailureObservation.exit(observationOwner, code, signal);
       reject(
         new Error(
           `pnpm dev:mcp exited before CDP was ready (${code ?? signal ?? 'unknown'})\n` +
@@ -295,6 +427,8 @@ async function startApp(fixture) {
   })();
   const port = await Promise.race([ownedPort, exitedBeforeRenderer]);
   const renderer = await Promise.race([waitForRenderer(port), exitedBeforeRenderer]);
+  if (windows) windowsOwnedHistory = extendOwnedHistory(windowsOwnedHistory, processes());
+  appCdpPort = port;
   // electron-vite --inspect exposes the *main process* on loopback; renderer
   // CDP cannot access BrowserWindow.webContents.zoomFactor or menu accelerators.
   const inspectorWebSocketDebuggerUrl = await Promise.race([
@@ -311,9 +445,145 @@ async function startApp(fixture) {
   return { port, renderer, inspectorWebSocketDebuggerUrl };
 }
 
+function installTaskTabObservation(browser, document, element, identity) {
+  const slot = '__teamsTaskTabObservation';
+  if (Object.getOwnPropertyDescriptor(browser, slot)) return false;
+  const data = (value, key, optional = false) => {
+    if (!value || typeof value !== 'object' || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
+      throw new Error('Unavailable diagnostic data');
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (!descriptor && optional) return undefined;
+    if (!descriptor || !('value' in descriptor) || descriptor.value === undefined) throw new Error('Unavailable diagnostic field');
+    return descriptor.value;
+  };
+  const id = value => {
+    if (typeof value !== 'string' || value.length > 256 || !value.trim()) throw new Error('Unavailable diagnostic identity');
+    return value;
+  };
+  const list = (value, limit) => {
+    if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype)
+      throw new Error('Unavailable diagnostic collection');
+    const length = Object.getOwnPropertyDescriptor(value, 'length')?.value;
+    if (!Number.isInteger(length) || length < 0 || length > limit) throw new Error('Unavailable diagnostic size');
+    const rows = [];
+    for (let index = 0; index < length; index++) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !('value' in descriptor)) throw new Error('Unavailable diagnostic row');
+      rows.push(descriptor.value);
+    }
+    return rows;
+  };
+  const record = { version: 1, before: null, first: null, last: null, samples: 0,
+    samplesCapped: false, events: [], eventsCapped: false, finished: 'pending' };
+  const listeners = [];
+  let context, key, beforeOwner, disposed = false;
+  const dispose = status => {
+    if (disposed) return;
+    disposed = true; record.finished = status;
+    for (const [kind, listener, capture] of listeners)
+      try { document.removeEventListener(kind, listener, capture); } catch { /* Diagnostic only. */ }
+    listeners.length = 0; element = null;
+  };
+  const snapshot = (state, initial = false) => { try {
+    if (!context || !key) return null;
+    const global = data(state, 'globalTaskDetail');
+    const globalIdentity = global == null ? null : ['contextId', 'teamName', 'taskId'].map(field => id(data(global, field)).trim());
+    const globalDialog = globalIdentity === null ? 'absent' :
+      globalIdentity[0] === context && globalIdentity[1] === identity.teamName && globalIdentity[2] === identity.taskId ? 'target' : 'other';
+    const session = data(data(state, 'taskDetailSessionById'), key, true), detail = data(data(state, 'taskDetailById'), key, true);
+    const owner = session === undefined ? undefined : data(session, 'ownerSurfaceId');
+    if (owner !== undefined && owner !== null) id(owner);
+    const revision = session === undefined ? null : data(session, 'ownerRevision');
+    if (session !== undefined && (!Number.isInteger(revision) || revision < 0 || revision > 2147483647)) return null;
+    const layout = data(state, 'paneLayout'), focused = data(layout, 'focusedPaneId'), rootActive = data(state, 'activeTabId');
+    if (focused != null) id(focused);
+    if (rootActive != null) id(rootActive);
+    let targetTabs = 0, activeTargetTabs = 0, focusedTarget = false, rootActiveTarget = false, ownerMatchesTarget = false;
+    for (const pane of list(data(layout, 'panes'), 8)) {
+      const paneId = id(data(pane, 'id')), active = data(pane, 'activeTabId');
+      if (active != null) id(active);
+      for (const tab of list(data(pane, 'tabs'), 32)) {
+        const tabId = id(data(tab, 'id')), task = data(tab, 'taskDetail', true);
+        if (task == null) continue;
+        const taskIdentity = [id(data(tab, 'teamName')).trim(), id(data(task, 'contextId')).trim(), id(data(task, 'taskId')).trim()];
+        if (taskIdentity[0] !== identity.teamName || taskIdentity[1] !== context || taskIdentity[2] !== identity.taskId) continue;
+        targetTabs++; activeTargetTabs += tabId === active ? 1 : 0;
+        focusedTarget ||= paneId === focused && tabId === active;
+        rootActiveTarget ||= tabId === rootActive; ownerMatchesTarget ||= tabId === owner;
+      }
+    }
+    const activeContext = id(data(state, 'activeContextId')).trim(), switching = data(state, 'isContextSwitching');
+    if (typeof switching !== 'boolean') return null;
+    if (detail !== undefined && typeof data(detail, 'phase') !== 'string') return null;
+    if (initial) beforeOwner = owner;
+    return { contextMatches: activeContext === context, switching, globalDialog,
+      detailReady: detail === undefined ? false : data(detail, 'phase') === 'ready', sessionPresent: session !== undefined,
+      ownerPresent: owner != null, ownerChanged: owner == null || beforeOwner == null ? null : owner !== beforeOwner,
+      ownerMatchesTarget, ownerRevision: revision, targetTabs, activeTargetTabs, focusedTarget, rootActiveTarget };
+  } catch { return null; } };
+  const observe = (event, kind, phase) => { try {
+    if (disposed) return;
+    if (record.events.length >= 8) { record.eventsCapped = true; return; }
+    let sameMeasured = false, taskTabTarget = false, inDialog = false, node = event.target, count = 0;
+    try {
+      for (; node && count < 16; count++, node = node.parentElement) {
+        sameMeasured ||= node === element;
+        taskTabTarget ||= node.hasAttribute('data-task-detail-open-tab') === true;
+        inDialog ||= node.getAttribute('role') === 'dialog';
+        if (sameMeasured && taskTabTarget && inDialog) { node = null; break; }
+      }
+      if (node) { if (!sameMeasured) sameMeasured = null; if (!taskTabTarget) taskTabTarget = null; if (!inDialog) inDialog = null; }
+    } catch { sameMeasured = null; taskTabTarget = null; inDialog = null; }
+    const trusted = event.isTrusted, connected = element?.isConnected, prevented = event.defaultPrevented;
+    record.events.push({ kind, phase, trusted: typeof trusted === 'boolean' ? trusted : null,
+      sameMeasured, taskTabTarget, inDialog, measuredConnected: typeof connected === 'boolean' ? connected : null,
+      prevented: typeof prevented === 'boolean' ? prevented : null });
+  } catch { /* A failed observation cannot affect input delivery. */ } };
+  const recorder = Object.freeze({
+    sample(state, activeTab, visible, result) { try {
+      if (disposed) return;
+      if (record.samples < 65535) record.samples++; else record.samplesCapped = true;
+      const sample = { state: snapshot(state), predicate: {
+        activeTab: typeof activeTab === 'boolean' ? activeTab : null, visible: typeof visible === 'boolean' ? visible : null,
+        result: result === true ? 'true' : result === false ? 'false' : result === null ? 'null' : result === undefined ? 'undefined' : 'other',
+      } };
+      record.first ??= sample; record.last = sample;
+      if (result) dispose('success');
+    } catch { /* Preserve the original predicate result. */ } },
+    read() { try {
+      dispose('failure');
+      const raw = JSON.stringify(record);
+      return raw.length <= 4096 && /^[\x20-\x7e]*$/.test(raw) ? JSON.parse(raw) : null;
+    } catch { return null; } },
+  });
+  try {
+    identity = { teamName: id(data(identity, 'teamName')).trim(), taskId: id(data(identity, 'taskId')).trim() };
+    const store = Object.getOwnPropertyDescriptor(browser, '__agentTeamsDevStore');
+    if (!store || !('value' in store) || !store.value) return false;
+    const getState = Object.getOwnPropertyDescriptor(store.value, 'getState');
+    if (!getState || !('value' in getState) || typeof getState.value !== 'function') return false;
+    const initial = Reflect.apply(getState.value, store.value, []);
+    try {
+      const global = data(initial, 'globalTaskDetail');
+      if (id(data(global, 'teamName')).trim() === identity.teamName && id(data(global, 'taskId')).trim() === identity.taskId) {
+        context = id(data(global, 'contextId')).trim(); key = JSON.stringify([context, identity.teamName, identity.taskId]);
+      }
+    } catch { /* The before identity remains unavailable. */ }
+    record.before = snapshot(initial, true);
+    Object.defineProperty(browser, slot, { value: recorder });
+    for (const kind of ['pointerdown', 'pointerup', 'click']) for (const capture of [true, false]) {
+      const listener = event => observe(event, kind, capture ? 'capture' : 'bubble');
+      listeners.push([kind, listener, capture]); document.addEventListener(kind, listener, { capture, passive: true });
+    }
+    return true;
+  } catch { dispose('setup-failed'); return false; }
+}
+
 class CdpClient {
-  constructor(socket) {
+  constructor(socket, failureObservation = null) {
     this.socket = socket;
+    this.failureObservation = failureObservation;
+    this.observationOwner = failureObservation?.owner() ?? null;
     this.nextId = 0;
     this.pending = new Map();
     this.listeners = new Map();
@@ -335,6 +605,7 @@ class CdpClient {
       }
     });
     socket.on('close', () => {
+      this.failureObservation?.closed(this.observationOwner, this.pending);
       for (const pending of this.pending.values()) {
         clearTimeout(pending.timer);
         pending.reject(new Error('CDP connection closed'));
@@ -349,7 +620,7 @@ class CdpClient {
       socket.once('open', resolve);
       socket.once('error', reject);
     });
-    return new CdpClient(socket);
+    return new CdpClient(socket, processFailureObservation);
   }
 
   on(method, listener) {
@@ -365,7 +636,7 @@ class CdpClient {
         this.pending.delete(id);
         reject(new Error(`CDP command timed out: ${method}`));
       }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
+      this.pending.set(id, { resolve, reject, timer, method: this.failureObservation?.method(method) ?? null });
       this.socket.send(JSON.stringify({ id, method, params }));
     });
   }
@@ -389,7 +660,10 @@ class CdpClient {
     let lastTransientError = null;
     while (Date.now() < deadline) {
       try {
-        if (await this.evaluate(`Boolean(${expression})`)) return;
+        if (await this.evaluate(`Boolean(${expression})`)) {
+          try { if (label === 'fully hydrated visible localized task detail in active native tab') this.taskTabObservationInstalled = false; } catch { /* Diagnostic only. */ }
+          return;
+        }
         lastTransientError = null;
       } catch (error) {
         if (
@@ -408,24 +682,57 @@ class CdpClient {
     );
   }
 
-  async click(expression) {
-    await this.waitFor(expression, expression);
-    const target = await this.evaluate(`(() => {
+  async click(expression, taskTab = null, scheduleTeam = null) {
+    const cutoff = Date.now() + 30_000;
+    const remaining = () => Math.max(0, cutoff - Date.now());
+    await this.waitFor(expression, expression, remaining());
+    assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+    let taskTabObservation = '';
+    try {
+      const team = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'teamName'), task = taskTab && Object.getOwnPropertyDescriptor(taskTab, 'taskId');
+      if (team && task && 'value' in team && 'value' in task && typeof team.value === 'string' && typeof task.value === 'string' &&
+          team.value.length <= 256 && task.value.length <= 256)
+        taskTabObservation = `if (target) { try { target.taskTabObserved = (${installTaskTabObservation.toString()})(window, document, element, ${JSON.stringify({ teamName: team.value, taskId: task.value })}); } catch {} }`;
+    } catch { /* An unavailable diagnostic cannot prevent the original measurement/input. */ }
+    const scheduleObservation = scheduleTeam === null ? '' : scheduleOptionObservationSource(scheduleTeam);
+    await this.evaluate(`(() => {
       const element = ${expression};
-      if (!element || element.disabled) return null;
-      element.scrollIntoView({ block: 'center', inline: 'nearest' });
-      const rect = element.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0
-        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
-        : null;
+      if (element && !element.disabled) {
+        element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      }
     })()`);
-    assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
-    await this.send('Input.dispatchMouseEvent', {
-      type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
-    });
+    const hitTarget = (observation = '') => `(() => {
+      const element = ${expression};
+      if (!element?.isConnected || element.disabled) return null;
+      for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+        if (ancestor.getAnimations().some(animation => animation.playState === 'running')) return null;
+      }
+      const rect = element.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      const target = rect.width > 0 && rect.height > 0 &&
+        x >= 0 && x < window.innerWidth && y >= 0 && y < window.innerHeight &&
+        hit && element.contains(hit) ? { x, y } : null;
+      ${observation}
+      return target;
+    })()`;
+    await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
+    let prepared;
+    try {
+      if (scheduleTeam !== null)
+        prepared = await prepareScheduleOptionClick(this, expression, scheduleTeam, cutoff, scheduleObservation);
+      const target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
+      try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
+      assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
+      assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mousePressed', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+      await this.send('Input.dispatchMouseEvent', {
+        type: 'mouseReleased', x: target.x, y: target.y, button: 'left', clickCount: 1,
+      });
+    } finally { if (prepared) await prepared.release(); }
   }
 
   async fill(selector, value) {
@@ -574,10 +881,19 @@ async function waitForProcessGroupExit(processGroupId, timeoutMs) {
     try {
       process.kill(-processGroupId, 0);
     } catch (error) {
-      if (error?.code === 'ESRCH' || error?.code === 'EPERM') return;
-      throw error;
+      if (error?.code === 'ESRCH') return true;
+      // EPERM proves a group may still exist; it never authorizes cleanup success.
+      if (error?.code !== 'EPERM') throw error;
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  try {
+    process.kill(-processGroupId, 0);
+    return false;
+  } catch (error) {
+    if (error?.code === 'ESRCH') return true;
+    if (error?.code === 'EPERM') return false;
+    throw error;
   }
 }
 
@@ -596,23 +912,70 @@ async function cleanup(fixture) {
     } catch {
       appProcess?.kill('SIGKILL');
     }
-    await waitForProcessGroupExit(appProcessGroupId, 4_000);
+    if (!(await waitForProcessGroupExit(appProcessGroupId, 4_000))) {
+      throw new Error('Disposable Electron process group is still present after teardown');
+    }
   } else if (appProcess?.pid && process.platform === 'win32') {
-    // Killing only cmd.exe leaves the child pnpm/Electron processes alive and
-    // contaminates the second launch or the next CI job.
-    const launcherPid = appProcess.pid;
-    await new Promise((resolve) => {
-      const killer = spawn('taskkill', ['/PID', String(launcherPid), '/T', '/F'], {
-        windowsHide: true, stdio: 'ignore',
+    // taskkill can return nonzero after a normal launcher exit. Do not accept
+    // either its exit status OR launcher absence as proof the Electron tree died.
+    const launcher = windowsOwnedHistory[0];
+    assert(launcher?.pid === appProcess.pid && launcher.birth,
+      'Disposable Windows launcher identity was not pinned');
+    let current = processes();
+    const currentLauncher = current.find((value) => value.pid === launcher.pid);
+    assert(!currentLauncher || currentLauncher.birth === launcher.birth,
+      'Disposable Windows launcher PID was reused; refusing taskkill');
+    let history = extendOwnedHistory(windowsOwnedHistory, current);
+    let taskkillExitCode = null;
+    if (currentLauncher) {
+      taskkillExitCode = await new Promise((resolve, reject) => {
+        const killer = spawn('taskkill', ['/PID', String(launcher.pid), '/T', '/F'], {
+          windowsHide: true, stdio: 'ignore',
+        });
+        killer.once('error', reject);
+        killer.once('close', resolve);
       });
-      killer.once('error', resolve);
-      killer.once('close', resolve);
+    }
+    const deadline = Date.now() + 12_000;
+    let remaining = [];
+    let debugStillListening = false;
+    for (;;) {
+      current = processes();
+      history = extendOwnedHistory(history, current);
+      remaining = remainingOwned(history, current);
+      debugStillListening = false;
+      if (appCdpPort !== null) {
+        try {
+          await getTargets(appCdpPort);
+          debugStillListening = true;
+        } catch {
+          // Only the OS census below authorizes cleanup. CDP absence alone is insufficient.
+        }
+      }
+      if (!remaining.length && !debugStillListening) break;
+      if (Date.now() >= deadline) {
+        throw new Error(
+          'Disposable Windows Electron process-tree termination unconfirmed: ' +
+          `taskkill=${String(taskkillExitCode)} ownedRemaining=${remaining.map(p => p.pid).join(',')} cdp=${debugStillListening}`
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    windowsTeardowns.push({
+      launcherPid: launcher.pid,
+      taskkillAttempted: taskkillExitCode !== null,
+      taskkillExitCode,
+      observedIdentityCount: history.length,
+      exactOwnedProcessesAbsent: true,
+      cdpPortAbsent: true,
     });
+    windowsOwnedHistory = [];
   } else if (appProcess?.pid) {
     appProcess.kill('SIGKILL');
   }
   appProcess = null;
   appProcessGroupId = null;
+  appCdpPort = null;
   if (fixture?.root && process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1') {
     for (let attempt = 0; attempt < 8; attempt += 1) {
       try {
@@ -621,7 +984,7 @@ async function cleanup(fixture) {
       } catch (error) {
         if (attempt === 7) {
           process.stderr.write(`Fixture cleanup failed: ${String(error)}\n`);
-          return;
+          throw error;
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
@@ -639,6 +1002,7 @@ async function dumpRenderer(client, label) {
         dialog: Boolean(dialog),
         creationPageName: document.querySelector('[data-testid="create-team-page"] #team-name')?.value ?? null,
         bodyText: (document.body?.innerText ?? '').slice(0, 800),
+        ${client.taskTabObservationInstalled === true ? "taskTabObservation: (() => { try { return window.__teamsTaskTabObservation.read(); } catch { return null; } })()," : ''}
       };
     })()`);
     process.stderr.write(`${JSON.stringify(snapshot, null, 2)}\n`);
@@ -655,7 +1019,28 @@ async function captureScreenshot(client, fixture, label) {
 }
 
 async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
+  // UI readiness must not be inferred from Main's ready flag. Capture renderer
+  // failures that occur before React's dev store is created, especially on macOS.
+  const rendererErrors = [];
+  const reportRendererError = (message) => {
+    if (!message) return;
+    rendererErrors.push(String(message).slice(0, 1800));
+    if (rendererErrors.length > 12) rendererErrors.shift();
+  };
+  client.on('Runtime.exceptionThrown', (params) => {
+    reportRendererError(params.exceptionDetails?.exception?.description ?? params.exceptionDetails?.text);
+  });
+  client.on('Runtime.consoleAPICalled', (params) => {
+    if (params.type !== 'error') return;
+    reportRendererError((params.args ?? []).map((arg) =>
+      arg.value ?? arg.description ?? arg.unserializableValue ?? ''
+    ).join(' '));
+  });
+  client.on('Log.entryAdded', (params) => {
+    if (params.entry?.level === 'error') reportRendererError(params.entry.text);
+  });
   await client.send('Runtime.enable');
+  await client.send('Log.enable');
   await client.send('Page.enable');
   try {
     // Cold macOS CI may finish Vite's dev renderer bundle after 60s while
@@ -672,9 +1057,26 @@ async function initializeTeams(client, fixture, { afterRestart = false } = {}) {
     } catch {
       // The renderer may not have a working preload at all.
     }
+    let rendererState = null;
+    try {
+      rendererState = await client.evaluate(`(() => ({
+        url: location.href,
+        readyState: document.readyState,
+        rootChildren: document.querySelector('#root')?.childElementCount ?? null,
+        uiDidInit: Boolean(window.__claudeTeamsUiDidInit),
+        electronApiPresent: Boolean(window.electronAPI),
+        teamsApiPresent: Boolean(window.electronAPI?.teams),
+        devStorePresent: Boolean(window.__agentTeamsDevStore),
+        viteOverlay: document.querySelector('vite-error-overlay')?.shadowRoot?.textContent?.slice(0, 1200) ?? null,
+      }))()`);
+    } catch {
+      // Renderer may have crashed; retain the captured CDP exceptions instead.
+    }
     throw new Error(
       `Electron renderer did not initialize after ${afterRestart ? 'process restart' : 'cold start'}; ` +
-        `startup status: ${JSON.stringify(startupStatus)}. ${String(error)}`
+        `startup status: ${JSON.stringify(startupStatus)}; ` +
+        `renderer state: ${JSON.stringify(rendererState)}; ` +
+        `renderer errors: ${JSON.stringify(rendererErrors)}. ${String(error)}`
     );
   }
   const names = await client.evaluate(
@@ -779,6 +1181,12 @@ async function setBrowserWindowZoom(inspector, factor) {
 
 async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebuggerUrl) {
   const scheduleLabel = 'schedule-visual-e2e-' + randomUUID().slice(0, 8);
+  // This scenario exercises Run now; an automatic occurrence must not race its single click.
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 2);
+  const cronDate = `${futureDate.getDate()} ${futureDate.getMonth() + 1} *`;
+  const initialCron = `0 9 ${cronDate}`;
+  const editedCron = `0 10 ${cronDate}`;
   log('reject invalid cron and timezone at the actual native IPC boundary');
   for (const { timing, expectedError } of [
     { timing: { cronExpression: 'not a cron', timezone: 'UTC' }, expectedError: /cron/i },
@@ -816,12 +1224,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
 
   log('select the fixture team and review its saved one-time startup prompt');
   await client.click("document.querySelector('[role=dialog] button[role=combobox]')");
-  const teamOption = "Array.from(document.querySelectorAll('[cmdk-item]'))" +
-    ".find(option => option.textContent?.includes(" + JSON.stringify(fixture.teamName) + "))";
-  await client.click(teamOption);
-  await client.waitFor(
-    "document.querySelector('#schedule-saved-prompt-reviewed')",
-    'saved prompt acknowledgement visible before Save', 45_000);
+  await observeScheduleTeamSelection(client, fixture.teamName);
   await captureScreenshot(client, fixture, 'schedules-old-prompt-review');
 
   await client.fill('#schedule-label', scheduleLabel);
@@ -836,7 +1239,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     false, 'Invalid cron was persisted before Save'
   );
 
-  await client.fill('input[placeholder="0 9 * * 1-5"]', '*/30 * * * *');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', initialCron);
   await client.click("document.querySelector('#schedule-saved-prompt-reviewed')");
   await client.waitFor("(" + saveButton + ")?.disabled === false",
     'valid schedule and reviewed old prompt allow Save', 45_000);
@@ -861,7 +1264,7 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
     'Native IPC rejected invalid edit for the wrong reason: ' + invalidEditResult);
   const afterRejectedEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
-  assert.equal(afterRejectedEdit?.cronExpression, '*/30 * * * *',
+  assert.equal(afterRejectedEdit?.cronExpression, initialCron,
     'Rejected timing edit corrupted the saved active schedule');
   assert.equal(afterRejectedEdit?.status, 'active',
     'Rejected timing edit deactivated the saved schedule');
@@ -942,14 +1345,14 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.click(createButtonExpression('Edit'));
   await client.waitFor("document.querySelector('[role=dialog] #schedule-label')",
     'existing schedule editor loaded', 45_000);
-  await client.fill('input[placeholder="0 9 * * 1-5"]', '0 * * * *');
+  await client.fill('input[placeholder="0 9 * * 1-5"]', editedCron);
   await client.waitFor(createButtonExpression('Save Changes'), 'edited schedule can save');
   await captureScreenshot(client, fixture, 'schedules-edit');
   await client.click(createButtonExpression('Save Changes'));
   await client.waitFor("!document.querySelector('[role=dialog]')", 'schedule edit persisted');
   const afterEdit = (await client.evaluate('window.electronAPI.schedules.list()'))
     .find(s => s.id === scheduled.id);
-  assert.equal(afterEdit?.cronExpression, '0 * * * *');
+  assert.equal(afterEdit?.cronExpression, editedCron);
   assert.equal(afterEdit.taskFirst, true, 'Edit silently changed schedule execution semantics');
 
   log('pause and resume the schedule through the real actions menu');
@@ -1017,7 +1420,16 @@ async function exerciseScheduleUx(client, fixture, log, inspectorWebSocketDebugg
   await client.waitFor("document.querySelector('[role=dialog][aria-label=Delete]')",
     'schedule deletion confirmation');
   await captureScreenshot(client, fixture, 'schedules-delete-confirm');
-  await client.click("document.querySelector('[role=dialog][aria-label=Delete] button:not([data-confirm-btn])')");
+  await client.click(`(() => {
+    const dialogs = document.querySelectorAll('[role=dialog][aria-label=Delete]');
+    if (dialogs.length !== 1) return null;
+    const buttons = dialogs[0].querySelectorAll('button:not([data-confirm-btn])');
+    if (buttons.length !== 1 || buttons[0].disabled) return null;
+    const button = buttons[0], rect = button.getBoundingClientRect();
+    if (!(rect.width > 0 && rect.height > 0)) return null;
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit && button.contains(hit) ? button : null;
+  })()`);
   assert((await client.evaluate('window.electronAPI.schedules.list()')).some(s => s.id === scheduled.id),
     'Cancel deleted a scheduled task');
   await client.waitFor("!document.querySelector('[role=dialog]')",
@@ -1170,7 +1582,7 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
     'localized task detail dialog and open-tab action', 60_000
   );
   await captureScreenshot(cdp, fixture, 'zh-tw-task-detail-dialog');
-  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')");
+  await cdp.click("document.querySelector('[role=dialog] [data-task-detail-open-tab]')", { teamName: fixture.teamName, taskId: '77' });
   await cdp.waitFor(
     `(() => {
       const s = window.__agentTeamsDevStore.getState();
@@ -1178,10 +1590,12 @@ async function exerciseTraditionalChineseMcpUi(fixture, log) {
         t.id === p.activeTabId && t.taskDetail && t.teamName === ${JSON.stringify(fixture.teamName)}));
       const page = document.querySelector('[data-task-detail-page][data-task-detail-task-id="77"]');
       const visible = page && page.getClientRects().length > 0 && page.getBoundingClientRect().height > 0;
-      return !s.globalTaskDetail && activeTab && visible &&
+      const result = !s.globalTaskDetail && activeTab && visible &&
         page.getAttribute('data-task-detail-team') === ${JSON.stringify(fixture.teamName)} &&
         page.getAttribute('data-origin-current') === 'true' &&
         page.querySelector('h1')?.textContent?.includes('TEST zh-TW task detail');
+      try { if (${cdp.taskTabObservationInstalled === true}) window.__teamsTaskTabObservation.sample(s, activeTab, visible, result); } catch { /* Diagnostic only. */ }
+      return result;
     })()`,
     'fully hydrated visible localized task detail in active native tab', 60_000
   );
@@ -1405,6 +1819,8 @@ async function main() {
   const fixture = await seedFixture();
   const unique = `create-page-e2e-${randomUUID().slice(0, 8)}`;
   let failure = null;
+  let cleanupFailure = null;
+  let qualifiedResult = null;
   const log = (step) => process.stdout.write(`STEP: ${step}\n`);
   const renderSnapshot = async (client) => {
     return client.evaluate(`(() => {
@@ -2259,8 +2675,12 @@ async function main() {
       await cdp.click("document.querySelector('[data-testid=create-team-page] #launch-team')");
     }
     await cdp.click(createButtonExpression('Create'));
+    // Config-only Create closes before the asynchronous list refresh. Wait for its
+    // exact row so that refresh cannot insert a preceding option during selection.
     await cdp.waitFor(
-      "!document.querySelector('[data-testid=create-team-page]')",
+      "!document.querySelector('[data-testid=create-team-page]') && " +
+        "window.__agentTeamsDevStore.getState().teamByName[" + JSON.stringify(orgTeamName) +
+        "]?.teamName === " + JSON.stringify(orgTeamName),
       'organization team saved and editor closed', 45_000
     );
     const structure = await cdp.evaluate(
@@ -2276,7 +2696,7 @@ async function main() {
     const scheduleUiEvidence = await exerciseScheduleUx(cdp, fixture, log, started.inspectorWebSocketDebuggerUrl);
     const zhTwMcpUiEvidence = await exerciseTraditionalChineseMcpUi(fixture, log);
 
-    const results = {
+    qualifiedResult = {
       success: true,
       scheduleUiEvidence,
       zhTwMcpUiEvidence,
@@ -2310,25 +2730,47 @@ async function main() {
       macInputFocusFallbackCount: inputNativeFocusFallbacks,
       sandboxRoot: fixture.root,
     };
-    const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
-    await mkdir(outDir, { recursive: true });
-    await writeFile(path.join(outDir, 'teams-create-page-result.json'),
-      JSON.stringify(results, null, 2));
-    process.stdout.write(JSON.stringify(results, null, 2) + '\n');
+
   } catch (error) {
     failure = error;
+    processFailureObservation.primary(error);
     await dumpRenderer(cdp, 'teams-create-page-failure');
     if (cdp) {
       try { await captureScreenshot(cdp, fixture, 'failure'); } catch { /* disconnected */ }
     }
   } finally {
-    await cleanup(fixture);
+    processFailureObservation.cleanup();
+    try {
+      await cleanup(fixture);
+    } catch (error) {
+      cleanupFailure = error;
+    }
+  }
+  if (failure && cleanupFailure) {
+    throw new AggregateError([failure, cleanupFailure], 'Create Page E2E and cleanup both failed');
   }
   if (failure) throw failure;
+  if (cleanupFailure) throw cleanupFailure;
+  assert(qualifiedResult, 'Missing Create Page E2E proof');
+  qualifiedResult.cleanup = {
+    processGroupAbsent: process.platform !== 'win32' ? true : null,
+    windowsTaskkillExitedZero: process.platform === 'win32'
+      ? windowsTeardowns.every((item) => item.taskkillExitCode === 0) : null,
+    windowsExactOwnedProcessesAbsent: process.platform === 'win32'
+      ? windowsTeardowns.length === 3 && windowsTeardowns.every((item) => item.exactOwnedProcessesAbsent) : null,
+    windowsTeardowns: process.platform === 'win32' ? windowsTeardowns : null,
+    temporaryProfileRemoved: process.env.TEAMS_CREATE_PAGE_E2E_KEEP !== '1',
+  };
+  const outDir = process.env.TEAMS_CREATE_E2E_ARTIFACT_DIR || os.tmpdir();
+  await mkdir(outDir, { recursive: true });
+  await writeFile(path.join(outDir, 'teams-create-page-result.json'),
+    JSON.stringify(qualifiedResult, null, 2));
+  process.stdout.write(JSON.stringify(qualifiedResult, null, 2) + '\n');
 }
 
 main().catch(async (error) => {
   process.stderr.write(`${error instanceof Error ? error.stack : String(error)}\n`);
   process.stderr.write(`${appLogTail.slice(-40).join('\n')}\n`);
+  processFailureObservation.write();
   process.exitCode = 1;
 });

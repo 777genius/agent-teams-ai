@@ -1,0 +1,30 @@
+{
+  "label": "retained-main-eight-files",
+  "sourceHead": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "sourceTree": "1db97f452abcd5996f061a8a3ed476a44cf33302",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--maxWorkers=1",
+    "test/features/agent-backend/capturedHostClient.test.ts",
+    "test/features/agent-backend/capturedWindowsSelection.test.ts",
+    "test/features/agent-backend/desktopBackendFeature.test.ts",
+    "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+    "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+    "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+    "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+    "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T17:55:10.823068+00:00",
+  "finishedAtUTC": "2026-11-15T17:55:52.292641+00:00",
+  "elapsedSeconds": 41.46957421700063,
+  "exitCode": 0,
+  "logBytes": 4109,
+  "logSHA256": "e59b0df8991ba407d37a3d7221eec86db27fe950c6252a19ae07392302aef404",
+  "sourceHeadAfter": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "statusAfter": ""
+}

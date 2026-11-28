@@ -1,0 +1,99 @@
+{
+  "status": "source-controlled-provider-red-green-pass-production-frozen",
+  "scope": "Exact retained saved-model cancellation after operator grant revocation; read/new start remain denied. No production dist build, native SDK/app execution or new Team allocation.",
+  "sourcePins": {
+    "packages/legacy-agent-host/src/composition/savedTeamModelProbe.ts": "befc6884a31f3607bc699bc25867eed47c3a4afb4ae87f89257787bab68aedef",
+    "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts": "bf086d155dc086a10786bd3b4fed337080c850507f163f48e32d50b9a01f3f58"
+  },
+  "behaviorRuntime": {
+    "nodeVersion": "24.21.0",
+    "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+    "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+    "mode": "Host TypeScript source execution via temporary resolver hook and experimental-transform-types; external package distributions unchanged"
+  },
+  "red": {
+    "command": "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --experimental-transform-types --import /tmp/TEST-saved-model-source-loader.mjs --test --test-name-pattern='exact cleanup after revoke' packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+    "exitCode": 1,
+    "toolChunk": "750908",
+    "meaning": "Running probe after revoke cannot reach contextual cancellation: even wrong-original cleanup is rejected forbidden before exact-context validation. New/read admission remains forbidden.",
+    "testSourceSha256": "bf086d155dc086a10786bd3b4fed337080c850507f163f48e32d50b9a01f3f58",
+    "sourcePinCaveat": "RED source SHA was not captured before the fix; no retrospective execution-source hash claimed.",
+    "evidence": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/red.tool-output-excerpt.txt"
+  },
+  "green": {
+    "command": "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node --experimental-transform-types --import /tmp/TEST-saved-model-source-loader.mjs --test packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+    "exitCode": 0,
+    "toolChunks": [
+      "caf23c",
+      "9f4ff4"
+    ],
+    "tests": 6,
+    "passed": 6,
+    "evidence": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/green.tool-output-excerpt.txt",
+    "assertions": [
+      "running original probe survives grant revoke until exact cancellation",
+      "new start and read remain forbidden",
+      "wrong original command or changed member context cannot cancel",
+      "exact original cancellation reaches cancelled and closes once",
+      "repeated exact cancel and late success cannot restart/complete the cancelled probe",
+      "original roster invalidation and physical config inode refusal remain covered"
+    ]
+  },
+  "checks": {
+    "hostProductionNoEmitTypes": "PASS",
+    "hostTestNoEmitTypes": "PASS",
+    "focusedFastLint": "PASS",
+    "commandRecord": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/checks.tool-output-record.json"
+  },
+  "loaderProvenance": {
+    "executedArtifact": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/executed-loader.mjs",
+    "originalExecutedPath": "/tmp/TEST-saved-model-source-loader.mjs",
+    "originalArtifactWas": "handwritten .mjs, executed before typed equivalent was retained",
+    "typedEquivalent": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader.ts",
+    "derivation": "Typed equivalent reconstructed afterward: same resolver body, explicit ResolveHookSync binding. The behavior run is not retroactively claimed to execute generated output from loader.ts.",
+    "typedEquivalentCheck": {
+      "command": "resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node node_modules/@typescript/native/bin/tsc --ignoreConfig --noEmit --strict --module NodeNext --moduleResolution NodeNext --target ES2024 --types node --skipLibCheck docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader.ts",
+      "exitCode": 0,
+      "toolChunk": "cf79a4",
+      "log": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader-typecheck.log"
+    },
+    "initialTypecheckSetupFailure": {
+      "exitCode": 1,
+      "reason": "TS5112 requires --ignoreConfig when passing an explicit file from project root",
+      "log": "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader-typecheck-initial.log"
+    }
+  },
+  "logProvenance": "Behavior excerpts and checks record were transcribed from retained tool outputs after execution; original raw shell stdout was not saved to disk. Helper typecheck logs are directly redirected original stdout/stderr. No behavior suite rerun to increase count.",
+  "artifacts": {
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/checks.tool-output-record.json": {
+      "sha256": "f75e649556fa8bb0e3f39b765218cba98f7e9d11933ab14fe6277d411db93af3",
+      "bytes": 934
+    },
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/executed-loader.mjs": {
+      "sha256": "1fc4aac6e6530c750abc043421c4bce8bd0b3c7db42aaaf0fd8a7f74925b9d52",
+      "bytes": 766
+    },
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/green.tool-output-excerpt.txt": {
+      "sha256": "50ea96bc4007800446638242281fd1cd3725e3ab582b50056ecf2b847c624203",
+      "bytes": 1006
+    },
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader-typecheck-initial.log": {
+      "sha256": "5b766b55df5bc15c215149742c8fe88d72a584cb45f5422c7edca1594b6d0cb5",
+      "bytes": 142
+    },
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader-typecheck.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/loader.ts": {
+      "sha256": "60ccee8d1a4403fe2d2a0e3da777028052d612ce728bac2b9d79375ba4b39d8f",
+      "bytes": 923
+    },
+    "docs/plans/provider-migration/evidence/p5-saved-model-revoke-cleanup-v1/red.tool-output-excerpt.txt": {
+      "sha256": "41caf7128015c2020cae1e38d70dc4ce4ca81b65c000d3e0150064f895749a99",
+      "bytes": 482
+    }
+  },
+  "nativeE2e": "NOT RUN; Root rebuild/fresh E2E remains separate",
+  "noProductionEditsAfterFreeze": true
+}

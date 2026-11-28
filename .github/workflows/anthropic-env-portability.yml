@@ -59,6 +59,10 @@ jobs:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -69,6 +73,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      - name: Build captured Host and ledger prerequisites
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Lint the integration tests with type information
         if: runner.os == 'Linux'
         run: >-

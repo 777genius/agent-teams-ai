@@ -1,0 +1,1051 @@
+{
+  "schemaVersion": 1,
+  "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "runId": 44434982606,
+  "jobId": 135261471191,
+  "event": "pull_request",
+  "runAttempt": 1,
+  "result": "FAIL",
+  "scope": "Original exact42a4 native OpenCode V2 Review journey failed at the durable runtime-capture boundary after original Launch team. This is not a Review or provider parity acceptance pass.",
+  "jobUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982606/job/135261471191",
+  "failedSteps": [
+    {
+      "name": "Exercise original OpenCode V2 native Desktop journey",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 34,
+      "started_at": "2026-11-19T02:20:08Z",
+      "completed_at": "2026-11-19T02:25:18Z"
+    },
+    {
+      "name": "Verify original V2 journey receipts, source binding and cleanup",
+      "status": "completed",
+      "conclusion": "failure",
+      "number": 37,
+      "started_at": "2026-11-19T02:25:18Z",
+      "completed_at": "2026-11-19T02:25:21Z"
+    }
+  ],
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135261471191,
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "runAttempt": 1,
+    "conclusion": "failure",
+    "requestedAt": "2026-11-19 02:29:07 UTC",
+    "bytes": 241505,
+    "sha256": "d657ec60b9cde85b9ad7a42f3e57a945861a18ced337261b3264b22c1acb81a2",
+    "computedGitBlobSha": "d2572a97c875cf8c07b8cf2239b0f48c3a534859",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471191-terminal.log",
+    "rawToolResponseLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/job-135261471191-log-response-raw.json",
+    "rawResponsePersistedBeforeDecode": true,
+    "endpointRetired": true
+  },
+  "originalArtifact": {
+    "phase": "permanently-retired",
+    "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+    "runId": 44434982606,
+    "jobId": 135261471191,
+    "artifactId": 14492477433,
+    "bytes": 306005,
+    "sha256": "8683e322f38276a2e313d3db54483bbf005959b3b6613a00285c9f8623530b17",
+    "file": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/42a4-review-14492477433.zip",
+    "originalUploadPinsMatch": true,
+    "endpointRetired": true,
+    "rawResponsePersistedBeforeDecode": true,
+    "rawDownloadResponseLocalOnly": true,
+    "members": 24
+  },
+  "originalReceipt": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492477433/TEST-desktop-backend-4vNIRL/desktop-backend-receipt.json",
+    "bytes": 912901,
+    "sha256": "0c87858ad00b38101ab00d71750da08e49af274c076bec6f4b6ecadfd71a65eb",
+    "computedGitBlobSha": "3d537bea3dcaa7caa90b99f74c453f7a61dbfd46"
+  },
+  "failure": "one original runtime capture",
+  "failureSource": {
+    "kind": "assertion",
+    "frames": [
+      "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts:57:12",
+      "scripts/legacy-agent-host/desktop-opencode-v2-review-ui-smoke.ts:105:19",
+      "scripts/legacy-agent-host/desktop-native-review-compose.ts:48:7",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:451:7",
+      "scripts/legacy-agent-host/desktop-backend-smoke.ts:789:29"
+    ]
+  },
+  "startupOutcome": {
+    "elapsedMs": 54421,
+    "matchingMainFound": true,
+    "appExitCode": null,
+    "appSignalCode": null,
+    "spawnError": false
+  },
+  "discoveryReadiness": {
+    "attempts": 1,
+    "transient": []
+  },
+  "sourcePins": {
+    "beforeCount": 1899,
+    "afterCount": 1899,
+    "equal": true,
+    "reviewSourceSha256": "420af7899047a5e32553a8678a28f8fb3baa2681dc8b80b2ebd49aefc3083a9b",
+    "modelSourceSha256": "a849ecf59b41f87ecf0bdc56196fffb032cbb3b7583c9665e7c35e1b089fc6d3"
+  },
+  "observedSteps": [
+    {
+      "ordinal": 1,
+      "action": "mouseMoved",
+      "label": "hover sidebar row before measuring click"
+    },
+    {
+      "ordinal": 2,
+      "action": "mouseClick",
+      "label": "sidebar task",
+      "state": "attempted"
+    },
+    {
+      "ordinal": 3,
+      "observation": "passive input delivery after sidebar click"
+    },
+    {
+      "ordinal": 4,
+      "action": "mouseMoved",
+      "label": "hover Open team",
+      "selector": "[role=\"dialog\"] button",
+      "geometrySamples": 5,
+      "geometryOverflow": false
+    },
+    {
+      "ordinal": 5,
+      "action": "mouseClick",
+      "label": "Open team",
+      "selector": "[role=\"dialog\"] button",
+      "expectedText": "Open team",
+      "state": "attempted"
+    },
+    {
+      "ordinal": 6,
+      "action": "mouseMoved",
+      "label": "hover original saved V2 Team Launch",
+      "selector": "button",
+      "geometrySamples": 5,
+      "geometryOverflow": false
+    },
+    {
+      "ordinal": 7,
+      "action": "mouseClick",
+      "label": "original saved V2 Team Launch",
+      "selector": "button",
+      "expectedText": "Launch",
+      "state": "attempted"
+    },
+    {
+      "ordinal": 8,
+      "action": "mouseMoved",
+      "label": "hover expand original optional launch settings",
+      "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2q_\"]",
+      "geometrySamples": 7,
+      "geometryOverflow": false
+    },
+    {
+      "ordinal": 9,
+      "action": "mouseClick",
+      "label": "expand original optional launch settings",
+      "selector": "[role=\"dialog\"] button[aria-controls=\"_r_2q_\"]",
+      "state": "attempted"
+    },
+    {
+      "ordinal": 10,
+      "action": "mouseWheel",
+      "label": "original V2 review prompt",
+      "selector": "[role=\"dialog\"] #dialog-prompt",
+      "deltaY": 309.4296875
+    },
+    {
+      "ordinal": 11,
+      "action": "mouseMoved",
+      "label": "hover focus original V2 review bootstrap",
+      "selector": "[role=\"dialog\"] #dialog-prompt",
+      "geometrySamples": 5,
+      "geometryOverflow": false
+    },
+    {
+      "ordinal": 12,
+      "action": "mouseClick",
+      "label": "focus original V2 review bootstrap",
+      "selector": "[role=\"dialog\"] #dialog-prompt",
+      "state": "attempted"
+    },
+    {
+      "ordinal": 13,
+      "action": "mouseWheel",
+      "label": "original V2 Launch team ready",
+      "selector": "[role=\"dialog\"] button",
+      "deltaY": 304.4296875
+    },
+    {
+      "ordinal": 14,
+      "action": "mouseMoved",
+      "label": "hover original V2 Launch team once",
+      "selector": "[role=\"dialog\"] button",
+      "geometrySamples": 5,
+      "geometryOverflow": false
+    },
+    {
+      "ordinal": 15,
+      "action": "mouseClick",
+      "label": "original V2 Launch team once",
+      "selector": "[role=\"dialog\"] button",
+      "expectedText": "Launch team",
+      "state": "attempted"
+    }
+  ],
+  "passiveInput": {
+    "count": 41,
+    "limit": 96,
+    "lastSixOriginalEvents": [
+      {
+        "type": "pointerdown",
+        "timeMs": 188088,
+        "x": 810.1484375,
+        "y": 537.921875,
+        "button": 0,
+        "buttons": 1,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "focusBefore": {
+          "tag": "TEXTAREA",
+          "id": "dialog-prompt",
+          "ariaLabel": null,
+          "className": "flex w-full rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 shadow-sm transit"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "teamNavigation": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "TEXTAREA",
+          "id": "dialog-prompt",
+          "ariaLabel": null,
+          "className": "flex w-full rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 shadow-sm transit"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 188089,
+        "trusted": true,
+        "buttonClass": null,
+        "target": {
+          "tag": "TEXTAREA",
+          "id": "dialog-prompt",
+          "ariaLabel": null,
+          "className": "flex w-full rounded-md border border-[var(--color-border)] bg-[var(--color-form-control-bg)] px-3 py-2 shadow-sm transit"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        }
+      },
+      {
+        "type": "focusin",
+        "timeMs": 188089,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        }
+      },
+      {
+        "type": "pointerup",
+        "timeMs": 188091,
+        "x": 810.1484375,
+        "y": 537.921875,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "teamNavigation": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        }
+      },
+      {
+        "type": "click",
+        "timeMs": 188092,
+        "x": 810,
+        "y": 537,
+        "button": 0,
+        "buttons": 0,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "focusBefore": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "taskClarification": null,
+        "teamNavigation": null,
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        }
+      },
+      {
+        "type": "focusout",
+        "timeMs": 188158,
+        "trusted": true,
+        "buttonClass": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib",
+        "target": {
+          "tag": "BUTTON",
+          "id": "",
+          "ariaLabel": null,
+          "className": "inline-flex items-center justify-center gap-2 whitespace-nowrap transition-colors focus-visible:outline-none focus-visib"
+        },
+        "focusBefore": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedBefore": false,
+        "sidebarRow": false,
+        "taskId": null,
+        "activeSortable": [],
+        "dragAnnouncement": [
+          "",
+          ""
+        ],
+        "defaultPreventedAfterMicrotask": false,
+        "focusAfterMicrotask": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        },
+        "defaultPreventedAfterDispatch": false,
+        "focusAfterDispatch": {
+          "tag": "BODY",
+          "id": "",
+          "ariaLabel": null,
+          "className": ""
+        }
+      }
+    ]
+  },
+  "preSubmit": [
+    {
+      "phase": "before-original-submit",
+      "snapshot": {
+        "now": 1795055054420,
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-4vNIRL",
+        "form": {
+          "prompt": "TEST_NATIVE_V2_REVIEW_BOOTSTRAP",
+          "model": "OpenCode provider, TEST-model",
+          "effort": null,
+          "submit": [
+            {
+              "disabled": false,
+              "text": "Launch team"
+            }
+          ]
+        },
+        "checks": [],
+        "currentDraftSignatures": [],
+        "ancestorCount": 91,
+        "ancestorLimitHit": false,
+        "namedAncestorFound": true,
+        "rootTag": 3,
+        "currentTreeNodesVisited": 2293,
+        "hookCount": 0
+      }
+    }
+  ],
+  "postFailureRenderer": {
+    "readyState": "complete",
+    "focused": true,
+    "visibility": "visible",
+    "dialogs": [],
+    "provisioning": [
+      {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-4vNIRL",
+        "currentProvisioningRunId": null,
+        "currentRuntimeRunId": null,
+        "startedAtFloor": "2026-11-19T02:24:15.882Z",
+        "error": "Launch capture result unknown. Retry the same intent.",
+        "ignoredProvisioning": false,
+        "ignoredRuntime": false,
+        "progress": null
+      }
+    ]
+  },
+  "originalModel": {
+    "observations": [],
+    "probes": [
+      {
+        "model": "TEST-model",
+        "tools": 0
+      }
+    ],
+    "failures": [],
+    "inference": "Local scripted model; original V2 tools and Host own every file and Task effect"
+  },
+  "metadataProcessesBeforeLaunch": {
+    "host": {
+      "pid": 9731,
+      "parentPid": 9309,
+      "groupId": 8254,
+      "birth": "Thu Nov 19 02:21:16 2026",
+      "command": "/Users/runner/hostedtoolcache/node/24.21.0/arm64/bin/node"
+    },
+    "children": [
+      {
+        "pid": 14396,
+        "parentPid": 9731,
+        "groupId": 14396,
+        "birth": "Thu Nov 19 02:23:06 2026",
+        "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+      },
+      {
+        "pid": 17587,
+        "parentPid": 9731,
+        "groupId": 17587,
+        "birth": "Thu Nov 19 02:24:06 2026",
+        "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+      }
+    ],
+    "metadataLineage": {
+      "profileHashes": [
+        "6be79d01966e5bc5b35665f89508774b24a4264cd526d646921ce14e12657de7",
+        "b20e4104e25ef9c24c46c7883998755c0a41c346a00d046ef494eba24e5d5d95"
+      ],
+      "events": [
+        {
+          "hostPid": 9731,
+          "profileHash": "6be79d01966e5bc5b35665f89508774b24a4264cd526d646921ce14e12657de7",
+          "mode": "provider",
+          "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+          "pid": 12667,
+          "startIdentityHash": "2b78cb03cb1c5a50d8bac3ccf100892954f8f747d429fe1d48d2a06254113ebc",
+          "stage": "ready"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "6be79d01966e5bc5b35665f89508774b24a4264cd526d646921ce14e12657de7",
+          "mode": "provider",
+          "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+          "pid": 12667,
+          "startIdentityHash": "2b78cb03cb1c5a50d8bac3ccf100892954f8f747d429fe1d48d2a06254113ebc",
+          "stage": "released"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "6be79d01966e5bc5b35665f89508774b24a4264cd526d646921ce14e12657de7",
+          "mode": "directory",
+          "providerHash": null,
+          "pid": 13218,
+          "startIdentityHash": "7acda3056be9f0212c19a935da824feb0dbdee1afc058deb4e08308d6e520ae1",
+          "stage": "ready"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "6be79d01966e5bc5b35665f89508774b24a4264cd526d646921ce14e12657de7",
+          "mode": "directory",
+          "providerHash": null,
+          "pid": 13218,
+          "startIdentityHash": "7acda3056be9f0212c19a935da824feb0dbdee1afc058deb4e08308d6e520ae1",
+          "stage": "released"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "6be79d01966e5bc5b35665f89508774b24a4264cd526d646921ce14e12657de7",
+          "mode": "provider",
+          "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+          "pid": 14396,
+          "startIdentityHash": "0ddd2e635e4a9717cb17c410191e4c3a15643a523e8fe652a56daf39eabefe17",
+          "stage": "ready"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "b20e4104e25ef9c24c46c7883998755c0a41c346a00d046ef494eba24e5d5d95",
+          "mode": "directory",
+          "providerHash": null,
+          "pid": 14917,
+          "startIdentityHash": "0b673f24db37f3394bfc646ff0d310c9ba148d3241796cc69e45818e1a15a3cc",
+          "stage": "ready"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "b20e4104e25ef9c24c46c7883998755c0a41c346a00d046ef494eba24e5d5d95",
+          "mode": "directory",
+          "providerHash": null,
+          "pid": 14917,
+          "startIdentityHash": "0b673f24db37f3394bfc646ff0d310c9ba148d3241796cc69e45818e1a15a3cc",
+          "stage": "released"
+        },
+        {
+          "hostPid": 9731,
+          "profileHash": "b20e4104e25ef9c24c46c7883998755c0a41c346a00d046ef494eba24e5d5d95",
+          "mode": "provider",
+          "providerHash": "0ba7b8d653dcc699e4a2d820cb9ec2fb8d41d42f360ddbbb9e85457dd911a89a",
+          "pid": 17587,
+          "startIdentityHash": "36ce460f68733f570507e0356d31988679c6429524bdbebe2d63bcb2e61963fb",
+          "stage": "ready"
+        }
+      ],
+      "births": [
+        {
+          "pid": 12667,
+          "parentPid": 9731,
+          "groupId": 12667,
+          "birth": "Thu Nov 19 02:22:24 2026",
+          "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+        },
+        {
+          "pid": 14396,
+          "parentPid": 9731,
+          "groupId": 14396,
+          "birth": "Thu Nov 19 02:23:06 2026",
+          "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+        },
+        {
+          "pid": 17587,
+          "parentPid": 9731,
+          "groupId": 17587,
+          "birth": "Thu Nov 19 02:24:06 2026",
+          "command": "/Users/runner/work/agent-teams-ai/agent-teams-ai/resources/runtime/bun/bun"
+        }
+      ]
+    }
+  },
+  "postCleanupOwnerState": {
+    "pin": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492477433/TEST-desktop-backend-4vNIRL/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 1428,
+      "sha256": "392730e3bf3476da4f0551e40039853c3e317d8273c879b97376dcf051e12f0c",
+      "computedGitBlobSha": "3d5b6726d81d712b7406c5951954420fd9a30727"
+    },
+    "runtimeCapturesPropertyPresent": false,
+    "runtimeCapturesValue": null,
+    "value": {
+      "schemaVersion": 1,
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-4vNIRL",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "members": [
+        {
+          "memberId": "alice-id",
+          "name": "alice",
+          "role": "lead"
+        }
+      ],
+      "grants": [
+        {
+          "principalId": "TEST-human",
+          "memberName": "user",
+          "permissions": [
+            "read",
+            "task.write",
+            "message.write",
+            "admin"
+          ],
+          "revision": 1
+        },
+        {
+          "principalId": "alice-session",
+          "memberName": "alice",
+          "permissions": [
+            "read",
+            "task.write",
+            "message.write"
+          ],
+          "revision": 2,
+          "revoked": true
+        }
+      ],
+      "ready": true,
+      "savedSettings": {
+        "cwd": "/Users/runner/work/_temp/TEST-desktop-backend-4vNIRL/workspace",
+        "prompt": "TEST_NATIVE_V2_REVIEW_BOOTSTRAP",
+        "providerId": "opencode",
+        "model": "test-local/TEST-model",
+        "limitContext": false,
+        "skipPermissions": true,
+        "allowExperimentalLocalModels": false
+      },
+      "removedMembers": [],
+      "rosterVersion": 1,
+      "rosterCommands": [
+        {
+          "commandId": "roster:9e2cb87d-4799-42c7-ae56-c8d7c9976ad7",
+          "revision": "b92c4c8f09bfd9e8510603292a75770b8912e92e23d8c15bdb8b8430a8f7407d",
+          "principalId": "TEST-human",
+          "fingerprint": "8f65023e06cde471f157b6cbb28bba21c60c656d5f62460e7c2de02166aa9529"
+        }
+      ]
+    },
+    "qualification": "Captured final artifact state, not an atomic state at the instant of the failed poll."
+  },
+  "originalCommands": [
+    {
+      "pin": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492477433/TEST-desktop-backend-4vNIRL/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+        "bytes": 2335,
+        "sha256": "d89617b9374a73b56f6398059bf0b1e24059505e0f98fe499f70c27211b7b9bf",
+        "computedGitBlobSha": "486e454898b2141e344cd713d33ca4f7dc7ba21f"
+      },
+      "command": {
+        "schemaVersion": 1,
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-4vNIRL",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "commandId": "TEST-ui-offline-seed",
+        "principalId": "TEST-human",
+        "fingerprint": "fb0c8e6c71a559715a644cc836fa4f60ee70e5edae0f56358265d6f3131bf507",
+        "command": {
+          "commandId": "TEST-ui-offline-seed",
+          "operation": "task.create",
+          "payload": {
+            "subject": "TEST persisted Host sidebar seed"
+          }
+        },
+        "effects": {
+          "taskId": "da25663c-a822-57b1-86f4-9ee56ece66f9",
+          "commentId": "cf811a82-cfa3-5d5a-b297-ee7fbf34c8b6",
+          "messageId": "fc52fda1-7d98-5589-9337-f9b56b23ef59",
+          "deliveryId": "01b57932-5b1d-5abc-8c8e-857b837d1c4d"
+        },
+        "createdAt": "2026-11-19T02:20:11.559Z",
+        "phase": "completed",
+        "authorityRevision": 1,
+        "taskPlanVersion": 1,
+        "taskPreimage": "37b68a06b2b3b6d97fcc65bf1489484a641339399f5c0d87882baa18e83d5930",
+        "taskRecipients": [
+          {
+            "name": "alice",
+            "delivery": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-4vNIRL",
+              "teamId": "TEST-desktop-team",
+              "teamName": "test-desktop-backend",
+              "runId": "TEST-run-TEST-desktop-backend-4vNIRL",
+              "memberId": "alice-id",
+              "generation": "1"
+            }
+          }
+        ],
+        "result": {
+          "id": "da25663c-a822-57b1-86f4-9ee56ece66f9",
+          "displayId": "da25663c",
+          "subject": "TEST persisted Host sidebar seed",
+          "description": "TEST persisted Host sidebar seed",
+          "createdBy": "user",
+          "status": "pending",
+          "createdAt": "2026-11-19T02:20:11.559Z",
+          "updatedAt": "2026-11-19T02:20:11.559Z",
+          "historyEvents": [
+            {
+              "id": "ab7561f3-04ad-483b-b0d3-1c4d88a569a3",
+              "timestamp": "2026-11-19T02:20:11.559Z",
+              "type": "task_created",
+              "status": "pending",
+              "actor": "user"
+            }
+          ],
+          "blocks": [],
+          "blockedBy": [],
+          "reviewState": "none",
+          "creationCommand": {
+            "namespace": "legacy-agent-host",
+            "scopeKey": "test-desktop-backend",
+            "operation": "task.create",
+            "commandId": "da25663c-a822-57b1-86f4-9ee56ece66f9",
+            "payloadHash": "fb0c8e6c71a559715a644cc836fa4f60ee70e5edae0f56358265d6f3131bf507"
+          }
+        },
+        "taskHash": "7256225247f495dd7938a5d7a1cc627494c4153e1f5597b915b336a6336ab146"
+      }
+    }
+  ],
+  "originalLaunchJournals": [
+    {
+      "pin": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492477433/TEST-desktop-backend-4vNIRL/hoststore/teams/test-desktop-backend/.host-owner/launches/5ab3d91d1c5c100f92ed13d68bcd772d504e954a7c772bc18e62ff0bd836fce8.json",
+        "bytes": 2094,
+        "sha256": "c60de631eebe9bfc55ad27ec441d81f89cf91c95815342dbaa886791f7add55b",
+        "computedGitBlobSha": "18c48e78b5238a54cab8b205b000a7a0841571d6"
+      },
+      "journal": {
+        "schemaVersion": 1,
+        "definition": {
+          "launchId": "TEST-run-TEST-desktop-backend-4vNIRL",
+          "rosterRevision": "9b7a3d3b2b8adfb40bd82a38a0a630159ac39abb13614eecc56d6c7b8982df65",
+          "rosterScope": {
+            "projectId": "TEST-project-TEST-desktop-backend-4vNIRL",
+            "workspaceId": "TEST-workspace-TEST-desktop-backend-4vNIRL",
+            "teamId": "TEST-desktop-team",
+            "runId": "TEST-run-TEST-desktop-backend-4vNIRL",
+            "memberId": "human",
+            "generation": "1"
+          },
+          "members": [
+            {
+              "memberId": "alice-id",
+              "binding": {
+                "backendId": "TEST-desktop-owner-TEST-desktop-backend-4vNIRL",
+                "teamId": "TEST-desktop-team",
+                "runId": "TEST-run-TEST-desktop-backend-4vNIRL",
+                "memberId": "alice-id",
+                "generation": "1"
+              },
+              "configurationDigest": "f8fa6cf89be3a6c31e41fcf8d1bedb12b6398a5d1e63cba0dbfcfcc761aecf47",
+              "contextDigest": "b04949193f3fe506942590b28d1826690cbdb81effe85f25170dd77da5c5f67a",
+              "configRevision": "TEST-opencode-v2-config",
+              "skipped": false,
+              "timeoutMs": 120000,
+              "runtimeGeneration": 1,
+              "baseConfigurationDigest": "f8fa6cf89be3a6c31e41fcf8d1bedb12b6398a5d1e63cba0dbfcfcc761aecf47"
+            }
+          ]
+        },
+        "fingerprint": "9bb728cc063c82a640ef4d2e7bad7c2c2dc6099813831feef5ba58a3b6aee7cc",
+        "members": [
+          {
+            "memberId": "alice-id",
+            "currentAttemptId": "initial-8e6b204967e1a736050718b55d17984e43cf5a915af4113bd870c91a7746308e",
+            "attempts": [
+              {
+                "attemptId": "initial-8e6b204967e1a736050718b55d17984e43cf5a915af4113bd870c91a7746308e",
+                "hostIncarnation": "fe28a223-4def-4a24-9691-a9d88e20d455",
+                "startedAtMs": 0,
+                "deadlineMs": 0,
+                "claimed": false,
+                "status": "not-started",
+                "reason": "not-started",
+                "nativeReady": false,
+                "contextApplied": false,
+                "everReady": false,
+                "usable": false,
+                "controlAvailable": false,
+                "noAllocation": false
+              }
+            ]
+          }
+        ],
+        "retries": []
+      }
+    }
+  ],
+  "originalRuntimeSessions": [
+    {
+      "pin": {
+        "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492477433/TEST-desktop-backend-4vNIRL/hoststore/runtime-sessions/d21a5cdf7fd179ddd1a816110553ee3f6e5e7fc0193cb7f0070edad3f905fff6/6e3c2bdf9f53877a9323a2c5cd0afc3289b46d61c67221493c4a13b0cfe237e9.json",
+        "bytes": 714,
+        "sha256": "1ee20f365d9bac3b3a3e5a7293ebb1c0c127dc07bd14c00908a69d39ddd49b44",
+        "computedGitBlobSha": "e8ed0186a875d9fce70ff27a5672c9ff69fe00b9"
+      },
+      "session": {
+        "schemaVersion": 1,
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-4vNIRL",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-run-TEST-desktop-backend-4vNIRL",
+          "memberId": "alice-id",
+          "generation": "1"
+        },
+        "profileId": "TEST-desktop-profile-TEST-desktop-backend-4vNIRL",
+        "config": null,
+        "openFingerprint": null,
+        "hostIncarnation": "fe28a223-4def-4a24-9691-a9d88e20d455",
+        "phase": "closed",
+        "sealed": true,
+        "custody": "released",
+        "nativeReady": false,
+        "inputs": [],
+        "interactions": [],
+        "conversation": {
+          "sequence": 0,
+          "digest": "9fb88697f2cef66c413ece58266feda995972a718760c4674d70649c74e3f0ae",
+          "gaps": []
+        },
+        "activitySequence": 1
+      }
+    }
+  ],
+  "preflightCommand": {
+    "pin": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-42a4/artifact-14492477433/TEST-desktop-backend-4vNIRL/hoststore/management-commands/84e12d581e16d1946a506d69e62b88c9ffa6a92ff299884577913fa881238f2a.json",
+      "bytes": 6377,
+      "sha256": "3dca99832a61c296436a8b99ab4869aa38bec7d99316760146e5780e590fb035",
+      "computedGitBlobSha": "63166418152398159037fbaf2ab5b07291f6cdd4"
+    },
+    "phase": "completed",
+    "ok": true,
+    "readiness": {
+      "context": "41f14fd5429532b5c52d4b0e99f9a1f216f609161a7e273ff9b2e4e6219fabbb",
+      "selectionDigest": "a81295ddc02be4eedb43c5b5dc5fe672b4d3a164426e8f135e91269c68f19de6",
+      "evidence": {
+        "schemaVersion": 1,
+        "ordinary": "confirmed",
+        "coordination": "not-applicable",
+        "decision": "allow",
+        "reasons": [
+          "not-applicable"
+        ],
+        "routeDigest": "2707e8aa84532f16286c137d8bfcc38d7bebc6088123cdc22f157ca4bcbe63e7",
+        "configurationDigest": "1d33119690f9d66330d3935f269c4225b6337ed3c42ace8bc1c12c2165812b17",
+        "accountDigest": "bdc0f9ab7ea3268fbe4444ccb62f78f1942afa66049ce5ee2d4c85d834bf2156",
+        "metadata": {
+          "provider": "custom",
+          "tools": null,
+          "modelListed": null,
+          "contextTokens": null,
+          "parameterCount": null,
+          "configuredContextTokens": null,
+          "trainedContextTokens": null,
+          "contextSource": "unknown"
+        }
+      }
+    },
+    "expiresAt": 1795055082404,
+    "preparationExpiresAt": 1795055092336,
+    "readinessScopeCutoff": 1795055092336
+  },
+  "cleanup": {
+    "hostChildBeforeNativeReview": {
+      "pid": 9731,
+      "ppid": 9309,
+      "pgid": 8254,
+      "observedBeforeShutdown": true
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "originalRequestedQuitExit": {
+      "initialExitCode": 0,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [],
+    "cleanup": {
+      "processGroup": 8254,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; consult per-flow native custody and physical child observations"
+    },
+    "finalSentinelCensus": {
+      "invocations": [
+        {
+          "executable": "claude-multimodel",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        },
+        {
+          "executable": "shell-env",
+          "allowed": true,
+          "argc": 2,
+          "flags": [
+            "-lic"
+          ]
+        },
+        {
+          "executable": "opencode",
+          "allowed": true,
+          "argc": 1,
+          "command": null,
+          "flags": [
+            "--version"
+          ]
+        }
+      ],
+      "preQuitCount": null,
+      "postQuitOrCleanupInvocations": null,
+      "refusedInvocations": [],
+      "qualification": "Sentinels refuse nonversion commands without launching providers. Post-Quit/cleanup refusals are retained legacy maintenance gaps; they do not prove native execution or full fork-free/P5 qualification."
+    }
+  },
+  "boundaries": {
+    "reached": [
+      "Original global/project metadata capture",
+      "Successful original model preflight probe",
+      "Original Launch team mouse press/release/click delivered once",
+      "Original launch dialog closed"
+    ],
+    "firstUnfulfilled": "Wait for exactly one durable runtime capture in owner state; source poll line105 asserted after its bounded wait.",
+    "notReached": [
+      "Task Start",
+      "Native Read/Edit business effects",
+      "Review Keep/Reject/Undo/Redo",
+      "Original Stop and renderer reload",
+      "Cold Review history readback"
+    ],
+    "unknown": [
+      "Cause of Launch capture result unknown",
+      "Exact intermediate owner state at each failed poll",
+      "Any transient business runtime allocation before cleanup"
+    ]
+  },
+  "limits": [
+    "The absent runtimeCaptures property in final artifact is not proof that no native child existed. Original metadata Bun children were recorded.",
+    "No old030 cause is carried forward.",
+    "Cleanup success does not turn the failed business journey into PASS.",
+    "No visual audit of ui-failure.png performed.",
+    "No real Claude or Codex execution."
+  ]
+}

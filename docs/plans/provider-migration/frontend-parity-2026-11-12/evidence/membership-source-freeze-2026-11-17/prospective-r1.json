@@ -1,0 +1,442 @@
+{
+  "kind": "prospective-plan79-root-r1",
+  "at": "2026-11-17T04:51:41.849218+00:00",
+  "decision": "SELECT_EXACT_MEMBERSHIP_ORDER_AND_THREE_OBSERVED_SOURCE_FREEZE_ROWS",
+  "parent": "32aa94501c41eac930a26e780c40b6dbb436c1e6",
+  "parentTree": "442adf28fac51a129c4a4193351ec3621596f6c9",
+  "primary": "5c55a4a2008f4a6131d265344d384b39415ad055",
+  "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+  "closedParentActualR2": {
+    "sha256": "aa5f9299ed347990d967f1fb13f2b0f985d41c873dc0e125ae02a5c6fa064ccb",
+    "rootFullReadLines": 108,
+    "dataSha256": "9e487b73df3805f4ed01ea2af2b56bd8ec61e0a73270c1bf03e51b0e1720cc7f",
+    "rootDataFullReadLines": 292
+  },
+  "plan": {
+    "bytes": 4996,
+    "physicalLines": 22,
+    "gitBlob": "5d050f11cdc99e981c993ee7c992605a9abd660d",
+    "sha256": "9402896b70a74f3c855daf7235c962c9a7097b7738d5ff52cdf3e18fab89ee23"
+  },
+  "sourceCut": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 47601,
+        "physicalLines": 585,
+        "gitBlob": "6fd01f62356f098647cb454440790d7664ddaa3e",
+        "sha256": "5b2feb8629d03c92a5c004f8cb5923715e34060342c74f44418ed2897e193bf3"
+      },
+      "selections": [
+        {
+          "selectedOldText": "  const create = '[data-testid=\"create-team-page\"]';\n  await checked(cdp, ui, create + ' #launch-team', false);\n",
+          "selectedNewText": "  const create = '[data-testid=\"create-team-page\"]';\n",
+          "exactOccurrenceCount": 1
+        },
+        {
+          "selectedOldText": "  await replace(cdp, ui, create + ' #team-prompt', '', 'empty original launch prompt');\n",
+          "selectedNewText": "  await replace(cdp, ui, create + ' #team-prompt', '', 'empty original launch prompt');\n  await checked(cdp, ui, create + ' #launch-team', false);\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "meaning": "Move the one existing checked(false) call after prompt setup and before Bob; every other byte preserved",
+      "expectedPhysicalLines": 585
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "preimage": {
+        "bytes": 23535,
+        "physicalLines": 362,
+        "gitBlob": "d6e3dbe4b6c5f6def5aeba21671456291ce1396b",
+        "sha256": "f316db6661d7ca4a20b959c8d85ab5b85e1c089d3f61f7ec0d8d1eceb7e5a301"
+      },
+      "selections": [
+        {
+          "selectedOldText": "  'scripts/legacy-agent-host/desktop-owner-routing-product-census.ts',\n",
+          "selectedNewText": "  'scripts/legacy-agent-host/desktop-owner-routing-product-census.ts',\n  'scripts/legacy-agent-host/desktop-task-board-group-page-read.ts',\n  'src/renderer/components/team/kanban/KanbanBoard.tsx',\n  'src/renderer/components/team/kanban/KanbanTaskCard.tsx',\n",
+          "exactOccurrenceCount": 1
+        }
+      ],
+      "meaning": "Add only the three existing, observed but unfrozen source paths to the existing common supplementary roster",
+      "expectedPhysicalLines": 365
+    }
+  ],
+  "sourceAfterimagesCreated": false,
+  "originalEvidence": {
+    "membership": {
+      "run": 44008164473,
+      "job": 133788425693,
+      "diagnosis": {
+        "bytes": 18097,
+        "physicalLines": 299,
+        "gitBlob": "216c8a62a8b993f4f9db7516297d540d315c9c9c",
+        "sha256": "f0df0d981f9902486bdcf15470c9f7332262209fe1c46dd6ac0a96d7a1763ff4"
+      },
+      "data": {
+        "bytes": 10759,
+        "physicalLines": 269,
+        "gitBlob": "e0c9deb11be1ec5aa628d4cac68f30ada9298338",
+        "sha256": "4a0aa75907d965d2c0d909c2ae0ce481257474f708b7a22983deef183d91c557"
+      },
+      "rootFullR2AndDataRead": "299+269lines and10 source identity rows",
+      "rootFailurePngViewed": true,
+      "failurePngSha256": "0948e6aae0f9e49195bc88bcc934f1dcd7e62eb5e2dd082579f156380ecf4bef",
+      "originalResult": "Separate Settings PASS; membership INCOMPLETE before Create/Launch; wholejobFAIL; capturedHostAbsentnull"
+    },
+    "cross": {
+      "run": 44008164473,
+      "job": 133788425709,
+      "receipt": {
+        "file": "/workspace/scratch/b87c90489dab/e2e-recovery/qualification-5c55a4a/jobs/133788425709/extracted/TEST-desktop-backend-CrVT6f/desktop-backend-receipt.json",
+        "bytes": 21275534,
+        "physicalLines": 96071,
+        "gitBlob": "5a9707644509bb4d0df966e2596e0dea1c0f4872",
+        "sha256": "b7b33633fa3742062604c407932b0170ecc8561a866aa7756e8e8d190df63598"
+      },
+      "beforeAfterUniqueOrderedEqual": 1815,
+      "missingBeforeAfterPaths": [
+        "scripts/legacy-agent-host/desktop-task-board-group-page-read.ts",
+        "src/renderer/components/team/kanban/KanbanBoard.tsx",
+        "src/renderer/components/team/kanban/KanbanTaskCard.tsx"
+      ],
+      "boardPostFlowRows": 11,
+      "postFlowRowsAlsoFrozen": 9,
+      "postFlowOnly": [
+        {
+          "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
+          "sha256": "2a0ba036f8e61c2009c48883cc2184c44e4233c00dbdd496ed7cbde2a627dec0",
+          "currentGitBlob": "15578dd958bf33460c9e166be4b1a0fdb04f4f09"
+        },
+        {
+          "path": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+          "sha256": "05450de37d0ce062c02a797076a6202f76bcafdd23d2db4b16deb20561694ea2",
+          "currentGitBlob": "93c2ad26cfe85d2b9c02bf380e1e9a2cd47d1636"
+        }
+      ],
+      "groupHelperNotInPostFlow": true,
+      "retainedGroupPhases": {
+        "beforeCreate": {
+          "phase": "before",
+          "revision": "73e55bdbd316f578fe5b0dd6b07f2e0d1255e5d50486166c03b1c1d9c1978061",
+          "feed": {
+            "streamId": "42fcdb0f-bf70-4c94-9dee-70928881bfab",
+            "cursor": "15684b6e-f9da-4a9e-a6e1-dddaf2af6e6d",
+            "sequence": 0
+          },
+          "pageCount": 3,
+          "taskIds": [
+            "ac9b6533-8872-5978-b6d5-6e8c68bbe058"
+          ],
+          "groupChatId": "10000000-0000-4000-8000-000000000017",
+          "originalOwnerPagesComplete": true
+        },
+        "afterCreate": {
+          "phase": "created",
+          "revision": "0d5c4f3dbc8bfd6b841148a4079bee6ccfbd1aefca1456dce87888ecc33868ed",
+          "feed": {
+            "streamId": "42fcdb0f-bf70-4c94-9dee-70928881bfab",
+            "cursor": "0c0b160c-ca2d-44d5-b53f-a55105dc1362",
+            "sequence": 1
+          },
+          "pageCount": 3,
+          "taskIds": [
+            "4c6a7c5c-4fca-5074-ae16-5899d3d5859d",
+            "ac9b6533-8872-5978-b6d5-6e8c68bbe058"
+          ],
+          "groupChatId": "10000000-0000-4000-8000-000000000017",
+          "originalOwnerPagesComplete": true
+        },
+        "afterReload": {
+          "phase": "reloaded",
+          "revision": "1a085b0a8c457385a1ba66f2c8c99235eb727479a7b93ed3e8d56826497f5ee1",
+          "feed": {
+            "streamId": "42fcdb0f-bf70-4c94-9dee-70928881bfab",
+            "cursor": "a0034d00-30ab-4797-bc90-849de944d5cb",
+            "sequence": 8
+          },
+          "pageCount": 3,
+          "taskIds": [
+            "4c6a7c5c-4fca-5074-ae16-5899d3d5859d",
+            "ac9b6533-8872-5978-b6d5-6e8c68bbe058"
+          ],
+          "groupChatId": "10000000-0000-4000-8000-000000000017",
+          "originalOwnerPagesComplete": true
+        }
+      },
+      "rootReadScope": "Whole JSON parsed/hash checked; selected source vectors, all11post hashes, three retained group snapshots, direct import/caller, full135-line group helper, main Set union, dynamic source capture/verify and cap guard seams. Full Cross semantic R2 remains separate.",
+      "originalResult": "Original eight UI scope statuses PASS; historical freeze incomplete for the3 named inputs; no rewrite or future qualification"
+    }
+  },
+  "sourceReferences": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-create-config-ui-smoke.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/scripts/legacy-agent-host/desktop-create-config-ui-smoke.ts",
+      "bytes": 9597,
+      "physicalLines": 263,
+      "gitBlob": "64907147154ac556d9936585b6745a85738deb86",
+      "sha256": "d5d3c2ce06d8ad5f41434a20a5cb4592a8ccc2dcc1da20175bbb966dbac68e30",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "bytes": 47601,
+      "physicalLines": 585,
+      "gitBlob": "6fd01f62356f098647cb454440790d7664ddaa3e",
+      "sha256": "5b2feb8629d03c92a5c004f8cb5923715e34060342c74f44418ed2897e193bf3",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-mixed-dialog-settings.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/scripts/legacy-agent-host/desktop-mixed-dialog-settings.ts",
+      "bytes": 12851,
+      "physicalLines": 292,
+      "gitBlob": "21963fc2ebc5b60fa17c459581799a7ad993a6b0",
+      "sha256": "f2f3e6227c6f1499c40b35d056658fa1dd33d050850df139acce2546fc6dcbbf",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "bytes": 193022,
+      "physicalLines": 3105,
+      "gitBlob": "770835e3f57cf174535b066f17c2b9f40d160b58",
+      "sha256": "484161ebe89f1caa3a5a39197b9476dc94bd530d5b72d009048eee59fde19fc7",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 32310,
+      "physicalLines": 578,
+      "gitBlob": "4f79628eb550fb2522f797437211510951a1581a",
+      "sha256": "fd1ffb5544d0016f485976fdebd6e8dd078033a60554b70ad0b513953f720b78",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "src/features/localization/renderer/locales/en/team.json",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/src/features/localization/renderer/locales/en/team.json",
+      "bytes": 148715,
+      "physicalLines": 3442,
+      "gitBlob": "e2507954e3a109cd1a44e9c199ad7ce5e10b0120",
+      "sha256": "bfa7935056b73d18bc074a3412c2e01b1bc6bd6f556e0dcd28b8cd5b574e204c",
+      "evidenceKind": "static-current-leaf-only"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/src/renderer/components/team/dialogs/CreateTeamDialog.tsx",
+      "bytes": 127745,
+      "physicalLines": 3098,
+      "gitBlob": "eff07b53a39c74ed80c0658c6e4a15de6fb18a0e",
+      "sha256": "b5ddff2a1f061dcaca00d5f989964cfc5954fe5e4b8f7367b82f8ecccf3a4ef3",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/src/renderer/components/team/dialogs/OptionalSettingsSection.tsx",
+      "bytes": 7553,
+      "physicalLines": 220,
+      "gitBlob": "83244b15d0af25a146b8c61dbd2fb300dc251348",
+      "sha256": "bad2fe006d0a6b0e14ae38e1a31c953ff0ecc71821a1353579815a0c22ed4cc8",
+      "evidenceKind": "static-current-leaf-only"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/useCreatedTeamLaunchReadiness.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/src/renderer/components/team/dialogs/useCreatedTeamLaunchReadiness.ts",
+      "bytes": 4267,
+      "physicalLines": 126,
+      "gitBlob": "dd9cb97edc56814ad0a5485416223e9d86d34bba",
+      "sha256": "1992d423633dc0124e437517659c72196e7f9b8dbda85f8d76f105fd25a9c5e2",
+      "evidenceKind": "original-membership-freeze"
+    },
+    {
+      "path": "src/renderer/hooks/useCreateTeamDraft.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/settings-membership-5c55-r2/source/src/renderer/hooks/useCreateTeamDraft.ts",
+      "bytes": 23472,
+      "physicalLines": 645,
+      "gitBlob": "989dc1fd4e0bbb24924d4066d262cb2562a3683a",
+      "sha256": "0b17e3934a1bded1c748cebb780b50de755f2664487b9e58a19fad3b1bb2b19c",
+      "evidenceKind": "static-current-leaf-only"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-group-page-read.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/legacy-agent-host/desktop-task-board-group-page-read.ts",
+      "bytes": 5443,
+      "physicalLines": 135,
+      "gitBlob": "ff04e1a1626e79fc31b5bbf70f50fc763185f52b",
+      "sha256": "6e463966fd91cab761b0358e086322b9a291545bd8188696e79af4a1b07eba6a",
+      "evidenceKind": "static-current-leaf-only"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts",
+      "bytes": 36341,
+      "physicalLines": 799,
+      "gitBlob": "7707de6f387471609df97f0e1d93b93fbd4a1f77",
+      "sha256": "0e4491d9c877e35b07e48e04cf5bed8716e25d3ee8b664b1c168e4b8643d9c79",
+      "evidenceKind": "original-cross-freeze"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/legacy-agent-host/desktop-proof-sources.ts",
+      "bytes": 52632,
+      "physicalLines": 800,
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a",
+      "evidenceKind": "original-cross-freeze"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/legacy-agent-host/desktop-source-freeze.ts",
+      "bytes": 3208,
+      "physicalLines": 68,
+      "gitBlob": "4ef2cc07ede3172aa594e0eac614a1d473a5f705",
+      "sha256": "b7db02503f45ee10136de234f96d4a0999d2dfbbfb421fefb499dfe7a27ec8f9",
+      "evidenceKind": "original-cross-freeze"
+    },
+    {
+      "path": "scripts/ci/check-source-file-size.mjs",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/ci/check-source-file-size.mjs",
+      "bytes": 8145,
+      "physicalLines": 231,
+      "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+      "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+      "evidenceKind": "static-current-leaf-only"
+    },
+    {
+      "path": "scripts/ci/source-file-size-baseline.json",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/cross-team-5c55-r2/reference/scripts/ci/source-file-size-baseline.json",
+      "bytes": 9635,
+      "physicalLines": 146,
+      "gitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+      "sha256": "8e4e373812efb4556e6261353fe9c8808fc93e6393f095fd00476a11fb5a6cae",
+      "evidenceKind": "static-current-leaf-only"
+    },
+    {
+      "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan79/reference/src/renderer/components/team/kanban/KanbanBoard.tsx",
+      "bytes": 30276,
+      "physicalLines": 884,
+      "gitBlob": "15578dd958bf33460c9e166be4b1a0fdb04f4f09",
+      "sha256": "2a0ba036f8e61c2009c48883cc2184c44e4233c00dbdd496ed7cbde2a627dec0",
+      "evidenceKind": "original-board-post-flow-only"
+    },
+    {
+      "path": "src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+      "local": "/workspace/scratch/b87c90489dab/e2e-recovery/plan79/reference/src/renderer/components/team/kanban/KanbanTaskCard.tsx",
+      "bytes": 34033,
+      "physicalLines": 1007,
+      "gitBlob": "93c2ad26cfe85d2b9c02bf380e1e9a2cd47d1636",
+      "sha256": "05450de37d0ce062c02a797076a6202f76bcafdd23d2db4b16deb20561694ea2",
+      "evidenceKind": "original-board-post-flow-only"
+    }
+  ],
+  "protectedLeaves": {
+    "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d2d027f5aab70da3396c9b61fa6bf3c6f77a1f05"
+    },
+    "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f541d89ab012eee5ba912bc80991538cd3ad8367"
+    },
+    "packages/legacy-agent-host/tests/runtime-team-host.test.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c9d9f0fe21f7859188b5231819affd6e469d8a34"
+    },
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-fixture.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "86281851a8e410dcc5d78f1829a711a44a346a78"
+    },
+    "scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9d266e5683b3d2db54c3d2af031f675d6a4b3505"
+    },
+    ".github/workflows/host-emulated-acceptance.yml": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5556d12fc6ef0564c70d590e4ee9e9af2d860d69"
+    },
+    "scripts/legacy-agent-host/desktop-proof-sources.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8be2617b2c765091cecce789f028ef2bf67af60"
+    },
+    ".github/workflows/host-process-acceptance.yml": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77971d912790262a76069c101b905a5357fc9198"
+    },
+    "pnpm-lock.yaml": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b709c1ecdf6a29532ebaefca35b75ed44b2428af"
+    },
+    "scripts/ci/check-source-file-size.mjs": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "65775f7889470056ef7cd91ad6c56d9351e6cdfc"
+    },
+    "scripts/ci/source-file-size-baseline.json": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f5deeed4e406894e1ee587ed541014bcb7dde77"
+    },
+    "scripts/legacy-agent-host/desktop-task-board-group-page-read.ts": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff04e1a1626e79fc31b5bbf70f50fc763185f52b"
+    },
+    "src/renderer/components/team/kanban/KanbanBoard.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15578dd958bf33460c9e166be4b1a0fdb04f4f09"
+    },
+    "src/renderer/components/team/kanban/KanbanTaskCard.tsx": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "93c2ad26cfe85d2b9c02bf380e1e9a2cd47d1636"
+    }
+  },
+  "closure": {
+    "parentMerkleObjects": 1729,
+    "parentLeaves": 11226,
+    "mainRosterPhysicalLines": 800,
+    "supplementaryCurrentPhysicalLines": 362,
+    "supplementaryProposedPhysicalLines": 365,
+    "memberPhysicalLinesRemain": 585,
+    "commonCurrentLiteralRows": 271,
+    "commonProposedLiteralRows": 274,
+    "commonOriginalVector": 1815,
+    "expectedUniqueVectorWithSelectedRows": 1818,
+    "fastOperands": 141,
+    "newFastOperands": 0,
+    "selectedSourcePathsAlreadyFast": true,
+    "additionalTests": 0,
+    "noSourceBudgetOrOracleChanges": true
+  },
+  "documentaryPaths": {
+    "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/79-membership-source-freeze-2026-11-17.md",
+    "r1": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/membership-source-freeze-2026-11-17/prospective-r1.json",
+    "r2": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/membership-source-freeze-2026-11-17/prospective-r2.json"
+  },
+  "documentaryPathsAbsent": true,
+  "deliveryBranch": "fix/frontend-parity-e2e-bounds-20261116",
+  "primaryBranch": "fix/frontend-parity-completion-20261113",
+  "baseBranch": "feat/provider-host-frontend-parity-20261112",
+  "execution": "Inert byte/JSON/source checks only; original resulting-head gates required",
+  "requiredReview": [
+    "Exact one statement move preserves conditional-control visibility and save-only intent before Bob/submit",
+    "All original bounded preflight/no-allocation/effect/cleanup/no-replay assertions unchanged",
+    "Exactly3existing proven missing source inputs added to common literal roster; no current source body or other list changes",
+    "Current main/common/capture/verify/caps/fast closure; historical1815 evidence limits explicit",
+    "Actual documentary R2/root closure before source afterimages; frozen and actual source R2 before primary delivery"
+  ]
+}

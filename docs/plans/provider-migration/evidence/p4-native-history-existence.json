@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "scope": "Selected actual Claude native transcript is present in its captured TEST namespace; not proof of history restore",
+  "nativeHistoryFound": true,
+  "readOnlyCollectorLogSha256": "a6c81620bc3801a00074197560def390247b75b32389f15898e9fd5eeb9c0f79",
+  "sourceNativeReceiptSha256": "916c59c2ad1e6f9a5ae7c84a7cae614ae9e5c6b139148b528dce15d5d3269657"
+}

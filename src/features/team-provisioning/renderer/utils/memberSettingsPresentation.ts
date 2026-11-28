@@ -59,6 +59,11 @@ export function draftToEditableSettings(draft: MemberDraft): EditableMemberSetti
 }
 
 export function fingerprintResolvedMember(member: TeamMemberSnapshot): string {
+  if (member.configuredSettingsFingerprint !== undefined) {
+    if (!/^[a-f0-9]{64}$/.test(member.configuredSettingsFingerprint))
+      throw new Error('Invalid configured member version');
+    return member.configuredSettingsFingerprint;
+  }
   return createMemberSettingsFingerprint(memberToTargetSnapshot(member));
 }
 

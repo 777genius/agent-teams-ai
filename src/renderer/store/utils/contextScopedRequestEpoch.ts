@@ -4,7 +4,9 @@ const epochListeners = new Set<() => void>();
 
 export function subscribeContextScopedRequestEpoch(listener: () => void): () => void {
   epochListeners.add(listener);
-  return () => { epochListeners.delete(listener); };
+  return () => {
+    epochListeners.delete(listener);
+  };
 }
 
 function notifyEpochListeners(): void {
@@ -32,4 +34,5 @@ export function invalidateContextScopedRequestEpoch(): void {
 export function resetContextScopedRequestEpochForTests(): void {
   contextScopedRequestEpoch = 0;
   contextScopedRequestEpochStartedAtMs = Date.now();
+  notifyEpochListeners();
 }

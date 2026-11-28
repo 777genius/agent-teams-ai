@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "id": 14183136114,
+    "name": "opencode-v2-embedded-native-win32-x64",
+    "size_in_bytes": 13207,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14183136114",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14183136114/zip",
+    "expired": false,
+    "created_at": "2026-11-15T22:07:12Z",
+    "expires_at": "2026-11-22T22:07:11Z",
+    "updated_at": "2026-11-15T22:07:12Z",
+    "digest": "sha256:4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802",
+    "workflow_run": {
+      "id": 43766707964,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179"
+    }
+  },
+  "archive": "332-v2-win32-x64.zip",
+  "archiveIdentity": {
+    "bytes": 13207,
+    "sha256": "4b7a4213ae1a685d1c7ae4aa25ed46e59307da0762ec44569d4d44827a857802",
+    "gitBlob": "a6a00a0226bd30be97639c4f14bab8c9c7615e81"
+  },
+  "validation": {
+    "apiSize": true,
+    "apiSha256": true,
+    "allCrc32": true,
+    "safeUniqueRelativeNames": true,
+    "noSymlinks": true
+  },
+  "extract": "v2_win_x64",
+  "fileCount": 4,
+  "members": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "crc32": "aa392294",
+      "compressedBytes": 489,
+      "bytes": 780,
+      "sha256": "1bfb54cccd96a143d8a4fe804447f1ba608b1602eaf0f923e6c0ec43f1f4d70d",
+      "gitBlob": "994bf2c84036d1b609d50c40507500b63eda67e7"
+    },
+    {
+      "name": "opencode-v2-windows-custody.json",
+      "crc32": "ef258345",
+      "compressedBytes": 549,
+      "bytes": 907,
+      "sha256": "996936a7a98676dc6b0e8e59e803e6e1a270b5ab7f7e2c0b6d6d7493ecff0f69",
+      "gitBlob": "faec7e270862cb3e0465b65bb76a2ca0c241f81f"
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "crc32": "c2647111",
+      "compressedBytes": 5786,
+      "bytes": 95064,
+      "sha256": "75b454be43a36b317592ccddf0413c093cccd6812351e91c2b2103316dad032c",
+      "gitBlob": "db8b4924546895a226ee049852e6a9d72ac5fb9c"
+    },
+    {
+      "name": "opencode-v2-embedded-host-auto.json",
+      "crc32": "3f9505e8",
+      "compressedBytes": 5735,
+      "bytes": 94874,
+      "sha256": "843a8d2e3eaac4571ede1d480b9d810ad34e0ae1ba4543491a3e9cfef87661c9",
+      "gitBlob": "dad81f5ec77415166a342fd4293412fdcfc086d9"
+    }
+  ]
+}

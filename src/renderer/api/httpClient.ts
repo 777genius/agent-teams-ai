@@ -1,10 +1,7 @@
 /**
- * HTTP-based implementation of ElectronAPI for browser mode.
- *
- * Replaces Electron IPC with fetch() for request/response and
- * EventSource (SSE) for real-time events. Allows the renderer
- * to run in a regular browser connected to an HTTP server.
+ * Browser-mode ElectronAPI using HTTP requests and server-sent events.
  */
+import { createAgentBackendHttpClient } from '@features/agent-backend/renderer';
 import {
   createHttpCustomTeamTemplatesApi,
   type CustomTeamTemplatesApi,
@@ -14,6 +11,10 @@ import {
   createEmptyMemberLogStreamResponse,
   createEmptyMemberRuntimeLogTailResponse,
 } from '@features/member-log-stream/contracts';
+import {
+  NATIVE_NEXT_PROMPT_UPDATED,
+  type NativeNextPromptApi,
+} from '@features/native-prompt-suggestions/contracts';
 import { NOTIFICATION_CHANNELS_HTTP } from '@features/notification-channels/contracts';
 import {
   type AssignOrganizationTeamRequest,
@@ -36,6 +37,7 @@ import {
   type UpsertOrganizationRelationRequest,
   type UpsertOrganizationUnitRequest,
 } from '@features/organizations/contracts';
+import { createReviewFlowHttpApi } from '@features/review-flow/renderer/http';
 import { createHttpTeamGroupChatsAPI } from '@features/team-group-chats';
 import { DESKTOP_ONLY_TEAM_MEMBER_SETTINGS_API } from '@features/team-provisioning/contracts';
 import {
@@ -63,6 +65,7 @@ import {
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
+import { createAgentBackendReviewHttpTransport } from './createAgentBackendReviewHttpTransport';
 import { createHttpNotificationHistoryApi } from './notificationHistoryHttp';
 import { buildTokenUsageSnapshotRoute } from './tokenUsageSnapshotRoute';
 
@@ -81,13 +84,12 @@ import type { MemberLogStreamApi } from '@features/member-log-stream/contracts';
 import type { NotificationChannelsApi } from '@features/notification-channels/contracts';
 import type { ProjectFolderElectronApi } from '@features/project-folder/contracts';
 import type { DashboardRecentProjectsPayload } from '@features/recent-projects/contracts';
-import type { ReviewFlowElectronApi } from '@features/review-flow/contracts';
 import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
-  RuntimeProviderManagementRuntimeId,
+  RuntimeProviderModelTestRuntimeId,
 } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
@@ -203,8 +205,9 @@ function createBrowserCompanionStatus(
     updatedAt: new Date().toISOString(),
   };
 }
-function createBrowserRuntimeProviderError(
-  runtimeId: RuntimeProviderManagementRuntimeId,
+
+function createBrowserRuntimeProviderError<T extends RuntimeProviderModelTestRuntimeId>(
+  runtimeId: T,
   code: 'runtime-unhealthy' | 'unsupported-action'
 ) {
   return {
@@ -221,20 +224,22 @@ function gatewayUnavailable(): never {
   throw new Error('Gateway providers are available in the desktop app.');
 }
 export class HttpAPIClient implements ElectronAPI {
+  agentBackend = createAgentBackendHttpClient(
+    (route, request) => this.post(route, request),
+    (route) => this.get(route),
+    createAgentBackendReviewHttpTransport(
+      () => this.baseUrl,
+      (route, request) => this.post<void>(route, request)
+    ),
+    (route, request) => this.post(route, request),
+    (route, request) => this.post(route, request)
+  );
+
+  reviewFlow = createReviewFlowHttpApi();
+
   get customTeamTemplates(): CustomTeamTemplatesApi {
     return createHttpCustomTeamTemplatesApi(this.baseUrl);
   }
-  reviewFlow: ReviewFlowElectronApi = {
-    getOverview: async () => {
-      throw new Error('Review flow settings are only available in the desktop app');
-    },
-    setDefaults: async () => {
-      throw new Error('Review flow settings are only available in the desktop app');
-    },
-    setTeamOverride: async () => {
-      throw new Error('Review flow settings are only available in the desktop app');
-    },
-  };
   gatewayProvider: GatewayProviderApi = {
     listGatewayProfiles: async () => [],
     saveGatewayProfile: async () => gatewayUnavailable(),
@@ -355,6 +360,7 @@ export class HttpAPIClient implements ElectronAPI {
 
   private async parseJson<T>(res: Response, reviveDates = true): Promise<T> {
     const text = await res.text();
+    if (res.ok && res.status === 204) return undefined as T;
     if (!res.ok) {
       const parsed = JSON.parse(text) as { error?: string };
       throw new Error(parsed.error ?? `HTTP ${res.status}`);
@@ -564,6 +570,9 @@ export class HttpAPIClient implements ElectronAPI {
     },
   };
 
+  nativePromptSuggestions: NativeNextPromptApi = {
+    onUpdated: (callback) => this.addEventListener(NATIVE_NEXT_PROMPT_UPDATED, callback),
+  };
   tokenUsage: TokenUsageElectronApi['tokenUsage'] = {
     getSnapshot: (request?: TokenUsageSnapshotRequest): Promise<TokenUsageAnalyticsSnapshotDto> =>
       this.get<TokenUsageAnalyticsSnapshotDto>(buildTokenUsageSnapshotRoute(request)),

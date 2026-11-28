@@ -43,8 +43,10 @@ describe('extension IPC handlers', () => {
       pluginInstaller as unknown as ExtensionHandlerDependencies[1],
       mcpInstaller as unknown as ExtensionHandlerDependencies[2]
     );
+    const captureNative = vi.fn(() => undefined);
     registerExtensionHandlers(
-      ipcMain as unknown as Parameters<typeof registerExtensionHandlers>[0]
+      ipcMain as unknown as Parameters<typeof registerExtensionHandlers>[0],
+      captureNative
     );
 
     const installRequest = {
@@ -76,9 +78,15 @@ describe('extension IPC handlers', () => {
     expect(installResult).toMatchObject({ success: true, data: { state: 'success' } });
     expect(customInstallResult).toMatchObject({ success: true, data: { state: 'success' } });
     expect(uninstallResult).toMatchObject({ success: true, data: { state: 'success' } });
-    expect(mcpInstaller.install).toHaveBeenCalledWith(installRequest);
-    expect(mcpInstaller.installCustom).toHaveBeenCalledWith(customInstallRequest);
-    expect(mcpInstaller.uninstall).toHaveBeenCalledWith('example', 'global', undefined);
+    expect(mcpInstaller.install).toHaveBeenCalledWith(installRequest, undefined);
+    expect(mcpInstaller.installCustom).toHaveBeenCalledWith(customInstallRequest, undefined);
+    expect(mcpInstaller.uninstall).toHaveBeenCalledWith('example', 'global', undefined, undefined);
+    for (let call = 1; call <= 3; call++) {
+      expect(captureNative).toHaveBeenNthCalledWith(call, {}, undefined, {
+        panel: 'mcp',
+        scope: 'global',
+      });
+    }
 
     expect(pluginResult).toEqual({ success: false, error: 'Invalid scope: "global"' });
     expect(pluginInstaller.install).not.toHaveBeenCalled();
@@ -105,6 +113,11 @@ describe('extension IPC handlers', () => {
         handlers.get(MCP_REGISTRY_UNINSTALL)?.({}, 'example', invalidScope)
       ).resolves.toMatchObject({ success: false });
     }
+
+    expect(captureNative).toHaveBeenCalledTimes(3);
+    expect(mcpInstaller.install).toHaveBeenCalledOnce();
+    expect(mcpInstaller.installCustom).toHaveBeenCalledOnce();
+    expect(mcpInstaller.uninstall).toHaveBeenCalledOnce();
 
     expectTypeOf<PluginInstallRequest['scope']>().toEqualTypeOf<PluginInstallScope>();
     expectTypeOf<PluginInstallScope>().toEqualTypeOf<'local' | 'user' | 'project'>();

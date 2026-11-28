@@ -11,6 +11,7 @@ import { useShallow } from 'zustand/react/shallow';
 import {
   getOpenCodeGeneration,
   inferOpenCodeProviderAuthMethod,
+  isCapturedOpenCodeV1Runtime,
   isOpenCodeProviderConnectionBlocked,
 } from '../core/domain';
 
@@ -56,24 +57,32 @@ export const RuntimeProviderManagementPanel = ({
   );
   const runtimeRevision =
     nativeOpenCodeStatus?.state === 'ready' && nativeOpenCodeStatus.installed
-      ? JSON.stringify(['ready', nativeOpenCodeStatus.version ?? null, nativeOpenCodeStatus.binaryPath ?? null])
-      : nativeOpenCodeStatus && !nativeOpenCodeStatus.installed &&
+      ? JSON.stringify([
+          'ready',
+          nativeOpenCodeStatus.version ?? null,
+          nativeOpenCodeStatus.binaryPath ?? null,
+          ...(nativeOpenCodeStatus.sourceRevision ? [nativeOpenCodeStatus.sourceRevision] : []),
+          ...(nativeOpenCodeStatus.nativeGeneration ? [nativeOpenCodeStatus.nativeGeneration] : []),
+        ])
+      : nativeOpenCodeStatus &&
+          !nativeOpenCodeStatus.installed &&
           nativeOpenCodeStatus.state !== 'checking' &&
           nativeOpenCodeStatus.state !== 'downloading' &&
           nativeOpenCodeStatus.state !== 'installing'
         ? 'unavailable'
         : null;
-  const openCodeGeneration =
-    nativeOpenCodeStatus?.installed &&
-    nativeOpenCodeStatus.version &&
-    isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
+  const openCodeGeneration = isCapturedOpenCodeV1Runtime(nativeOpenCodeStatus)
+    ? 'v1'
+    : nativeOpenCodeStatus?.installed &&
+        nativeOpenCodeStatus.version &&
+        isRecognizedOpenCodeRuntimeVersion(nativeOpenCodeStatus.version)
       ? getOpenCodeGeneration(nativeOpenCodeStatus.version)
       : null;
   useEffect(() => {
     if (!open) return;
     let active = true;
     // A replaced native binary must not reuse the previous generation's cached status.
-    void invalidateOpenCodeRuntimeStatus()
+    void invalidateOpenCodeRuntimeStatus('cache-only')
       .catch(() => undefined)
       .then(() => {
         if (active) return fetchOpenCodeRuntimeStatus();

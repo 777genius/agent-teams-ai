@@ -1,0 +1,104 @@
+{
+  "status": "SCOPED_NATIVE_ORDINARY_CLAUDE_CHILD_EFFECT_PROVENANCE_AND_CONTROL_PASS",
+  "job": "429ec3caf739c14219aeb5acf168229c",
+  "runnerExitCode": 0,
+  "retentionManifestSha256": "3aee10f82d90d4eff9814a82fe8d4379a49054ca2d5086bafffd50b56e2636d2",
+  "retainedFileCount": 964,
+  "pins": {
+    "artifact": {
+      "path": "vendor/provider-migration/native-subagent-argv-v1/agent-teams-provider-implementations-0.0.0.tgz",
+      "sha256": "f66b8ea54e0ce353bb41704c3bee800b7d4915dfa6a1e7fa161340abfd8e3a01"
+    },
+    "node": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/resources/legacy-agent-host/node/v24.21.0/darwin-arm64/node",
+      "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b"
+    },
+    "fixture": "1df22463add266a7672182a11efab149a4f604965f26b1a36b9dad54a1cfdba2",
+    "model": "3e2fca0ab3bdb0f34199a0afbf19aa4b422a9fd5bbee29278ab3071b3e1503ed",
+    "hostSource": "c33e03b79970197c3851402e9d083e6c679c692fb74e1783c694fe0246e6ddfc",
+    "hostDist": "802c12ff0286680b2c30056d6662a80972ad55e1fe11f9766f19d766dc9ccd89",
+    "providerDist": "38a6befa49736292772e27cef29cc1284b4fe740828eca45258ed403317a0d38",
+    "native": {
+      "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/node_modules/.pnpm/@anthropic-ai+claude-agent-sdk-darwin-arm64@0.3.305/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+      "sha256": "ea3ea3c08d2a9634a4651e687fcf900d410c489bce2b00f22bd7352b91ba704f"
+    }
+  },
+  "provenance": {
+    "inputId": "90b028c8-98dd-5168-a7e5-712034157097",
+    "operationRef": "0bd1e106-1757-4d40-b3f1-92b42d13f0c5",
+    "childId": "child-30fc19d2f4bee2402d98e27a1af6b9d3c05bc5d2d34aea7b35565b19f10b751f",
+    "parentToolRef": "tool-ac03b1c4ada50fd542a071aa2f684a0fded33da65ae77f0d17dee11b6396a073",
+    "phases": [
+      "started",
+      "usage",
+      "fact",
+      "fact",
+      "usage",
+      "fact",
+      "fact",
+      "fact",
+      "completed"
+    ]
+  },
+  "proofs": {
+    "askDeniedBeforeChildInference": true,
+    "nativeChildTools": [
+      "Read",
+      "Write",
+      "Bash"
+    ],
+    "nativeChildTeamMcpDenied": true,
+    "actualChildWriteBytes": 34,
+    "teamAuthorityUnchanged": true,
+    "parentStop": {
+      "memberId": "a-id",
+      "generation": "1",
+      "phase": "closed",
+      "sealed": true,
+      "custody": "released",
+      "nativeReady": false,
+      "attached": false,
+      "inputs": [
+        {
+          "inputId": "3247d7d3-1ac9-53a1-9d40-c0d506fecc57",
+          "phase": "terminal",
+          "terminal": "succeeded"
+        },
+        {
+          "inputId": "90b028c8-98dd-5168-a7e5-712034157097",
+          "phase": "terminal",
+          "terminal": "succeeded"
+        },
+        {
+          "inputId": "d3d1a2ed-f4b2-5a67-9b89-55752502d8b5",
+          "phase": "unknown"
+        }
+      ],
+      "interactions": [],
+      "diagnostic": "observe-ended"
+    },
+    "childNoContinuedEffectBytes": 5,
+    "neighborOneAndTwoEffects": true,
+    "cleanup": true,
+    "hostExitCode": 0,
+    "hostSignalCode": null
+  },
+  "installed": {
+    "D": 201,
+    "SPI": 12,
+    "canonicalSpiIdentity": true,
+    "binaryPins": 5,
+    "protectedAddons": 13,
+    "allAddons": 32,
+    "sdkFiles": 3
+  },
+  "limits": [
+    "Observed actual finite TEST Bash file effect ceased after parent custody release, remained stable during fixture1.2s quiet interval and retention; neighboring native member survived",
+    "Stopped original input remains unknown rather than fabricated terminal success",
+    "No whole M11/P4/Stage1 claim; Desktop UI, real auth, M13 child evidence remain excluded",
+    "No independent global OS-process absence census or guessed-PID signaling"
+  ],
+  "evidenceScope": "Actual TEST-native Claude SDK/CLI and localhost inference; ordinary foreground child only. Stage1 remains open, Stage2 excluded.",
+  "retentionLocation": ".artifacts/provider-migration/native-subagent-f66-qualified-v1/retention.json",
+  "realAuthenticationVerified": false
+}

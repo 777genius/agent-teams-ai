@@ -257,6 +257,17 @@ describe('external OpenCode V2 support installation', () => {
     expect(await service.withStatus(native)).toMatchObject({ ...native, v2Support: 'ready' });
     const receiptPath = path.join(directory(descriptor), 'installed.json');
     const original = JSON.parse(await readFile(receiptPath, 'utf8')) as { instance: string };
+    const captured = await service.captureInstalled(native.version!, '2.1.4');
+    expect(captured).toEqual({
+      version: '2.1.4',
+      directory: path.join(directory(descriptor), original.instance),
+      manifestSha256: descriptor.manifest.sha256,
+      platform: process.platform,
+      arch: process.arch,
+    });
+    await expect(service.captureInstalled(native.version!, '2.2.0')).rejects.toThrow(
+      'not in the qualified support delivery'
+    );
     await service.install(native.version!, vi.fn());
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const originalFile = path.join(
@@ -266,9 +277,14 @@ describe('external OpenCode V2 support installation', () => {
     );
     await writeFile(originalFile, 'tamper fixture'); // Same byte length: cheap status is availability only.
     expect((await service.withStatus(native)).v2Support).toBe('ready');
+    await expect(service.captureInstalled(native.version!, '2.1.4')).rejects.toThrow();
     await service.install(native.version!, vi.fn());
     const repaired = JSON.parse(await readFile(receiptPath, 'utf8')) as { instance: string };
     expect(repaired.instance).not.toBe(original.instance);
+    expect((await service.captureInstalled(native.version!, '2.1.4')).directory).toBe(
+      path.join(directory(descriptor), repaired.instance)
+    );
+    expect(captured.directory).toBe(path.join(directory(descriptor), original.instance));
     expect(await readFile(originalFile, 'utf8')).toBe('tamper fixture');
     expect(
       await readFile(

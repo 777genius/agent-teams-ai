@@ -1,0 +1,166 @@
+{
+  "kind": "N608EFB_ORIGINAL_CREATION_THREE_PLATFORM_CHECKPOINT",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "runId": 43795234704,
+  "jobs": [
+    133062439206,
+    133062439418,
+    133062439396
+  ],
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/teams-original-run-0258.json",
+      "bytes": 30116,
+      "gitBlob": "38b6f50be1a9b7d7f877b076e039973280456746",
+      "sha256": "59e887bb7486f2a0920f7d2f7fe9ba673f0d93957bf091c46173af4224b4f730"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/owned-api-jobs-0342.json",
+      "bytes": 37937,
+      "gitBlob": "ade5adbae9357aec457c33a24e34c20d28ec60d2",
+      "sha256": "b251f8e47e5dea2a4988d12df7dda33c1f094392924b6f7661ea33a1f0695670"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-ubuntu/official-artifact-response.json",
+      "bytes": 2964,
+      "gitBlob": "a302878be57c002d6d70f6d5f9f89304e16cd1b8",
+      "sha256": "3fa12ce13c75a461dc60988c2845a2bca8a1ba8ccba4e99e34d61087ce495d57"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-win/job-133062439206.log",
+      "bytes": 88469,
+      "gitBlob": "1cbd7998aa358038200cee3f691eb9276c422cfe",
+      "sha256": "3acbff34c88e687cd8df67a905c9dd4ee0fd7dcc78d95a28c902b36c11be2cbe"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-win/original-job-log-response.json",
+      "bytes": 92425,
+      "gitBlob": "8c296276f63fb295dd377ede3c61615e1595071c",
+      "sha256": "a4313df3bda2a0c2776a6a97079b8308eaef69a14c63dbb5a6bbc95ccbffeefc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-win/artifact-14194931971.zip",
+      "bytes": 1851725,
+      "gitBlob": "6b13ff2c8c695fcfcfc02c1a3718f44d2f581a04",
+      "sha256": "aeded53e65aa33aeef234c4dcc0ea5cd1ab6693196b22c20d38eb5f2adfd195e"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-win/archive-retention.json",
+      "bytes": 8769,
+      "gitBlob": "89c40c9274dd5eb43aae23099e286154ff5a602f",
+      "sha256": "e8baf2312c7e1e178fb2e57056ad8a9b88536bae373c26f8d2f0c44107ea83e7"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-win/official-artifact-response.json",
+      "bytes": 819,
+      "gitBlob": "89e797961f5562ef6d53e6f670f73e7aaed85bcb",
+      "sha256": "badc8d4386d03835c9d5065f0ea63376ed3d56957bfd781ff648c911d7a4e90d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-mac/job-133062439418.log",
+      "bytes": 60153,
+      "gitBlob": "87118c3d3c818c8a81c90099dcb1ed9ea17574e3",
+      "sha256": "27577c3e63370036d6a1b0f3bbd6f99572b6c3d84a1494e6f531264ead6b7bb0"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-mac/original-job-log-response.json",
+      "bytes": 61511,
+      "gitBlob": "0985550132aa91988895d9fff36392e11c58471b",
+      "sha256": "4696e1aa096d85d276304e90a6094cdd06f611656bde56b964cf25ab13a30dd9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-mac/artifact-14194057867.zip",
+      "bytes": 2268628,
+      "gitBlob": "e8faabfd359a7864941e38ed46f6cc59e0741614",
+      "sha256": "58a2c943552f7aedaa51f071c46fcbd5aade6b308deca78326026739954c28b4"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-mac/archive-retention.json",
+      "bytes": 8499,
+      "gitBlob": "a669fda3245c6e7a83e4dc60cfb301360da68e59",
+      "sha256": "88d807165684b67a8b03b7025eb0fba2495be40859312eba83c5eed602e6043b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-mac/official-artifact-response.json",
+      "bytes": 1098,
+      "gitBlob": "5416699615a2393629e06c2aca6826e277d8bb53",
+      "sha256": "0e3c1860908e6a0e6391735178da4f0a686c9ca2b6459bb501266ef54914a971"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-ubuntu/job-133062439396.log",
+      "bytes": 57342,
+      "gitBlob": "fdd42e0c9b45404425dc4f8b86e425b631e72bad",
+      "sha256": "fee77fe87382fdfc4555d6a345183206682f2e510c349c0ee5f21a9347908e8d"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-ubuntu/original-job-log-response.json",
+      "bytes": 58685,
+      "gitBlob": "b7e6d16ec51f13358e257c2207fc0da221641503",
+      "sha256": "ac3380d8d0ce3519b32f9d7c2bf268cd7aa810530f9633812a6fab148243b045"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-ubuntu/artifact-14196341016.zip",
+      "bytes": 2870789,
+      "gitBlob": "f5c669e4da70a471e8c28963c920090985f123b4",
+      "sha256": "e3ed46646107240d2ddd3076a3c21a290e2967df8ddeb9c4c5c0e6d5c50ee2d6"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-ubuntu/archive-retention.json",
+      "bytes": 8579,
+      "gitBlob": "e1ecdde04e918e9d866fc2ed47a9a9bd35c00229",
+      "sha256": "8eb3c7417dee13f911c2f42dc5d03847442af44a4752e7281cd924d90fd068e1"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/audit-v2.json",
+      "bytes": 122769,
+      "gitBlob": "c5c9c5615906713411000ddf27cc4eed700b0a69",
+      "sha256": "a4a0f74733e4c489e42d5c98fcbe9860bfaf078edcdcb01f0f45b6869a1eb016"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/raw-inventory.json",
+      "bytes": 4980,
+      "gitBlob": "d043861f626bbba5205bb272f914a377842b244b",
+      "sha256": "92a3cc9ca9f40f661e3c11790324e8da5a82beb79ffa9b8f48854bc26bd91100"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/Plan29-creation-three-platforms-appendix.md",
+      "bytes": 6150,
+      "gitBlob": "a5e41666ada785b30178ed12fab15fa30989d42f",
+      "sha256": "13d7acdec617156c08ebb75a8f69e7c14909c52f4e90ec366e12604ec2479dee"
+    }
+  ],
+  "payloadCount": 20,
+  "totalPayloadBytes": 7642407,
+  "archiveMembers": 123,
+  "pngBytesChecked": 120,
+  "pngActuallyViewed": 9,
+  "qualification": {
+    "originalThreeCreationJobs": "SUCCESS",
+    "newExecution": false,
+    "realProviderQualified": false,
+    "naturalCleanupQualified": false,
+    "teamPrivacyGreenQualified": false,
+    "runtimeLogsThinkingStandaloneQualified": false,
+    "installerSelectionQualified": false,
+    "packagedNativeReleaseQualified": false
+  },
+  "allOriginalsFrozen": true,
+  "independentReviewPending": true,
+  "noSourceOrCIChange": true,
+  "proseCorrection": {
+    "onlyChangedAuditFields": "Three copied-editor visualReview.scope captions remove the erroneous create-page- prefix. Correct visible source-selected names begin copy-edited-e2e-. No artifact/source/outcome/image-view change. Appendix is byte-identical.",
+    "originalAudit": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/audit.json",
+      "bytes": 122805,
+      "gitBlob": "02305cd8974b3aadf8afdd78226a7e5b8ba3445d",
+      "sha256": "951310638d3e8abf1eca7564bd41d1ca78a4d513d8edf3eb383721daaecb3fc7"
+    },
+    "originalCheckpoint": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-n-608efb/creation-all-platforms/checkpoint.json",
+      "bytes": 6480,
+      "gitBlob": "3c527b6180b602f4853dc9b822c716d41545332a",
+      "sha256": "6a425c202e40ecc79884e3d005d0e7569b4c821c25b84344c7daed2f0eddec5c"
+    }
+  }
+}

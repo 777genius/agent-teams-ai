@@ -1,0 +1,195 @@
+{
+  "artifactId": 14192315246,
+  "officialDigestVerified": true,
+  "safeUniquePaths": true,
+  "crcAllPassed": true,
+  "originalZip": {
+    "bytes": 725322,
+    "blob": "d1af3576ca463471e811759baf57be528467f145",
+    "sha256": "7428ac649238a7d82f29790dabf29d08305a4c8d50c23d815916443a3f98c17b"
+  },
+  "entries": [
+    {
+      "path": "TEST-desktop-backend-mcR37P/controlled-process-cold-ui-receipt.json",
+      "crc32": "b4b7db28",
+      "bytes": 18263,
+      "blob": "5f789aea40f7eea95f10aba0d09b35b0c9428ba1",
+      "sha256": "feb74ece2f093b54c86681d372dbc216042726920ec73d1058f45028700ef12e"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/controlled-process-root-result.json",
+      "crc32": "15e1952e",
+      "bytes": 415,
+      "blob": "2cb00b29601cadf06491464378cbe2f4f1f7c609",
+      "sha256": "dabc7072c510763aff9fbe0a91bd6e80b6b264b209678514f36b78611c111294"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/controlled-process-before-restart.json",
+      "crc32": "20c6b9c1",
+      "bytes": 10983,
+      "blob": "02e6ef5815e0de7e05e651425af88b3355802c7a",
+      "sha256": "b849ca3f124f994d53ed2046d187ab0dd2ceb5d2c125750a0f81f906b4ba652f"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/desktop-app.log",
+      "crc32": "1cac1ed5",
+      "bytes": 14230,
+      "blob": "f473188f34fbc8647fe0ed17f94095014f1b274e",
+      "sha256": "95c84469319862d5be52ad051c68f8ae492acbc2b13af35838ce4ae96d2df638"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/desktop-backend-receipt.json",
+      "crc32": "b8f14c21",
+      "bytes": 723028,
+      "blob": "5cfb8a99043fda84d2bd831db40707832caf5eb6",
+      "sha256": "b476ebdd201e97dadc6357bbb17c2943340ff64a333e0e29b14de920255f6e75"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/desktop-descriptor.json",
+      "crc32": "7730c551",
+      "bytes": 1895,
+      "blob": "eea9f983ce6fae0c28407ce777c76e16cbde9eed",
+      "sha256": "05c75a69ca7ecae48ea12368ea8e4aebd654ed90a83a6ec0b151a337e0a03c24"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/host-profile.json",
+      "crc32": "be83064a",
+      "bytes": 1288,
+      "blob": "5b6bfe2c0a07a5e7b866cb8bca8f2230acda53eb",
+      "sha256": "dd7479f52cab06a6b9f08952a1ad30e43e9cbac3b2603d0854cf85533d054fd7"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/process-ui-seed.json",
+      "crc32": "24f47df9",
+      "bytes": 269,
+      "blob": "264f97dd99addc08eef401ca4f2cfe29a2d09c51",
+      "sha256": "44117705e424b539607050a7c3830dc22297f38e8c1d115e28332ea84c4ddb7f"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-original-native-process-after-stop.png",
+      "crc32": "71f2ab2d",
+      "bytes": 73540,
+      "blob": "b1c15e570866fe68ad94084a4cac8994f89a76b0",
+      "sha256": "f88478b2736e71d8ffc99f0e56a94c3ae48919b5d9917374df615d9a10edcfbf"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-original-native-process-before-stop.png",
+      "crc32": "ad1d12f0",
+      "bytes": 73412,
+      "blob": "88ae78cd875f3cf982b264b084894d533c39602c",
+      "sha256": "b383ffa2807ebf59af14d804ee35c3b59f6d141eddadfd23691e04d27ace2557"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-original-process-stop-attempted.json",
+      "crc32": "1d2ad9cf",
+      "bytes": 239,
+      "blob": "829dd20eed7d2bef4702424e18a9e7727a3b7581",
+      "sha256": "d6cd809f766f5976ffbbf58bb96bb6f880448cf99874347949b5d2c308f0bc6a"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-seed-receipt.json",
+      "crc32": "663c41c0",
+      "bytes": 2070,
+      "blob": "a3cc936f230fb6618b04bcb6fd423de5329f851d",
+      "sha256": "b5b74fc7c419b5a1f0bfc2616d6deb743e30ae3f03dc882f5e8dcfe8ec0aa6fa"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-neighbor-lifecycle.ndjson",
+      "crc32": "71f589e3",
+      "bytes": 372,
+      "blob": "3accf89513e77754f67cae9fad64affa145e2e4e",
+      "sha256": "407861e9cdcfb342debc9a8d733214089f7b28548b030a077cc7923d9d14ed9d"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-neighbor.json",
+      "crc32": "6bd8f376",
+      "bytes": 168,
+      "blob": "a4808a51614486e2d3f2fbf4d4025c574c33cdcb",
+      "sha256": "e016685a761df0416d07c25a700c94edf48166a6bf6159a4fc48f77095624ad2"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-primary-lifecycle.ndjson",
+      "crc32": "71e9f75b",
+      "bytes": 369,
+      "blob": "c04942edd96a27ff787a0f7e997f1b187e1a2462",
+      "sha256": "c2ff3825fc8c884275057e3c77f472e4f5703f1a474047c5c29bf6b2a2d99e6b"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-primary.json",
+      "crc32": "81378490",
+      "bytes": 167,
+      "blob": "5a7f1ccc0e911bd9b7121d1e6282e628ecd66ec2",
+      "sha256": "1b69df028020b9ac92f265d6a5d92278dcee1f070fa378a1fdbb2b63342e6948"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/process-custody/manifest.json",
+      "crc32": "09a593f5",
+      "bytes": 1170,
+      "blob": "5c34a107e9c30e8095c69896f38dddabc0d30dab",
+      "sha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/process-custody/registered-process.node",
+      "crc32": "5a16e350",
+      "bytes": 35304,
+      "blob": "f617887b54fa3c77ed601e5308641ecb1c0105e3",
+      "sha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/process-ui-capture.json",
+      "crc32": "ee1c049e",
+      "bytes": 1646,
+      "blob": "1f608cedb7c64d6b8d343646d5372ac7383fbda3",
+      "sha256": "fb521f3ff28d400048b6f251b8440ff46ef1f9625ee9b13caa56dc057cff99f3"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "b82b9e14",
+      "bytes": 2429,
+      "blob": "10eb2b91f1296ff572764c6ebda0ed5054cae36f",
+      "sha256": "7e8ee4637eb75bb916728442bd676d3a0ba943da8f1e43419d35a17e81e904c9"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "6fefc396",
+      "bytes": 271,
+      "blob": "02d3080641af175ddad7ea7627d39498748de4bb",
+      "sha256": "76f22e13e4252182cd6e9b1a6091ff5336132d299c109f6f83f877f217ce56cd"
+    },
+    {
+      "path": "host-emulated-process-cold-ui.log",
+      "crc32": "dd25f790",
+      "bytes": 225,
+      "blob": "79989ca6f8c9639a80fd0d522fe14a05a62581ee",
+      "sha256": "62702e776ee3d9f108ce23e7efc0d2af9e69c69054d0685f3f2454324907062c"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "crc32": "efb881d3",
+      "bytes": 664,
+      "blob": "26e4f911ae0765a0b7c6e38fda46d10f3ff17967",
+      "sha256": "95a339b022930b62f270ce2c2f760f749160ca0ab0426b0a36262939472658fa"
+    }
+  ]
+}

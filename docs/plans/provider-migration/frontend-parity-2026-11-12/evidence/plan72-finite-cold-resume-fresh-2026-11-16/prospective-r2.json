@@ -1,0 +1,239 @@
+{
+  "kind": "PLAN72_INDEPENDENT_PROSPECTIVE_R2",
+  "reviewer": "/root/p09_review",
+  "decision": "GO_PROSPECTIVE_DOCUMENTARY_SELECTION_ONLY",
+  "concreteBlockers": [],
+  "decisionBoundary": [
+    "The exact root-selected Plan72 is a bounded five-path finite TEST W07 continuation on source 12d01, unchanged at documentary descendant b3ddf344. No source afterimage has been created or approved in this review.",
+    "This GO permits the selected documentary gate to proceed under the existing root authorization. Source authoring remains behind complete actual documentary readback/R2, followed by separate exact source R1/R2 and actual source readback.",
+    "Only resulting-head original CI may establish compile, lint, timing, native lifecycle or cleanup outcomes. Neither the donor checkpoint nor earlier receipts qualify a new source."
+  ],
+  "reviewedDocuments": {
+    "plan.md": {
+      "bytes": 12927,
+      "physicalLines": 61,
+      "gitBlob": "ca85b023f287e59c1a17e78b4874a2dc64eb736f",
+      "sha256": "24d4334bd43e79d001791555565dd906e1c1903ffc672c780016e907e7452590"
+    },
+    "prospective-r1.json": {
+      "bytes": 24093,
+      "physicalLines": 462,
+      "gitBlob": "e2d3bf3d54cfb2b78fc3d300603fff5e06ba0034",
+      "sha256": "a0ec4342c4e86ec0985a8b2487c495929dfaa3919bb047b6df350a580f477cea"
+    },
+    "preimage-bindings.json": {
+      "bytes": 24208,
+      "physicalLines": 438,
+      "gitBlob": "064626a5756b76099af1d95decf85c2b34234018",
+      "sha256": "23f11f814656d037d91114f1399a206b9337ee5c93f6ea9a88c4e7511e620259"
+    }
+  },
+  "base": {
+    "head": "12d01df13271def88d7a1dd86da6ec70ca243902",
+    "tree": "8d778f4f6f4b0aa4043ae3348b91208e701be452",
+    "leaves": 11152,
+    "allDirectoryHashesMatch": true,
+    "truncated": false,
+    "directoryEntriesExcludingRoot": 1707,
+    "directoriesIncludingRoot": 1708
+  },
+  "currentDocumentaryDescendant": {
+    "head": "b3ddf344cbfdb13b152036f5a865c0d3c29365b4",
+    "tree": "1150bc2c4e9d6a2b7dda0e4215fe138092402a86",
+    "leaves": 11155,
+    "allDirectoryHashesMatch": true,
+    "truncated": false,
+    "directoryEntriesExcludingRoot": 1708,
+    "directoriesIncludingRoot": 1709
+  },
+  "binding": {
+    "fourExistingPreimagesMatchBothCompleteOfficialTrees": true,
+    "newColdPathAbsentBothTrees": true,
+    "planAndEvidencePathsAbsentAtCurrentDocumentaryDescendant": true,
+    "all11152BaseLeavesRemainUnchangedAtB3dd": true,
+    "selectedPaths": [
+      {
+        "repositoryPath": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "bytes": 59488,
+        "physicalLines": 800,
+        "gitBlob": "0c8931cf13eb39e28cf028eecb297f25fb3169a8",
+        "sha256": "e86c90a9fc0658daa10a74b681548988cd5c8889db4446b03841d13934aa137f",
+        "bothOfficialTreesMatch": true
+      },
+      {
+        "repositoryPath": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+        "absentBothTrees": true
+      },
+      {
+        "repositoryPath": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+        "bytes": 25025,
+        "physicalLines": 291,
+        "gitBlob": "e0a107ffb1f57b62396c725cef57e9cadb78c5b1",
+        "sha256": "ece91a5b47fb81afe2f271a2ec627e577615eca256f309c2a51dcce291d41767",
+        "bothOfficialTreesMatch": true
+      },
+      {
+        "repositoryPath": "tools/owned-process-broker/tsconfig.json",
+        "bytes": 557,
+        "physicalLines": 6,
+        "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+        "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+        "bothOfficialTreesMatch": true
+      },
+      {
+        "repositoryPath": ".github/workflows/host-emulated-acceptance.yml",
+        "bytes": 142070,
+        "physicalLines": 1771,
+        "gitBlob": "bd50fd9636f7b63bf8501bca0c6c5a296e2e21bb",
+        "sha256": "5da008329c759a03bbe83f984603048d5b832e1b5f8e9932beaad8385590f7ea",
+        "bothOfficialTreesMatch": true
+      }
+    ],
+    "noWholeExternalChainAdoption": true,
+    "sourceAfterimages": 0,
+    "requiredFutureRebind": "Preserve any intervening selected Plan71 or other source changes. Recheck all four preimages/new-path absence immediately before source authoring/publication; only exact non-overlapping composition may proceed."
+  },
+  "independentDataProof": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan72-finite-cold-resume-fresh/independent-data-proof.json",
+    "bytes": 10755,
+    "physicalLines": 274,
+    "gitBlob": "217315c320e154f3af69cab115edd66fdafd40c3",
+    "sha256": "636d716e28bf8993144c1d8ee661855ad2fa995d565b6c3dd5e6bf3797582296"
+  },
+  "readScope": {
+    "fullDocuments": [
+      "plan.md: 61 lines",
+      "root-owned prospective-r1.json: 462 lines",
+      "preimage-bindings.json: 438 lines"
+    ],
+    "fullCurrentSelectedBodies": [
+      "Scenario: 800 lines",
+      "Profile: 291 lines",
+      "tsconfig: 6 lines"
+    ],
+    "currentWorkflow": "Full bytes independently hashed/tree-joined; the complete 136-operand fast-lint command was literally parsed and compared in order. No fresh whole-workflow semantic or runtime qualification claim.",
+    "externalDonor": "Complete Cold 102-line helper, full Scenario diff against the fully read current owner, and all Profile/tsconfig/workflow deltas read. Complete donor bytes independently hashed to the root-selected identities; no donor full-tree/ancestry API read performed here.",
+    "peer": "Exact 463-line peer body hashed/current-tree joined; semantic read of lines 1-100, 157-220 and 346-463 covering actual PID envelope, persisted history, UUID admission, native input and started/initialized events. Unread unrelated peer branches are not claimed as a fresh full semantic review.",
+    "additionalCheckpointOwners": "Full readMemberCheckpoints.ts 37 lines and checkpointContracts.ts 92 lines; CheckpointCoordinator.ts lines 1-146 including complete readAvailable. All complete bodies independently hashed against current b3dd leaves.",
+    "nativeEntry": "Current nativeEmulatedProviderGate.ts complete body hash/tree joined; source-selection and original entry/exit lines 177-231 read. No local invocation.",
+    "normativeBoundaries": "P08 exact current body hash/tree joined; rows 183-201, native-first 704-715 and existing cut limit 872-883 read. Full current CLAUDE.md, critical guardrails and delivery policy read. No direct-main or execution authority inferred from them."
+  },
+  "sourceSemanticFindings": [
+    {
+      "id": "W07-selected-existing-owner",
+      "finding": "Original physical custody remains entirely in Scenario. Cold is a concrete finite lifecycle helper receiving existing capabilities/data; type-only Job export adds no runtime import cycle or new ownership implementation.",
+      "evidence": "Current Scenario open/attach/handle retains original capturedMainWindowsCustody, captured root/birth/HANDLE witnesses, one job allocation record per capability and the unchanged 64-job limit. Donor Cold imports Job with import type.",
+      "limit": "Future concrete postimages must retain this shape; the prospective plan is not a compiled implementation."
+    },
+    {
+      "id": "Plan64-failure-cleanup-preserved",
+      "finding": "The selected plan explicitly rejects the donor cleanup regression. Keep current (job.resumed || failure !== undefined), original root/witness, Stop/drain/release assertions, HANDLE wait zero, sentinel and aggregation/rethrow.",
+      "evidence": "Current Scenario line 316 contains the exact failure-aware predicate; the donor diff removes it. That donor hunk is excluded, while the complete 7009-byte outer suffix is literally unchanged.",
+      "limit": "An additional cold runtime is acceptable only as a normal retained Job in the existing cold epoch. No untracked root or cleanup fallback is selected."
+    },
+    {
+      "id": "Warm-launch-and-replay-oracles-preserved",
+      "finding": "Only the explicit epoch parameter and closed A/B/B-fresh command key are selected for Launch. Warm calls preserve their original first epoch and A/B command IDs.",
+      "proof": "Independent inverse normalization of the donor Launch header, epoch. and ${action} restores all 9773 original bytes and all 40 assertions. Boot 811 bytes/1 assertion, generic cold replay 1426 bytes/14 assertions, outer suffix 7009 bytes/32 assertions are exactly unchanged.",
+      "limit": "This confirms source preservation, not test execution. Every non-Claude authority/probe/schedule path and budget remains in the selected owner unchanged."
+    },
+    {
+      "id": "Checkpoint-read-after-existing-Stops",
+      "finding": "Capture stays at its original warm-live point. One new runtime.checkpoints.read after both existing Stops establishes only current owner eligibility of the exact checkpoint/reference/source generation.",
+      "evidence": "readMemberCheckpoints checks current captured roster and refuses attached custody before reading availability. CheckpointCoordinator.readAvailable reads existing publication/payload under authorization and requires closed/released, idle state, compatible configuration and available next generation; it neither captures nor allocates.",
+      "requiredAssertions": "One exact ID/reference match, original source generation, owner-eligible and native-backing-unverified on selected availability/row, nativeBacking=unverified at the original contract level.",
+      "limit": "Eligibility is deliberately not native-history proof. The subsequent actual Restore remains necessary; no additional checkpoint/publication or new root may be used."
+    },
+    {
+      "id": "Cold-exact-root-accounting",
+      "finding": "Keep original restored native readiness, string generation and distinction from warm, exact source A/role/Team/workspace, one live restored Job and initialized/session joins. Strengthen the selected helper with cold.jobs.length===1 immediately after Restore and ===2 after fresh Launch.",
+      "evidence": "Current generic cold replay proves zero Jobs/entries/input before Restore. Cold still uses the same cold.jobs array and jobEntry original captured witness/entry interval. Fresh must be exactly the job at the pre-fresh index, one new allocation.",
+      "limit": "The donor alone has only live/root-increment checks; the selected plan explicitly adds total counts. Those additions require exact source R2 later."
+    },
+    {
+      "id": "Native-history-observation-with-correct-identifier-domain",
+      "finding": "The unchanged peer already emits the finite facts required for the new history assertion. Select one warm A TEST_UI_BOOT input by the captured warm entry PID and use its native inputId, not the Team delivery ID returned by boot.",
+      "evidence": "Peer effect() writes its actual process.pid. Input admission validates frame.uuid and non-replay before recording inputId. Resume reads bounded history, validates native session/cwd/sidechain, builds userIds and bootRetained. started emits that record with native session and restored flag before further input.",
+      "requiredJoin": "Exactly one restored started event joined to the existing captured restored Job/entry PID, exact original native session and restored=true; record/array shape, bootRetained===true, and userIds includes the exact warm native UUID.",
+      "limits": [
+        "The observation does not create PID signal authority. Existing original Job/HANDLE custody remains the authority.",
+        "A same-session/history SHA without an independently captured earlier history digest is not exact byte equality.",
+        "No TEST_UI_RESUME marker, extra input, peer write, event change or protocol extension is required or selected."
+      ]
+    },
+    {
+      "id": "Restore-replay-and-explicit-continuation",
+      "finding": "Keep identical Restore replay response and unchanged Jobs/entries/input before continuation. Send exactly the existing boot continuation and then Stop its actual restored generation closed/released.",
+      "evidence": "Both current Restore block and donor Cold retain the snapshots and explicit continuation; moving the 25-line block does not justify removing any existing assertion.",
+      "limit": "The selected history checks belong before the new continuation so later history cannot masquerade as retained warm input."
+    },
+    {
+      "id": "Fresh-B-independent-run",
+      "finding": "Reuse the same Launch closure in the cold epoch with Team A slot/source B/B-fresh, after restored-A Stop. Retain exact source/role/Team/workspace plus different launchId, different physical capability and one fresh initialized event with restored=false and a new nonempty native session.",
+      "evidence": "The donor closure factory uses existing cold client/owner and a new closed command key. Existing unchanged boot returns a Team delivery ID; the fresh input assertion separately joins actual PID/session/marker/native UUID and unchanged prior-input prefix.",
+      "limits": [
+        "No globally increasing generation across unrelated runs is asserted.",
+        "Readiness must leave input snapshots unchanged. Exactly one explicit fresh input and one Stop are selected.",
+        "Total cold root count must be exactly two, with original outer physical cleanup for both."
+      ]
+    },
+    {
+      "id": "Arithmetic-and-budgets",
+      "finding": "Selected target lifecycle has two Main/Host epochs and warm A/restored A/fresh B runtime executions, exactly two cold roots, three target business inputs and two cold Stops. Existing warm B, source-publication, management and schedule paths remain separately counted.",
+      "deltaFromCurrentClaudeJourney": "One extra cold root, one explicit input, one Stop and one read-only checkpoint availability read; no readiness input, version/publication or model-probe root.",
+      "budgetBoundary": "Plan retains controller, phase/profile deadlines and original poll/request behavior. Current Profile still has 15s management/request and original 30s model-probe/90s input limits. The referenced 120s controller is unchanged by the five-path selection; this review makes no new execution or elapsed-fit claim."
+    }
+  ],
+  "coverageAndCaps": {
+    "mainDesktopVector": {
+      "count": 1783,
+      "sha256": "ef73662d6baadbb38ee4c7b382c716c87387aa1353ad24939497685c3ce2ed55",
+      "allFiveSelectedPathsAbsent": true,
+      "rosterEditsSelected": 0
+    },
+    "fastLint": {
+      "command": "pnpm lint:fast:files --",
+      "count": 136,
+      "unique": 136,
+      "orderedSha256": "cf6ef50f584dd0c910deaacf9a13d2e81cb4408c0eda1eae6a787e391eeab0b7",
+      "onlySelectedAddition": "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "prospectiveCount": 137
+    },
+    "pinning": "Current ownSources array is captured once into fixture.pins; Scenario final cleanup checks every pin. Selected Cold is added exactly once there, not to the unrelated main Desktop vector.",
+    "typeRoute": "Cold is imported by the existing integration Scenario and is added only to the existing tools integration exclusion list. The selected workflow edit is only its single fast operand; no new type framework or job is selected.",
+    "donorChangesExcluded": [
+      "Plain job.resumed cleanup regression",
+      "nativeRetainedProviderFixture.ts tsconfig exclusion",
+      "Six unrelated retained/vendor/model fast operands",
+      "Deletion of current native-stop and three Plan68 clock/utility operands"
+    ],
+    "naturalSourceCap": "Current Scenario is exactly 800 lines. Coherent existing Restore extraction yields donor 797 lines; added root/history assertions belong in the small concrete Cold helper. No source packing, cap exception, assertion deletion or unrelated extraction is authorized.",
+    "nativePeerAndOtherRostersUnchanged": true
+  },
+  "meaningfulResultingHeadAcceptance": [
+    "Original type/lint/process routes must execute the final source, including the exact new Cold pin and one fast-lint operand. No local compile/test result is asserted.",
+    "Actual original receipts must show cold total 1 immediately after Restore and total 2 after fresh Launch, both native ready observations, source/role/Team/workspace and captured Job/entry joins.",
+    "Actual restored started history must contain the original warm native UUID and bootRetained with exact native session/restored=true before continuation; identical Restore replay allocates and sends nothing.",
+    "Fresh opening must leave input untouched, then exactly one explicit native input with a new UUID/session and unchanged previous prefix must complete; both cold Stops and physical root/HANDLE cleanup must be confirmed.",
+    "Original failure/cleanup paths and unchanged controller/phase budgets remain mandatory. Failure or timeout remains an observed failure; no deadline relaxation, retry or PASS transfer is selected."
+  ],
+  "excludedQualification": [
+    "Genuine Claude/Codex or new native baseline",
+    "W01, W05, P09 strict contract, Plan40 choices",
+    "Desktop/packaged/release or full migration",
+    "Genuine M16/native mixed Resume",
+    "Producer/archive adoption or external whole-chain qualification"
+  ],
+  "executionAndMutation": {
+    "sourceAfterimagesWritten": 0,
+    "projectCompilerTestsLintInstallVmNativeProviderGui": 0,
+    "actionsQueriesDownloadsOrDispatches": 0,
+    "gitOrApiMutations": 0,
+    "changesMade": "Only inert independent proof/report and backup copies of already held exact review inputs."
+  },
+  "recovery": {
+    "scratch": "/tmp/e2e-original-artifacts/reviews/plan72-finite-cold-resume-fresh",
+    "backup": "/workspace/scratch/b87c90489dab/e2e-recovery/plan72",
+    "fullReportAndSelectedInputsCheckpointedInFunctionsStore": true
+  }
+}

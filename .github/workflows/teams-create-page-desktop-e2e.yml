@@ -16,6 +16,10 @@ on:
       - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
+      - 'scripts/e2e/teams-create-page-owned-processes.mjs'
+      - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.test.mjs'
       - 'src/renderer/components/team/**'
       # Task-board presentation has its own Linux/native Kanban E2E.
       - '!src/renderer/components/team/kanban/**'
@@ -39,6 +43,10 @@ on:
       - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts'
       - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
+      - 'scripts/e2e/teams-create-page-owned-processes.mjs'
+      - 'scripts/e2e/teams-create-page-owned-processes.test.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.mjs'
+      - 'scripts/e2e/teams-create-page-schedule-observation.test.mjs'
       - 'src/renderer/components/team/**'
       # Task-board presentation has its own Linux/native Kanban E2E.
       - '!src/renderer/components/team/kanban/**'
@@ -69,14 +77,14 @@ jobs:
     # Desktop E2E launches real Electron; native modules must use Electron's ABI.
     # The node-ci install profile skips @electron/rebuild and leaves SQLite unavailable.
     steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: false
       - name: Enable Windows long paths
         if: runner.os == 'Windows'
         shell: pwsh
         run: git config --global core.longpaths true
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
@@ -91,14 +99,27 @@ jobs:
           fc-match 'Noto Sans CJK TC' | grep -F 'Noto Sans CJK TC'
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
-      - name: Ensure Electron is installed before measuring app startup
-        run: node ./scripts/ensure-electron-install.cjs --strict
-      # Stage the real, checksum-pinned terminal runtime outside the CDP startup deadline.
-      - name: Stage pinned terminal runtime on Windows
-        if: runner.os == 'Windows'
+      # The Stage 1 extracted Host is a workspace export consumed by Vite's
+      # Electron main bundle; installing alone does not produce dist/lifecycle.
+      - name: Build isolated Host before Electron startup
+        run: pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Typecheck application before Electron startup
+        run: node ./node_modules/@typescript/native/bin/tsc --noEmit
+      # dev:mcp bootstraps terminal-platform before opening CDP. Stage the exact
+      # lockfile-pinned and checksum-verified runtime with Actions credentials,
+      # instead of leaving a network download inside the 90s UI startup deadline.
+      - name: Stage pinned terminal-platform runtime before Electron startup
+        timeout-minutes: 10
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: node ./scripts/ensure-terminal-platform-runtime.mjs
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node ./scripts/stage-terminal-platform-runtime.mjs --ensure
+      # node-ci intentionally skips Electron's postinstall. Validate it explicitly
+      # so failures retain the installer's diagnostics rather than a CDP timeout.
+      - name: Ensure Electron binary before UI E2E
+        timeout-minutes: 10
+        run: node ./scripts/ensure-electron-install.cjs --strict
+      - name: Verify owned Windows process census and fail-closed teardown invariants
+        run: node --test scripts/e2e/teams-create-page-owned-processes.test.mjs scripts/e2e/teams-create-page-schedule-observation.test.mjs
       - name: Exercise actual Electron Create/Back/Resume/Copy/Launch
         shell: bash
         env:

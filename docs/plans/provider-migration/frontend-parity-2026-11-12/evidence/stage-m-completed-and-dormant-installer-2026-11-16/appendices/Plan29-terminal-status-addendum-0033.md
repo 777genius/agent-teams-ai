@@ -1,0 +1,7 @@
+### Source 9e542 terminal native-cohort addendum — 2026-11-16 00:33 UTC
+
+The original source9e542 Process run43776922660 and V2/static run43776922841 are now both completed/cancelled, attempt1, updated2026-11-16T00:32:42Z. The final original jobs read at00:33:24 retains the same seven successful leaves and two Darwin P09 failures recorded in the frozen00:17:46 evidence checkpoint. Their original receipts, source qualification, cleanup and skip limits are unchanged.
+
+The five formerly queued rows are now cancelled at00:32:42 with empty step arrays: Process Linux133005206377; V2 Ubuntu SPI133005207826; HTTP discovery133005207978; Ubuntu static133005208251; and native Linux133005208337. They have no executed step or qualified PASS in this record. An aggregate cancelled status does not replace the nine completed original leaf outcomes, and the seven successful leaves do not make either workflow aggregate a success.
+
+Both complete final jobs APIs and run APIs are retained beside this addendum. This is a terminal API observation, not evidence of reviewer reruns or a new native action; no CI dispatch, rerun or cancellation was issued by this reviewer. The frozen source9e completed-evidence ZIP, its exact00:17:46 checkpoint and independent qualification R2 remain unchanged. This terminal addendum creates no M/privacy RED/GREEN, packaged/Desktop, real-vendor, P09 or release qualification. Polling these two terminal original cohorts stops after this retained read.

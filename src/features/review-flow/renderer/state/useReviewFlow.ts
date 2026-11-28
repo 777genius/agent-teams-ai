@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 
+import { useAppTranslation } from '@features/localization/renderer';
 import { findProjectCopyOwner, projectCopyLabel } from '@features/team-project-context/renderer';
 import { api } from '@renderer/api';
 import { useStore } from '@renderer/store';
@@ -13,7 +14,7 @@ import {
   reviewFlowTeamOf,
   type TeamLevelReviewFlow,
 } from '../view-model/projectTeamReviewFlow';
-import { reviewFlowBoardsOf } from '../view-model/reviewFlowViewModel';
+import { isReviewFlowTeamUnavailable, reviewFlowBoardsOf } from '../view-model/reviewFlowViewModel';
 
 import { createReviewFlowStore } from './createReviewFlowStore';
 
@@ -69,6 +70,7 @@ export function useReviewFlowOverview(
       defaultsError: s.defaultsError,
       overrides: s.overrides,
       unreadableTeams: s.unreadableTeams,
+      unavailable: s.unavailable,
       projectTeams: s.projectTeams,
       load: s.load,
       saveDefaults: s.saveDefaults,
@@ -117,12 +119,24 @@ export function useTeamReviewFlow(boardName: string): TeamReviewFlow {
   const rawProjectTeams = useReviewFlowStore((state) => state.projectTeams);
   const teamName = reviewFlowTeamOf(rawProjectTeams, boardName);
   const { defaults, overrides, unreadableTeams, projectTeams, load, saveTeamOverride } = overview;
+  const { t } = useAppTranslation('team');
+  const teams = useStore((state) => state.teams);
+  const unavailableHere = [
+    teamName,
+    boardName,
+    ...(rawProjectTeams[teamName]?.projects.map((project) => project.executionTeamName) ?? []),
+  ].some((name) =>
+    isReviewFlowTeamUnavailable(
+      teams.find((entry) => entry.teamName === name) ?? { teamName: name },
+      overview.unavailable
+    )
+  );
   const override = overrides[teamName];
   const policy = useMemo(() => resolveReviewFlowPolicy(defaults, override), [defaults, override]);
   return {
     teamName,
-    status: overview.status,
-    error: overview.error,
+    status: unavailableHere ? 'error' : overview.status,
+    error: unavailableHere ? t('reviewFlow.unavailable', { count: 1 }) : overview.error,
     defaults,
     defaultsError: overview.defaultsError,
     needsRepair: unreadableTeams.includes(teamName),

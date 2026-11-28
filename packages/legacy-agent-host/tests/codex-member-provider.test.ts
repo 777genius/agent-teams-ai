@@ -1,0 +1,1219 @@
+import { codexMcpPolicy } from '../dist/adapters/providers/codexMcpPolicy.js';
+import type { CodexConfiguredMcpCatalog } from '@agent-teams/provider-implementations/codex';
+import assert from 'node:assert/strict';
+import { channel } from 'node:diagnostics_channel';
+import { readFileSync } from 'node:fs';
+import { performance } from 'node:perf_hooks';
+import { managementDigest } from '../dist/management/identity.js';
+import { ChildProcess } from 'node:child_process';
+import { PassThrough, Writable } from 'node:stream';
+import { test } from 'node:test';
+
+import {
+  codexLaunchArguments,
+  createCodexMemberProvider,
+} from '../dist/adapters/providers/CodexMemberProvider.js';
+import { createTeamMcpTools } from '../dist/mcp/tools.js';
+import { applyLaunchConfiguration } from '../dist/composition/launchConfiguration.js';
+import { runtimeProfileSchema } from '../dist/composition/runtimeProfile.js';
+
+import type {
+  CapturedProcessLaunch,
+  CapturedProcessPort,
+} from '../dist/adapters/providers/CapturedProcess.js';
+import type { MemberProviderContext } from '../dist/adapters/providers/MemberProvider.js';
+import type { CodexMemberProfile } from '../dist/composition/runtimeProfile.js';
+import type { Event } from '@agent-teams/provider-session-contracts';
+
+const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+const record = (value: unknown): Record<string, unknown> => {
+  assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+  return value as Record<string, unknown>;
+};
+
+/** In-memory process streams only. Real public D handles all requests and projections. */
+class ControlledChild extends ChildProcess {
+  override stdin: Writable;
+  override stdout = new PassThrough();
+  override stderr = new PassThrough();
+  override stdio: [Writable, PassThrough, PassThrough, undefined, undefined];
+  readonly frames: Record<string, unknown>[] = [];
+  required: string[] = [];
+  mcpConfiguration: Record<string, unknown> | undefined;
+  unexpectedMcp = false;
+  failInitialize = false;
+  startupStderr = '';
+  protocolRevision: CodexMemberProfile['protocolRevision'] = '0.162.0';
+  holdTurn = false;
+  turns = 0;
+  constructor() {
+    super();
+    this.stdin = new Writable({
+      write: (chunk: Buffer, _encoding, done) => {
+        try {
+          const frame = record(JSON.parse(chunk.toString()) as unknown);
+          this.frames.push(frame);
+          if (frame.id === undefined) {
+            done();
+            return;
+          }
+          const params = record(frame.params);
+          if (frame.method === 'initialize' && this.startupStderr) this.stderr.write(this.startupStderr);
+          let result: unknown = {};
+          if (frame.method === 'initialize' && this.failInitialize) {
+            this.stdout.write(
+              `${JSON.stringify({ id: frame.id, error: { code: -32000, message: 'TEST-rejection' } })}\n`
+            );
+            done();
+            return;
+          }
+          if (frame.method === 'config/read')
+            result = {
+              config: {
+                features: { apps: false },
+                mcp_servers: this.mcpConfiguration,
+                ...(this.protocolRevision === '0.169.0' ? { client_search_provider: null } : {}),
+              },
+            };
+          if (frame.method === 'thread/start') result = { thread: { id: 'TEST-thread' } };
+          if (frame.method === 'thread/resume') {
+            assert.equal(params.threadId, 'TEST-thread');
+            result = { thread: { id: 'TEST-thread' } };
+          }
+          if (frame.method === 'mcpServerStatus/list') {
+            assert.equal(params.threadId, 'TEST-thread');
+            assert.equal(params.serverName, this.mcpConfiguration ? undefined : 'team');
+            result = {
+              data: [
+                {
+                  name: 'team',
+                  authStatus: 'bearerToken',
+                  runtimeStatus: 'connected',
+                  toolsError: null,
+                  resources: [],
+                  resourceTemplates: [],
+                  tools: Object.fromEntries(
+                    this.required.map((name) => [name, { name, inputSchema: {} }])
+                  ),
+                  ...(this.protocolRevision === '0.169.0' ? { toolListMeta: { 'TEST/new-native-metadata': true } } : {}),
+                },
+              ],
+              nextCursor: null,
+            };
+            if (this.mcpConfiguration) {
+              const rows = record(result).data as Record<string, unknown>[];
+              for (const [name, value] of Object.entries(this.mcpConfiguration))
+                if (name !== 'team')
+                  rows.push({
+                    name,
+                    authStatus: 'unsupported',
+                    runtimeStatus: record(value).enabled === false ? 'disabled' : 'connected',
+                    toolsError: null,
+                    resources: [],
+                    resourceTemplates: [],
+                    tools: {},
+                  });
+              if (this.unexpectedMcp)
+                rows.push({
+                  name: 'TEST-uncaptured',
+                  authStatus: 'unsupported',
+                  runtimeStatus: 'connected',
+                  toolsError: null,
+                  resources: [],
+                  resourceTemplates: [],
+                  tools: {},
+                });
+            }
+          }
+          if (frame.method === 'turn/start') {
+            const turnId = `TEST-turn-${++this.turns}`;
+            result = { turn: { id: turnId } };
+            if (!this.holdTurn) setImmediate(() => {
+              const item = {
+                id: `TEST-tool-${this.turns}`,
+                type: 'commandExecution',
+                command: 'TEST-only command',
+                cwd: '/TEST-workspace',
+                status: 'inProgress',
+                ...(this.protocolRevision === '0.169.0' ? { startedAtMs: 1_700_000_000_000, completedAtMs: null } : {}),
+              };
+              this.notify('item/started', {
+                threadId: 'TEST-thread',
+                turnId,
+                item,
+              });
+              this.notify('item/completed', {
+                threadId: 'TEST-thread',
+                turnId,
+                ...(this.protocolRevision === '0.169.0' ? { contentTokenCount: 0 } : {}),
+                item: {
+                  ...item,
+                  status: 'failed',
+                  exitCode: 7,
+                  aggregatedOutput: 'TEST partial effect',
+                  ...(this.protocolRevision === '0.169.0' ? { completedAtMs: 1_700_000_000_001 } : {}),
+                },
+              });
+              this.notify('item/completed', {
+                threadId: 'TEST-thread',
+                turnId,
+                ...(this.protocolRevision === '0.169.0' ? { contentTokenCount: 4 } : {}),
+                item: {
+                  id: `TEST-message-${this.turns}`,
+                  type: 'agentMessage',
+                  text: `TEST reply ${this.turns}`,
+                },
+              });
+              this.notify('turn/completed', {
+                threadId: 'TEST-thread',
+                turn: { id: turnId, status: 'completed' },
+              });
+            });
+          }
+          if (frame.method === 'turn/interrupt') {
+            assert.equal(params.threadId, 'TEST-thread');
+            assert.equal(params.turnId, `TEST-turn-${this.turns}`);
+            setImmediate(() => this.notify('turn/completed', { threadId: params.threadId, turn: { id: params.turnId, status: 'interrupted' } }));
+          }
+          this.stdout.write(`${JSON.stringify({ id: frame.id, result })}\n`);
+          done();
+        } catch (error) {
+          done(error instanceof Error ? error : new Error('TEST stream rejected'));
+        }
+      },
+    });
+    this.stdio = [this.stdin, this.stdout, this.stderr, undefined, undefined];
+  }
+  notify(method: string, params: unknown): void {
+    this.stdout.write(`${JSON.stringify({ method, params })}\n`);
+  }
+}
+
+function fixture(
+  options: {
+    extraArgs?: string[];
+    protocolRevision?: CodexMemberProfile['protocolRevision'];
+    onCreateProcess?(): void;
+    capturedMcpServers?: CodexMemberProfile['capturedMcpServers'];
+    capturedMcpCatalog?: CodexConfiguredMcpCatalog;
+    readCatalog?: () => Promise<CodexConfiguredMcpCatalog>;
+    nativeOptions?: Partial<CodexMemberProfile['nativeOptions']>;
+    missingTools?: boolean;
+    failInitialize?: boolean;
+    checkpoint?: boolean;
+    checkpointData?: unknown;
+    endpointUrl?: string;
+    generation?: number;
+    previousTurns?: number;
+    codexEvidence?: NonNullable<MemberProviderContext['codexEvidence']>;
+    processOrigin?: NonNullable<MemberProviderContext['processOrigin']>;
+  } = {}
+) {
+  const profile: CodexMemberProfile = {
+    provider: 'codex',
+    ...(options.extraArgs ? { extraArgs: options.extraArgs } : {}),
+    ...(options.capturedMcpServers ? { capturedMcpServers: options.capturedMcpServers } : {}),
+    ...(options.capturedMcpCatalog ? { capturedMcpCatalog: options.capturedMcpCatalog } : {}),
+    teamId: 'TEST-team',
+    memberId: 'bob',
+    principalId: 'bob-session',
+    sessionId: 'TEST-session',
+    generation: options.generation ?? 1,
+    configRevision: 'TEST-config',
+    protocolRevision: options.protocolRevision ?? '0.162.0',
+    cwd: '/TEST-workspace',
+    model: 'TEST-model',
+    accountBinding: 'TEST-account',
+    environment: {
+      HOME: '/TEST-home',
+      CODEX_HOME: '/TEST-codex',
+      TEST_ENV: 'captured',
+    },
+    executable: { path: '/TEST-codex-bin', sha256: 'a'.repeat(64) },
+    nativeOptions: {
+      approvalPolicy: 'on-request',
+      sandbox: 'read-only',
+      modelProvider: 'TEST-provider',
+      developerInstructions: 'TEST appended instruction',
+      ...options.nativeOptions,
+    },
+    limits: {
+      queuedInputs: 2,
+      inputBytes: 4096,
+      outputBytes: 65536,
+      outputEvents: 256,
+      pendingInteractions: 4,
+      timeoutMs: 1000,
+    },
+  };
+  let current = true;
+  let allocate = true;
+  let running = false;
+  let sealed = false;
+  let cleanupCalls = 0;
+  const launches: CapturedProcessLaunch[] = [];
+  let captured: CodexMemberProfile | undefined;
+  const child = new ControlledChild();
+  child.protocolRevision = profile.protocolRevision;
+  child.turns = options.previousTurns ?? 0;
+  child.failInitialize = !!options.failInitialize;
+  const context: MemberProviderContext = {
+    profile,
+    request: {
+      tenantId: 'TEST-tenant',
+      projectId: 'TEST-project',
+      sessionId: profile.sessionId,
+      generation: profile.generation,
+      configRevision: profile.configRevision,
+      requiredCapabilities: ['text', 'tools'],
+      ...(options.checkpoint || options.checkpointData !== undefined
+        ? { checkpointRef: 'TEST-checkpoint' }
+        : {}),
+    },
+    endpoint: {
+      url: options.endpointUrl ?? 'http://127.0.0.1:12345/TEST-private',
+      bearerToken: 'TEST-private-bearer',
+      binding: {
+        backendId: 'TEST-backend',
+        teamId: 'TEST-team',
+        teamName: 'test-team',
+        runId: 'TEST-run',
+        memberId: 'bob',
+        generation: String(profile.generation),
+      },
+      revoke() {},
+      async close() {},
+    },
+    connection: {
+      execute() {
+        throw new Error('Not called');
+      },
+      lookup: () => undefined,
+      getTask() {
+        throw new Error('Not called');
+      },
+      listTasks: () => [],
+    },
+    instructions: 'TEST captured role/team/cwd',
+    ...(options.codexEvidence ? { codexEvidence: options.codexEvidence } : {}),
+    ...(options.processOrigin ? { processOrigin: options.processOrigin } : {}),
+    isCurrent: () => current,
+    canAllocate: () => allocate,
+    readCheckpoint: async () => options.checkpointData,
+    onProgress() {},
+  };
+  child.required = options.missingTools
+    ? []
+    : createTeamMcpTools(context.connection)
+        .list()
+        .map((tool) => tool.name);
+  if (profile.capturedMcpServers !== undefined) {
+    const policy = codexMcpPolicy(profile, context.endpoint, child.required)!;
+    const rows: Record<string, unknown> = {};
+    for (const row of policy.catalog.servers)
+      rows[row.name] = {
+        ...(row.transport.type === 'stdio'
+          ? { command: row.transport.command }
+          : { url: row.transport.url }),
+        enabled: false,
+      };
+    // config/read exposes Codex 0.162's serialized defaults after TOML merging.
+    for (const [name, value] of Object.entries(policy.selected))
+      rows[name] = {
+        ...value,
+        environment_id: 'local',
+        tool_timeout_sec: value.tool_timeout_sec ?? null,
+        ...('command' in value ? { args: value.args ?? [] } : {}),
+        enabled: true,
+      };
+    child.mcpConfiguration = rows;
+  }
+  const custody: CapturedProcessPort = {
+    launch(request) {
+      assert.ok(!sealed && allocate);
+      launches.push(request);
+      running = true;
+      return child;
+    },
+    seal() {
+      sealed = true;
+    },
+    isRunning: () => running,
+    async confirmStopped() {
+      cleanupCalls++;
+      sealed = true;
+      running = false;
+      child.stdin.end();
+      child.stdout.end();
+      child.stderr.end();
+      return true;
+    },
+  };
+  const provider = createCodexMemberProvider(context, {
+    ...(options.readCatalog ? { readCatalog: options.readCatalog } : {}),
+    createProcess(selected) {
+      options.onCreateProcess?.();
+      captured = selected;
+      return custody;
+    },
+  });
+  return {
+    provider,
+    context,
+    profile,
+    child,
+    launches,
+    captured: () => captured!,
+    revoke: () => {
+      current = false;
+    },
+    forbidAllocation: () => {
+      allocate = false;
+    },
+    cleanupCalls: () => cleanupCalls,
+    running: () => running,
+  };
+}
+
+test('Codex observes only original stderr before initialization completes and retains the final tail', async () => {
+  const f = fixture(), observations: unknown[] = [];
+  let opening = true;
+  f.context.observeProcessOutput = value => {
+    if (!observations.length) assert.equal(opening, true);
+    observations.push(value);
+  };
+  f.child.startupStderr = `TEST startup ${f.context.endpoint.bearerToken}\n`;
+  const opened = await f.provider.factory.open(f.context.request);
+  opening = false;
+  assert.equal(f.launches.length, 1);
+  assert.deepEqual(observations, [{ kind: 'process-output', stream: 'stderr', text: 'TEST startup [redacted]' }]);
+  f.child.stderr.write('TEST shutdown tail');
+  await opened.driver.close(); await tick();
+  assert.deepEqual(observations.at(-1), { kind: 'process-output', stream: 'stderr', text: 'TEST shutdown tail' });
+  assert.equal(JSON.stringify(observations).includes('TEST-thread'), false, 'Native stdout protocol is not Logs output');
+});
+
+test('Codex profile is a finite private union and requires captured namespace paths', () => {
+  const f = fixture();
+  assert.ok(runtimeProfileSchema.safeParse({ members: [f.profile] }).success);
+  assert.equal(
+    runtimeProfileSchema.safeParse({
+      members: [{ ...f.profile, nativeTools: [] }],
+    }).success,
+    false
+  );
+  assert.equal(
+    runtimeProfileSchema.safeParse({
+      members: [{ ...f.profile, environment: { HOME: '/TEST' } }],
+    }).success,
+    false
+  );
+  assert.equal(
+    runtimeProfileSchema.safeParse({
+      members: [{ ...f.profile, protocolRevision: 'unknown' }],
+    }).success,
+    false
+  );
+});
+
+test('Codex profile enforces native 1 MiB ceiling before allocation and preserves Claude bounds', () => {
+  const f = fixture();
+  const selected = {
+    ...f.profile,
+    limits: { ...f.profile.limits, outputBytes: 2_000_000 },
+  };
+  assert.equal(runtimeProfileSchema.safeParse({ members: [selected] }).success, false);
+  assert.equal(
+    f.launches.length,
+    0,
+    'invalid captured configuration must be rejected before a process exists'
+  );
+  assert.ok(
+    runtimeProfileSchema.safeParse({
+      members: [
+        {
+          ...f.profile,
+          limits: { ...f.profile.limits, outputBytes: 1_048_576 },
+        },
+      ],
+    }).success
+  );
+  const { protocolRevision: _revision, nativeOptions: _options, ...common } = selected;
+  assert.ok(
+    runtimeProfileSchema.safeParse({
+      members: [
+        {
+          ...common,
+          provider: 'claude',
+          nativeTools: [],
+          autoAllowedTools: [],
+        },
+      ],
+    }).success,
+    'Claude retains its existing 16 MiB ceiling'
+  );
+});
+
+for (const protocolRevision of ['0.162.0', '0.169.0'] as const) test(
+  `Codex ${protocolRevision} enforces tuple eligibility before selected-config tools, attributed inputs and exact interrupt`,
+  { timeout: 5000 },
+  async () => {
+    if (protocolRevision === '0.169.0' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
+      assert.throws(() => fixture({ protocolRevision }), { reason: 'unqualified-version' });
+      return;
+    }
+    const f = fixture({ protocolRevision });
+    const { driver, capabilities } = await f.provider.factory.open(f.context.request);
+    const events: Event[] = [];
+    const observing = (async () => {
+      for await (const event of driver.observe()) events.push(event);
+    })();
+    try {
+      assert.deepEqual(capabilities, ['text', 'tools']);
+      assert.ok((await driver.checkReadiness()).ok);
+      assert.equal(f.provider.isReady(), true);
+      assert.equal(record(record(f.child.frames.find(frame => frame.method === 'initialize')!.params).capabilities).requiredHumanApproval, undefined);
+      assert.equal(f.launches.length, 1);
+      const launch = f.launches[0]!;
+      assert.equal(launch.command, f.profile.executable.path);
+      assert.equal(launch.cwd, f.profile.cwd);
+      assert.deepEqual(launch.args.slice(-3), ['app-server', '--listen', 'stdio://']);
+      const settings = launch.args.filter((_, index) => launch.args[index - 1] === '-c');
+      assert.ok(settings.includes('mcp_servers.team.enabled=true'));
+      assert.ok(
+        settings.includes(`mcp_servers.team.enabled_tools=${JSON.stringify(f.child.required)}`)
+      );
+      for (const name of f.child.required)
+        assert.ok(settings.includes(`mcp_servers.team.tools.${name}.approval_mode="approve"`));
+      assert.equal(JSON.stringify(launch).includes(f.context.endpoint.bearerToken), false);
+      assert.equal(f.profile.environment.LEGACY_AGENT_HOST_TEAM_MCP_TOKEN, undefined);
+      assert.equal(
+        f.captured().environment.LEGACY_AGENT_HOST_TEAM_MCP_TOKEN,
+        f.context.endpoint.bearerToken
+      );
+      const thread = record(
+        f.child.frames.find((frame) => frame.method === 'thread/start')?.params
+      );
+      assert.equal(thread.cwd, f.profile.cwd);
+      assert.equal(thread.model, f.profile.model);
+      assert.equal(thread.approvalPolicy, 'on-request');
+      assert.equal(thread.sandbox, 'read-only');
+      assert.equal(thread.modelProvider, 'TEST-provider');
+      assert.equal(
+        thread.developerInstructions,
+        `${f.context.instructions}\n\nTEST appended instruction`
+      );
+      for (let n = 1; n <= 2; n++) {
+        const input = {
+          inputId: `TEST-input-${n}`,
+          operationRef: `TEST-operation-${n}`,
+          content: `TEST message ${n}`,
+        };
+        const receipt = await driver.submit(input);
+        assert.ok(receipt.ok);
+        for (
+          let count = 0;
+          count < 100 &&
+          !events.some((event) => event.kind === 'result' && event.inputId === input.inputId);
+          count++
+        )
+          await tick();
+        assert.equal(
+          events.filter((event) => event.kind === 'result' && event.inputId === input.inputId)
+            .length,
+          1
+        );
+        assert.ok(
+          events.some(
+            (event) =>
+              event.kind === 'text' &&
+              event.inputId === input.inputId &&
+              event.text === `TEST reply ${n}`
+          )
+        );
+        assert.ok(
+          events.some(
+            (event) =>
+              event.kind === 'tool' && event.inputId === input.inputId && event.name === 'Bash'
+          )
+        );
+        assert.ok(
+          events.some(
+            (event) =>
+              event.kind === 'tool-result' && event.inputId === input.inputId && event.isError
+          )
+        );
+        assert.ok(
+          events
+            .filter((event) => event.inputId === input.inputId)
+            .every(
+              (event) =>
+                event.operationRef === input.operationRef &&
+                event.sessionRef === f.profile.sessionId
+            )
+        );
+      }
+      assert.equal(f.child.turns, 2);
+      f.child.holdTurn = true;
+      assert.ok((await driver.submit({ inputId: 'TEST-stopped', operationRef: 'TEST-stopped-op', content: 'TEST stop this turn' })).ok);
+      assert.equal((await driver.interrupt('TEST-stopped-op')).ok, true);
+      for (let count = 0; count < 100 && !events.some(event => event.kind === 'result' && event.inputId === 'TEST-stopped'); count++) await tick();
+      const stopped = events.find(event => event.kind === 'result' && event.inputId === 'TEST-stopped');
+      assert.ok(stopped?.kind === 'result');
+      assert.equal(stopped.outcome, 'cancelled');
+      assert.deepEqual(f.child.frames.filter(frame => frame.method === 'turn/interrupt').map(frame => frame.params), [{ threadId: 'TEST-thread', turnId: 'TEST-turn-3' }]);
+      f.revoke();
+      assert.equal(f.provider.isReady(), false);
+      assert.equal((await driver.checkReadiness()).ok, false);
+    } finally {
+      assert.equal((await driver.close()).cleanup, 'confirmed');
+      await observing;
+      assert.equal(f.running(), false);
+    }
+  }
+);
+
+for (const scenario of ['missingTools', 'failInitialize', 'checkpoint'] as const) {
+  test(
+    `Codex ${scenario} setup failure cleans captured handles before throwing`,
+    { timeout: 5000 },
+    async () => {
+      const f = fixture({ [scenario]: true });
+      await assert.rejects(f.provider.factory.open(f.context.request), /Codex member unavailable/);
+      assert.ok(f.cleanupCalls() > 0);
+      assert.equal(f.running(), false);
+      assert.equal(f.provider.isReady(), false);
+    }
+  );
+}
+
+test('seal or lost allocation authority prevents a Codex process allocation', async () => {
+  for (const mode of ['seal', 'authority'] as const) {
+    const f = fixture();
+    if (mode === 'seal') f.provider.seal();
+    else f.forbidAllocation();
+    await assert.rejects(f.provider.factory.open(f.context.request));
+    assert.equal(f.launches.length, 0);
+  }
+});
+
+test(
+  'Host Codex adapter awaits its captured original-input baseline and terminal observer through real public D',
+  { timeout: 5000 },
+  async () => {
+    let beforeEntered!: () => void, releaseBefore!: () => void;
+    let afterEntered!: () => void, releaseAfter!: () => void;
+    const beforeReady = new Promise<void>((resolve) => {
+      beforeEntered = resolve;
+    });
+    const beforeGate = new Promise<void>((resolve) => {
+      releaseBefore = resolve;
+    });
+    const afterReady = new Promise<void>((resolve) => {
+      afterEntered = resolve;
+    });
+    const afterGate = new Promise<void>((resolve) => {
+      releaseAfter = resolve;
+    });
+    const requests: Parameters<
+      NonNullable<MemberProviderContext['codexEvidence']>['observe']
+    >[0][] = [];
+    let sealed = false;
+    const f = fixture({
+      codexEvidence: {
+        async observe(request) {
+          requests.push(request);
+          if (request.phase === 'before') {
+            beforeEntered();
+            await beforeGate;
+          }
+          if (request.phase === 'after') {
+            afterEntered();
+            await afterGate;
+          }
+        },
+        seal() {
+          sealed = true;
+        },
+        readStatus: () => ({
+          phase: sealed ? 'sealed' : 'capturing',
+          baseline: 'ready',
+        }),
+      },
+    });
+    const { driver } = await f.provider.factory.open(f.context.request);
+    const events: Event[] = [];
+    const observing = (async () => {
+      for await (const event of driver.observe()) events.push(event);
+    })();
+    try {
+      const input = {
+        inputId: 'TEST-original-input',
+        operationRef: 'TEST-original-operation',
+        content: 'TEST original',
+      };
+      const submission = driver.submit(input);
+      await beforeReady;
+      assert.equal(f.child.turns, 0, 'no native turn/start before the baseline callback settles');
+      assert.equal(requests[0]!.inputId, input.inputId);
+      assert.equal(requests[0]!.operationRef, input.operationRef);
+      assert.equal(requests[0]!.threadId, 'TEST-thread');
+      releaseBefore();
+      assert.ok((await submission).ok);
+      await afterReady;
+      assert.equal(
+        events.some((event) => event.kind === 'result'),
+        false
+      );
+      assert.equal(requests[1]!.phase, 'after');
+      if (requests[1]!.phase !== 'after') throw new Error('Wrong terminal callback');
+      assert.equal(requests[1]!.beforeObserved, true);
+      assert.equal(requests[1]!.windowRef, requests[0]!.windowRef);
+      assert.equal(requests[1]!.turnId, 'TEST-turn-1');
+      releaseAfter();
+      for (let i = 0; i < 100 && !events.some((event) => event.kind === 'result'); i++)
+        await tick();
+      assert.equal(events.filter((event) => event.kind === 'result').length, 1);
+    } finally {
+      releaseBefore();
+      releaseAfter();
+      await driver.close();
+      await observing;
+      assert.equal(sealed, true);
+      assert.equal(f.running(), false);
+    }
+  }
+);
+
+for (const effort of ['none', 'minimal', 'ultra', 'TEST-future-native-effort'])
+  test(`captured Codex options preserve ${effort} across each input and true-only Fast config`, async () => {
+    const f = fixture({
+      nativeOptions: { reasoningEffort: effort, fastMode: true },
+    });
+    const opened = await f.provider.factory.open(f.context.request);
+    const events: Event[] = [];
+    const observing = (async () => {
+      for await (const event of opened.driver.observe()) events.push(event);
+    })();
+    try {
+      const args = f.launches[0]!.args;
+      assert.ok(args.includes(`model_reasoning_effort=${JSON.stringify(effort)}`));
+      assert.ok(args.includes('service_tier="fast"'));
+      assert.ok(args.includes('features.fast_mode=true'));
+      assert.equal(
+        record(f.child.frames.find((frame) => frame.method === 'thread/start')!.params).serviceTier,
+        'fast'
+      );
+      f.profile.nativeOptions.reasoningEffort = 'TEST-later-draft';
+      for (let n = 1; n <= 2; n++) {
+        assert.ok(
+          (
+            await opened.driver.submit({
+              inputId: `TEST-option-${n}`,
+              operationRef: `TEST-option-op-${n}`,
+              content: 'TEST input',
+            })
+          ).ok
+        );
+        const deadline = Date.now() + 1000;
+        while (
+          !events.some(
+            (event) => event.kind === 'result' && event.inputId === `TEST-option-${n}`
+          ) &&
+          Date.now() < deadline
+        )
+          await tick();
+        assert.equal(f.child.turns, n);
+      }
+      for (const turn of f.child.frames.filter((frame) => frame.method === 'turn/start'))
+        assert.equal(record(turn.params).effort, effort);
+    } finally {
+      await opened.driver.close();
+      await observing;
+      await f.provider.cleanup();
+    }
+  });
+
+test('Codex Default/absent options preserve the captured recipe; explicit false adds no native Fast override', () => {
+  const f = fixture({
+    nativeOptions: { reasoningEffort: 'minimal', fastMode: true },
+  });
+  const unchanged = applyLaunchConfiguration(f.profile, {
+    model: f.profile.model,
+  });
+  assert.equal(unchanged.provider, 'codex');
+  if (unchanged.provider !== 'codex') assert.fail('TEST-codex');
+  assert.equal(unchanged.nativeOptions.reasoningEffort, 'minimal');
+  assert.equal(unchanged.nativeOptions.fastMode, true);
+  const selected = applyLaunchConfiguration(f.profile, {
+    effort: 'ultra',
+    fastMode: false,
+  });
+  if (selected.provider !== 'codex') assert.fail('TEST-codex');
+  assert.equal(selected.nativeOptions.reasoningEffort, 'ultra');
+  assert.equal(selected.nativeOptions.fastMode, false);
+  const args = codexLaunchArguments({ ...f.context, profile: selected });
+  assert.equal(
+    args.some((arg) => arg.startsWith('service_tier=') || arg.startsWith('features.fast_mode=')),
+    false
+  );
+  assert.ok(args.includes('model_reasoning_effort="ultra"'));
+  const absent = codexLaunchArguments(fixture().context);
+  assert.equal(
+    absent.some(
+      (arg) => arg.startsWith('model_reasoning_effort=') || arg.startsWith('service_tier=')
+    ),
+    false
+  );
+  assert.equal(f.profile.nativeOptions.reasoningEffort, 'minimal');
+  assert.notEqual(selected.configRevision, f.profile.configRevision);
+  assert.deepEqual(selected.environment, f.profile.environment);
+  assert.equal(selected.sessionId, f.profile.sessionId);
+});
+
+const policyCatalog: CodexConfiguredMcpCatalog = {
+  digest: 'c'.repeat(64),
+  servers: [
+    {
+      name: 'TEST-plugin-only',
+      enabled: true,
+      transport: { type: 'stdio', command: '/TEST/plugin' },
+    },
+  ],
+};
+for (const protocolRevision of ['0.162.0', '0.169.0'] as const) for (const mode of ['appOnly', 'inherited'] as const)
+  test(
+    `managed Codex ${protocolRevision} ${mode} enforces tuple eligibility and retained-thread restore across Host endpoint rotation`,
+    { timeout: 5000 },
+    async () => {
+      if (protocolRevision === '0.169.0' && !(process.platform === 'darwin' && process.arch === 'arm64')) {
+        assert.throws(() => fixture({ protocolRevision }), { reason: 'unqualified-version' });
+        return;
+      }
+      const catalog: CodexConfiguredMcpCatalog = {
+        ...policyCatalog,
+        servers: [
+          ...policyCatalog.servers,
+          {
+            name: 'Docs',
+            enabled: true,
+            transport: { type: 'streamable_http', url: 'https://example.invalid/Docs' },
+          },
+        ],
+      };
+      const selected: NonNullable<CodexMemberProfile['capturedMcpServers']> =
+        mode === 'appOnly' ? {} : { Docs: { type: 'http', url: 'https://example.invalid/Docs' } };
+      const options = {
+        protocolRevision,
+        capturedMcpServers: selected,
+        capturedMcpCatalog: catalog,
+        readCatalog: async () => catalog,
+      };
+      const original = fixture(options);
+      const opened = await original.provider.factory.open(original.context.request);
+      let checkpoint: unknown;
+      try {
+        assert.ok(
+          (
+            await opened.driver.submit({
+              inputId: 'TEST-before-cold',
+              operationRef: 'TEST-operation-before-cold',
+              content: 'TEST original input',
+            })
+          ).ok
+        );
+        for (let count = 0; count < 100; count++) {
+          const captured = await opened.driver.checkpoint();
+          if (captured.ok) {
+            checkpoint = captured.value;
+            break;
+          }
+          await tick();
+        }
+        assert.ok(checkpoint, 'original completed native thread supplies its own checkpoint');
+        assert.equal(original.child.turns, 1);
+      } finally {
+        assert.equal((await opened.driver.close()).cleanup, 'confirmed');
+        await original.provider.cleanup();
+      }
+      const resumed = fixture({
+        ...options,
+        endpointUrl: 'http://127.0.0.1:54321/TEST-new-private',
+        generation: 2,
+        previousTurns: 1,
+        checkpointData: checkpoint,
+      });
+      const restored = await resumed.provider.factory.open(resumed.context.request);
+      try {
+        assert.ok((await restored.driver.checkReadiness()).ok);
+        assert.equal(
+          resumed.child.frames.filter((frame) => frame.method === 'thread/resume').length,
+          1
+        );
+        assert.equal(
+          resumed.child.frames.some((frame) => frame.method === 'thread/start'),
+          false
+        );
+        assert.equal(
+          resumed.child.frames.some((frame) => frame.method === 'turn/start'),
+          false
+        );
+        assert.equal(
+          record(resumed.child.mcpConfiguration!.team).url,
+          resumed.context.endpoint.url
+        );
+        assert.ok(
+          (
+            await restored.driver.submit({
+              inputId: 'TEST-after-cold',
+              operationRef: 'TEST-operation-after-cold',
+              content: 'TEST next original input',
+            })
+          ).ok
+        );
+        let continuation: unknown;
+        for (let count = 0; count < 100; count++) {
+          const captured = await restored.driver.checkpoint();
+          if (captured.ok) {
+            continuation = captured.value;
+            break;
+          }
+          await tick();
+        }
+        assert.equal(record(continuation).nativeThreadId, 'TEST-thread');
+        assert.equal(resumed.child.turns, 2);
+        assert.equal(
+          resumed.child.frames.filter((frame) => frame.method === 'turn/start').length,
+          1
+        );
+        assert.equal(
+          record(resumed.child.frames.find((frame) => frame.method === 'turn/start')!.params)
+            .threadId,
+          'TEST-thread'
+        );
+        assert.equal(resumed.launches.length, 1);
+      } finally {
+        assert.equal((await restored.driver.close()).cleanup, 'confirmed');
+        await resumed.provider.cleanup();
+      }
+      if (mode === 'inherited') {
+        const foreign = fixture({
+          ...options,
+          capturedMcpServers: { Docs: { type: 'http', url: 'https://example.invalid/changed' } },
+          checkpointData: checkpoint,
+          generation: 2,
+          previousTurns: 1,
+        });
+        await assert.rejects(
+          foreign.provider.factory.open(foreign.context.request),
+          /Codex member unavailable/u
+        );
+        assert.equal(
+          foreign.child.frames.length,
+          0,
+          'changed foreign policy never resumes or starts a thread'
+        );
+        assert.equal(foreign.running(), false);
+        assert.ok(foreign.cleanupCalls() > 0);
+      }
+      if (protocolRevision === '0.162.0' && mode === 'appOnly') {
+        if (!(process.platform === 'darwin' && process.arch === 'arm64')) {
+          assert.throws(() => fixture({ ...options, protocolRevision: '0.169.0', generation: 2, checkpointData: checkpoint }),
+            { reason: 'unqualified-version' });
+          return;
+        }
+        const relabeled = fixture({ ...options, protocolRevision: '0.169.0', generation: 2, checkpointData: checkpoint });
+        await assert.rejects(relabeled.provider.factory.open(relabeled.context.request), /Codex member unavailable/u);
+        assert.equal(relabeled.child.frames.some(frame => frame.method === 'thread/resume' || frame.method === 'thread/start'), false);
+        assert.equal(relabeled.running(), false);
+      }
+    }
+  );
+test('captured appOnly launches veto original plugin names and exact native gate precedes thread allocation', async () => {
+  let reads = 0;
+  const f = fixture({
+    capturedMcpServers: {},
+    capturedMcpCatalog: policyCatalog,
+    readCatalog: async () => {
+      reads++;
+      return policyCatalog;
+    },
+  });
+  const opened = await f.provider.factory.open(f.context.request);
+  try {
+    assert(reads >= 2);
+    const configIndex = f.child.frames.findIndex((frame) => frame.method === 'config/read');
+    const threadIndex = f.child.frames.findIndex((frame) => frame.method === 'thread/start');
+    assert(configIndex >= 0 && configIndex < threadIndex);
+    const args = f.launches[0]!.args;
+    assert(args.includes('features.apps=false'));
+    const table = args.find((value) => value.startsWith('mcp_servers='));
+    assert(table?.includes('"TEST-plugin-only"={"command"="/TEST/plugin","enabled"=false}'));
+    assert(table?.includes('"team"='));
+    assert((await opened.driver.checkReadiness()).ok);
+    f.child.unexpectedMcp = true;
+    assert.equal((await opened.driver.checkReadiness()).ok, false);
+    assert.equal(f.child.turns, 0);
+  } finally {
+    await opened.driver.close();
+    await f.provider.cleanup();
+  }
+  const rejected = fixture({
+    capturedMcpServers: {},
+    capturedMcpCatalog: policyCatalog,
+    readCatalog: async () => policyCatalog,
+  });
+  record(rejected.child.mcpConfiguration!.team).environment_id = 'FOREIGN';
+  await assert.rejects(rejected.provider.factory.open(rejected.context.request));
+  assert.equal(rejected.launches.length, 1);
+  assert.ok(rejected.child.frames.some((frame) => frame.method === 'config/read'));
+  assert.equal(
+    rejected.child.frames.some((frame) => frame.method === 'thread/start'),
+    false
+  );
+  await rejected.provider.cleanup();
+});
+test('changed original native census refuses before app-server allocation and without a thread', async () => {
+  const f = fixture({
+    capturedMcpServers: {},
+    capturedMcpCatalog: policyCatalog,
+    readCatalog: async () => ({ ...policyCatalog, digest: 'd'.repeat(64) }),
+  });
+  await assert.rejects(f.provider.factory.open(f.context.request));
+  assert.equal(f.launches.length, 0);
+  assert.equal(f.child.frames.length, 0);
+});
+test('new captured selection without original native census refuses before process custody', () => {
+  assert.throws(() => fixture({ capturedMcpServers: {} }), /census unavailable/u);
+});
+
+test('captured Codex argv reaches only the selected app-server launch, preserving managed flags', async () => {
+  const extraArgs = ['--strict-config', '--analytics-default-enabled', '--strict-config'];
+  const f = fixture({ extraArgs });
+  extraArgs.splice(0, extraArgs.length, '--listen', 'FOREIGN');
+  const opened = await f.provider.factory.open(f.context.request);
+  try {
+    const launch = f.launches[0]!;
+    assert.equal(launch.command, '/TEST-codex-bin');
+    assert.equal(launch.cwd, '/TEST-workspace');
+    assert.deepEqual(launch.args.slice(-6), [
+      'app-server',
+      '--listen',
+      'stdio://',
+      '--strict-config',
+      '--analytics-default-enabled',
+      '--strict-config',
+    ]);
+    assert.equal(launch.args.includes('FOREIGN'), false);
+    assert.equal(launch.args.filter((value) => value === '--listen').length, 1);
+    assert.ok((await opened.driver.checkReadiness()).ok);
+  } finally {
+    await opened.driver.close();
+    await f.provider.cleanup();
+  }
+});
+
+test('captured Codex managed aliases and positional prompts refuse before custody allocation', () => {
+  let created = 0;
+  for (const extraArgs of [
+    ['-c', 'model="FOREIGN"'],
+    ['--listen=FOREIGN'],
+    ['-C', '/FOREIGN'],
+    ['prompt'],
+    ['--'],
+  ])
+    assert.throws(() =>
+      fixture({
+        extraArgs,
+        onCreateProcess: () => {
+          created++;
+        },
+      })
+    );
+  assert.equal(created, 0);
+});
+
+
+const readinessOrigin = (): NonNullable<MemberProviderContext['processOrigin']> => ({
+  sourceId: '1'.repeat(64), revision: '2'.repeat(64),
+  origin: { kind: 'runtime', scope: { teamId: 'TEST-team', projectId: 'TEST-project', workspaceId: 'TEST-workspace' },
+    projectPath: '/TEST-workspace', teamId: 'TEST-team', memberId: 'bob', recipeIdentity: '3'.repeat(64) },
+});
+const readinessChannel = () => channel('agent-teams.legacy-host.codex-readiness');
+const readinessBinding = () => managementDigest({ backendId: 'TEST-backend', teamId: 'TEST-team',
+  runId: 'TEST-run', memberId: 'bob', generation: '1' });
+
+test('original Codex open and readiness retain captured await boundaries without extra provider work', async t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  const run = async (observe: boolean) => {
+    now = 0;
+    let catalogs = 0, current = 0, allocations = 0;
+    const rows: unknown[] = [], counts: number[][] = [], diagnostic = readinessChannel();
+    const receive = (value: unknown) => { rows.push(value); counts.push([current, allocations, now]); };
+    if (observe) diagnostic.subscribe(receive);
+    const origin = readinessOrigin();
+    const f = fixture({ processOrigin: origin, capturedMcpServers: {}, capturedMcpCatalog: policyCatalog,
+      readCatalog: async () => { catalogs++; return policyCatalog; } });
+    const originalCurrent = f.context.isCurrent;
+    f.context.isCurrent = function () { assert.equal(this, f.context); current++; now += 0.25; return originalCurrent(); };
+    const originalAllocate = f.context.canAllocate;
+    f.context.canAllocate = function () { assert.equal(this, f.context); allocations++; now += 0.5; return originalAllocate(); };
+    try {
+      const opened = await f.provider.factory.open(f.context.request);
+      Object.assign(origin, { sourceId: 'f'.repeat(64), revision: 'e'.repeat(64) });
+      Object.assign(f.context.endpoint.binding, { teamName: 'PRIVATE-later-label', runId: 'PRIVATE-later-run' });
+      const proof = await opened.driver.checkReadiness();
+      assert.equal(proof.ok, true); assert.equal(f.provider.isReady(), true);
+      assert.equal(f.launches.length, 1); assert.equal(f.child.turns, 0);
+      assert.equal(catalogs, 4);
+      const work = { catalogs, current, allocations, now, frames: f.child.frames.map(frame => frame.method), launches: f.launches.length };
+      const failure = new Error('PRIVATE-original-current-error'), prior = f.context.isCurrent;
+      f.context.isCurrent = function () { assert.equal(this, f.context); throw failure; };
+      assert.throws(() => f.provider.isReady(), error => error === failure, 'timing preserves the exact original throw');
+      f.context.isCurrent = prior;
+      await opened.driver.close(); await f.provider.cleanup(); assert.equal(f.running(), false);
+      return { work, rows, counts };
+    } finally { diagnostic.unsubscribe(receive); await f.provider.cleanup(); }
+  };
+  const plain = await run(false), observed = await run(true);
+  assert.deepEqual(observed.work, plain.work, 'passive subscribers add no native frames, catalogues or currentness calls');
+  assert.ok(observed.rows.length > 0, 'successful original calls must publish closed Codex await observations');
+  const rows = observed.rows.map(record), invocations = new Map<number, { operation: unknown; phases: unknown[] }>();
+  for (const [index, row] of rows.entries()) {
+    assert.deepEqual(Object.keys(row).sort(), ['schemaVersion', 'bindingDigest', 'sourceId', 'sourceRevision',
+      'sequence', 'invocation', 'operation', 'phase', 'result', 'timing'].sort());
+    assert.equal(row.schemaVersion, 2); assert.equal(row.bindingDigest, readinessBinding());
+    assert.equal(row.sourceId, '1'.repeat(64)); assert.equal(row.sourceRevision, '2'.repeat(64)); assert.equal(row.sequence, index + 1);
+    assert.equal(typeof row.invocation, 'number'); const invocation = row.invocation as number;
+    let retained = invocations.get(invocation);
+    if (!retained) { assert.equal(invocation, invocations.size + 1); retained = { operation: row.operation, phases: [] }; invocations.set(invocation, retained); }
+    assert.equal(row.operation, retained.operation); retained.phases.push(row.phase);
+    assert.equal(row.result, row.phase === 'returned' ? true : null);
+    const timing = row.timing; assert.ok(Array.isArray(timing)); assert.equal(timing.length, 10);
+    const count = observed.counts[index]!;
+    assert.deepEqual(timing.slice(0, 7), [Math.floor(count[2]! * 10), count[0], Math.floor(count[0]! * 2.5),
+      count[0] ? 2 : 0, count[1], count[1]! * 5, count[1] ? 5 : 0]);
+    assert.ok(timing[7] > 0); assert.deepEqual(timing.slice(8), [0, 0]);
+    assert.ok(timing.every((value, field) => index === 0 || value >= (record(rows[index - 1]).timing as number[])[field]!));
+  }
+  assert.deepEqual([...invocations.values()].map(row => row.operation), ['open', 'catalog', 'catalog', 'catalog', 'readiness', 'catalog']);
+  for (const row of invocations.values()) assert.deepEqual(row.phases,
+    row.operation === 'open' ? ['before-await', 'after-await'] : ['before-await', 'after-await', 'returned']);
+  assert.doesNotMatch(JSON.stringify(rows), /PRIVATE-|TEST-|bearer|sessionRef|operationRef|argv|environment/);
+});
+
+for (const outcome of ['same', 'different', 'throws'] as const)
+  test('original Codex catalogue ' + outcome + ' retains the pending boundary and original readiness result', async () => {
+    const rows: unknown[] = [], diagnostic = readinessChannel(), receive = (value: unknown) => { rows.push(value); };
+    diagnostic.subscribe(receive);
+    let held = false, release = () => {}, entered = () => {}, catalogs = 0;
+    const gate = new Promise<void>(resolve => { release = resolve; }), entry = new Promise<void>(resolve => { entered = resolve; });
+    const f = fixture({ processOrigin: readinessOrigin(), capturedMcpServers: {}, capturedMcpCatalog: policyCatalog,
+      readCatalog: async () => {
+        catalogs++;
+        if (held) { entered(); await gate; if (outcome === 'throws') throw new Error('PRIVATE-catalogue-error'); }
+        return held && outcome === 'different' ? { ...policyCatalog, digest: 'f'.repeat(64) } : policyCatalog;
+      } });
+    let pending: ReturnType<Awaited<ReturnType<typeof f.provider.factory.open>>['driver']['checkReadiness']> | undefined;
+    try {
+      const opened = await f.provider.factory.open(f.context.request), before = catalogs;
+      held = true; pending = opened.driver.checkReadiness(); await entry;
+      assert.equal(catalogs, before + 1); assert.equal(f.launches.length, 1); assert.equal(f.child.turns, 0);
+      const during = rows.map(record).map(row => [row.operation, row.phase]);
+      release(); const proof = await pending;
+      assert.equal(proof.ok, outcome === 'same'); assert.equal(f.provider.isReady(), outcome === 'same');
+      await opened.driver.close(); assert.equal(f.running(), false);
+      assert.deepEqual(during.slice(-2), [['readiness', 'before-await'], ['catalog', 'before-await']],
+        'an outstanding original catalogue has no fabricated after-await or return');
+      const catalog = rows.map(record).filter(row => row.operation === 'catalog').slice(outcome === 'throws' ? -2 : -3);
+      assert.deepEqual(catalog.map(row => [row.phase, row.result]), outcome === 'throws'
+        ? [['before-await', null], ['threw', null]]
+        : [['before-await', null], ['after-await', null], ['returned', outcome === 'same']]);
+      assert.deepEqual(rows.map(record).slice(-2).map(row => [row.phase, row.result]),
+        [['after-await', null], ['returned', outcome === 'same']]);
+      assert.doesNotMatch(JSON.stringify(rows), /PRIVATE-|TEST-|Error|message/);
+    } finally { release(); await pending?.catch(() => {}); diagnostic.unsubscribe(receive); await f.provider.cleanup(); }
+  });
+
+test('Codex diagnostic publication failure and missing identity preserve ordinary readiness and cleanup', async t => {
+  const diagnostic = readinessChannel(), rows: unknown[] = [], receive = (value: unknown) => { rows.push(value); };
+  diagnostic.subscribe(receive); t.after(() => diagnostic.unsubscribe(receive));
+  for (const processOrigin of [undefined, { ...readinessOrigin(), sourceId: 'not-a-source-hash' }]) {
+    const f = fixture({ ...(processOrigin ? { processOrigin } : {}) });
+    try {
+      const opened = await f.provider.factory.open(f.context.request);
+      assert.equal((await opened.driver.checkReadiness()).ok, true);
+      await opened.driver.close(); assert.equal(f.running(), false); assert.deepEqual(rows, []);
+    } finally { await f.provider.cleanup(); }
+  }
+  // This is the synchronous publication helper seam, not a claim about arbitrary external subscriber exceptions.
+  t.mock.method(diagnostic, 'publish', () => { throw new Error('PRIVATE-publication-error'); });
+  const f = fixture({ processOrigin: readinessOrigin() });
+  try {
+    const opened = await f.provider.factory.open(f.context.request);
+    assert.equal((await opened.driver.checkReadiness()).ok, true); assert.equal(f.launches.length, 1);
+    await opened.driver.close(); assert.equal(f.running(), false); assert.deepEqual(rows, []);
+  } finally { await f.provider.cleanup(); }
+});
+
+test('Codex finite observation saturation stops diagnostics once while all original readiness calls continue', async t => {
+  let now = 0;
+  t.mock.method(performance, 'now', () => now);
+  for (const limit of ['phases', 'time', 'calls'] as const) {
+    now = 0;
+    const rows: unknown[] = [], diagnostic = readinessChannel(), receive = (value: unknown) => { rows.push(value); };
+    diagnostic.subscribe(receive);
+    const f = fixture({ processOrigin: readinessOrigin() });
+    try {
+      const opened = await f.provider.factory.open(f.context.request);
+      if (limit === 'time') now = 100000;
+      if (limit === 'calls') {
+        assert.equal((await opened.driver.checkReadiness()).ok, true);
+        for (let index = 0; index < 4100; index++) assert.equal(f.provider.isReady(), true);
+      }
+      for (let index = 0; index < 20; index++) assert.equal((await opened.driver.checkReadiness()).ok, true);
+      assert.equal(f.launches.length, 1); assert.equal(f.child.turns, 0);
+      await opened.driver.close(); assert.equal(f.running(), false);
+      const limits = rows.map(record).filter(row => row.limit === true);
+      assert.deepEqual(limits, [{ schemaVersion: 2, bindingDigest: readinessBinding(), sourceId: '1'.repeat(64),
+        sourceRevision: '2'.repeat(64), limit: true }]);
+      assert.equal(record(rows.at(-1)).limit, true);
+      const phases = rows.map(record).filter(row => row.limit !== true);
+      assert.ok(phases.length <= 64);
+      assert.equal(Math.max(...phases.map(row => Number(row.invocation))), limit === 'phases' ? 16 : limit === 'calls' ? 2 : 1);
+      assert.ok(phases.every(row => (row.timing as number[]).every((value, index) => value >= 0 && value <= ([1, 4, 7].includes(index) ? 4096 : 999999))));
+    } finally { diagnostic.unsubscribe(receive); await f.provider.cleanup(); }
+  }
+});
+
+test('actual Codex readiness wrapper preserves proof/error identity and original short-circuit operand order', async () => {
+  const sourceText = readFileSync(new URL('../src/adapters/providers/CodexMemberProvider.ts', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const start = '          async checkReadiness() {', end = '          checkpoint: () => source.checkpoint(),';
+  assert.equal(sourceText.split(start).length, 2); assert.equal(sourceText.split(end).length, 2);
+  const method = sourceText.slice(sourceText.indexOf(start), sourceText.indexOf(end));
+  const make = new Function('source', 'current', 'readinessObservation',
+    '"use strict"; let ready = false; return {' + method + ' readReady() { return ready; } };') as (
+      source: { checkReadiness(): Promise<unknown> }, current: () => boolean,
+      observation: { begin(operation: string): number; publish(invocation: number, operation: string, phase: string, result?: boolean): void }
+    ) => { checkReadiness(): Promise<unknown>; readReady(): boolean };
+  for (const mode of ['true', 'false', 'source-throws', 'proof-throws', 'current-false', 'current-throws'] as const) {
+    const order: string[] = [], failure = new Error('PRIVATE-original-throw');
+    const proof = { get ok() { order.push('proof'); if (mode === 'proof-throws') throw failure; return mode !== 'false'; } };
+    const wrapper = make({ async checkReadiness() { order.push('source'); if (mode === 'source-throws') throw failure; return proof; } },
+      () => { order.push('current'); if (mode === 'current-throws') throw failure; return mode !== 'current-false'; },
+      { begin(operation) { assert.equal(operation, 'readiness'); order.push('before-await'); return 1; },
+        publish(invocation, operation, phase, result) {
+          assert.equal(invocation, 1); assert.equal(operation, 'readiness'); order.push(phase);
+          if (phase === 'returned') assert.equal(result, mode === 'true');
+        } });
+    if (mode.endsWith('throws')) await assert.rejects(wrapper.checkReadiness(), error => error === failure);
+    else assert.equal(await wrapper.checkReadiness(), proof);
+    assert.equal(wrapper.readReady(), mode === 'true');
+    assert.deepEqual(order.filter(name => ['source', 'proof', 'current'].includes(name)),
+      mode === 'source-throws' ? ['source'] : mode === 'false' || mode === 'proof-throws' ? ['source', 'proof'] : ['source', 'proof', 'current']);
+    assert.deepEqual(order, mode === 'source-throws' ? ['before-await', 'source', 'threw']
+      : ['before-await', 'source', 'after-await', 'proof', ...(mode === 'false' || mode === 'proof-throws' ? [] : ['current']),
+        mode.endsWith('throws') ? 'threw' : 'returned']);
+  }
+});

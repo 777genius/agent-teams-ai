@@ -1,0 +1,30 @@
+{
+  "status": "INCOMPLETE",
+  "jobId": "fc4e59e52eb885c46e27443d11adb692",
+  "scope": "Actual Electron dev:mcp: ordinary sidebar/Open Team/Create Task and same canonical Task after reload PASS. Legacy runtime-status CLI refusals removed; two remaining Codex nonversion calls prevent strict sentinel qualification. No Native agent sessions or model vendor auth.",
+  "receiptSha256": "af43e77c650734ec66d3c8edf50ab125f6be6825f42c7805b40e330f326abc0d",
+  "refusedInvocations": [
+    {
+      "executable": "codex",
+      "allowed": false,
+      "argc": 1,
+      "flags": []
+    },
+    {
+      "executable": "codex",
+      "allowed": false,
+      "argc": 1,
+      "flags": []
+    }
+  ],
+  "cleanup": "Original group SIGTERM stopped wrapper/Host but orphan Electron survived. Original receipt retained failure. Graceful captured renderer close dispatched but blocked on readiness after renderer dev-server loss. Fresh individual listener/start/argv plus exact TEST userData open-file custody permitted stopping only the captured test Electron PID638; helpers exited with it. No group retry, no successful Quit claim.",
+  "recoveryConfirmed": true,
+  "createdTask": {
+    "id": "9e6fe654-cbd5-5109-9697-a151b0f96ea6",
+    "subject": "TEST created by ordinary Desktop Task controls",
+    "status": "pending"
+  },
+  "next": "Trace remaining Codex metadata app-server source; integrate via captured profile/Host, keeping sentinel policy unchanged. P0-P8/M01-M19 remains incomplete.",
+  "archive": "docs/plans/provider-migration/evidence/p5-desktop-team-ui-attempt12.tar.gz",
+  "archiveSha256": "066a76a83bad5e59e1b10d30244c8349f1fb6337486538f577fe6dae9484f771"
+}

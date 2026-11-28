@@ -1,0 +1,5553 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { runInNewContext } from 'node:vm';
+import { setImmediate } from 'node:timers/promises';
+
+import { desktopShellEnvironmentProbeSource } from './desktop-backend-fixture.ts';
+import { readRendererBackendConnections } from './desktop-backend-observations.ts';
+import { attachRendererDiagnostics, waitForDesktopMainUiReadiness, waitForDesktopUiStartup } from './desktop-team-ui-smoke.ts';
+import { observeDesktopModuleLoads } from './desktop-module-load-observation.ts';
+import { assertDesktopOwnerRoutingAvailability } from './desktop-owner-routing-availability-ui.ts';
+import { hostTeamSelectionKey } from '../../src/features/agent-backend/contracts/teamSelection.ts';
+import { desktopTaskBoardAssignmentReadyExpression } from './desktop-task-comment-input-target.ts';
+import { runDesktopTaskBoardAttachmentsUi } from './desktop-task-board-attachments-ui.ts';
+import { createDesktopUiControls } from './desktop-ui-controls.ts';
+import { projectDesktopCodexLoginFailure } from './desktop-codex-login-ui-proof.ts';
+import { projectDesktopCodexInstallerFailure, projectDesktopSelectionTargetFailure } from './desktop-backend-failures.ts';
+import { projectDesktopEmulatedReadinessFailure, projectDesktopProofReceiptSummary, projectDesktopTaskBoardFailure } from './desktop-proof-evidence.ts';
+import { readNativeProviderArtifact } from '../../packages/legacy-agent-host/tests/fixtures/native-provider-artifact.ts';
+import { readDesktopFiniteMembershipPeers } from './desktop-live-membership-controlled.ts';
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(done => { resolve = done; });
+  return { promise, resolve };
+}
+const ready = { originMatches: true, mainReady: true, errorPresent: false, phase: 'ready',
+  uiDidInit: true, storePresent: true, rootChildCount: 1 };
+function fixture(reads: ReturnType<typeof deferred<Record<string, unknown>>>[], bootstrapOnly = false) {
+  const listeners = new Map<string, (value: unknown) => void>();
+  const acknowledgments = reads.map(() => deferred<void>());
+  let observations = 0, discovery = 0, ownerChecks = 0;
+  const commands: string[] = [];
+  const cdp = {
+    on(method: string, listener: (value: unknown) => void) {
+      assert.equal(bootstrapOnly, false, 'readiness-only admission has no diagnostic subscriptions');
+      listeners.set(method, listener);
+    },
+    async send(method: string) {
+      assert.equal(bootstrapOnly, false, 'readiness-only admission has no diagnostic protocol calls');
+      commands.push(method);
+      if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
+        context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
+      });
+      if (method === 'Page.getFrameTree') return { frameTree: { frame: { id: 'TEST-frame', url: 'http://localhost:5173/' } } };
+      if (method === 'Runtime.evaluate') return { result: { value: { url: 'http://localhost:5173/', readyState: 'complete' } } };
+      return {};
+    },
+    async evaluate(expression: string) {
+      if (expression.startsWith('Boolean(')) return true;
+      if (expression === 'window.electronAPI.agentBackend.getConnections()') {
+        discovery++; return { state: 'ready', bindings: [] };
+      }
+      assert.ok(expression.includes('window.electronAPI.startup.getStatus()'), 'only public startup snapshot before discovery');
+      const index = observations++;
+      assert.ok(reads[index], 'no extra startup read after its original deadline');
+      acknowledgments[index]!.resolve();
+      return reads[index]!.promise;
+    },
+  };
+  const evidence: Record<string, unknown> = {};
+  const assertOwnedRenderer = () => { ownerChecks++; };
+  const start = (remainingMs: number) => {
+    const deadline = performance.now() + remainingMs;
+    const admission = bootstrapOnly
+      ? waitForDesktopMainUiReadiness(cdp, 'http://localhost:5173/', evidence,
+          { deadline, assertOwnedRenderer })
+      : waitForDesktopUiStartup(cdp, 'http://localhost:5173/', evidence,
+          { mode: 'team-ui', uiMode: true, deadline, remainingMs, assertOwnedRenderer });
+    return admission.then(() => readRendererBackendConnections(cdp));
+  };
+  const startNative = (deadline: number, remainingMs: number) =>
+    waitForDesktopUiStartup(cdp, 'http://localhost:5173/', evidence,
+      { mode: 'codex-login-ui', uiMode: false, deadline, remainingMs, assertOwnedRenderer })
+      .then(() => readRendererBackendConnections(cdp));
+  return { start, startNative, acknowledgments, evidence, listeners, commands,
+    observations: () => observations, discovery: () => discovery, ownerChecks: () => ownerChecks };
+}
+
+test('captured UI discovery waits for Main admission and actual mount while early diagnostics remain active', { timeout: 5000 }, async () => {
+  for (const bootstrapOnly of [false, true]) {
+    const reads = [deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>(), deferred<Record<string, unknown>>()];
+    const f = fixture(reads, bootstrapOnly), pending = f.start(3000);
+    await Promise.race([f.acknowledgments[0]!.promise, pending.then(() => { assert.fail('discovery completed before Main/UI readiness was observed'); })]);
+    assert.equal(f.discovery(), 0);
+    if (!bootstrapOnly) {
+      const diagnostics = f.evidence.rendererDiagnostics as { startup: { status: string }; };
+      assert.equal(diagnostics.startup.status, 'DOCUMENT_READY', 'document diagnostics do not wait for full app admission');
+    }
+    reads[0]!.resolve({ ...ready, mainReady: false, phase: 'team-backups' });
+    await f.acknowledgments[1]!.promise; assert.equal(f.discovery(), 0);
+    reads[1]!.resolve({ ...ready, uiDidInit: false, rootChildCount: 0 });
+    await f.acknowledgments[2]!.promise; assert.equal(f.discovery(), 0);
+    reads[2]!.resolve({ ...ready, storePresent: false }); // Packed builds expose no DEV store.
+    assert.deepEqual(await pending, { kind: 'read', value: { state: 'ready', bindings: [] } });
+    assert.equal(f.discovery(), 1);
+  }
+});
+
+test('the original remaining startup deadline rejects a pending snapshot without late discovery or a reset', { timeout: 5000 }, async () => {
+  for (const bootstrapOnly of [false, true]) {
+    const held = deferred<Record<string, unknown>>(), f = fixture([held], bootstrapOnly);
+    const pending = f.start(500);
+    const rejected = assert.rejects(pending, /Main\/UI startup readiness timed out; no mutation retry/);
+    await f.acknowledgments[0]!.promise; assert.equal(f.discovery(), 0);
+    await rejected; assert.equal(f.discovery(), 0);
+    held.resolve(ready); await setImmediate(); assert.equal(f.discovery(), 0);
+  }
+});
+
+test('native login startup keeps the original absolute deadline before and after deferred reads', { timeout: 5000 }, async (context) => {
+  const expired = fixture([], true);
+  await assert.rejects(expired.startNative(performance.now() - 1, 20_000),
+    /original startup budget expired before Main\/UI readiness/);
+  assert.equal(expired.observations(), 0); assert.equal(expired.discovery(), 0);
+  assert.equal(expired.ownerChecks(), 0);
+
+  const held = deferred<Record<string, unknown>>(), waiting = fixture([held], true);
+  const pending = waiting.startNative(performance.now() + 500, 20_000);
+  const rejected = assert.rejects(pending, /Main\/UI startup readiness timed out; no mutation retry/);
+  await waiting.acknowledgments[0]!.promise;
+  assert.equal(waiting.discovery(), 0); assert.equal(waiting.ownerChecks(), 1);
+  await rejected;
+  held.resolve(ready); await setImmediate();
+  assert.equal(waiting.observations(), 1); assert.equal(waiting.discovery(), 0);
+  assert.equal(waiting.ownerChecks(), 1);
+
+  const admitted = deferred<Record<string, unknown>>(), successful = fixture([admitted], true);
+  const completing = successful.startNative(performance.now() + 3000, 20_000);
+  await successful.acknowledgments[0]!.promise; assert.equal(successful.discovery(), 0);
+  admitted.resolve({ ...ready, storePresent: false });
+  assert.deepEqual(await completing, { kind: 'read', value: { state: 'ready', bindings: [] } });
+  assert.equal(successful.discovery(), 1); assert.equal(successful.ownerChecks(), 2);
+  assert.deepEqual(successful.commands, []);
+  assert.equal(successful.evidence.rendererDiagnostics, undefined);
+  assert.equal((successful.evidence.codexLoginStartup as { appReadiness: { status: string } }).appReadiness.status, 'READY');
+
+  // Complete the deferred read after the monotonic cutoff, before its real timer fires.
+  let now = 100;
+  context.mock.method(performance, 'now', () => now);
+  const late = deferred<Record<string, unknown>>(), observedLate = fixture([late], true);
+  const completingLate = observedLate.startNative(200, 20_000);
+  const rejectedLate = assert.rejects(completingLate, /original startup budget remains after Main\/UI observation/);
+  await observedLate.acknowledgments[0]!.promise;
+  now = 201; late.resolve(ready);
+  await rejectedLate;
+  assert.equal(observedLate.observations(), 1); assert.equal(observedLate.discovery(), 0);
+  assert.equal(observedLate.ownerChecks(), 2);
+});
+
+test('startup dispatch leaves unrelated modes untouched without probes or owner callbacks', async () => {
+  let probes = 0, ownerChecks = 0;
+  const cdp = {
+    on() { probes++; assert.fail('unrelated modes must not subscribe to diagnostics'); },
+    async send() { probes++; assert.fail('unrelated modes must not send protocol commands'); },
+    async evaluate() { probes++; assert.fail('unrelated modes must not read startup'); },
+  };
+  for (const mode of ['read', 'codex-account-read', 'codex-account-auth', 'emulated-codex-login-ui']) {
+    const evidence: Record<string, unknown> = {};
+    await waitForDesktopUiStartup(cdp, 'not-a-renderer-url', evidence, {
+      mode, uiMode: false, deadline: -1, remainingMs: -1,
+      assertOwnedRenderer() { ownerChecks++; assert.fail('unrelated modes must not check the owner'); },
+    });
+    assert.deepEqual(evidence, {});
+  }
+  assert.equal(probes, 0); assert.equal(ownerChecks, 0);
+});
+
+test('startup diagnostics retain the final call and completed observation after the original 24 history cap', { timeout: 5000 }, async () => {
+  let rejectLast!: (reason: unknown) => void;
+  const failed = { promise: new Promise<Record<string, unknown>>((_, reject) => { rejectLast = reject; }),
+    resolve(_value: Record<string, unknown>) { assert.fail('the final TEST CDP call must reject'); } };
+  const reads = [...Array.from({ length: 25 }, () => deferred<Record<string, unknown>>()), failed];
+  const f = fixture(reads), pending = f.start(4500);
+  const original = Object.assign(new Error('CDP command timed out: Runtime.evaluate'), { private: 'TEST-private-error-payload' });
+  const rejected = assert.rejects(pending, error => error === original, 'retain the original rejection object');
+  for (let index = 0; index < 25; index++) {
+    await f.acknowledgments[index]!.promise;
+    reads[index]!.resolve({ ...ready, mainReady: index === 24, uiDidInit: false, storePresent: false, rootChildCount: 0 });
+  }
+  await f.acknowledgments[25]!.promise;
+  const diagnostic = (f.evidence.rendererDiagnostics as { startup: { appReadiness: {
+    observations: Record<string, unknown>[]; contextRetries: number; last: Record<string, unknown>;
+  } } }).startup.appReadiness;
+  assert.equal(diagnostic.observations.length, 24);
+  assert.ok(diagnostic.observations.every(value => value.mainReady === false));
+  assert.equal(diagnostic.last.attempt, 26); assert.equal(diagnostic.last.phase, 'evaluate');
+  assert.equal(diagnostic.last.completedAt, null); assert.equal(diagnostic.last.failure, null);
+  const observation = diagnostic.last.observation as Record<string, unknown>;
+  assert.equal(observation.attempt, 25); assert.equal(observation.mainReady, true);
+  rejectLast(original); await rejected;
+  assert.equal(diagnostic.last.failure, 'cdp-timeout'); assert.equal(diagnostic.last.phase, 'evaluate');
+  const call = diagnostic.last.callAt as { monotonicMs: number; epochMs: number };
+  const failure = diagnostic.last.failedAt as typeof call;
+  assert.ok(Number.isSafeInteger(call.monotonicMs) && Number.isSafeInteger(call.epochMs));
+  assert.ok(failure.monotonicMs >= call.monotonicMs); assert.ok(Number.isSafeInteger(failure.epochMs));
+  assert.equal(diagnostic.contextRetries, 0); assert.equal(f.observations(), 26); assert.equal(f.discovery(), 0);
+  assert.deepEqual(f.commands, ['Page.enable', 'Runtime.enable', 'Page.getFrameTree', 'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+  assert.equal(JSON.stringify(f.evidence).includes('TEST-private-error-payload'), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(diagnostic.last)) < 2048, 'one fixed closed record beyond the unchanged history');
+});
+
+
+const viewLoadSample = {
+  kind: 'runtime-provider-view-load-v1', owner: 1, request: 1, phase: 'view-set', silent: false,
+  sequenceCurrent: true, contextCurrent: true, viewPresent: true,
+  inheritanceFields: 31, loadingFalseSet: null,
+};
+const viewLoadEvent = (value: unknown, contextId = 7) => ({
+  type: 'debug', executionContextId: contextId,
+  args: [{ type: 'string', value: typeof value === 'string' ? value : JSON.stringify(value) }],
+});
+
+test('view-load diagnostics retain and echo the same bounded current-document projection without new reads', { timeout: 5000 }, async t => {
+  const output: string[] = [];
+  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+  const readyRead = deferred<Record<string, unknown>>(), f = fixture([readyRead]);
+  const running = f.start(3000);
+  const emit = f.listeners.get('Runtime.consoleAPICalled');
+  assert.ok(emit, 'the passive listener precedes the original Runtime.enable');
+  emit(viewLoadEvent(viewLoadSample));
+  readyRead.resolve(ready);
+  await running;
+  const diagnostic = f.evidence.rendererDiagnostics as {
+    events: unknown[];
+    viewLoads: { events: Record<string, unknown>[]; overflow: boolean };
+  };
+  assert.deepEqual<typeof diagnostic.viewLoads>(diagnostic.viewLoads, { events: [], overflow: false },
+    'an event before the original document fence is not attributed to the current view');
+  emit(viewLoadEvent(viewLoadSample));
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+  const retained = diagnostic.viewLoads.events[0]!;
+  const { monotonicMs, executionContextId, documentRevision, ...fields } = retained;
+  assert.equal(typeof monotonicMs, 'number'); assert.equal(executionContextId, 7);
+  assert.equal(typeof documentRevision, 'number');
+  assert.deepEqual(fields, viewLoadSample);
+  const canary = 'TEST-private-renderer-value';
+  const incomplete: Record<string, unknown> = { ...viewLoadSample };
+  delete incomplete.contextCurrent;
+  for (const invalid of [
+    { ...viewLoadSample, private: canary }, incomplete,
+    { ...viewLoadSample, owner: 0 }, { ...viewLoadSample, request: Number.MAX_SAFE_INTEGER + 1 },
+    { ...viewLoadSample, phase: canary }, { ...viewLoadSample, silent: null },
+    { ...viewLoadSample, contextCurrent: canary }, { ...viewLoadSample, viewPresent: 1 },
+    { ...viewLoadSample, inheritanceFields: 32 }, { ...viewLoadSample, inheritanceFields: 0.5 },
+    { ...viewLoadSample, loadingFalseSet: canary },
+    '{"kind":"runtime-provider-view-load-v1",',
+    JSON.stringify(viewLoadSample).padEnd(1025, ' '),
+  ]) assert.doesNotThrow(() => emit(viewLoadEvent(invalid)));
+  emit(viewLoadEvent(viewLoadSample, 999));
+  emit({ ...viewLoadEvent(viewLoadSample), type: 'log' });
+  emit({ ...viewLoadEvent(viewLoadSample), args: [{ type: 'object', value: canary }] });
+  emit({ ...viewLoadEvent(viewLoadSample), args: [
+    { type: 'string', value: JSON.stringify(viewLoadSample) }, { type: 'string', value: canary },
+  ] });
+  assert.doesNotThrow(() => emit(Object.defineProperty({}, 'type', {
+    get() { throw new Error(canary); },
+  })));
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+  assert.equal(output.length, 1);
+  f.listeners.get('Log.entryAdded')!({
+    entry: { level: 'error', source: 'javascript', text: 'SyntaxError: TEST retained module error' },
+  });
+  const originalEvents = [...diagnostic.events];
+  for (let request = 2; request <= 97; request++) emit(viewLoadEvent({ ...viewLoadSample, request }));
+  assert.equal(diagnostic.viewLoads.events.length, 96);
+  assert.equal(diagnostic.viewLoads.overflow, true);
+  assert.deepEqual(diagnostic.events, originalEvents, 'view diagnostics do not consume the original module budget');
+  assert.equal(output.length, 96, 'the receipt and stdout share the same finite admission');
+  const echoes = output.map(line => JSON.parse(line) as { kind: string; observation: unknown });
+  assert.ok(echoes.every(row => row.kind === 'TEST_RENDERER_VIEW_LOAD'));
+  assert.deepEqual(echoes.map(row => row.observation), diagnostic.viewLoads.events);
+  assert.ok(echoes.every(row => !('receipt' in row) && !('status' in row)),
+    'the unchanged original final-receipt selector cannot treat a diagnostic as success');
+  const saved = JSON.parse(JSON.stringify(f.evidence)) as typeof f.evidence;
+  assert.deepEqual(saved.rendererDiagnostics, f.evidence.rendererDiagnostics);
+  assert.equal(JSON.stringify(saved).includes(canary), false);
+  assert.equal(output.join('\n').includes(canary), false);
+  assert.deepEqual(f.commands, ['Page.enable', 'Runtime.enable', 'Page.getFrameTree',
+    'Runtime.evaluate', 'Log.enable', 'Network.enable']);
+  assert.equal(f.observations(), 1); assert.equal(f.discovery(), 1);
+});
+
+for (const invalidation of ['navigation', 'cleared', 'destroyed'] as const) test(
+  `view-load diagnostics do not reuse the initial document fence after ${invalidation}`,
+  { timeout: 5000 }, async t => {
+    const output: string[] = [];
+    t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+    const readyRead = deferred<Record<string, unknown>>(), f = fixture([readyRead]);
+    readyRead.resolve(ready);
+    await f.start(3000);
+    const emit = f.listeners.get('Runtime.consoleAPICalled')!;
+    emit(viewLoadEvent(viewLoadSample));
+    if (invalidation === 'navigation') f.listeners.get('Page.frameNavigated')!({
+      frame: { id: 'TEST-frame', url: 'http://localhost:5173/' },
+    });
+    else if (invalidation === 'cleared') f.listeners.get('Runtime.executionContextsCleared')!({});
+    else f.listeners.get('Runtime.executionContextDestroyed')!({ executionContextId: 7 });
+    // Even a reused default context ID in the same frame does not reopen the initial-document grant.
+    f.listeners.get('Runtime.executionContextCreated')!({
+      context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-frame' } },
+    });
+    emit(viewLoadEvent({ ...viewLoadSample, request: 2 }));
+    const diagnostic = f.evidence.rendererDiagnostics as { viewLoads: { events: unknown[] } };
+    assert.equal(diagnostic.viewLoads.events.length, 1);
+    assert.equal(output.length, 1);
+    assert.equal(f.commands.length, 6); assert.equal(f.observations(), 1); assert.equal(f.discovery(), 1);
+  }
+);
+
+test('throwing diagnostic stdout preserves the retained row and the original startup refusal', { timeout: 5000 }, async t => {
+  let echoes = 0;
+  t.mock.method(console, 'log', () => { echoes++; throw new Error('TEST-diagnostic-stdout-failure'); });
+  const held = deferred<Record<string, unknown>>(), f = fixture([held]);
+  const pending = f.start(3000);
+  const refused = assert.rejects(pending, /Main startup refused before UI readiness/);
+  await f.acknowledgments[0]!.promise;
+  assert.doesNotThrow(() => f.listeners.get('Runtime.consoleAPICalled')!(viewLoadEvent(viewLoadSample)));
+  const diagnostic = f.evidence.rendererDiagnostics as { viewLoads: { events: unknown[] } };
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+  assert.equal(echoes, 1);
+  held.resolve({ ...ready, errorPresent: true });
+  await refused;
+  assert.equal(f.discovery(), 0);
+  assert.equal(diagnostic.viewLoads.events.length, 1);
+});
+
+test('module diagnostics retain late pending, successful and failed loads without adding CDP commands', async () => {
+  const read = deferred<Record<string, unknown>>(), f = fixture([read]);
+  read.resolve(ready); await f.start(1000);
+  const originalCommands = [...f.commands];
+  const emit = (method: string, value: unknown) => f.listeners.get(method)!(value);
+  const request = (requestId: string, url: string) => emit('Network.requestWillBeSent', {
+    requestId, type: 'Script', frameId: 'TEST-frame', request: { url },
+  });
+  for (let index = 0; index < 300; index++) {
+    request(String(index), `http://localhost:5173/initial-${index}.ts`);
+    emit('Network.loadingFinished', { requestId: String(index) });
+  }
+  request('late-pending', 'http://localhost:5173/TeamDetailView.tsx?private=query#secret');
+  request('late-failed', 'http://localhost:5173/late-chunk.js');
+  emit('Network.responseReceived', { requestId: 'late-failed', response: { status: 503, headers: { private: 'secret' } } });
+  emit('Network.loadingFailed', { requestId: 'late-failed', errorText: 'net::ERR_INSUFFICIENT_RESOURCES' });
+  request('late-success', 'http://localhost:5173/shell.ts');
+  emit('Network.responseReceived', { requestId: 'late-success', response: { status: 200 } });
+  emit('Network.loadingFinished', { requestId: 'late-success' });
+  const diagnostics = f.evidence.rendererDiagnostics as { events: Record<string, unknown>[];
+    moduleLoads: { limit: number; overflow: boolean; loads: Record<string, unknown>[] } };
+  assert.equal(diagnostics.moduleLoads.loads.length, 256);
+  assert.equal(diagnostics.moduleLoads.overflow, true);
+  const [pending, failed, succeeded] = diagnostics.moduleLoads.loads.slice(-3);
+  assert.equal(pending!.path, '/TeamDetailView.tsx'); assert.equal(pending!.outcome, 'pending');
+  assert.equal(pending!.finishedMs, null);
+  assert.equal(failed!.outcome, 'failed'); assert.equal(failed!.status, 503);
+  assert.equal(failed!.failure, 'net::ERR_INSUFFICIENT_RESOURCES');
+  assert.equal(succeeded!.outcome, 'finished'); assert.equal(succeeded!.status, 200);
+  assert.ok(Number(succeeded!.finishedMs) >= Number(succeeded!.startedMs));
+  assert.equal(diagnostics.events.at(-1)!.event, 'Network.loadingFailed', 'existing failure subscription remains active');
+  assert.deepEqual(f.commands, originalCommands); assert.equal(f.observations(), 1);
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('secret'), false);
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('private'), false);
+});
+
+test('module diagnostics ignore foreign frames, non-script data and unretained completions', async () => {
+  const read = deferred<Record<string, unknown>>(), f = fixture([read]);
+  read.resolve(ready); await f.start(1000);
+  const emit = (method: string, value: unknown) => f.listeners.get(method)!(value);
+  const base = { requestId: 'TEST-private-id', frameId: 'TEST-frame', type: 'Script',
+    request: { url: 'http://localhost:5173/local.js' } };
+  for (const value of [null, [], {}, { ...base, frameId: 'foreign' }, { ...base, type: 'Fetch' },
+    { ...base, requestId: 'x'.repeat(129) }, { ...base, request: { url: 'https://external.example/private' } },
+    { ...base, request: { url: 'data:text/javascript,private' } }, { ...base, request: { url: 'invalid' } }])
+    assert.doesNotThrow(() => emit('Network.requestWillBeSent', value));
+  emit('Network.loadingFinished', { requestId: 'unobserved' });
+  const diagnostics = f.evidence.rendererDiagnostics as { events: Record<string, unknown>[];
+    moduleLoads: { loads: Record<string, unknown>[] } };
+  assert.equal(diagnostics.moduleLoads.loads.length, 0);
+  emit('Network.requestWillBeSent', base);
+  emit('Network.requestWillBeSent', base);
+  assert.equal(diagnostics.moduleLoads.loads.length, 1, 'duplicate events do not invent new loads');
+  emit('Network.responseReceived', { requestId: base.requestId, response: { status: Infinity } });
+  emit('Network.loadingFailed', { requestId: base.requestId, errorText: 'PRIVATE request payload' });
+  assert.equal(diagnostics.moduleLoads.loads[0]!.status, null);
+  assert.equal(diagnostics.moduleLoads.loads[0]!.failure, 'unclassified');
+  assert.equal(JSON.stringify(diagnostics.moduleLoads).includes('PRIVATE'), false);
+  emit('Network.requestWillBeSent', base);
+  emit('Network.loadingFailed', { requestId: base.requestId, errorText: 'net::ERR_' + 'A'.repeat(1_000_000) });
+  assert.equal(diagnostics.moduleLoads.loads[1]!.failure, 'unclassified');
+  assert.equal(diagnostics.events.at(-1)!.errorText, 'unclassified');
+  assert.ok(JSON.stringify(diagnostics).length < 64 * 1024, 'both passive observers retain bounded error text');
+});
+
+function readinessRuntime(expression: string, href: string, origin: string): Promise<Record<string, unknown>> {
+  return Promise.resolve(runInNewContext(expression, {
+    URL,
+    location: { href, origin },
+    window: { __claudeTeamsUiDidInit: true,
+      electronAPI: { startup: { getStatus: async () => ({ ready: true, phase: 'ready' }) } } },
+    document: { getElementById: () => ({ childElementCount: 1 }) },
+  }) as Promise<Record<string, unknown>>);
+}
+async function observedReadinessExpression(rendererUrl: string, runtimeOrigin: string): Promise<string> {
+  const listeners = new Map<string, (value: unknown) => void>();
+  let evaluated = '';
+  const cdp = {
+    on(method: string, listener: (value: unknown) => void) { listeners.set(method, listener); },
+    async send(method: string) {
+      if (method === 'Runtime.enable') listeners.get('Runtime.executionContextCreated')?.({
+        context: { id: 7, auxData: { isDefault: true, frameId: 'TEST-packed-frame' } },
+      });
+      if (method === 'Page.getFrameTree') return { frameTree: { frame: { id: 'TEST-packed-frame', url: rendererUrl } } };
+      if (method === 'Runtime.evaluate') return { result: { value: { url: rendererUrl, readyState: 'complete' } } };
+      return {};
+    },
+    async evaluate(expression: string) {
+      evaluated = expression;
+      return readinessRuntime(expression, rendererUrl, runtimeOrigin);
+    },
+  };
+  const evidence: Record<string, unknown> = {};
+  await attachRendererDiagnostics(cdp, rendererUrl, evidence, { remainingMs: 1000, assertOwnedRenderer() {} });
+  const diagnostics = evidence.rendererDiagnostics as { startup: { appReadiness: { status: string } } };
+  assert.equal(diagnostics.startup.appReadiness.status, 'READY');
+  assert.ok(evaluated);
+  return evaluated;
+}
+
+test('packed file readiness executes the actual diagnostic expression using exact href instead of Electron opaque origin', { timeout: 5000 }, async () => {
+  const expected = 'file:///Volumes/TEST%20candidate/Agent.app/Contents/Resources/app.asar/out/renderer/index.html';
+  assert.equal(new URL(expected).origin, 'null');
+  const expression = await observedReadinessExpression(expected, 'file://');
+  for (const href of [expected, expected + '#same-document-route'])
+    assert.equal((await readinessRuntime(expression, href, 'file://')).originMatches, true, href);
+  for (const href of [
+    expected.replace('index.html', 'other.html'),
+    expected.replace('/TEST%20candidate/', '/OTHER/'),
+    expected.replace('file:///', 'file://foreign/'),
+    expected + '?different-document-input',
+    'https://foreign.example/index.html', 'not a URL',
+  ]) assert.equal((await readinessRuntime(expression, href, 'file://')).originMatches, false, href);
+});
+
+test('HTTP readiness keeps exact origin and document path guards when the runtime location origin is untrusted', { timeout: 5000 }, async () => {
+  const expected = 'http://localhost:5173/index.html';
+  const expression = await observedReadinessExpression(expected, 'http://localhost:5173');
+  assert.equal((await readinessRuntime(expression, expected + '#same-document-route', 'http://localhost:5173')).originMatches, true);
+  for (const href of ['http://localhost:5173/other.html', 'http://localhost:5174/index.html',
+    'https://localhost:5173/index.html', 'http://foreign.example:5173/index.html'])
+    assert.equal((await readinessRuntime(expression, href, 'http://localhost:5173')).originMatches, false, href);
+});
+
+
+test('isolated shell fixture emits the actual framed environment and refuses shell effects', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'TEST-desktop-shell-probe-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const script = join(root, 'shell-probe.mjs'), log = join(root, 'sentinel.ndjson');
+  await writeFile(script, desktopShellEnvironmentProbeSource(process.execPath, log));
+  const nonce = 'AGENT_TEAMS_SHELL_ENV_12345678-1234-1234-1234-123456789abc';
+  const command = `command printf '\\0%s\\0' '${nonce}_START' && env -0 && command printf '\\0%s\\0' '${nonce}_END'`;
+  const env = { TEST_ONLY_VALUE: 'exact fixture value' };
+  const assertDump = (dump: string) => {
+    assert.ok(dump.endsWith('\0'), 'the actual environment dump remains NUL terminated');
+    const entries = dump.split('\0').filter(Boolean).map(entry => {
+      const separator = entry.indexOf('=');
+      assert.ok(separator > 0);
+      return [entry.slice(0, separator), entry.slice(separator + 1)] as const;
+    });
+    assert.equal(new Set(entries.map(([key]) => key)).size, entries.length);
+    const observed = Object.fromEntries(entries);
+    assert.equal(observed.TEST_ONLY_VALUE, env.TEST_ONLY_VALUE);
+    const extra = entries.filter(([key]) => key !== 'TEST_ONLY_VALUE');
+    // macOS may insert this Core Foundation value before the Node script starts.
+    if (process.platform === 'darwin' && extra.length === 1) {
+      assert.equal(extra[0]![0], '__CF_USER_TEXT_ENCODING');
+      assert.match(extra[0]![1], /^0x[0-9a-f]+:0x[0-9a-f]+:0x[0-9a-f]+$/iu);
+    } else assert.deepEqual(extra, []);
+  };
+  for (const mode of ['-lic', '-ic']) {
+    const actual = execFileSync(process.execPath, [script, mode, command], { env }).toString();
+    const start = `\0${nonce}_START\0`, end = `\0${nonce}_END\0`;
+    assert.ok(actual.startsWith(start), 'exact original start marker');
+    assert.ok(actual.endsWith(end), 'exact original end marker');
+    assertDump(actual.slice(start.length, -end.length));
+  }
+  assertDump(execFileSync(process.execPath, [script, '-ic', 'env -0'], { env }).toString());
+  for (const refused of [command + '; touch arbitrary', command.replace('_END', '_OTHER'), 'env -0 && arbitrary']) {
+    assert.throws(() => execFileSync(process.execPath, [script, '-lic', refused], { env, stdio: 'pipe' }),
+      (error: unknown) => Boolean(error && typeof error === 'object' && 'status' in error && error.status === 78));
+  }
+  const calls = (await readFile(log, 'utf8')).trim().split('\n').map(line => JSON.parse(line) as { allowed: boolean });
+  assert.deepEqual(calls.map(call => call.allowed), [true, true, true, false, false, false]);
+});
+
+function assignmentRuntime(stage?: 'in-progress-comment' | 'clarification') {
+  const identity = {
+    contextId: 'TEST-context',
+    teamName: 'host-team:TEST-owner',
+    taskId: 'TEST-task',
+  };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
+  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
+  const controller = {
+    identity,
+    surfaceId: captured.surfaceId,
+    isOwner: true,
+    canSubmit: true,
+    canEditNow: () => true,
+    canResolveClarification: true,
+    attachmentError: null,
+    session: {
+      ownerSurfaceId: captured.surfaceId,
+      ownerRevision: 1,
+      commentText: '',
+      partRevisions: { commentText: 0, pendingAttachments: 0 },
+      submitPending: false,
+      submitError: null,
+      pendingAttachments: [],
+      pendingAttachmentPreparationIds: [],
+    },
+  };
+  const root = { return: null, stateNode: {} as { current: unknown } };
+  root.stateNode.current = root;
+  const dialogFiber = {
+    return: root,
+    memoizedProps: {
+      open: true,
+      teamName: identity.teamName,
+      task: { id: identity.taskId },
+      sessionController: controller,
+    },
+  };
+  const trigger = {
+    disabled: false,
+    expanded: 'false',
+    textContent: 'alice',
+    getAttribute() {
+      return this.expanded;
+    },
+  };
+  const triggers = [trigger];
+  const dialog = {
+    __reactFiber$TEST: dialogFiber,
+    getClientRects: () => [1],
+    querySelectorAll(selector: string): unknown[] {
+      return selector === 'textarea'
+        ? [input]
+        : selector === 'button[role="combobox"]'
+          ? triggers
+          : [];
+    },
+  };
+  const input = {
+    id: 'TEST-original-comment',
+    disabled: false,
+    getClientRects: () => [1],
+    closest: () => dialog,
+    __reactFiber$TEST: {
+      return: dialogFiber,
+      memoizedProps: {
+        controller,
+        contextId: identity.contextId,
+        teamName: identity.teamName,
+        taskId: identity.taskId,
+        surfaceId: captured.surfaceId,
+      },
+    },
+  };
+  const detail = {
+    identity: { ...identity },
+    phase: 'ready',
+    loading: false,
+    refreshPending: false,
+    error: null,
+    deletionIntent: null,
+    full: { id: identity.taskId, owner: 'alice', status: 'pending', needsClarification: 'user' },
+    fullToken: { resource: 'full', key: 'full:' + key, serial: 1, sourceEpoch: 1,
+      physicalStartOrder: 1, scope: { ...scope } },
+  };
+  const storedSession = { ...controller.session };
+  const state = {
+    taskDetailSessionById: { [key]: storedSession },
+    activeContextId: identity.contextId,
+    selectedTeamName: identity.teamName,
+    isContextSwitching: false,
+    taskDetailById: { [JSON.stringify(Object.values(identity))]: detail },
+  };
+  const work = { refreshPending: false, teamUnavailable: false };
+  const imports: string[] = [];
+  const expression = desktopTaskBoardAssignmentReadyExpression(
+    'TEST-owner',
+    identity.taskId,
+    captured,
+    stage
+  );
+  assert.equal(
+    expression.match(/await import\(/g)?.length,
+    2,
+    'only the two existing read-only observer modules'
+  );
+  const evaluate = () =>
+    Promise.resolve(
+      runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+        window: { __agentTeamsDevStore: { getState: () => state } },
+        document: {
+          getElementById: () => input,
+          querySelectorAll: (selector: string) =>
+            selector === '[role="dialog"]' ? [dialog] : selector === 'textarea' ? [input] : [],
+        },
+        async __testImport(path: string) {
+          imports.push(path);
+          if (path === '/store/slices/teamSlice.ts')
+            return {
+              isTeamDataRefreshPending(team: string) {
+                assert.equal(team, identity.teamName);
+                return work.refreshPending;
+              },
+            };
+          assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
+          return {
+            captureTaskDetailReadScope(teamName: string, contextId: string) {
+              assert.deepEqual(
+                { teamName, contextId },
+                { teamName: identity.teamName, contextId: captured.contextId }
+              );
+              return { ...scope };
+            },
+            isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {
+              assert.equal(observed, state);
+              assert.equal(team, identity.teamName);
+              assert.deepEqual(observedScope, scope);
+              return work.teamUnavailable;
+            },
+          };
+        },
+      }) as Promise<Record<string, unknown> | null>
+    );
+  return { evaluate, imports, state, detail, controller, storedSession, trigger, triggers, work };
+}
+
+test('original in-progress Task comment prerequisite requires its exact stage without an assignment control', async () => {
+  const commentRuntime = () => {
+    const f = assignmentRuntime('in-progress-comment');
+    f.detail.full.status = 'in_progress';
+    f.triggers.length = 0; // The real in-progress header renders an owner badge.
+    return f;
+  };
+  const ready = await commentRuntime().evaluate();
+  assert.equal(ready?.surfaceId, 'TEST-original-surface');
+  for (const change of [
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.full.status = 'pending'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.full.status = 'completed'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.full.owner = 'bob'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.triggers.push(f.trigger); },
+    (f: ReturnType<typeof commentRuntime>) => { f.work.refreshPending = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.refreshPending = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.loading = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.phase = 'unavailable'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.work.teamUnavailable = true; },
+    (f: ReturnType<typeof commentRuntime>) => { f.state.activeContextId = 'foreign-context'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.state.selectedTeamName = 'host-team:foreign'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.detail.identity.taskId = 'foreign-task'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.surfaceId = 'foreign-surface'; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.isOwner = false; },
+    (f: ReturnType<typeof commentRuntime>) => { f.controller.canEditNow = () => false; },
+  ]) {
+    const f = commentRuntime();
+    change(f);
+    assert.equal(await f.evaluate(), null);
+  }
+  const assignment = assignmentRuntime();
+  assignment.triggers.length = 0;
+  assert.equal(await assignment.evaluate(), null, 'default assignment still requires its control');
+});
+
+test('Task attachment comment waits for its original focused owner after one click before inserting text', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-attachment-comment-focus-')));
+  try {
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAADklEQVR4nGP4z8DwHwQBEPgD/U6VwW8AAAAASUVORK5CYII=',
+      'base64'
+    );
+    const { createHash } = await import('node:crypto');
+    const digest = createHash('sha256').update(png).digest('hex');
+    const selector = '[role="dialog"] textarea[id="TEST-original-comment"]';
+    const owner = {
+      selector,
+      identity: { contextId: 'TEST-context' },
+      surfaceId: 'TEST-original-surface',
+      inputId: 'TEST-original-comment',
+      ownerRevision: 3,
+      commentText: '',
+      submitPending: false,
+      submitError: null,
+      pendingAttachmentCount: 0,
+      pendingPreparationCount: 0,
+      canSubmit: true,
+      attachmentError: null,
+    };
+    const ready = {
+      owner,
+      inputProbe: {
+        present: true,
+        connected: true,
+        disabled: false,
+        focused: true,
+        ownerSurfaceId: owner.surfaceId,
+        ownerRevision: owner.ownerRevision,
+        expectedSurfaceId: owner.surfaceId,
+        detailPhase: 'ready',
+        refreshPending: false,
+        taskStatus: 'in_progress',
+        taskId: 'TEST-task',
+        activeContextId: owner.identity.contextId,
+        contextSwitching: false,
+      },
+      settled: true,
+      domValue: '',
+      inputEnabled: true,
+      visibility: 'visible',
+      focused: true,
+      documentFocused: true,
+    };
+    const afterFocus = [
+      {
+        ...ready,
+        owner: null,
+        inputProbe: {
+          ...ready.inputProbe,
+          present: false,
+          connected: false,
+          ownerRevision: null,
+          focused: false,
+        },
+        settled: false,
+        domValue: null,
+        inputEnabled: false,
+      },
+      {
+        ...ready,
+        owner: { ...owner, selector: '[role="dialog"] textarea[id="TEST-rebound-comment"]' },
+      },
+      { ...ready, focused: false, inputProbe: { ...ready.inputProbe, focused: false } },
+      ready,
+    ];
+    let focused = false,
+      focusClicks = 0,
+      postFocusReads = 0,
+      insertions = 0,
+      fileInputs = 0;
+    const inserted = new Error('TEST original insertion reached after readiness');
+    const cdp = {
+      async evaluate(expression: string) {
+        if (expression.includes('const settled=await')) {
+          if (!focused) return { ...ready, focused: false };
+          assert.ok(
+            postFocusReads < afterFocus.length,
+            'no read beyond the original settled focus'
+          );
+          return afterFocus[postFocusReads++]!;
+        }
+        if (expression.startsWith('Boolean(')) return true;
+        if (expression.includes('const currentFiber=')) return owner;
+        if (expression.includes('naturalWidth===2'))
+          return { src: `data:image/png;base64,${png.toString('base64')}`, width: 2, height: 1 };
+        if (expression.includes('let parent=e.parentElement')) return { visible: true };
+        if (expression.includes('const elements =')) return { x: 10, y: 20 };
+        throw new Error('unexpected TEST observer expression');
+      },
+      async send(method: string, params?: Record<string, unknown>) {
+        if (method === 'DOM.getDocument') return { root: { nodeId: 1 } };
+        if (method === 'DOM.querySelectorAll') return { nodeIds: [2] };
+        if (method === 'DOM.setFileInputFiles') {
+          fileInputs++;
+          return {};
+        }
+        if (method === 'Input.dispatchMouseEvent' && params?.type === 'mouseReleased') {
+          focusClicks++;
+          focused = true;
+        }
+        if (method === 'Input.insertText') {
+          insertions++;
+          assert.equal(params?.text, 'TEST attachment comment original');
+          assert.equal(
+            postFocusReads,
+            afterFocus.length,
+            'missing, rebound and unfocused owners were refused'
+          );
+          throw inserted;
+        }
+        return {};
+      },
+    };
+    const image = { filename: 'TEST-task-owned.png', artifactId: digest, mimeType: 'image/png' };
+    await assert.rejects(
+      runDesktopTaskBoardAttachmentsUi(cdp, {
+        root,
+        taskId: 'TEST-task',
+        subject: 'TEST task',
+        handleId: 'TEST-owner',
+        proof: {},
+        assertOwnedRenderer() {},
+        step() {},
+        async task() {
+          return { attachments: [image] };
+        },
+        async commands() {
+          return [];
+        },
+        async receiptFor() {
+          return {
+            phase: 'completed',
+            command: {
+              payload: {
+                attachment: {
+                  artifactId: digest,
+                  byteLength: png.length,
+                  digest,
+                  mimeType: image.mimeType,
+                },
+              },
+            },
+          };
+        },
+        async waitProduct<T>(
+          read: () => Promise<T>,
+          matches: (value: T) => boolean,
+          label: string
+        ) {
+          for (let observation = 0; observation < 6; observation++) {
+            const value = await read();
+            if (matches(value)) return value;
+          }
+          throw new Error(`TEST original readiness did not settle: ${label}`);
+        },
+        async screenshot() {
+          return { path: join(root, 'TEST-image.png'), sha256: digest };
+        },
+      }),
+      (error) => error === inserted
+    );
+    assert.equal(focusClicks, 1, 'the original focus action is never replayed');
+    assert.equal(fileInputs, 1, 'only the original image was uploaded before comment insertion');
+    assert.equal(insertions, 1, 'one insertion follows the exact original readiness');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('original Task assignment prerequisite refuses receipt-only, pending and stale renderer state', async () => {
+  const f = assignmentRuntime();
+  f.work.refreshPending = true;
+  assert.equal(
+    await f.evaluate(),
+    null,
+    'physical receipt does not settle the original UI refresh'
+  );
+  f.work.refreshPending = false;
+  f.detail.refreshPending = true;
+  assert.equal(await f.evaluate(), null);
+  f.detail.refreshPending = false;
+  f.detail.loading = true;
+  assert.equal(await f.evaluate(), null);
+  f.detail.loading = false;
+  f.detail.full.owner = 'bob';
+  assert.equal(await f.evaluate(), null, 'retained pre-assignment full Task is not completion');
+  f.detail.full.owner = 'alice';
+  f.work.teamUnavailable = true;
+  assert.equal(
+    await f.evaluate(),
+    null,
+    'visible Task alone is not current accepted live authority'
+  );
+  f.work.teamUnavailable = false;
+  f.controller.canEditNow = () => false;
+  assert.equal(await f.evaluate(), null, 'original Task owner forbids editing');
+  f.controller.canEditNow = () => true;
+  const result = await f.evaluate();
+  assert.equal(result?.surfaceId, 'TEST-original-surface');
+  assert.equal((result?.identity as { contextId: string }).contextId, 'TEST-context');
+  assert.deepEqual(
+    [...new Set(f.imports)],
+    ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']
+  );
+});
+
+test('original Task assignment prerequisite rejects a foreign context, Team, Task or rebound surface', async () => {
+  for (const change of [
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.state.activeContextId = 'foreign-context';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.state.selectedTeamName = 'host-team:foreign';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.detail.identity.taskId = 'foreign-task';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.controller.surfaceId = 'foreign-surface';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.controller.isOwner = false;
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.trigger.expanded = 'true';
+    },
+    (f: ReturnType<typeof assignmentRuntime>) => {
+      f.trigger.textContent = 'bob';
+    },
+  ]) {
+    const f = assignmentRuntime();
+    change(f);
+    assert.equal(await f.evaluate(), null);
+  }
+});
+
+test('original desktop click waits for stable target geometry, without repeating input', { timeout: 5000 }, async () => {
+  const points = [
+    { x: 100, y: 100, tag: 'BUTTON' },
+    { x: 100, y: 100, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+    { x: 100, y: 200, tag: 'BUTTON' },
+  ];
+  const dispatched: Record<string, unknown>[] = [];
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(expression.includes('document.querySelectorAll'));
+      return points.shift() ?? { x: 100, y: 200, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  await ui.click('#TEST-original-toggle', 'TEST moving original toggle');
+  assert.deepEqual(dispatched.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  for (const event of dispatched) {
+    assert.equal(event.x, 100);
+    if (event.type !== 'mouseMoved') assert.equal(event.y, 200);
+  }
+});
+
+test('original Task hover waits through layout and unavailability before its one physical move', { timeout: 5000 }, async () => {
+  const expression = 'TEST_originalTaskHitPoint()';
+  const points = [
+    { x: 100, y: 100 }, { x: 100, y: 200 }, { x: 100, y: 200 },
+    null, { x: 100, y: 200 }, { x: 100, y: 200 }, { x: 100, y: 200 },
+  ];
+  const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(actual, expression);
+      reads++;
+      return points.shift();
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.equal(method, 'Input.dispatchMouseEvent');
+      assert.equal(reads, 7, 'no move at a stale or temporarily ineligible target');
+      dispatched.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
+  await ui.hoverExpression(expression, 'TEST original Task');
+  assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 200 }]);
+  assert.deepEqual(steps, [{ action: 'mouseMoved', label: 'TEST original Task', target: { x: 100, y: 200 } }]);
+});
+
+test('original desktop click refuses a constantly moving target before dispatch', { timeout: 5000 }, async () => {
+  let reads = 0;
+  const dispatched: string[] = [];
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(expression.includes('document.querySelectorAll'));
+      return { x: 100, y: 100 + reads++ * 10, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push(String(params.type));
+      return {};
+    },
+  };
+  const ui = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  await assert.rejects(ui.click('#TEST-original-toggle', 'TEST moving original toggle'), /did not settle before one click/);
+  assert.deepEqual(dispatched, ['mouseMoved'], 'no physical click after unstable ownership');
+});
+
+test('original owner-qualified click rereads its full expression through unavailability at unchanged coordinates', { timeout: 5000 }, async () => {
+  const expression = '(async () => TEST_currentOwnerAndEnabledControl())()';
+  const observations = [
+    { x: 100, y: 100 },
+    { x: 100, y: 100 },
+    null,
+    { x: 100, y: 100 },
+    { x: 100, y: 100 },
+  ];
+  const dispatched: Record<string, unknown>[] = [];
+  let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(actual, expression, 'every sample executes the original owner-qualified lookup');
+      reads++;
+      return observations.length ? observations.shift() : { x: 100, y: 100 };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() {}, step() {} });
+  await ui.clickExpression(expression, 'TEST original owner-qualified control');
+  assert.ok(reads >= 5, 'temporary unavailability is observed before the ready control settles');
+  assert.deepEqual(dispatched.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.deepEqual(dispatched.slice(1).map(({ x, y }) => ({ x, y })), [
+    { x: 100, y: 100 }, { x: 100, y: 100 },
+  ], 'only one press/release at the eligible original target');
+});
+
+test('login failure facts retain only bounded original attempts and confirmed milestones', () => {
+  const privateSentinel = 'TEST-private-account-URL-code-clipboard-selector-error';
+  const evidence = {
+    status: 'INCOMPLETE', failure: privateSentinel,
+    codexInitialAccount: { managedAccount: { token: privateSentinel }, appServerState: privateSentinel },
+    cdpListenerFailure: { scope: 'original-linux-lsof-test-cdp', holderCount: 2,
+      files: [{ pid: 123456, endpoint: privateSentinel }] },
+    codexLoginUi: { status: 'INCOMPLETE', privateFields: privateSentinel,
+      steps: [{ action: 'mouseClick', label: 'start one original browser login',
+        selector: privateSentinel, target: { text: privateSentinel } }],
+      cases: [{ mode: 'browser', status: 'INCOMPLETE', nativeStatus: 'pending',
+        copyAcknowledged: true, authUrl: privateSentinel, userCode: privateSentinel }] },
+    cleanup: { remaining: [{ pid: 123456, executable: privateSentinel }],
+      capturedHostObserved: true, capturedHostAbsent: false, cleanupFailure: privateSentinel },
+  };
+  const before = structuredClone(evidence);
+  const projection = projectDesktopCodexLoginFailure(evidence);
+  assert.equal(projection.initialSnapshotRecorded, true);
+  assert.equal(projection.proofRecorded, true);
+  assert.equal(projection.originalFailureRecorded, true);
+  assert.deepEqual(projection.listenerFailure, { recorded: true, count: 2, overflow: false });
+  assert.deepEqual(projection.steps, { count: 1, overflow: false,
+    lastAction: 'mouseClick', lastAttempt: 'browser-start' });
+  assert.deepEqual(projection.cases, { count: 1, overflow: false, items: [{
+    mode: 'browser', status: 'INCOMPLETE', nativeStatus: 'pending', copyAcknowledged: true,
+    externalOpenDispatched: null, reopenPreservedOriginal: null, cancelledOriginal: null, privateFieldsCleared: null,
+  }] });
+  assert.deepEqual(projection.cleanup, { recorded: true, count: 1, overflow: false,
+    capturedHostObserved: true, capturedHostAbsent: false, failureRecorded: true });
+  const serialized = JSON.stringify(projection);
+  assert.equal(serialized.includes(privateSentinel), false);
+  assert.equal(serialized.includes('123456'), false);
+  assert.ok(Buffer.byteLength(serialized) <= 4096);
+  assert.deepEqual(evidence, before, 'the original private receipt is unchanged');
+  const overflow = projectDesktopCodexLoginFailure({ ...evidence, codexLoginUi: {
+    steps: Array.from({ length: 257 }, () => ({ action: privateSentinel, label: privateSentinel })),
+    cases: [null, { mode: privateSentinel, nativeStatus: privateSentinel }, privateSentinel],
+  } });
+  assert.deepEqual(overflow.steps, { count: 256, overflow: true, lastAction: null, lastAttempt: null });
+  const unknownCase = { mode: null, status: null, nativeStatus: null, copyAcknowledged: null,
+    externalOpenDispatched: null, reopenPreservedOriginal: null, cancelledOriginal: null, privateFieldsCleared: null };
+  assert.deepEqual(overflow.cases, { count: 2, overflow: true, items: [unknownCase, unknownCase] });
+  assert.equal(JSON.stringify(overflow).includes(privateSentinel), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(overflow)) <= 4096);
+  const malformed = projectDesktopCodexLoginFailure({ codexLoginUi: privateSentinel,
+    failure: { privateSentinel }, cleanup: { cleanupFailure: { privateSentinel } } });
+  assert.equal(malformed.proofRecorded, null);
+  assert.deepEqual(malformed.steps, { count: null, overflow: null, lastAction: null, lastAttempt: null });
+  assert.equal(malformed.originalFailureRecorded, null);
+  assert.deepEqual(malformed.cleanup, { recorded: true, count: null, overflow: null,
+    capturedHostObserved: null, capturedHostAbsent: null, failureRecorded: null });
+  assert.equal(JSON.stringify(malformed).includes(privateSentinel), false);
+  assert.equal(projectDesktopCodexLoginFailure({}).originalFailureRecorded, false);
+  assert.deepEqual(projection.initialUnavailableTarget, { state: 'not-recorded' });
+  const prefix = 'UI target read failed: open existing More menu; facts=';
+  const facts = { matches: 0, disabled: false, ariaDisabled: false, pointerEventsNone: false,
+    centerInViewport: false, hitPresent: false, rootPresent: true, rootChildren: 0 };
+  const retainedEvidence = { ...evidence, failure: prefix + JSON.stringify(facts) };
+  const retainedBefore = structuredClone(retainedEvidence);
+  const retained = projectDesktopCodexLoginFailure(retainedEvidence);
+  assert.deepEqual(retained.initialUnavailableTarget, { state: 'retained', facts: {
+    disabled: false, ariaDisabled: false, pointerEventsNone: false, centerInViewport: false,
+    hitPresent: false, rootPresent: true, uiInitialized: null, splashPresent: null,
+    splashPositiveSize: null, splashError: null, splashSlow: null, documentComplete: null,
+    languageEnglish: null, languageEmpty: null, rootFallbackShape: null,
+    matches: 0, rawMatches: null, rootChildren: 0,
+  } });
+  assert.equal(JSON.stringify(retained).includes(privateSentinel), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(retained)) <= 4096);
+  assert.deepEqual(retainedEvidence, retainedBefore, 'the bounded projection does not mutate the private receipt');
+  const boundary = projectDesktopCodexLoginFailure({ ...evidence,
+    failure: prefix + JSON.stringify({ ...facts, matches: 256, rawMatches: 256, rootChildren: 16 }) });
+  assert.equal((boundary.initialUnavailableTarget as { state: string }).state, 'retained');
+  const invalidFailures = [
+    prefix + '{',
+    prefix + JSON.stringify([facts]),
+    prefix + JSON.stringify({ ...facts, disabled: undefined }),
+    prefix + JSON.stringify({ ...facts, disabled: 'false' }),
+    prefix + JSON.stringify({ ...facts, rootPresent: 'true' }),
+    prefix + JSON.stringify({ ...facts, matches: -1 }),
+    prefix + JSON.stringify({ ...facts, matches: 0.5 }),
+    prefix + JSON.stringify({ ...facts, matches: 257 }),
+    prefix + JSON.stringify({ ...facts, rawMatches: 257 }),
+    prefix + JSON.stringify({ ...facts, rootChildren: 17 }),
+    prefix + JSON.stringify({ ...facts, privateUrl: privateSentinel }),
+    prefix + JSON.stringify(facts) + ' '.repeat(4001),
+  ];
+  for (const failure of invalidFailures) {
+    const input = { ...evidence, failure }, original = structuredClone(input);
+    const unavailable = projectDesktopCodexLoginFailure(input);
+    assert.deepEqual(unavailable.initialUnavailableTarget, { state: 'unavailable' });
+    assert.equal(JSON.stringify(unavailable).includes(privateSentinel), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(unavailable)) <= 4096);
+    assert.deepEqual(input, original);
+  }
+});
+
+test('finite readiness failure summaries keep only bounded states and never private snapshot data', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
+  const evidence = { status: 'INCOMPLETE', stoppedImportUiProof: { hydrationFailureDiagnostics: {
+    text: 'Runtime environment unavailable ' + secret, permissions: 'unchecked', inputs: [{ value: secret }] } },
+    rendererFailureSnapshot: { store: { provisioning: [{ currentProvisioningRunId: secret,
+      error: 'Runtime source changed ' + secret, progress: { state: 'failed', configReady: false,
+        message: 'Selected model could not be verified ' + secret } }] } } };
+  const before = JSON.stringify(evidence), result = projectDesktopEmulatedReadinessFailure(evidence);
+  assert.ok('hydration' in result && result.hydration && 'provisioning' in result && result.provisioning);
+  assert.equal(result.hydration.text.runtimeUnavailable, true);
+  assert.equal(result.hydration.permissions, 'unchecked');
+  assert.equal(result.provisioning.items[0]!.state, 'failed');
+  assert.equal(result.provisioning.items[0]!.configReady, false);
+  assert.deepEqual(result.provisioning.items[0]!.error.terms, ['runtime', 'source', 'changed']);
+  assert.equal(result.provisioning.items[0]!.message.modelUnverified, true);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|https:|\/TEST-secret|Runtime source changed/);
+  assert.equal(JSON.stringify(evidence), before);
+  for (const mode of ['emulated-import-ui', 'emulated-opencode-runtime-ui']) {
+    assert.ok('emulatedReadinessFailure' in projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false }));
+    assert.equal('emulatedReadinessFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' }, { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  for (const mode of ['team-ui', 'emulated-extensions-ui'])
+    assert.equal('emulatedReadinessFailure' in projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  let getterReads = 0;
+  projectDesktopEmulatedReadinessFailure(Object.defineProperty({}, 'rendererFailureSnapshot', {
+    get() { getterReads++; throw new Error(secret); } }));
+  projectDesktopEmulatedReadinessFailure({ rendererFailureSnapshot: { store: {
+    provisioning: new Proxy([], { get() { getterReads++; throw new Error(secret); } }) } } });
+  assert.equal(getterReads, 0);
+  const overflow = projectDesktopEmulatedReadinessFailure({ rendererFailureSnapshot: {
+    store: { provisioning: Array.from({ length: 99 }, () => ({ progress: { state: secret } })) } } });
+  assert.ok('provisioning' in overflow && overflow.provisioning);
+  assert.equal(overflow.provisioning.count, 9); assert.equal(overflow.provisioning.overflow, true);
+  assert.equal(overflow.provisioning.items.length, 8);
+  assert.ok(overflow.provisioning.items.every(row => row.state === null));
+  assert.ok(Buffer.byteLength(JSON.stringify(overflow)) <= 8192);
+});
+
+test('native Review failure summaries reuse the bounded retained readiness projection', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
+  const evidence = { status: 'INCOMPLETE',
+    nativeReviewUiProof: { provider: 'opencode-v2', status: 'INCOMPLETE', steps: [] },
+    rendererFailureSnapshot: { dialogs: [{
+      text: 'Runtime environment unavailable. OpenCode provider status is still loading. Selected model could not be verified. ' + secret,
+      buttons: [{ text: 'Launch team', disabled: true }, { text: 'Skip preflight and launch', disabled: false },
+        { text: secret, disabled: false }],
+    }] } };
+  const original = structuredClone(evidence);
+  const result = projectDesktopEmulatedReadinessFailure(evidence);
+  assert.ok('retainedDialogs' in result && result.retainedDialogs);
+  assert.deepEqual(result.retainedDialogs.items[0]!.buttons.launchTeam,
+    { matches: 1, enabled: 0, disabled: 1, unknown: 0 });
+  assert.equal(result.retainedDialogs.items[0]!.text.runtimeUnavailable, true);
+  assert.equal(result.retainedDialogs.items[0]!.text.providerStatusLoading, true);
+  assert.equal(result.retainedDialogs.items[0]!.text.modelUnverified, true);
+  assert.equal(result.retainedDialogs.atomicWithFailedWait, false);
+  assert.equal(result.retainedDialogs.completeDom, false);
+  assert.equal(result.retainedDialogs.actualTruncationKnown, false);
+  assert.equal(result.importRecorded, false);
+  assert.equal(result.peerCleanup.recorded, false);
+  const options = { mode: 'native-review-ui', receiptPath: 'TEST-receipt', mixedMode: false };
+  const summary = projectDesktopProofReceiptSummary(evidence, options);
+  assert.ok('nativeReviewReadinessFailure' in summary && 'nativeReviewFailure' in summary);
+  assert.deepEqual(summary.nativeReviewReadinessFailure, result);
+  assert.ok(Buffer.byteLength(JSON.stringify(summary.nativeReviewFailure)) <= 2048);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 8192);
+  assert.ok(Buffer.byteLength(JSON.stringify({ nativeReviewFailure: summary.nativeReviewFailure,
+    nativeReviewReadinessFailure: result })) <= 10296);
+  assert.doesNotMatch(JSON.stringify(summary), /TEST-private|https:|\/TEST-secret|Runtime environment unavailable/);
+  assert.deepEqual(evidence, original);
+  assert.equal('nativeReviewReadinessFailure' in projectDesktopProofReceiptSummary(
+    { ...evidence, status: 'PASS' }, options), false);
+  for (const mode of ['team-ui', 'emulated-opencode-runtime-ui', 'native-resume-ui'])
+    assert.equal('nativeReviewReadinessFailure' in projectDesktopProofReceiptSummary(
+      evidence, { ...options, mode }), false);
+  let getterReads = 0;
+  const accessor = { ...evidence, rendererFailureSnapshot: Object.defineProperty({}, 'dialogs', {
+    get() { getterReads++; throw new Error(secret); },
+  }) };
+  const accessorSummary = projectDesktopProofReceiptSummary(accessor, options);
+  assert.equal(getterReads, 0);
+  assert.doesNotMatch(JSON.stringify(accessorSummary), /TEST-private|https:|\/TEST-secret/);
+  const refused = projectDesktopProofReceiptSummary({ ...evidence, rendererFailureSnapshot:
+    new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }) }, options);
+  assert.ok('nativeReviewReadinessFailure' in refused);
+  assert.deepEqual(refused.nativeReviewReadinessFailure,
+    { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' });
+  assert.doesNotMatch(JSON.stringify(refused), /TEST-private|https:|\/TEST-secret/);
+});
+
+async function savedNativeNavigationFixture(t: import('node:test').TestContext, options: {
+  surface?: 'delayed' | 'alice' | 'bob' | 'foreign' | 'dialog' | 'duplicate'; retired?: boolean;
+} = {}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-readback-fixture.ts', import.meta.url), 'utf8');
+  const first = 'export async function runDesktopNativeReadback(', last = '  const geometry = await revealDesktopReply(cdp, reply, {';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const prefix = stripTypeScriptTypes(source.slice(source.indexOf(first), source.indexOf(last)).replace(/^export /u, '') + '\n}');
+  const handleId = 'TEST-original-handle', team = hostTeamSelectionKey(handleId);
+  const selector = '[data-team-sidebar-host="team"][data-team-name=' + JSON.stringify(team) + ']';
+  const surface = options.surface ?? 'delayed', refusal = new Error('TEST original renderer retired');
+  const calls: { method: string; params?: Record<string, unknown> }[] = [], steps: Record<string, unknown>[] = [];
+  let now = 0, selected = false, opened = surface === 'alice', reads = 0, ownerChecks = 0;
+  const waits: number[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (done: () => void, ms: number) => {
+    assert.equal(ms, 100, 'original passive-read and click-settling cadence');
+    waits.push(ms); now += ms; queueMicrotask(done); return 1 as unknown as NodeJS.Timeout;
+  });
+  const visible = () => surface !== 'foreign' && (surface !== 'delayed' || now >= 200);
+  const rect = () => ({ x: 40, y: 50, width: 200, height: 32 });
+  const recipient = { textContent: surface === 'bob' ? 'bob' : 'alice', getBoundingClientRect: rect };
+  const textarea = { getBoundingClientRect: rect };
+  const composer = { getBoundingClientRect: rect,
+    querySelectorAll(query: string) { assert.equal(query, 'textarea'); return [textarea]; },
+    querySelector(query: string) { assert.equal(query, '.message-composer-target-selectors'); return recipient; } };
+  const alice = { textContent: 'alice REPLY_NATIVE_ONE', tagName: 'BUTTON', getBoundingClientRect: rect,
+    matches(query: string) { assert.equal(query, ':disabled'); return false; }, contains: () => false,
+    closest: () => null, getAttribute: () => null, getAnimations: () => [] };
+  const sidebar = { getBoundingClientRect: rect,
+    querySelectorAll(query: string) {
+      if (query === '.message-composer-flat-layout') return opened || surface === 'bob' ? [composer] : [];
+      if (query === 'button[aria-label^="alice,"]') return opened || surface === 'bob' ? [] : [alice];
+      assert.fail('unexpected original Team query: ' + query);
+    },
+    get innerText() { return opened || surface === 'bob' ? 'REPLY_NATIVE_ONE' : 'TEST original Team overview'; },
+  };
+  const dialog = { getBoundingClientRect: rect };
+  const document = {
+    querySelector(query: string) {
+      if (query === '.message-composer-flat-layout textarea') return textarea; // The old global shortcut sees the foreign/task composer.
+      if (query === selector) return visible() ? sidebar : null;
+      assert.fail('unexpected document query: ' + query);
+    },
+    querySelectorAll(query: string) {
+      if (query === '[role="dialog"]') return surface === 'dialog' || surface === 'delayed' && now < 200 ? [dialog] : [];
+      if (query === selector) return !visible() ? [] : surface === 'duplicate' ? [sidebar, sidebar] : [sidebar];
+      if (query === selector + ' button[aria-label^="alice,"]' || query === 'button[aria-label^="alice,"]')
+        return visible() && !opened && surface !== 'bob' ? [alice] : [];
+      assert.fail('unexpected document query list: ' + query);
+    },
+    elementFromPoint: () => alice,
+    body: { get innerText() { return opened || surface !== 'delayed' ? 'REPLY_NATIVE_ONE' : 'TEST stale task composer'; } },
+  };
+  const cdp = {
+    async evaluate(expression: string) {
+      assert.ok(selected, 'no navigation read before the original sidebar/Open Team intent');
+      reads++;
+      return runInNewContext(expression, { document, innerWidth: 1200, innerHeight: 900,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      calls.push({ method, params });
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (params?.type === 'mouseReleased') opened = true;
+      return {};
+    },
+  };
+  const make = Function('dependencies', `'use strict'; const {assert,readDesktopNativeStopSessions,readFile,join,process,record,
+    createDesktopUiControls,desktopJsLiteral,hostTeamSelectionKey}=dependencies; ${prefix}; return runDesktopNativeReadback;`) as
+    (dependencies: Record<string, unknown>) => (port: typeof cdp, input: Record<string, unknown>) => Promise<void>;
+  const run = make({ assert, readDesktopNativeStopSessions: async () => [{ phase: 'closed', custody: 'released' }],
+    readFile: async () => JSON.stringify({ nativeProvider: 'claude', discovery: { state: 'ready',
+      bindings: [{ handle: { handleId } }] } }), join, process: { env: {} }, desktopJsLiteral, hostTeamSelectionKey,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    createDesktopUiControls(port: typeof cdp, input: Parameters<typeof createDesktopUiControls>[1]) {
+      const controls = createDesktopUiControls(port, { ...input, step(value) { steps.push(value); input.step(value); } });
+      return { ...controls, async observeInput() {}, async clickSidebar(subject: string) {
+        assert.equal(subject, 'TEST saved task'); assert.equal(selected, false); selected = true;
+      } };
+    },
+  });
+  return { calls, steps, waits, refusal, counts: () => ({ now, reads, ownerChecks }),
+    run: () => run(cdp, { root: '/TEST-original-root', seed: { taskId: '1', subject: 'TEST saved task' },
+      evidence: {}, assertNoNativeChildren() { assert.fail('this finite prefix stops before native custody reads'); },
+      assertOwnedRenderer() { ownerChecks++; if (options.retired) throw refusal; } }) };
+}
+
+test('saved native readback settles the original Team before one Alice intent despite a stale foreign composer', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t);
+  await f.run();
+  assert.deepEqual(f.calls.filter(call => call.method === 'Input.dispatchMouseEvent').map(call => call.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.equal(f.steps.filter(step => step.action === 'mouseClick').length, 1);
+  assert.equal(f.steps.find(step => step.action === 'mouseClick')?.label, 'open saved ordinary direct chat');
+  assert.equal(f.counts().now, 400, '200ms route settling plus original 200ms stable click; no new input');
+});
+
+test('saved native readback keeps an already open original Alice chat without another click', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t, { surface: 'alice' }); await f.run();
+  assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []); assert.equal(f.counts().now, 0);
+});
+
+for (const surface of ['bob', 'foreign', 'dialog', 'duplicate'] as const)
+test('saved native readback refuses ' + surface + ' despite a globally visible old reply', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t, { surface });
+  await assert.rejects(f.run(), /UI read timed out: .*; no mutation retry/);
+  assert.equal(f.counts().now, 30_000, 'one original30s classification budget without a reset');
+  assert.equal(f.counts().reads, 300); assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []);
+});
+
+test('saved native readback preserves the original renderer refusal before navigation input', { timeout: 5000 }, async t => {
+  const f = await savedNativeNavigationFixture(t, { retired: true });
+  await assert.rejects(f.run(), error => error === f.refusal);
+  assert.deepEqual(f.calls, []); assert.deepEqual(f.steps, []); assert.equal(f.counts().now, 0);
+});
+
+async function oversizedCommentNavigationFixture(t: import('node:test').TestContext, options: {
+  surface?: 'closing' | 'retained' | 'card' | 'blocked' | 'wrong-card'; retired?: boolean;
+} = {}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const { teamCommandPath } = await import('../../packages/legacy-agent-host/dist/team/commandEntries.js');
+  const source = await readFile(new URL('./desktop-oversized-comment-ui-smoke.ts', import.meta.url), 'utf8');
+  const first = 'export async function runDesktopOversizedCommentUiSmoke(', last = "  await ui.scrollTo(\n    commentSelector + ' div.relative.flex.justify-center > button',";
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const prefix = stripTypeScriptTypes(source.slice(source.indexOf(first), source.indexOf(last)).replace(/^export /u, '') + '\n}');
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-oversized-dialog-navigation-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const teamName = 'test-desktop-backend', taskId = 'TEST-original-task', commentId = 'TEST-original-comment';
+  const commandId = 'TEST-large-accepted-task-comment', largeText = '漢'.repeat(200_000);
+  const textSha256 = createHash('sha256').update(largeText).digest('hex');
+  const ownerRoot = join(root, 'hoststore/teams', teamName, '.host-owner');
+  await mkdir(join(ownerRoot, 'commands'), { recursive: true });
+  await mkdir(join(root, 'hoststore/tasks', teamName), { recursive: true });
+  await writeFile(join(root, 'large-comment-seed-proof.json'), JSON.stringify({ commandId, commentId, textBytes: Buffer.byteLength(largeText), textSha256 }));
+  await writeFile(join(ownerRoot, teamCommandPath(commandId)), JSON.stringify({ phase: 'completed',
+    command: { operation: 'task.comment', payload: { text: largeText } } }));
+  await writeFile(join(root, 'hoststore/tasks', teamName, taskId + '.json'), JSON.stringify({
+    subject: 'TEST original task', comments: [{ id: commentId, text: largeText }] }));
+  const card = '.kanban-task-card[data-task-id=' + JSON.stringify(taskId) + ']';
+  const comment = '[role="dialog"] [data-task-comment-id=' + JSON.stringify(commentId) + ']';
+  const surface = options.surface ?? 'closing', refusal = new Error('TEST original renderer retired');
+  const calls: { method: string; params?: Record<string, unknown> }[] = [], steps: Record<string, unknown>[] = [];
+  let now = 0, origin = 1, selected = false, sidebarClicks = 0, opened = surface === 'retained', ownerChecks = 0;
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (done: () => void, ms: number) => {
+    assert.equal(ms, 100, 'original passive-read and click-settling cadence');
+    now += ms; queueMicrotask(done); return 1 as unknown as NodeJS.Timeout;
+  });
+  const dialogOpen = () => opened || selected && (surface === 'blocked' || now < 200);
+  const cardReady = () => surface === 'retained' || surface === 'card' || selected && now >= 100 && surface !== 'wrong-card';
+  const rect = () => ({ x: 40, y: 50, top: 50, bottom: 82, width: 200, height: 32 });
+  const cardTitle = { textContent: 'TEST original task', tagName: 'H5', getBoundingClientRect: rect, matches: () => false, contains: () => false,
+    closest: () => null, getAttribute: () => null, getAnimations: () => [] };
+  const document = {
+    querySelector(query: string) {
+      if (query === card) return cardReady() ? cardTitle : null;
+      if (query === comment) return dialogOpen() ? { textContent: largeText } : null;
+      if (query === '[role="dialog"]') return dialogOpen() ? {} : null;
+      assert.fail('unexpected original Task document query: ' + query);
+    },
+    querySelectorAll(query: string) {
+      assert.equal(query, card + ' h5', 'only the captured original Task is a new click target');
+      return cardReady() ? [cardTitle] : [];
+    },
+    getElementById(id: string) { assert.equal(id, 'splash'); return null; },
+    elementFromPoint: () => dialogOpen() ? {} : cardTitle,
+    documentElement: { getBoundingClientRect: () => ({ top: 0, bottom: 900 }) },
+  };
+  const cdp = {
+    async evaluate(expression: string) {
+      return runInNewContext(expression, { document, window: { electronAPI: {} }, performance: { timeOrigin: origin },
+        innerWidth: 1200, innerHeight: 900, getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      calls.push({ method, params });
+      assert.ok(['Page.reload', 'Page.bringToFront', 'Input.dispatchMouseEvent'].includes(method));
+      if (method === 'Page.reload') origin++;
+      if (params?.type === 'mousePressed') assert.equal(dialogOpen(), false, 'never click through the outgoing sidebar dialog');
+      if (params?.type === 'mouseReleased') opened = true;
+      return {};
+    },
+  };
+  const run = Function('environment', `'use strict'; const {assert,createDesktopUiControls,join,readFile,readdir,
+    teamCommandPath,desktopJsLiteral,largeText,textSha256,teamName,commandId,Buffer,record}=environment;
+    ${prefix}; return runDesktopOversizedCommentUiSmoke;`)({ assert, join, readFile,
+    readdir: (await import('node:fs/promises')).readdir, teamCommandPath, desktopJsLiteral, largeText,
+    textSha256, teamName, commandId, Buffer,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    createDesktopUiControls(port: typeof cdp, input: Parameters<typeof createDesktopUiControls>[1]) {
+      const controls = createDesktopUiControls(port, input);
+      return { ...controls, async observeInput() {}, async clickSidebar(subject: string) {
+        assert.equal(subject, 'TEST original task'); assert.equal(sidebarClicks++, 0);
+        selected = true; // The real helper has dispatched its one Open team intent; its old dialog is still present.
+      } };
+    },
+  }) as (port: typeof cdp, input: Record<string, unknown>) => Promise<void>;
+  return { calls, steps, refusal, counts: () => ({ now, sidebarClicks, ownerChecks }),
+    run: () => run(cdp, { root, handleId: 'TEST-original-handle', taskId, subject: 'TEST original task',
+      step(value: Record<string, unknown>) { steps.push(value); },
+      assertOwnedRenderer() { ownerChecks++; if (options.retired && selected) throw refusal; } }) };
+}
+
+test('oversized comment navigation settles Open team before opening the original Task exactly once', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t); await f.run();
+  assert.equal(f.counts().sidebarClicks, 1);
+  assert.deepEqual(f.calls.filter(call => call.method === 'Input.dispatchMouseEvent').map(call => call.params?.type),
+    ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.equal(f.steps.filter(step => step.action === 'mouseClick').length, 1);
+  assert.equal(f.steps.find(step => step.action === 'mouseClick')?.label, 'open original Task detail after large comment');
+  assert.equal(f.counts().now, 400, '200ms original route settling plus original 200ms stable click');
+});
+
+test('oversized comment navigation reuses an already open original Task without a sidebar transition', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { surface: 'retained' }); await f.run();
+  assert.equal(f.counts().sidebarClicks, 0); assert.equal(f.counts().now, 0);
+  assert.deepEqual(f.calls.map(call => call.method), ['Page.reload']); assert.deepEqual(f.steps, []);
+});
+
+test('oversized comment navigation opens an already selected original Task exactly once', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { surface: 'card' }); await f.run();
+  assert.equal(f.counts().sidebarClicks, 0); assert.equal(f.counts().now, 200);
+  assert.equal(f.calls.filter(call => call.params?.type === 'mouseReleased').length, 1);
+});
+
+for (const surface of ['blocked', 'wrong-card'] as const)
+test('oversized comment navigation refuses ' + surface + ' within the original read budget without another action', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { surface });
+  await assert.rejects(f.run(), /UI read timed out: original Task card after cold readback; no mutation retry/);
+  assert.equal(f.counts().now, 30_000); assert.equal(f.counts().sidebarClicks, 1);
+  assert.deepEqual(f.calls.map(call => call.method), ['Page.reload']);
+});
+
+test('oversized comment navigation preserves renderer retirement before any Task input', { timeout: 5000 }, async t => {
+  const f = await oversizedCommentNavigationFixture(t, { retired: true });
+  await assert.rejects(f.run(), error => error === f.refusal);
+  assert.equal(f.counts().now, 0); assert.equal(f.counts().sidebarClicks, 1);
+  assert.deepEqual(f.calls.map(call => call.method), ['Page.reload']);
+});
+
+test('native cold readback summaries expose only retained route and renderer facts', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-secret/path';
+  const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: ['TEST-original-frame'] },
+    savedNativeReadback: { status: 'INCOMPLETE', steps: [
+      { action: 'mouseClick', label: 'sidebar task', state: 'attempted', subject: secret },
+      { action: 'mouseClick', label: 'Open team', state: 'attempted', selector: secret },
+      { observation: 'passive input delivery after sidebar click', value: { secret } },
+    ] },
+    rendererFailureSnapshot: {
+      store: { selectedTeamName: 'host-team:' + secret, selectedTeamError: 'Host runtime unavailable ' + secret },
+      commandComposer: { observedAfterFailure: true, atomicWithInput: false,
+        textareaCount: 1, textareaOverflow: false, single: { value: secret } },
+      visibleTaskCardIds: [secret, 'TEST-other-task'], dialogs: [],
+    } };
+  const original = structuredClone(evidence);
+  const options = { mode: 'native-readback-ui', receiptPath: 'TEST-receipt', mixedMode: false };
+  const summary = projectDesktopProofReceiptSummary(evidence, options);
+  const result = summary.nativeReadbackFailure as Record<string, unknown>;
+  assert.deepEqual(result.readback, { recorded: true, status: 'INCOMPLETE', stepCount: 3,
+    clickAttempts: { sidebarTask: 1, openTeam: 1, openDirectChat: 0 }, runtimeRecordUnchanged: null });
+  assert.deepEqual(result.renderer, { recorded: true, unavailable: null, selectedHostTeam: true,
+    composerRecorded: true, textareaCount: 1, textareaOverflow: false, visibleTaskCardCount: 2 });
+  assert.deepEqual(result.readiness, projectDesktopEmulatedReadinessFailure(evidence));
+  assert.equal(result.atomicWithFailedWait, false);
+  assert.equal(result.completeDom, false);
+  assert.equal(result.establishesCauseOrEffects, false);
+  assert.equal(summary.status, 'INCOMPLETE');
+  assert.equal(summary.failureSource, evidence.failureSource);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 10240);
+  assert.doesNotMatch(JSON.stringify(summary), /TEST-private|https:|\/TEST-secret|Host runtime unavailable/);
+  assert.deepEqual(evidence, original);
+  const clicked = structuredClone(evidence);
+  clicked.savedNativeReadback.steps.push({ action: 'mouseClick',
+    label: 'open saved ordinary direct chat', state: 'attempted', selector: secret });
+  const clickedResult = projectDesktopProofReceiptSummary(clicked, options).nativeReadbackFailure as Record<string, unknown>;
+  assert.deepEqual((clickedResult.readback as Record<string, unknown>).clickAttempts,
+    { sidebarTask: 1, openTeam: 1, openDirectChat: 1 });
+  assert.equal('nativeReadbackFailure' in projectDesktopProofReceiptSummary(
+    { ...evidence, status: 'PASS' }, options), false);
+  for (const mode of ['team-ui', 'native-conversation-ui', 'native-review-ui', 'native-quit-readback-ui'])
+    assert.equal('nativeReadbackFailure' in projectDesktopProofReceiptSummary(
+      evidence, { ...options, mode }), false);
+});
+
+test('native cold readback projection keeps absent facts unknown and refuses hostile retained data', () => {
+  const options = { mode: 'native-readback-ui', receiptPath: 'TEST-receipt', mixedMode: false };
+  const empty = projectDesktopProofReceiptSummary({ status: 'INCOMPLETE' }, options).nativeReadbackFailure as Record<string, unknown>;
+  assert.deepEqual(empty.readback, { recorded: false, status: null, stepCount: null,
+    clickAttempts: null, runtimeRecordUnchanged: null });
+  assert.deepEqual(empty.renderer, { recorded: false, unavailable: null, selectedHostTeam: null,
+    composerRecorded: false, textareaCount: null, textareaOverflow: null, visibleTaskCardCount: null });
+  const secret = 'TEST-private-error /TEST-secret/path';
+  let getterReads = 0;
+  const poisonedStep = Object.defineProperty({ action: 'mouseClick', state: 'attempted' }, 'label', {
+    get() { getterReads++; throw new Error(secret); },
+  });
+  const hostile = [
+    { savedNativeReadback: { status: 'INCOMPLETE', steps: [poisonedStep] } },
+    { savedNativeReadback: { status: 'INCOMPLETE', steps: Array(257).fill({}) } },
+    { rendererFailureSnapshot: { commandComposer: { textareaCount: 6 } } },
+    { rendererFailureSnapshot: { visibleTaskCardIds: Array(25).fill(secret) } },
+    { rendererFailureSnapshot: new Proxy({}, { getOwnPropertyDescriptor() { throw new Error(secret); } }) },
+  ];
+  for (const fields of hostile) {
+    const summary = projectDesktopProofReceiptSummary({ status: 'INCOMPLETE', ...fields }, options);
+    assert.deepEqual(summary.nativeReadbackFailure,
+      { schemaVersion: 1, status: 'unavailable', reason: 'invalid-retained-markers' });
+    assert.equal(summary.status, 'INCOMPLETE');
+    assert.doesNotMatch(JSON.stringify(summary), /TEST-private|\/TEST-secret/);
+  }
+  assert.equal(getterReads, 0);
+});
+
+test('Taskboard failure summaries compare retained identities without exposing private snapshot values', () => {
+  const secret = 'TEST-private-value https://TEST-private.example/token /TEST-private/path';
+  const identity = { contextId: 'local', teamName: 'TEST-private-owner', taskId: 'TEST-private-task' };
+  const surface = 'TEST-private-original-surface';
+  const inputId = (selectedSurface: string, selected = identity) =>
+    'task-comment-input-' + encodeURIComponent(JSON.stringify([selectedSurface,
+      JSON.stringify([selected.contextId, selected.teamName, selected.taskId])]));
+  const evidence = { status: 'INCOMPLETE', taskBoardUiProof: {
+    createReceipt: { effects: { taskId: identity.taskId } },
+    attachments: { commentReceipt: { phase: 'completed' }, commentComposerCompleted: {
+      ...identity, identity, surfaceId: surface, inputId: inputId(surface), commentText: '', submitPending: false,
+    } } }, rendererFailureSnapshot: {
+      documentFocused: true, visibility: 'visible',
+      store: { selectedTeamName: identity.teamName, selectedTeamError: 'unavailable ' + secret,
+        globalTaskDetail: { teamName: identity.teamName, taskId: identity.taskId } },
+      dialogs: [{ text: 'Loading task Comments Attachments ' + secret }],
+      visibleTaskCardIds: [identity.taskId],
+      commandComposer: { textareaCount: 1, textareaOverflow: false,
+        single: { disabled: true, focused: false, readOnly: false, connected: true } },
+      inputEvents: [{ type: 'focusin', trusted: true, taskId: identity.taskId,
+        target: { id: inputId('TEST-private-reloaded-surface') } }],
+    } };
+  const before = JSON.stringify(evidence), result = projectDesktopTaskBoardFailure(evidence);
+  assert.ok('original' in result && result.original && 'inputEvents' in result && result.inputEvents);
+  assert.equal(result.original.identityConsistent, true);
+  assert.equal(result.original.commentReceiptCompleted, true);
+  assert.equal(result.selectedTeamMatchesOriginal, true);
+  assert.equal(result.globalTeamMatchesOriginal, true);
+  assert.equal(result.globalTaskMatchesOriginal, true);
+  assert.equal(result.originalTaskCardObserved, true);
+  assert.equal(result.composer.disabled, true);
+  assert.deepEqual(result.dialogs.items[0]?.terms, ['loading', 'comments', 'attachments']);
+  assert.deepEqual(result.inputEvents.last[0], { type: 'focusin', trusted: true,
+    cardTaskMatchesOriginal: true, inputRecorded: true, ownerTaskContextMatchesOriginal: true,
+    sameOriginalSurface: false });
+  for (const mode of ['task-board-ui', 'task-board-cross-team-ui']) {
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence, {
+      mode, receiptPath: 'TEST-receipt', mixedMode: false }).taskBoardFailure, result);
+    assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  for (const mode of ['cross-team-ui', 'emulated-import-ui', 'emulated-codex-runtime-ui'])
+    assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary(evidence,
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  const serialized = JSON.stringify(result);
+  for (const privateValue of [secret, identity.teamName, identity.taskId, surface, 'TEST-private-reloaded-surface', 'https://', '/TEST-private/path'])
+    assert.equal(serialized.includes(privateValue), false);
+  assert.equal(JSON.stringify(evidence), before);
+  assert.notEqual(result.dialogs.items, evidence.rendererFailureSnapshot.dialogs);
+  assert.notEqual(result.inputEvents.last, evidence.rendererFailureSnapshot.inputEvents);
+
+  const foreign = projectDesktopTaskBoardFailure({ ...evidence, rendererFailureSnapshot: {
+    ...evidence.rendererFailureSnapshot, inputEvents: [{ type: 'focusin', trusted: true,
+      target: { id: inputId(surface, { ...identity, taskId: 'TEST-foreign-task' }) } }],
+  } });
+  assert.ok('inputEvents' in foreign && foreign.inputEvents);
+  assert.equal(foreign.inputEvents.last[0]?.ownerTaskContextMatchesOriginal, false);
+  assert.equal(foreign.inputEvents.last[0]?.sameOriginalSurface, true);
+  const inconsistent = projectDesktopTaskBoardFailure({ ...evidence, taskBoardUiProof: {
+    ...evidence.taskBoardUiProof, createReceipt: { effects: { taskId: 'TEST-foreign-created-task' } },
+  } });
+  assert.ok('original' in inconsistent && inconsistent.original);
+  assert.equal(inconsistent.original.identityConsistent, false);
+  assert.equal(inconsistent.selectedTeamMatchesOriginal, null);
+  assert.equal(inconsistent.inputEvents.last[0]?.ownerTaskContextMatchesOriginal, null);
+
+  let getterReads = 0;
+  const unreadable = () => { getterReads++; throw new Error(secret); };
+  projectDesktopTaskBoardFailure(Object.defineProperty({ ...evidence }, 'rendererFailureSnapshot', { get: unreadable }));
+  projectDesktopTaskBoardFailure({ ...evidence, rendererFailureSnapshot: {
+    ...evidence.rendererFailureSnapshot, inputEvents: new Proxy([], { get: unreadable }),
+    dialogs: [Object.defineProperty({}, 'text', { get: unreadable })],
+  } });
+  assert.equal(getterReads, 0);
+  const overflow = projectDesktopTaskBoardFailure({ ...evidence, rendererFailureSnapshot: {
+    ...evidence.rendererFailureSnapshot,
+    inputEvents: Array.from({ length: 200 }, () => ({ type: secret, target: { id: secret } })),
+    dialogs: Array.from({ length: 9 }, () => ({ text: secret })),
+  } });
+  assert.ok('inputEvents' in overflow && overflow.inputEvents);
+  assert.equal(overflow.inputEvents.count, 97); assert.equal(overflow.inputEvents.overflow, true);
+  assert.equal(overflow.inputEvents.last.length, 8);
+  assert.equal(overflow.dialogs.count, 4); assert.equal(overflow.dialogs.overflow, true);
+  assert.equal(overflow.dialogs.items.length, 3);
+  assert.equal(JSON.stringify(overflow).includes(secret), false);
+  assert.ok(JSON.stringify(overflow).length <= 4096);
+});
+
+test('installer failure summaries preserve original wait sites and attempts without inferring installation effects', () => {
+  const secret = 'TEST-private-code-token https://TEST-private.example /TEST-private/path';
+  const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+    failure: 'UI read timed out: original installation and Host publication ready; no mutation retry',
+    emulatedSelectionUiProof: { status: 'INCOMPLETE', a: { thread: secret },
+      steps: [...Array.from({ length: 8 }, () => ({ action: secret, label: secret })),
+        { action: 'mouseClick', label: 'install original Codex package exactly once', state: 'attempted',
+          selector: secret, target: { text: secret } }],
+      observations: [{ phase: 'before-original-installer-update', nativeReady: true,
+        originalInputsUnchanged: true, binding: secret, sessionRef: secret, thread: secret }] },
+    rendererFailureSnapshot: { dialogs: [{ text: 'Codex is ready for new launches. ' + secret,
+      buttons: [{ text: secret }] }] },
+  };
+  const before = JSON.stringify(evidence), result = projectDesktopCodexInstallerFailure(evidence);
+  assert.ok('failureSite' in result && result.failureSite && 'steps' in result && result.steps);
+  assert.deepEqual(result.failureSite, { operation: 'read-timeout', stage: 'update-ready' });
+  assert.equal(result.atomicWithFailure, false, 'the later retained renderer snapshot does not establish the timeout cause');
+  assert.equal(result.steps.count, 9); assert.equal(result.steps.overflow, false); assert.equal(result.steps.last.length, 8);
+  assert.deepEqual(result.steps.last.at(-1), { action: 'mouseClick', stage: 'update-submit', attempted: true });
+  assert.deepEqual(result.lastLiveObservation, {
+    phase: 'before-original-installer-update', nativeReady: true, originalInputsUnchanged: true,
+  });
+  assert.deepEqual(result.milestones, { firstRuntimeRecorded: true, savedSelectionRecorded: null,
+    nextRuntimeRecorded: null, completedInstallerReceiptRecorded: null });
+  assert.equal(result.completedInstallerStatus, null, 'missing completed receipt cannot mean Update never started');
+  assert.equal(result.snapshot.readyText, true);
+  assert.equal('installerStarted' in result, false);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|https:|\/TEST-private|binding|sessionRef|selector|thread/);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 4096);
+  assert.equal(JSON.stringify(evidence), before, 'original observations and failure remain unchanged');
+  const summary = projectDesktopProofReceiptSummary(evidence,
+    { mode: 'emulated-installer-ui', receiptPath: 'TEST-receipt', mixedMode: false });
+  assert.deepEqual(summary.installerFailure, result); assert.deepEqual(summary.failureSource, evidence.failureSource);
+  assert.equal(summary.status, 'INCOMPLETE'); assert.equal(summary.receipt, 'TEST-receipt');
+  for (const [mode, status] of [['emulated-installer-ui', 'PASS'], ['emulated-codex-runtime-ui', 'INCOMPLETE'],
+    ['codex-login-ui', 'INCOMPLETE']] as const)
+    assert.equal('installerFailure' in projectDesktopProofReceiptSummary({ ...evidence, status },
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  const completed = projectDesktopCodexInstallerFailure({ ...evidence, emulatedSelectionUiProof: {
+    ...evidence.emulatedSelectionUiProof, installer: { status: 'PASS', initialStatus: secret, installed: secret } } });
+  assert.ok('milestones' in completed && completed.milestones);
+  assert.equal(completed.milestones.completedInstallerReceiptRecorded, true);
+  assert.equal(completed.completedInstallerStatus, 'PASS');
+  for (const [failure, operation, stage] of [
+    ['UI scroll timed out: original Codex Update submit; no effect retry', 'scroll-timeout', 'update-submit'],
+    ['UI target read failed: open original Codex Update dialog after pointer enter; facts=' + secret, 'target-read', 'update-notice'],
+    ['UI read timed out: original installation and Host publication ready ' + secret + '; no mutation retry', null, null],
+    [secret, null, null],
+  ] as const) {
+    const observed = projectDesktopCodexInstallerFailure({ failure });
+    assert.ok('failureSite' in observed && observed.failureSite);
+    assert.deepEqual(observed.failureSite, { operation, stage });
+    assert.equal(JSON.stringify(observed).includes(secret), false);
+  }
+});
+
+test('installer failure projection does not invoke input getters and leaves oversized observations unknown', () => {
+  const secret = 'TEST-private-getter-token'; let reads = 0;
+  const unreadable = () => { reads++; throw new Error(secret); };
+  const row = Object.defineProperty({ action: 'mouseClick', state: 'attempted' }, 'label', { get: unreadable });
+  const observed = Object.defineProperty({}, 'phase', { get: unreadable });
+  const snapshot = { dialogs: [Object.defineProperty({}, 'text', { get: unreadable })] };
+  const input = Object.defineProperty({ emulatedSelectionUiProof: { steps: [row], observations: [observed] },
+    rendererFailureSnapshot: snapshot }, 'failure', { get: unreadable });
+  const result = projectDesktopCodexInstallerFailure(input);
+  assert.ok('steps' in result && result.steps);
+  assert.deepEqual(result.failureSite, { operation: null, stage: null });
+  assert.equal(result.steps.last[0]?.stage, null); assert.equal(result.lastLiveObservation.phase, null);
+  assert.equal(result.snapshot.readyText, null);
+  const missing = projectDesktopCodexInstallerFailure(Object.defineProperty({}, 'emulatedSelectionUiProof', { get: unreadable }));
+  assert.ok('proofRecorded' in missing); assert.equal(missing.proofRecorded, null);
+  assert.equal(reads, 0, 'getter values are not observations');
+  const oversized = projectDesktopCodexInstallerFailure({
+    failure: 'UI read timed out: original installation and Host publication ready; no mutation retry'.padEnd(4001, 'x'),
+    emulatedSelectionUiProof: { steps: Array.from({ length: 1025 }, () => row),
+      observations: Array.from({ length: 129 }, () => ({ phase: 'before-create' })) },
+    rendererFailureSnapshot: { dialogs: Array.from({ length: 4 }, () => ({ text: 'Codex is ready for new launches.' })) },
+  });
+  assert.ok('steps' in oversized && oversized.steps);
+  assert.deepEqual(oversized.steps, { count: null, overflow: true, last: [] });
+  assert.deepEqual(oversized.failureSite, { operation: null, stage: null });
+  assert.equal(oversized.lastLiveObservation.phase, null); assert.equal(oversized.snapshot.readyText, null);
+  const longText = projectDesktopCodexInstallerFailure({ rendererFailureSnapshot: {
+    dialogs: [{ text: ('Codex is ready for new launches. ' + secret).padEnd(8001, 'x') }] } });
+  assert.ok('snapshot' in longText && longText.snapshot); assert.equal(longText.snapshot.readyText, null);
+  assert.equal(reads, 0); assert.equal(JSON.stringify(oversized).includes(secret), false);
+  assert.ok(Buffer.byteLength(JSON.stringify(oversized)) <= 4096);
+});
+
+test('installer CDP and cleanup projection retains only exact finite observations', () => {
+  const secret = 'TEST-private-token https://TEST-private.example /TEST-private/path';
+  const evidence = { status: 'INCOMPLETE', failure: 'CDP command timed out: Runtime.evaluate',
+    emulatedSelectionUiProof: { steps: [
+      { action: 'mouseClick', label: 'open original Settings menu after Update', state: 'attempted' },
+      { action: 'mouseClick', label: 'expand original provider details after Update', state: 'attempted' }],
+      installer: { status: 'PASS', settings: { status: 'PASS', finalStatus: secret } } },
+    cleanup: { remaining: [{ pid: 123, argv: secret }], appExitCode: 0, appSignalCode: null,
+      capturedHostObserved: true, capturedHostAbsent: false, cleanupFailure: secret },
+    emulatedRuntimeCleanup: { absent: true, observationFailed: false, private: secret },
+    quitRequested: true, failureQuit: { attempted: true, reply: 'unconfirmed', listenerAbsent: false, reason: secret } };
+  const before = JSON.stringify(evidence), result = projectDesktopCodexInstallerFailure(evidence);
+  assert.ok('cdpFailure' in result && 'cleanup' in result);
+  assert.deepEqual(result.cdpFailure, { kind: 'command-timeout', method: 'Runtime.evaluate' });
+  assert.deepEqual(result.failureSite, { operation: null, stage: null }, 'CDP classification does not invent a UI stage');
+  assert.deepEqual(result.steps.last.map(row => row.stage), ['settings-menu', 'settings-details']);
+  assert.deepEqual(result.settingsReceipt, { recorded: true, status: 'PASS' });
+  assert.deepEqual(result.cleanup, { recorded: true, remainingCount: 1, capturedHostObserved: true,
+    capturedHostAbsent: false, failureRecorded: true, appExitCodeZero: true, appSignalPresent: false,
+    peerRecorded: true, peerAbsent: true, peerObservationFailed: false, quitRequested: true,
+    failureQuit: { recorded: true, attempted: true, reply: 'unconfirmed', listenerAbsent: false } });
+  assert.deepEqual(projectDesktopProofReceiptSummary(evidence, { mode: 'emulated-installer-ui',
+    receiptPath: 'TEST-receipt', mixedMode: false }).installerFailure, result);
+  assert.equal(JSON.stringify(evidence), before);
+  assert.doesNotMatch(JSON.stringify(result), /TEST-private|https:|\/TEST-private|argv|pid/);
+  assert.ok(Buffer.byteLength(JSON.stringify(result), 'utf8') <= 4096);
+  for (const [failure, kind, method] of [
+    ['CDP connection closed', 'connection-closed', null], ['Renderer evaluation failed', 'evaluation-failed', null],
+    ['CDP command timed out: Page.captureScreenshot', 'command-timeout', 'Page.captureScreenshot'],
+    ['CDP command timed out: ' + secret, null, null], ['CDP connection closed ' + secret, null, null],
+    ['CDP command timed out: Runtime.evaluate ' + secret, null, null], [secret, null, null],
+  ] as const) {
+    const observed = projectDesktopCodexInstallerFailure({ failure });
+    assert.ok('cdpFailure' in observed);
+    assert.deepEqual(observed.cdpFailure, { kind, method });
+    assert.equal(observed.cleanup.recorded, null); assert.equal(observed.settingsReceipt.recorded, null);
+    assert.equal(JSON.stringify(observed).includes(secret), false);
+  }
+  let reads = 0; const unreadable = () => { reads++; throw new Error(secret); };
+  const guarded = Object.defineProperty({ ...evidence }, 'cleanup', { get: unreadable });
+  Object.defineProperty(guarded, 'failureQuit', { get: unreadable });
+  Object.defineProperty(guarded, 'emulatedRuntimeCleanup', { get: unreadable });
+  const unknown = projectDesktopCodexInstallerFailure(guarded);
+  assert.ok('cleanup' in unknown); assert.equal(unknown.cleanup.recorded, null);
+  assert.equal(unknown.cleanup.failureQuit.recorded, null); assert.equal(unknown.cleanup.peerRecorded, null);
+  for (const [cleanup, expected] of [[{}, false], [{ cleanupFailure: undefined }, false],
+    [Object.defineProperty({}, 'cleanupFailure', { get: unreadable }), null]] as const) {
+    const nested = projectDesktopCodexInstallerFailure({ cleanup });
+    assert.ok('cleanup' in nested); assert.equal(nested.cleanup.failureRecorded, expected);
+  }
+  assert.equal(reads, 0); assert.equal(JSON.stringify(unknown).includes(secret), false);
+});
+
+test('Selection target summaries retain the exact original phase and six closed facts', () => {
+  const facts = { matches: 1, disabled: false, ariaDisabled: true,
+    pointerEventsNone: false, centerInViewport: true, hitPresent: false };
+  for (const [suffix, phase] of [['', 'initial'], [' after pointer enter', 'after-pointer-enter'],
+    [' stable target', 'stable-target']] as const) {
+    const evidence = { status: 'INCOMPLETE', failureSource: { kind: 'error', frames: [] },
+      failure: 'UI target read failed: select original save-only Create' + suffix + '; facts=' + JSON.stringify(facts) };
+    const before = JSON.stringify(evidence), result = projectDesktopSelectionTargetFailure(evidence);
+    assert.deepEqual(result, { schemaVersion: 1, status: 'available', source: 'retained-target-read-failure',
+      atomicWithFailure: false, site: 'save-only-create', phase, facts });
+    assert.ok('facts' in result); assert.notEqual(result.facts, facts);
+    assert.equal(JSON.stringify(evidence), before);
+    assert.ok(Buffer.byteLength(JSON.stringify(result), 'utf8') <= 1024);
+    assert.doesNotMatch(JSON.stringify(result), /select original|facts=|selector|cause/);
+    for (const mode of ['emulated-selection-ui', 'emulated-installer-ui']) {
+      const summary = projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false });
+      assert.deepEqual(summary.selectionTargetFailure, result);
+      assert.equal(summary.status, 'INCOMPLETE'); assert.equal(summary.receipt, 'TEST-receipt');
+      assert.deepEqual(summary.failureSource, evidence.failureSource);
+      assert.equal('selectionTargetFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+        { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+    }
+    for (const mode of ['emulated-codex-runtime-ui', 'task-board-cross-team-ui', 'codex-login-ui'])
+      assert.equal('selectionTargetFailure' in projectDesktopProofReceiptSummary(evidence,
+        { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  for (const matches of [0, 256]) {
+    const selected = { matches, disabled: false, ariaDisabled: false,
+      pointerEventsNone: false, centerInViewport: false, hitPresent: false };
+    const result = projectDesktopSelectionTargetFailure({
+      failure: 'UI target read failed: select original save-only Create; facts=' + JSON.stringify(selected) });
+    assert.ok('facts' in result); assert.deepEqual(result.facts, selected, 'zero/default facts do not infer a cause');
+  }
+});
+
+test('Selection target projection rejects unknown or malformed facts without exposing text or invoking getters', () => {
+  const secret = 'TEST-private-token https://TEST-private.example /TEST-private/path';
+  const facts = { matches: 1, disabled: false, ariaDisabled: false,
+    pointerEventsNone: false, centerInViewport: true, hitPresent: true };
+  const prefix = 'UI target read failed: select original save-only Create; facts=';
+  const badFacts = [null, [], {}, { ...facts, matches: -1 }, { ...facts, matches: 257 },
+    { ...facts, matches: 1.5 }, { ...facts, matches: '1' }, { ...facts, extra: secret },
+    ...['disabled', 'ariaDisabled', 'pointerEventsNone', 'centerInViewport', 'hitPresent']
+      .flatMap(key => [{ ...facts, [key]: undefined }, { ...facts, [key]: secret }])];
+  const messages = [...badFacts.map(row => prefix + JSON.stringify(row)),
+    prefix + '{', prefix + JSON.stringify(facts) + secret,
+    prefix + JSON.stringify(facts).padEnd(1025, ' '),
+    (prefix + JSON.stringify(facts)).padEnd(4001, ' '),
+    'UI target read failed: ' + secret + '; facts=' + JSON.stringify(facts),
+    'UI target read failed: select original save-only Create extra; facts=' + JSON.stringify(facts),
+    'UI read timed out: select original save-only Create; no mutation retry', secret];
+  for (const failure of messages) {
+    const result = projectDesktopSelectionTargetFailure({ failure });
+    assert.deepEqual(result, { schemaVersion: 1, status: 'unavailable', reason: 'unrecognized-target-facts' });
+    assert.equal(JSON.stringify(result).includes(secret), false);
+    assert.ok(Buffer.byteLength(JSON.stringify(result), 'utf8') <= 1024);
+  }
+  let reads = 0;
+  const input = Object.defineProperty({}, 'failure', { get() { reads++; throw new Error(secret); } });
+  for (const value of [input, null, [], {}, { failure: 1 }, Object.create({ failure: prefix + JSON.stringify(facts) })])
+    assert.equal(projectDesktopSelectionTargetFailure(value).status, 'unavailable');
+  assert.equal(reads, 0, 'accessors and inherited values are not retained observations');
+});
+
+test('Taskboard failure progress reports retained checkpoints and closed CDP failures without replay', () => {
+  const secret = 'TEST-private-reply-path-token';
+  const evidence = { status: 'INCOMPLETE', failure: 'CDP command timed out: Runtime.evaluate',
+    taskBoardUiProof: { steps: [{ action: 'Page.reload', state: 'attempted' }, { action: secret, state: 'attempted' }],
+      attachments: { status: 'INCOMPLETE', commentDraftBeforeReload: { durableEmpty: true, secret },
+        imageAfterReload: { secret }, imageOwnerRead: { secret }, commentOwnerRead: { secret },
+        downloadAttempt: { path: secret }, download: { path: secret }, removeReceipt: { phase: 'completed', secret } } } };
+  const before = JSON.stringify(evidence), result = projectDesktopTaskBoardFailure(evidence);
+  assert.ok('retainedProgress' in result && result.retainedProgress);
+  assert.deepEqual(result.cdpFailure, { kind: 'command-timeout', method: 'Runtime.evaluate' });
+  assert.deepEqual(result.retainedProgress, {
+    source: 'retained-taskboard-proof', atomicWithFailure: false, establishesCauseOrEffects: false,
+    durableDraftEmpty: true, rendererReloadAttempts: 1,
+    imageAfterReloadRecorded: true, imageOwnerReadRecorded: true, commentOwnerReadRecorded: true,
+    downloadAttemptRecorded: true, downloadRecorded: true, removeReceiptPhase: 'completed',
+    attachmentProofStatus: 'INCOMPLETE',
+  });
+  const summary = projectDesktopProofReceiptSummary(evidence, {
+    receiptPath: 'TEST-receipt', mode: 'task-board-cross-team-ui', mixedMode: false,
+  });
+  assert.deepEqual(summary.taskBoardFailure, result);
+  assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 8192);
+  assert.equal(JSON.stringify(result).includes(secret), false);
+  assert.equal(JSON.stringify(evidence), before);
+  for (const [failure, kind, method] of [
+    ['CDP connection closed', 'connection-closed', null],
+    ['Renderer evaluation failed', 'evaluation-failed', null],
+    ['CDP command timed out: Page.reload', 'command-timeout', 'Page.reload'],
+    ['CDP command timed out: Runtime.evaluate ' + secret, null, null],
+    ['CDP command timed out: ' + secret, null, null],
+    [secret.repeat(401), null, null],
+  ] as const) {
+    const projected = projectDesktopTaskBoardFailure({ ...evidence, failure });
+    assert.ok('cdpFailure' in projected && projected.cdpFailure);
+    assert.deepEqual(projected.cdpFailure, { kind, method });
+    assert.equal(JSON.stringify(projected).includes(secret), false);
+  }
+  for (const value of [
+    projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' }, {
+      receiptPath: 'TEST-receipt', mode: 'task-board-cross-team-ui', mixedMode: false,
+    }),
+    projectDesktopProofReceiptSummary(evidence, {
+      receiptPath: 'TEST-receipt', mode: 'native-stop-ui', mixedMode: false,
+    }),
+  ]) assert.equal('taskBoardFailure' in value, false);
+});
+
+test('Taskboard retained progress keeps missing or unreadable checkpoints unknown and bounds its scan', () => {
+  let getterReads = 0;
+  const unreadable = () => { getterReads++; throw new Error('TEST-private-accessor'); };
+  const project = (value: unknown) => {
+    const result = projectDesktopTaskBoardFailure(value);
+    assert.ok('retainedProgress' in result && result.retainedProgress);
+    return result;
+  };
+  const absent = project({});
+  assert.deepEqual(absent.cdpFailure, { kind: null, method: null });
+  assert.equal(absent.retainedProgress.durableDraftEmpty, null);
+  assert.equal(absent.retainedProgress.rendererReloadAttempts, null);
+  assert.equal(absent.retainedProgress.removeReceiptPhase, null);
+  const guarded = project(Object.defineProperty({
+    taskBoardUiProof: { steps: [Object.defineProperty({}, 'action', { get: unreadable })],
+      attachments: Object.defineProperty({}, 'commentDraftBeforeReload', { get: unreadable }) },
+  }, 'failure', { get: unreadable }));
+  assert.deepEqual(guarded.cdpFailure, { kind: null, method: null });
+  assert.equal(guarded.retainedProgress.durableDraftEmpty, null);
+  assert.equal(guarded.retainedProgress.rendererReloadAttempts, null);
+  assert.equal(getterReads, 0);
+  const inherited = project(Object.create({ failure: 'CDP connection closed', taskBoardUiProof: {
+    steps: [{ action: 'Page.reload', state: 'attempted' }],
+  } }));
+  assert.deepEqual(inherited.retainedProgress, absent.retainedProgress);
+  for (const steps of [[], [{ observation: 'retained passive sample' }]]) {
+    const result = project({ taskBoardUiProof: { steps } });
+    assert.equal(result.retainedProgress.rendererReloadAttempts, 0);
+  }
+  for (const steps of [Array(1), [null], Array.from({ length: 1025 }, () => ({ action: 'Page.reload', state: 'attempted' }))]) {
+    assert.equal(project({ taskBoardUiProof: { steps } }).retainedProgress.rendererReloadAttempts, null);
+  }
+  const failure = projectDesktopTaskBoardFailure({ taskBoardUiProof: {
+    steps: new Proxy([], { getOwnPropertyDescriptor() { throw new Error('TEST-private-proxy'); } }),
+  } });
+  assert.deepEqual(failure, { schemaVersion: 1, status: 'unavailable', reason: 'projection-failed' });
+  assert.equal(getterReads, 0);
+});
+
+test('Taskboard focus diagnostics preserve last samples and bounded transitions without exposing private input', () => {
+  const secret = 'TEST-private-focus https://TEST-private.example/token /TEST-private/path';
+  const stage = 'after one focus click';
+  const inputProbe = { present: true, connected: true, disabled: false, focused: true,
+    ownerSurfaceId: secret, expectedSurfaceId: secret, ownerRevision: 7, detailPhase: 'ready',
+    refreshPending: false, contextSwitching: false, taskId: secret, activeContextId: secret };
+  const owner = { selector: secret, commentText: '', submitPending: false, canSubmit: true,
+    submitError: secret, attachmentError: null, pendingAttachmentCount: 0, pendingPreparationCount: 0 };
+  const focus = { owner, inputProbe, settled: false, inputEnabled: true, focused: true,
+    documentFocused: true, visibility: 'visible', domValue: '', activeElement: { id: secret }, timeMs: 123456 };
+  const transitions = [
+    { ownerPresent: false, inputProbe: { ...inputProbe, ownerRevision: null, focused: false } },
+    { ownerPresent: true, inputProbe },
+    { ownerPresent: true, inputProbe: { ...inputProbe, ownerRevision: 8 } },
+  ];
+  const evidenceFor = (observations: unknown) => ({ status: 'INCOMPLETE',
+    taskBoardUiProof: { attachments: { commentInputObservations: observations } } });
+  const evidence = evidenceFor({ [stage]: focus, [stage + ' transitions']: transitions });
+  const before = JSON.stringify(evidence), result = projectDesktopTaskBoardFailure(evidence);
+  assert.ok('commentInputFocus' in result && result.commentInputFocus);
+  const projected = result.commentInputFocus;
+  assert.equal(projected.source, 'retained-comment-input-observations');
+  assert.equal(projected.sample, 'last-observed'); assert.equal(projected.atomicWithFailure, false);
+  assert.equal(projected.settled, false); assert.equal(projected.focused, true);
+  assert.equal(projected.transitions[2]?.inputProbe.focused, true);
+  assert.equal('settled' in projected.transitions[2]!, false, 'transitions do not contain the complete live predicate');
+  assert.equal(projected.domEmpty, true); assert.equal(projected.draftEmpty, true);
+  assert.equal(projected.submitErrorClear, false); assert.equal(projected.attachmentErrorClear, true);
+  assert.equal(projected.attachmentsEmpty, true); assert.equal(projected.preparationsEmpty, true);
+  assert.equal(projected.inputProbe.ownerSurfaceMatchesExpected, true);
+  assert.deepEqual(projected.transitions.map(row => row.ownerRevisionChangedFromPrevious), [null, null, true]);
+  assert.equal(projected.captureMayBeCapped, false); assert.equal(projected.extraRetainedRowsOmitted, false);
+  assert.equal(result.original.commentReceiptCompleted, false);
+  assert.equal(result.selectedTeamMatchesOriginal, null, 'pre-submit observation does not invent a completed owner identity');
+  for (const mode of ['task-board-ui', 'task-board-cross-team-ui']) {
+    assert.deepEqual(projectDesktopProofReceiptSummary(evidence, { mode, receiptPath: 'TEST-receipt', mixedMode: false }).taskBoardFailure, result);
+    assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary({ ...evidence, status: 'PASS' },
+      { mode, receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  }
+  assert.equal('taskBoardFailure' in projectDesktopProofReceiptSummary(evidence,
+    { mode: 'emulated-import-ui', receiptPath: 'TEST-receipt', mixedMode: false }), false);
+  assert.equal(JSON.stringify(evidence), before);
+  for (const value of [secret, '123456', 'ownerRevision":', 'https://', '/TEST-private/path'])
+    assert.equal(JSON.stringify(result).includes(value), false);
+  assert.notEqual(projected.transitions, transitions);
+  assert.notEqual(projected.transitions[1]?.inputProbe, inputProbe);
+
+  let getterReads = 0;
+  const unreadable = () => { getterReads++; throw new Error(secret); };
+  const baseline = projectDesktopTaskBoardFailure(evidenceFor({}));
+  for (const hidden of [Object.create({ [stage]: focus }), Object.defineProperty({}, stage, { get: unreadable })])
+    assert.deepEqual(projectDesktopTaskBoardFailure(evidenceFor(hidden)), baseline);
+  assert.equal('commentInputFocus' in baseline, false, 'absent own focus data preserves the original output shape');
+  const guarded = projectDesktopTaskBoardFailure(evidenceFor({
+    [stage]: Object.defineProperties({ ...focus }, {
+      owner: { get: unreadable }, inputProbe: { get: unreadable }, domValue: { get: unreadable },
+    }),
+    [stage + ' transitions']: new Proxy([Object.defineProperty({}, 'inputProbe', { get: unreadable })], { get: unreadable }),
+  }));
+  assert.ok('commentInputFocus' in guarded && guarded.commentInputFocus);
+  assert.equal(guarded.commentInputFocus.ownerPresent, null);
+  assert.equal(guarded.commentInputFocus.domEmpty, null);
+  assert.equal(guarded.commentInputFocus.submitErrorClear, null);
+  assert.equal(guarded.commentInputFocus.inputProbe.focused, null);
+  assert.equal(guarded.commentInputFocus.transitions[0]?.inputProbe.detailPhase, null);
+  assert.equal(getterReads, 0);
+
+  const history = Array.from({ length: 20 }, () => ({ ownerPresent: true,
+    inputProbe: { ...inputProbe, detailPhase: secret, ownerSurfaceId: '', expectedSurfaceId: '', ownerRevision: -1 } }));
+  const bounded = projectDesktopTaskBoardFailure({ ...evidenceFor({
+    [stage]: { ...focus, domValue: secret, owner: { ...owner, commentText: secret,
+      pendingAttachmentCount: -1, pendingPreparationCount: 0.5 }, inputProbe: { ...inputProbe, focused: 'true' } },
+    [stage + ' transitions']: history,
+  }), rendererFailureSnapshot: {
+    inputEvents: Array.from({ length: 96 }, () => ({ type: 'pointerdown', trusted: false })),
+    dialogs: [{ text: 'loading comments attachments' }, { text: 'unavailable' }, { text: 'deleted' }],
+  } });
+  assert.ok('commentInputFocus' in bounded && bounded.commentInputFocus);
+  assert.equal(bounded.commentInputFocus.transitions.length, 12);
+  assert.equal(bounded.commentInputFocus.captureMayBeCapped, true);
+  assert.equal(bounded.commentInputFocus.extraRetainedRowsOmitted, true);
+  assert.equal(bounded.commentInputFocus.transitions[0]?.inputProbe.detailPhase, null);
+  assert.equal(bounded.commentInputFocus.transitions[0]?.inputProbe.ownerSurfaceMatchesExpected, null);
+  assert.equal(bounded.commentInputFocus.transitions[1]?.ownerRevisionChangedFromPrevious, null);
+  assert.equal(bounded.commentInputFocus.inputProbe.focused, null);
+  assert.equal(bounded.commentInputFocus.domEmpty, false); assert.equal(bounded.commentInputFocus.draftEmpty, false);
+  assert.equal(bounded.commentInputFocus.attachmentsEmpty, null); assert.equal(bounded.commentInputFocus.preparationsEmpty, null);
+  assert.ok(JSON.stringify(bounded.commentInputFocus).length <= 4096);
+  assert.ok(JSON.stringify(bounded).length > 4096 && JSON.stringify(bounded).length <= 8192);
+  assert.equal(JSON.stringify(bounded).includes(secret), false);
+});
+
+for (const [change, replacement] of [
+  ['unavailable', { unavailableTarget: true, matches: 1 }],
+  ['moved', { x: 100, y: 200, tag: 'BUTTON' }],
+  ['tag-changed', { x: 100, y: 200, tag: 'INPUT' }],
+  ['nonfinite', { x: 100, y: Number.POSITIVE_INFINITY, tag: 'BUTTON' }],
+] as const) {
+  test(`original desktop click revalidates a target ${change} during the final ownership check`, { timeout: 5000 }, async t => {
+    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+    const expressions: string[] = [], dispatched: Record<string, unknown>[] = [];
+    const output: string[] = [];
+    t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+    let changed = false, guardChanges = 0;
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        expressions.push(actual);
+        return changed ? replacement : { x: 100, y: 100, tag: 'BUTTON' };
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+        return {};
+      },
+    }, { assertOwnedRenderer() {
+      // Initial point, pointer-enter point, and both original equal stable samples.
+      if (!changed && expressions.length === 4) { changed = true; guardChanges++; }
+    }, step() {} });
+    if (change === 'moved') await ui.clickExpression(expression, 'TEST original final target');
+    else await assert.rejects(
+      ui.clickExpression(expression, 'TEST original final target'),
+      new RegExp(`Original UI target ${change === 'unavailable' ? 'unavailable' : 'moved'} after ownership check`)
+    );
+    assert.equal(guardChanges, 1, 'the original final ownership guard changes the target once');
+    assert.deepEqual(expressions, Array.from({ length: change === 'moved' ? 8 : 5 }, () => expression),
+      'only coordinate motion receives two fresh stable reads and another complete final lookup');
+    assert.deepEqual(dispatched, change === 'moved' ? [
+      { type: 'mouseMoved', x: 100, y: 100 },
+      { type: 'mousePressed', x: 100, y: 200, button: 'left', clickCount: 1 },
+      { type: 'mouseReleased', x: 100, y: 200, button: 'left', clickCount: 1 },
+    ] : [{ type: 'mouseMoved', x: 100, y: 100 }],
+    'one hover and at most one press/release, only at the fully revalidated point');
+    assert.equal(output.length, change === 'moved' ? 0 : 1);
+  });
+}
+
+function originalLoginActionabilityFixture() {
+  const selector = '[role="dialog"] button', text = 'Connect ChatGPT', child = {};
+  const state = { top: 400, wheels: 0, presses: 0, releases: 0, targetReads: 0, ownerCurrent: true };
+  const refusal = new Error('TEST original login renderer no longer owned');
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  const reads: { kind: 'scroll' | 'target'; available: boolean }[] = [];
+  const hooks: {
+    beforeRead?(kind: 'scroll' | 'target'): void;
+    afterRead?(kind: 'scroll' | 'target'): void;
+    afterInput?(type: string): void;
+    afterOwnerCheck?(): void;
+  } = {};
+  const scroller = { parentElement: null, scrollHeight: 1200, clientHeight: 698,
+    getBoundingClientRect: () => ({ x: 210, top: 130, bottom: 828, width: 980 }) };
+  const rectangle = () => ({ x: 992, y: state.top, top: state.top, bottom: state.top + 32, width: 150, height: 32 });
+  const dialog = { getBoundingClientRect: () => ({ x: 210, y: 45, width: 980, height: 810 }), getAnimations: () => [] };
+  const control = { parentElement: scroller, textContent: text, tagName: 'BUTTON',
+    contains: (node: unknown) => node === child, matches: () => false, getAttribute: () => null,
+    getBoundingClientRect: rectangle, closest: () => dialog, getAnimations: () => [] };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const kind = expression.includes('const wheelTop=') ? 'scroll' : 'target';
+      if (kind === 'target') state.targetReads++;
+      hooks.beforeRead?.(kind);
+      const value = runInNewContext(expression, {
+        innerWidth: 1400, innerHeight: 900,
+        getComputedStyle: () => ({ overflowY: 'auto', pointerEvents: 'auto' }),
+        document: { documentElement: scroller, fonts: { status: 'loaded' },
+          querySelectorAll(actual: string) {
+            assert.ok(actual === selector || actual === selector + ':enabled'); return [control];
+          },
+          elementFromPoint(x: number, y: number) {
+            return x >= 992 && x < 1142 && y >= 130 && y < 828 &&
+              y >= state.top && y < state.top + 32 ? child : null;
+          } },
+      }) as Record<string, unknown>;
+      reads.push({ kind, available: kind === 'scroll' ? value.visible === true : value.unavailableTarget !== true });
+      hooks.afterRead?.(kind);
+      return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params });
+      if (method !== 'Input.dispatchMouseEvent') return {};
+      const type = String(params.type);
+      if (type === 'mouseWheel') { state.wheels++; state.top = 400; }
+      if (type === 'mousePressed') state.presses++;
+      if (type === 'mouseReleased') state.releases++;
+      hooks.afterInput?.(type);
+      return {};
+    },
+  }, { assertOwnedRenderer() {
+    if (!state.ownerCurrent) throw refusal;
+    hooks.afterOwnerCheck?.();
+  }, step(value) { steps.push(value); } });
+  const click = () => Reflect.apply(ui.click, undefined, [selector, 'start one original browser login', text,
+    undefined, { scrollBeforeClick: { label: 'show original login action', selector: selector + ':enabled',
+      requireCenterHit: true } }]) as Promise<void>;
+  return { ui, click, selector, text, state, refusal, hooks, commands, steps, reads };
+}
+
+test('original prepared login click repairs first-visible then offscreen geometry before one press', { timeout: 5000 }, async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  const f = originalLoginActionabilityFixture();
+  try {
+    // The failed original flow completed this zero-wheel read before starting its click.
+    await f.ui.scrollTo(f.selector + ':enabled', 'show original login action', f.text, 12, { requireCenterHit: true });
+    f.hooks.beforeRead = kind => {
+      if (kind !== 'target') return;
+      if (f.state.targetReads === 1) f.state.top = 884.5;
+      else if (f.state.wheels === 0) t.mock.timers.setTime(31_000);
+    };
+    await f.click().catch(error => {
+      assert.equal(f.state.presses, 0, 'unavailable geometry never dispatches the original login');
+      throw new Error('Original login stayed offscreen; physical presses=' + f.state.presses, { cause: error });
+    });
+    assert.equal(f.reads[0]?.available, true, 'the original scroll really observed a visible control');
+    assert.equal(f.reads.find(read => read.kind === 'target')?.available, false,
+      'the first actual click lookup observes the later offscreen control');
+    assert.equal(f.state.wheels, 1, 'one physical wheel repairs the observed geometry');
+    assert.equal(f.state.presses, 1);
+    assert.equal(f.state.releases, 1);
+    assert.deepEqual(f.commands.filter(row => row.method === 'Input.dispatchMouseEvent').map(row => row.type),
+      ['mouseWheel', 'mouseMoved', 'mousePressed', 'mouseReleased']);
+  } finally { t.mock.timers.reset(); }
+});
+
+for (const boundary of ['scroll-read', 'wheel', 'owner', 'wheel-transport'] as const) {
+  test(`original prepared login click refuses ${boundary} settlement before another lookup or input`, { timeout: 5000 }, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const f = originalLoginActionabilityFixture();
+    const transportFailure = new Error('Execution context was destroyed during original wheel');
+    const afterUnavailable = boundary === 'owner' || boundary === 'wheel-transport';
+    if (boundary === 'scroll-read') f.hooks.afterRead = kind => {
+      if (kind === 'scroll') t.mock.timers.setTime(31_000);
+    };
+    else {
+      if (afterUnavailable) f.hooks.beforeRead = kind => {
+        if (kind === 'target' && f.state.targetReads === 1) f.state.top = 884.5;
+      };
+      else f.state.top = 884.5;
+      f.hooks.afterInput = type => {
+        if (type !== 'mouseWheel') return;
+        if (boundary === 'owner') f.state.ownerCurrent = false;
+        else if (boundary === 'wheel-transport') throw transportFailure;
+        else t.mock.timers.setTime(31_000);
+      };
+    }
+    try {
+      await assert.rejects(f.click(), error => {
+        if (boundary === 'owner') assert.equal(error, f.refusal);
+        else if (boundary === 'wheel-transport') assert.equal(error, transportFailure);
+        else assert.match(String(error), /UI read timed out/);
+        return true;
+      });
+      assert.equal(f.state.targetReads, afterUnavailable ? 1 : 0,
+        'a late preparation cannot perform one extra target lookup');
+      assert.equal(f.state.wheels, boundary === 'scroll-read' ? 0 : 1);
+      assert.equal(f.reads.length, afterUnavailable ? 3 : 1, 'no fresh preparation after an original refusal');
+      assert.equal(f.state.presses, 0);
+      assert.equal(f.state.releases, 0);
+    } finally { t.mock.timers.reset(); }
+  });
+}
+
+for (const cutoff of ['owner', 'deadline'] as const) {
+  test(`original prepared login click rechecks ${cutoff} after final preparation fulfills`, { timeout: 5000 }, async t => {
+    t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const f = originalLoginActionabilityFixture();
+    let finalPreparationRead = false, checksAfterRead = 0;
+    f.hooks.afterRead = kind => {
+      if (kind === 'scroll' && f.state.targetReads === 4) finalPreparationRead = true;
+    };
+    f.hooks.afterOwnerCheck = () => {
+      // The scroll read and its caller have settled; revoke between fulfillment and final lookup.
+      if (finalPreparationRead && ++checksAfterRead === 2) queueMicrotask(() => {
+        if (cutoff === 'owner') f.state.ownerCurrent = false;
+        else t.mock.timers.setTime(31_000);
+      });
+    };
+    try {
+      await assert.rejects(f.click(), error => {
+        if (cutoff === 'owner') assert.equal(error, f.refusal);
+        else assert.match(String(error), /UI read timed out/);
+        return true;
+      });
+      assert.equal(finalPreparationRead, true);
+      assert.equal(f.state.targetReads, 4, 'no extra final target lookup after the awaited preparation');
+      assert.equal(f.state.wheels, 0);
+      assert.equal(f.state.presses, 0);
+      assert.equal(f.state.releases, 0);
+    } finally { t.mock.timers.reset(); }
+  });
+}
+
+test('original prepared login click shares twelve wheels across initial, stability and final reads', { timeout: 5000 }, async () => {
+  const f = originalLoginActionabilityFixture();
+  f.state.top = 884.5;
+  f.hooks.beforeRead = kind => {
+    if (kind === 'target') f.state.top = 400 + Math.max(0, Math.floor((f.state.targetReads - 2) / 3)) * 50;
+  };
+  f.hooks.afterRead = kind => { if (kind === 'target') f.state.top = 884.5; };
+  await assert.rejects(f.click(), /UI scroll timed out: show original login action/);
+  assert.equal(f.state.wheels, 12, 'no thirteenth wheel when a later phase needs another reveal');
+  assert.equal(f.state.targetReads, 12, 'the exhausted preparation cannot enter another target read');
+  assert.equal(f.reads.at(-1)?.kind, 'scroll');
+  assert.equal(f.reads.at(-1)?.available, false, 'zero remaining wheels still permits its final visibility read');
+  const trace = f.steps.find(step => step.action === 'mouseMoved')?.geometryTrace as { samples: { phase: string }[] };
+  assert.ok(trace.samples.filter(sample => sample.phase === 'final').length >= 3,
+    'the same original budget survives several final-target resamples');
+  assert.equal(f.state.presses, 0);
+  assert.equal(f.state.releases, 0);
+});
+
+test('original prepared login click admits visibility after the twelfth wheel without another wheel', { timeout: 5000 }, async () => {
+  const f = originalLoginActionabilityFixture();
+  f.state.top = 884.5;
+  f.hooks.afterInput = type => {
+    if (type === 'mouseWheel' && f.state.wheels < 12) f.state.top = 884.5;
+  };
+  await f.click();
+  assert.equal(f.state.wheels, 12);
+  assert.equal(f.state.presses, 1);
+  assert.equal(f.state.releases, 1);
+});
+
+for (const uncertain of ['mousePressed', 'mouseReleased'] as const) {
+  test(`original prepared login click never prepares again after uncertain ${uncertain}`, { timeout: 5000 }, async () => {
+    const f = originalLoginActionabilityFixture(), failure = new Error('TEST original uncertain ' + uncertain);
+    f.state.top = 884.5;
+    let readsAtPress = 0;
+    f.hooks.afterInput = type => {
+      if (type === 'mousePressed') { readsAtPress = f.reads.length; f.state.top = 884.5; }
+      if (type === uncertain) throw failure;
+    };
+    await assert.rejects(f.click(), error => { assert.equal(error, failure); return true; });
+    assert.equal(f.reads.length, readsAtPress, 'no scroll preparation or target read follows the original press');
+    assert.equal(f.state.wheels, 1);
+    assert.equal(f.state.presses, 1);
+    assert.equal(f.state.releases, uncertain === 'mouseReleased' ? 1 : 0);
+    assert.equal(f.commands.at(-1)?.type, uncertain, 'uncertain input is never retried');
+  });
+}
+
+function originalSidebarRevealFixture(t: import('node:test').TestContext, visible = false) {
+  t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+  t.mock.method(globalThis, 'setTimeout', (done: () => void, delay: number) => {
+    t.mock.timers.setTime(Date.now() + delay); done();
+    return {} as ReturnType<typeof setTimeout>;
+  });
+  const subject = 'TEST original sidebar subject';
+  const originalKey = JSON.stringify(['TEST team "quoted" \\ name', 'TEST-task']);
+  const state = { top: visible ? 200 : 900, key: originalKey, subject, duplicate: false,
+    ownerCurrent: true, covered: false, hitRow: false, wheels: 0, rowPresses: 0, rowReleases: 0,
+    dialogPresses: 0, dialogReleases: 0, dialogOpen: false };
+  const refusal = new Error('TEST original sidebar owner revoked');
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [], reads: string[] = [];
+  const hooks: { afterRead?(kind: string): void; afterInput?(type: string): void } = {};
+  const rect = (x: number, y: number, width: number, height: number) =>
+    ({ x, y, top: y, bottom: y + height, left: x, right: x + width, width, height });
+  const scroller = { parentElement: null, scrollHeight: 1400, clientHeight: 600,
+    getBoundingClientRect: () => rect(0, 80, 900, 600) };
+  const span = { get textContent() { return state.subject; }, parentElement: undefined as unknown,
+    getBoundingClientRect: () => rect(320, state.top + 10, 200, 20),
+    closest(selector: string): unknown { assert.equal(selector, '.sidebar-task-item'); return row; },
+    contains: (node: unknown) => node === span };
+  const row = { parentElement: scroller, textContent: subject + ' owner team status',
+    getAttribute(name: string) { assert.equal(name, 'data-task-key'); return state.key; },
+    querySelectorAll(selector: string) { assert.equal(selector, 'span'); return [span]; },
+    getBoundingClientRect: () => rect(300, state.top, 300, 60),
+    contains: (node: unknown) => node === span };
+  span.parentElement = row;
+  const dialog = { getBoundingClientRect: () => rect(50, 50, 300, 200), getAnimations: () => [] };
+  const button = { textContent: 'Open team', tagName: 'BUTTON',
+    getBoundingClientRect: () => rect(70, 70, 100, 40), matches: () => false,
+    closest: () => dialog, getAnimations: () => [] };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      let kind = 'passive';
+      const value = runInNewContext(expression, {
+        innerWidth: 1000, innerHeight: 720,
+        getComputedStyle: (node: unknown) => ({ overflowY: node === scroller ? 'auto' : 'visible', pointerEvents: 'auto' }),
+        document: { documentElement: scroller, fonts: { status: 'loaded' }, visibilityState: 'visible', hasFocus: () => true,
+          querySelectorAll(selector: string) {
+            if (selector === '#sidebar-tasks-panel .sidebar-task-item') {
+              kind = 'row'; return state.duplicate ? [row, row] : [row];
+            }
+            if (selector === '#sidebar-tasks-panel .sidebar-task-item [data-task-card-field="subject"]') {
+              kind = 'scroll'; return state.duplicate ? [span, span] : [span];
+            }
+            assert.equal(selector, '[role="dialog"] button'); kind = 'dialog';
+            return state.dialogOpen ? [button] : [];
+          },
+          elementFromPoint(x: number, y: number) {
+            if (state.dialogOpen && x >= 70 && x <= 170 && y >= 70 && y <= 110) return button;
+            if (state.covered) return {};
+            return y >= 80 && y <= 680 && y >= state.top && y <= state.top + 60 ? (state.hitRow ? row : span) : null;
+          } },
+        window: { __TEST_desktopInputEvents: [] },
+      });
+      reads.push(kind); hooks.afterRead?.(kind); return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params });
+      if (method !== 'Input.dispatchMouseEvent') return {};
+      const type = String(params.type);
+      if (type === 'mouseWheel') { state.wheels++; if (!state.covered) state.top = 200; }
+      const dialogInput = Number(params.x) < 200;
+      if (type === 'mousePressed') {
+        if (dialogInput) state.dialogPresses++; else state.rowPresses++;
+      }
+      if (type === 'mouseReleased') {
+        if (dialogInput) state.dialogReleases++;
+        else { state.rowReleases++; state.dialogOpen = true; }
+      }
+      hooks.afterInput?.(type); return {};
+    },
+  }, { assertOwnedRenderer() { if (!state.ownerCurrent) throw refusal; }, step(value) { steps.push(value); } });
+  return { ui, subject, originalKey, state, hooks, refusal, commands, steps, reads };
+}
+
+for (const visible of [false, true]) {
+  test(`original sidebar reveals its exact task before one row and Open team click (visible=${visible})`, { timeout: 5000 }, async t => {
+    const f = originalSidebarRevealFixture(t, visible);
+    try {
+      await f.ui.clickSidebar(f.subject);
+      assert.equal(f.state.wheels, visible ? 0 : 1, 'only a physical wheel reveals an initially clipped task');
+      assert.deepEqual([f.state.rowPresses, f.state.rowReleases, f.state.dialogPresses, f.state.dialogReleases], [1, 1, 1, 1]);
+      assert.ok(f.commands.filter(row => row.type === 'mousePressed').every(row => Number(row.y) < 680));
+      assert.equal(f.state.key, f.originalKey);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+test('original sidebar retains whole-row hit eligibility for a wrapped subject', { timeout: 5000 }, async t => {
+  const f = originalSidebarRevealFixture(t, true); f.state.hitRow = true;
+  try {
+    await f.ui.clickSidebar(f.subject);
+    assert.equal(f.state.wheels, 0, 'inline text whitespace must not require scrolling a visible row');
+    assert.deepEqual([f.state.rowPresses, f.state.rowReleases, f.state.dialogPresses, f.state.dialogReleases], [1, 1, 1, 1]);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+for (const changed of ['key', 'subject', 'duplicate'] as const) {
+  test('original sidebar reveal refuses changed ' + changed + ' before input', { timeout: 5000 }, async t => {
+    const f = originalSidebarRevealFixture(t);
+    f.hooks.afterRead = kind => {
+      if (kind !== 'row' || f.reads.length !== 1) return;
+      if (changed === 'key') f.state.key = JSON.stringify(['TEST another team', 'TEST-task']);
+      else if (changed === 'subject') f.state.subject = 'TEST replaced subject';
+      else f.state.duplicate = true;
+    };
+    try {
+      await assert.rejects(f.ui.clickSidebar(f.subject), /UI read timed out/);
+      assert.equal(f.state.wheels, 0); assert.equal(f.state.rowPresses, 0);
+      assert.equal(f.state.dialogPresses, 0);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+for (const boundary of ['read-deadline', 'wheel-deadline', 'owner', 'wheel-transport'] as const) {
+  test('original sidebar reveal preserves ' + boundary + ' before hover', { timeout: 5000 }, async t => {
+    const f = originalSidebarRevealFixture(t, boundary === 'read-deadline');
+    const transport = new Error('TEST original sidebar wheel transport failed');
+    if (boundary === 'read-deadline') f.hooks.afterRead = kind => {
+      if (kind === 'scroll') t.mock.timers.setTime(31_000);
+    };
+    else f.hooks.afterInput = type => {
+      if (type !== 'mouseWheel') return;
+      if (boundary === 'owner') f.state.ownerCurrent = false;
+      else if (boundary === 'wheel-transport') throw transport;
+      else t.mock.timers.setTime(31_000);
+    };
+    try {
+      await assert.rejects(f.ui.clickSidebar(f.subject), error => boundary === 'owner' ? error === f.refusal
+        : boundary === 'wheel-transport' ? error === transport : /UI read timed out/.test(String(error)));
+      assert.equal(f.commands.filter(row => row.type === 'mouseMoved').length, 0);
+      assert.equal(f.state.rowPresses, 0); assert.equal(f.state.dialogPresses, 0);
+      assert.equal(f.reads.filter(kind => kind === 'row').length, 1, 'no hover lookup after failed reveal');
+      assert.equal(f.state.wheels, boundary === 'read-deadline' ? 0 : 1);
+    } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+  });
+}
+
+test('original sidebar obstruction remains a refusal with bounded same-read facts', { timeout: 5000 }, async t => {
+  const f = originalSidebarRevealFixture(t, true); f.state.covered = true;
+  try {
+    await assert.rejects(f.ui.clickSidebar(f.subject), /UI scroll timed out/);
+    assert.equal(f.state.wheels, 12); assert.equal(f.state.rowPresses, 0); assert.equal(f.state.dialogPresses, 0);
+    const report = f.steps.filter(row => row.observation === 'last sidebar target observation before failure');
+    assert.equal(report.length, 1);
+    const facts = report[0]!.facts as Record<string, unknown>;
+    assert.equal(facts.matches, 1); assert.equal(facts.keyMatches, true);
+    assert.equal(facts.positiveSize, true); assert.equal(facts.centerInViewport, true);
+    assert.equal(facts.hitPresent, true); assert.equal(facts.hitWithinTarget, false);
+    assert.ok(JSON.stringify(report).length < 1024);
+    assert.doesNotMatch(JSON.stringify(report), /quoted|replaced|TEST original sidebar subject/);
+  } finally { t.mock.restoreAll(); t.mock.timers.reset(); }
+});
+
+for (const requireCenterHit of [false, true]) {
+  test(requireCenterHit
+    ? 'original scroll opt-in reveals a covered checkbox with one bounded wheel'
+    : 'original default scroll preserves a disabled control before its readiness wait', { timeout: 5000 }, async () => {
+    const selector = '#TEST-original-checkbox', child = {}, cover = {};
+    const expressions: string[] = [], selectors: string[] = [];
+    const hits: { x: number; y: number }[] = [], dispatched: Record<string, unknown>[] = [];
+    let revealed = false;
+    const scroller = { parentElement: null, scrollHeight: 1200, clientHeight: 600,
+      getBoundingClientRect: () => ({ x: 0, top: 80, bottom: 680, width: 900 }) };
+    const control = { parentElement: scroller, disabled: !requireCenterHit,
+      contains: (node: unknown) => node === child,
+      getBoundingClientRect() {
+        const top = revealed ? 372 : 96;
+        return { x: 90, y: top, top, bottom: top + 16, width: 16, height: 16 };
+      } };
+    const ui = createDesktopUiControls({
+      async evaluate(expression: string) {
+        expressions.push(expression);
+        return runInNewContext(expression, {
+          innerWidth: 1000, innerHeight: 720,
+          getComputedStyle: (node: unknown) => ({ overflowY: node === scroller ? 'auto' : 'visible',
+            pointerEvents: node === control && control.disabled ? 'none' : 'auto' }),
+          document: { documentElement: scroller,
+            querySelectorAll(actual: string) { selectors.push(actual); return [control]; },
+            elementFromPoint(x: number, y: number) {
+              hits.push({ x, y }); return requireCenterHit && revealed ? child : cover;
+            } },
+        });
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        dispatched.push({ method, ...params });
+        if (method === 'Input.dispatchMouseEvent' && params.type === 'mouseWheel') revealed = true;
+        return {};
+      },
+    }, { assertOwnedRenderer() {}, step() {} });
+    if (requireCenterHit) {
+      // The old four-argument helper ignores this option; its premature return is the RED.
+      await Reflect.apply(ui.scrollTo, undefined, [selector, 'TEST original covered checkbox',
+        undefined, 12, { requireCenterHit: true }]);
+    } else await ui.scrollTo(selector, 'TEST original disabled control');
+    assert.deepEqual(selectors, Array.from({ length: requireCenterHit ? 2 : 1 }, () => selector));
+    assert.ok(expressions.every(expression => expression === expressions[0]),
+      'each original loop read executes the same actual helper expression');
+    assert.deepEqual(hits, requireCenterHit ? [{ x: 98, y: 104 }, { x: 98, y: 380 }] : [],
+      'only the opt-in tests the original target center, including its descendant');
+    assert.deepEqual(dispatched, requireCenterHit ? [{ method: 'Input.dispatchMouseEvent',
+      type: 'mouseWheel', x: 450, y: 380, deltaX: 0, deltaY: -276 }] : [],
+      'only the existing centering wheel is used; no checkbox click or default-control input');
+  });
+}
+
+for (const [position, initialTop, firstDelta] of [['below', 800, 600], ['above', -800, -600]] as const) {
+  test(`original scroll reveals an offscreen inner scroller (${position}) before scrolling its clipped target`, { timeout: 5000 }, async () => {
+    const selector = '#TEST-original-nested-model';
+    const selectors: string[] = [], visibility: unknown[] = [];
+    const dispatched: Record<string, unknown>[] = [];
+    let wheels = 0;
+    const outer = { parentElement: null, scrollHeight: 1600, clientHeight: 681,
+      getBoundingClientRect: () => ({ x: 0, top: 0, bottom: 681, width: 1024 }) };
+    const inner = { parentElement: outer, scrollHeight: 1200, clientHeight: 380,
+      getBoundingClientRect() {
+        const top = wheels === 0 ? initialTop : 100;
+        return { x: 300, top, bottom: top + 380, width: 600 };
+      } };
+    const control = { parentElement: inner, contains: () => false,
+      getBoundingClientRect() {
+        const top = wheels === 0 ? 936 : wheels === 1 ? 500 : 200;
+        return { x: 320, y: top, top, bottom: top + 58, width: 300, height: 58 };
+      } };
+    const ui = createDesktopUiControls({
+      async evaluate(expression: string) {
+        const value = runInNewContext(expression, {
+          innerWidth: 1024, innerHeight: 681,
+          getComputedStyle: () => ({ overflowY: 'auto' }),
+          document: { documentElement: outer,
+            querySelectorAll(actual: string) { selectors.push(actual); return [control]; } },
+        }) as Record<string, unknown> | null;
+        assert.ok(value, 'the actual expression must find a visible wheel surface for the offscreen inner clip');
+        visibility.push(value.visible);
+        return value;
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        assert.equal(method, 'Input.dispatchMouseEvent');
+        assert.equal(params.type, 'mouseWheel', 'revealing the target performs no click, key or selection input');
+        dispatched.push({ method, ...params });
+        assert.ok(wheels < 2, 'the two original nested surfaces need only two wheels');
+        wheels++;
+        return {};
+      },
+    }, { assertOwnedRenderer() {}, step() {} });
+    await ui.scrollTo(selector, 'TEST original nested model');
+    assert.deepEqual(selectors, [selector, selector, selector]);
+    assert.deepEqual(visibility, [false, false, true],
+      'the target stays clipped after the outer wheel and becomes visible only after the inner wheel');
+    assert.deepEqual(dispatched, [
+      { method: 'Input.dispatchMouseEvent', type: 'mouseWheel', x: 512, y: 340.5, deltaX: 0, deltaY: firstDelta },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseWheel', x: 600, y: 290, deltaX: 0, deltaY: 239 },
+    ], 'dispatch first to the visible outer dialog, then to the revealed inner model grid');
+  });
+}
+
+for (const [change, moved] of [['owner', false], ['cutoff', false], ['owner', true], ['cutoff', true]] as const) {
+  test(`original desktop click rechecks ${change} after its pending final target read (moved=${moved})`, { timeout: 5000 }, async t => {
+    if (change === 'cutoff') t.mock.timers.enable({ apis: ['Date'], now: 1000 });
+    const originalCutoff = 1001, refusal = new Error('TEST original ' + change + ' no longer current');
+    const point = { x: 100, y: 100, tag: 'BUTTON' }, started = deferred<void>(), release = deferred<typeof point>();
+    const dispatched: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+    const expression = 'TEST_originalOwnerAndHitTestedTarget()';
+    let active = true, reads = 0;
+    const ui = createDesktopUiControls({
+      async evaluate(actual: string) {
+        assert.equal(actual, expression);
+        reads++;
+        if (reads === 5) { started.resolve(); return release.promise; }
+        return point;
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        if (method === 'Input.dispatchMouseEvent') dispatched.push({ ...params });
+        return {};
+      },
+    }, { assertOwnedRenderer() {
+      if (!active || change === 'cutoff' && Date.now() >= originalCutoff) throw refusal;
+    }, step(value) { steps.push(value); } });
+    const pending = ui.clickExpression(expression, 'TEST original pending final target');
+    try {
+      await started.promise;
+      assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }]);
+      if (change === 'owner') active = false;
+      else t.mock.timers.setTime(originalCutoff);
+      release.resolve(moved ? { ...point, y: 200 } : point);
+      await assert.rejects(pending, error => {
+        assert.equal(error, refusal, 'the exact original authority refusal remains authoritative');
+        return true;
+      });
+      assert.equal(reads, 5, 'no extra target read, polling, or retargeting after the original refusal');
+      assert.deepEqual(dispatched, [{ type: 'mouseMoved', x: 100, y: 100 }],
+        'no press or release after the original scope or cutoff changes');
+      assert.equal(steps.some(step => step.action === 'mouseClick'), false);
+    } finally {
+      release.resolve(point);
+      await pending.catch(() => undefined);
+      if (change === 'cutoff') t.mock.timers.reset();
+    }
+  });
+}
+
+test('original desktop click preserves a final transport rejection without more reads or input', { timeout: 5000 }, async () => {
+  const expression = 'TEST_originalFinalTransportTarget()', refusal = new Error('TEST original final CDP failure');
+  const commands: Record<string, unknown>[] = [];
+  let reads = 0;
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      assert.equal(actual, expression);
+      reads++;
+      if (reads === 5) throw refusal;
+      return { x: 100, y: 100, tag: 'BUTTON' };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params }); return {};
+    },
+  }, { assertOwnedRenderer() {}, step() {} });
+  await assert.rejects(ui.clickExpression(expression, 'TEST original final transport target'), error => {
+    assert.equal(error, refusal, 'the exact original transport failure remains authoritative');
+    return true;
+  });
+  assert.equal(reads, 5, 'a failed final read cannot start another observation');
+  assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
+    { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
+});
+
+test('original clarification lookup admits its retained read without completing the assignment prerequisite', async () => {
+  for (const stage of [undefined, 'in-progress-comment'] as const) {
+    const original = assignmentRuntime(stage);
+    if (stage === 'in-progress-comment') {
+      original.detail.full.status = 'in_progress';
+      original.triggers.length = 0;
+    }
+    original.detail.loading = true;
+    assert.equal(await original.evaluate(), null, 'original assignment/comment readiness still requires a settled read');
+  }
+  const current = assignmentRuntime('clarification');
+  current.detail.loading = true;
+  const retained = await current.evaluate();
+  assert.equal(retained?.surfaceId, 'TEST-original-surface');
+  assert.equal(retained?.ownerRevision, 1);
+  assert.equal(retained?.canResolveClarification, true);
+  assert.equal(current.detail.loading, true, 'the observer does not complete or replace the retained product read');
+  current.detail.loading = false;
+  assert.equal((await current.evaluate())?.surfaceId, 'TEST-original-surface');
+  assert.deepEqual([...new Set(current.imports)],
+    ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+});
+
+test('original clarification lookup refuses changed owner, revision, refresh and retained-read joins', async () => {
+  const changes: [string, (value: ReturnType<typeof assignmentRuntime>) => void][] = [
+    ['owner', f => { f.controller.isOwner = false; }],
+    ['fresh owner authority', f => { f.controller.canEditNow = () => false; }],
+    ['stored owner revision', f => { f.storedSession.ownerRevision++; }],
+    ['stored owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-other-surface'; }],
+    ['context', f => { f.state.activeContextId = 'TEST-other-context'; }],
+    ['Task identity', f => { f.detail.identity.taskId = 'TEST-other-task'; }],
+    ['assignment', f => { f.detail.full.owner = 'bob'; }],
+    ['metadata refresh', f => { f.work.refreshPending = true; }],
+    ['live metadata', f => { f.work.teamUnavailable = true; }],
+    ['detail refresh', f => { f.detail.refreshPending = true; }],
+    ['rendered resolve admission', f => { f.controller.canResolveClarification = false; }],
+    ['read failure', f => { Reflect.set(f.detail, 'error', 'TEST failed read'); }],
+    ['deletion intent', f => { Reflect.set(f.detail, 'deletionIntent', 'deleting'); }],
+    ['deleted Task', f => { Reflect.set(f.detail.full, 'deletedAt', 'TEST-deleted'); }],
+    ['changed clarification', f => { f.detail.full.needsClarification = 'lead'; }],
+    ['missing read token', f => { Reflect.deleteProperty(f.detail, 'fullToken'); }],
+    ['foreign resource', f => { f.detail.fullToken.resource = 'snapshot'; }],
+    ['foreign Task resource', f => { f.detail.fullToken.key = 'full:TEST-other-task'; }],
+    ['context epoch', f => { f.detail.fullToken.scope.contextEpoch++; }],
+    ['Team epoch', f => { f.detail.fullToken.scope.teamStateEpoch++; }],
+    ['foreign token context', f => { f.detail.fullToken.scope.contextId = 'TEST-other-context'; }],
+    ['foreign token Team', f => { f.detail.fullToken.scope.teamName = 'host-team:TEST-other'; }],
+  ];
+  for (const [label, change] of changes) {
+    const current = assignmentRuntime('clarification');
+    current.detail.loading = true;
+    assert.equal((await current.evaluate())?.surfaceId, 'TEST-original-surface', label);
+    change(current);
+    assert.equal(await current.evaluate(), null, label + ': no reuse of the earlier eligible observation');
+  }
+});
+
+type OwnerAvailabilityRow = Record<string, unknown>;
+
+function originalOwnerAvailability(teamCount = 3) {
+  const ownerA = 'a'.repeat(64), ownerB = 'b'.repeat(64);
+  const handles = ['TEST-original-a', 'TEST-cross/alpha', 'TEST-cross beta'].slice(0, teamCount);
+  const names = ['host-team:TEST-original-a', 'host-team:TEST-cross%2Falpha', 'host-team:TEST-cross%20beta'].slice(0, teamCount);
+  const aBindings = handles.map((handleId, index) => ({ handle: { handleId },
+    ownerResourceRef: ownerA, teamResourceRef: 'TEST-a-resource-' + index, label: 'TEST A ' + index }));
+  const aPublic = aBindings[0]!, bPublic = { handle: { handleId: 'TEST-healthy-b' },
+    ownerResourceRef: ownerB, teamResourceRef: 'TEST-b-resource', label: 'TEST B' };
+  const b = 'host-team:TEST-healthy-b', contextId = 'TEST-original-context';
+  const ownerRow = { kind: 'owner', ownerResourceRef: ownerA, code: 'unavailable', outcome: 'unknown' };
+  const unavailable: OwnerAvailabilityRow[] = [{ ...ownerRow }, ...names.map(teamName => ({
+    kind: 'team', teamName, code: 'unavailable', outcome: 'not-dispatched' }))];
+  const healthy: OwnerAvailabilityRow = { teamName: b, ownerResourceRef: ownerB };
+  const state = { activeContextId: contextId, teamsLoading: false, teamsError: null,
+    teams: [healthy], teamsUnavailable: unavailable };
+  const discovery = { state: 'ready', bindings: [...aBindings, bPublic], unavailableOwners: [{ ...ownerRow }] };
+  const task = { id: 'TEST-original-b-task', subject: 'TEST original B Task', status: 'pending' };
+  const bTask = { handle: bPublic.handle, task, receipt: { phase: 'completed',
+    command: { operation: 'task.create', payload: { subject: task.subject } },
+    effects: { taskId: task.id }, result: { id: task.id } } };
+  const controls = { active: true, invalidateAfterRead: false, targets: 1, notices: 1,
+    visible: true, loadedLabel: true, unknownCount: true, refresh: true };
+  const noticeOverrides: Record<string, string> = {}, actions: string[] = [], reads: string[] = [];
+  const screenshotBoundary = new Error('TEST original first availability screenshot boundary');
+  const evidence: OwnerAvailabilityRow = {};
+  let screenshots = 0;
+  const notice = {
+    getBoundingClientRect: () => ({ width: controls.visible ? 320 : 0, height: 40, top: 20, bottom: 60 }),
+    hasAttribute: () => true,
+    getAttribute(name: string) {
+      const attributes: Record<string, string> = { 'data-state': 'partial',
+        'data-team-count': String(unavailable.filter(entry => entry.kind === 'team').length),
+        'data-owner-count': String(unavailable.filter(entry => entry.kind === 'owner').length),
+        'data-loaded-count': String(state.teams.length) };
+      return noticeOverrides[name] ?? attributes[name];
+    },
+    get textContent() { return controls.unknownCount ? 'Team count unknown' : 'TEST known count'; },
+    querySelectorAll(selector: string) {
+      if (selector === '*') return controls.loadedLabel ? [{ textContent: state.teams.length + ' loaded' }] : [];
+      assert.equal(selector, 'button');
+      return [{ textContent: 'Refresh', disabled: !controls.refresh }];
+    },
+  };
+  const unused = async () => { throw new Error('TEST unexpected availability operation'); };
+  const ui = {
+    observeInput: unused, clickExpression: unused, clickSidebar: unused, hoverExpression: unused,
+    async click(_selector: string, label: string) { actions.push(label); },
+    async scrollTo(_selector: string, label: string) { actions.push(label); },
+    async waitRead(expression: string, label: string, timeoutMs = 30_000) {
+      assert.equal(label, 'original teams partial availability');
+      assert.ok(timeoutMs > 0 && timeoutMs <= 30_000);
+      reads.push(expression);
+      const value = structuredClone(runInNewContext(expression, {
+        innerHeight: 1000, window: { __agentTeamsDevStore: { getState: () => state } },
+        document: { querySelectorAll(selector: string) {
+          if (selector === '[data-team-aggregate-notice="teams"]') return Array.from({ length: controls.notices }, () => notice);
+          assert.equal(selector, '[data-team-name="' + b + '"]');
+          return Array.from({ length: controls.targets }, () => ({}));
+        } },
+      }));
+      if (controls.invalidateAfterRead) controls.active = false;
+      return value;
+    },
+  };
+  const cdp = {
+    on() { throw new Error('TEST unexpected availability subscription'); },
+    evaluate: unused, close: unused,
+    async send(method: string) {
+      assert.equal(method, 'Page.captureScreenshot');
+      screenshots++;
+      throw screenshotBoundary;
+    },
+  };
+  const run = () => assertDesktopOwnerRoutingAvailability({ cdp, ui, evidence,
+    root: 'TEST-no-screenshot-write', deadline: Date.now() + 2000,
+    assertCurrent() { assert.ok(controls.active, 'TEST original owner epoch remains current'); },
+    contextId, discovery, aPublic, bPublic, bTask, openTeam: unused });
+  return { run, discovery, aPublic, bPublic, unavailable, healthy, controls, state, noticeOverrides,
+    evidence, actions, reads, screenshotBoundary, screenshots: () => screenshots };
+}
+
+test('original owner availability admits three captured A Teams through its actual first DOM read', { timeout: 5000 }, async () => {
+  const f = originalOwnerAvailability();
+  const captured = structuredClone(f.discovery);
+  await assert.rejects(f.run(), error => {
+    assert.equal(error, f.screenshotBoundary, 'all original aggregate assertions precede the retained screenshot boundary');
+    return true;
+  });
+  assert.deepEqual(f.discovery, captured, 'the already captured discovery is read without mutation');
+  assert.equal(f.reads.length, 1, 'the actual retained DOM expression is evaluated once');
+  assert.equal(f.screenshots(), 1);
+  assert.deepEqual(f.actions, ['open original availability menu', 'open original available Teams list', 'original healthy B Team']);
+  assert.equal((f.evidence.availability as OwnerAvailabilityRow).status, 'INCOMPLETE');
+  assert.deepEqual((f.evidence.availability as OwnerAvailabilityRow).observations, [],
+    'the finite boundary test does not manufacture a PNG or a complete UI proof');
+});
+
+test('original owner availability retains singleton, subset and duplicate-row cardinality semantics', { timeout: 5000 }, async () => {
+  for (const variant of ['singleton', 'subset', 'duplicate'] as const) {
+    const f = originalOwnerAvailability(variant === 'singleton' ? 1 : 3);
+    if (variant !== 'singleton') f.unavailable.splice(2);
+    if (variant === 'duplicate') f.unavailable.push({ ...f.unavailable[1]! });
+    await assert.rejects(f.run(), error => {
+      assert.equal(error, f.screenshotBoundary, variant + ': no new completeness or uniqueness oracle');
+      return true;
+    });
+    assert.equal(f.reads.length, 1, variant);
+    assert.equal(f.screenshots(), 1, variant);
+  }
+});
+
+test('original owner availability refuses foreign identities and preserves its existing aggregate guards', { timeout: 5000 }, async () => {
+  const changes: [string, (f: ReturnType<typeof originalOwnerAvailability>) => void][] = [
+    ['healthy B as unavailable A', f => { f.unavailable[1]!.teamName = 'host-team:TEST-healthy-b'; }],
+    ['unregistered A-shaped key', f => { f.unavailable[1]!.teamName = 'host-team:TEST-unregistered-a'; }],
+    ['noncanonical key', f => { f.unavailable[2]!.teamName = 'host-team:TEST-cross/alpha'; }],
+    ['boxed key', f => { f.unavailable[1]!.teamName = Object('host-team:TEST-original-a'); }],
+    ['null key', f => { f.unavailable[1]!.teamName = null; }],
+    ['uncaptured key', f => { f.discovery.bindings.splice(1, 1); }],
+    ['uncaptured original A', f => { f.discovery.bindings.splice(0, 1); }],
+    ['non-string captured handle', f => { Reflect.set(f.discovery.bindings[1]!.handle, 'handleId', Object('TEST-cross/alpha')); }],
+    ['foreign binding owner', f => { f.discovery.bindings[1]!.ownerResourceRef = f.bPublic.ownerResourceRef; }],
+    ['foreign unavailable owner', f => { f.unavailable[0]!.ownerResourceRef = f.bPublic.ownerResourceRef; }],
+    ['missing unavailable owner', f => { f.unavailable.shift(); }],
+    ['duplicate unavailable owner', f => { f.unavailable.push({ ...f.unavailable[0]! }); }],
+    ['unknown row kind', f => { f.unavailable[1]!.kind = 'TEST-other-kind'; }],
+    ['unknown refusal code', f => { f.unavailable[1]!.code = 'TEST-other-code'; }],
+    ['unknown dispatch outcome', f => { f.unavailable[1]!.outcome = 'completed'; }],
+    ['original sixteen-row bound', f => { while (f.unavailable.length < 17) f.unavailable.push({ ...f.unavailable[1]! }); }],
+    ['healthy B owner', f => { f.healthy.ownerResourceRef = f.aPublic.ownerResourceRef; }],
+    ['missing healthy B', f => { f.state.teams.splice(0); }],
+    ['duplicate healthy B', f => { f.state.teams.push({ ...f.healthy }); }],
+    ['visible B target count', f => { f.controls.targets = 2; }],
+    ['notice count', f => { f.controls.notices = 2; }],
+    ['notice team count', f => { f.noticeOverrides['data-team-count'] = '99'; }],
+    ['notice owner count', f => { f.noticeOverrides['data-owner-count'] = '0'; }],
+    ['notice loaded count', f => { f.noticeOverrides['data-loaded-count'] = '0'; }],
+    ['notice visibility', f => { f.controls.visible = false; }],
+    ['loaded label', f => { f.controls.loadedLabel = false; }],
+    ['unknown-count label', f => { f.controls.unknownCount = false; }],
+    ['Refresh admission', f => { f.controls.refresh = false; }],
+    ['context', f => { f.state.activeContextId = 'TEST-other-context'; }],
+    ['original post-read epoch', f => { f.controls.invalidateAfterRead = true; }],
+  ];
+  for (const [label, change] of changes) {
+    const f = originalOwnerAvailability();
+    change(f);
+    await assert.rejects(f.run(), error => {
+      assert.ok(error instanceof Error, label);
+      assert.notEqual(error, f.screenshotBoundary, label);
+      assert.equal((error as { code?: string }).code, 'ERR_ASSERTION', label);
+      return true;
+    });
+    assert.equal(f.screenshots(), 0, label + ': no proof screenshot after refusal');
+  }
+});
+
+
+test('original owner availability refuses invalid captured discovery before navigation', { timeout: 5000 }, async () => {
+  for (const variant of ['empty A handle', 'duplicate A handle', 'over-bound capture'] as const) {
+    const f = originalOwnerAvailability();
+    if (variant === 'empty A handle') f.discovery.bindings[1]!.handle.handleId = '';
+    if (variant === 'duplicate A handle') f.discovery.bindings.push(f.discovery.bindings[1]!);
+    if (variant === 'over-bound capture') while (f.discovery.bindings.length <= 16) {
+      f.discovery.bindings.push({ ...f.bPublic, handle: { handleId: 'TEST-extra-' + f.discovery.bindings.length } });
+    }
+    await assert.rejects(f.run(), variant === 'empty A handle' ? /Invalid Host team/ : assert.AssertionError);
+    assert.deepEqual(f.actions, [], variant);
+    assert.deepEqual(f.reads, [], variant);
+    assert.equal(f.screenshots(), 0, variant);
+  }
+});
+
+const ownerAvailabilityPrefix = [
+  'open original availability menu', 'open original available Teams list', 'original healthy B Team',
+];
+
+function ownerAvailabilityFixture() {
+  const ownerA = 'a'.repeat(64), ownerB = 'b'.repeat(64), ownerForeign = 'c'.repeat(64);
+  const aPublic = { handle: { handleId: 'TEST-original-A' }, ownerResourceRef: ownerA };
+  const bPublic = { handle: { handleId: 'TEST-healthy-B' }, ownerResourceRef: ownerB };
+  const bindings: Record<string, unknown>[] = [aPublic,
+    { handle: { handleId: 'TEST-cross-handle-0' }, ownerResourceRef: ownerA },
+    { handle: { handleId: 'TEST-cross-handle-1' }, ownerResourceRef: ownerA }, bPublic,
+    { handle: { handleId: 'TEST-foreign' }, ownerResourceRef: ownerForeign }];
+  const unavailableOwner = { kind: 'owner', ownerResourceRef: ownerA,
+    code: 'unavailable', outcome: 'not-dispatched' };
+  const unavailable: Record<string, unknown>[] = [unavailableOwner,
+    ...['TEST-original-A', 'TEST-cross-handle-0', 'TEST-cross-handle-1'].map(handleId => ({
+      kind: 'team', teamName: hostTeamSelectionKey(handleId), displayName: handleId,
+      code: 'unavailable', outcome: 'not-dispatched',
+    }))];
+  const observed = { contextId: 'TEST-context', loaded: 1, unavailable, targets: 1,
+    healthy: { teamName: hostTeamSelectionKey(bPublic.handle.handleId), ownerResourceRef: ownerB },
+    notice: { state: 'partial', teams: 3, owners: 1, loaded: 1, visible: true,
+      loadedLabel: true, unknownCount: true, refresh: true } };
+  const steps: string[] = [], checkpoint = new Error('TEST first availability screenshot checkpoint');
+  let screenshots = 0;
+  const task = { id: 'TEST-task', subject: 'TEST healthy B Task', status: 'pending' };
+  type Options = Parameters<typeof assertDesktopOwnerRoutingAvailability>[0];
+  const options: Options = {
+    cdp: {
+      on() { assert.fail('unexpected availability CDP listener'); },
+      async send(method: string) {
+        assert.equal(method, 'Page.captureScreenshot'); screenshots++; throw checkpoint;
+      },
+      async evaluate() { assert.fail('unexpected availability CDP evaluation'); },
+      async close() { assert.fail('unexpected availability CDP close'); },
+    },
+    ui: {
+      async click(_selector: string, label: string) { steps.push(label); },
+      async scrollTo(_selector: string, label: string) { steps.push(label); },
+      async waitRead(_expression: string, label: string) {
+        assert.equal(label, 'original teams partial availability'); return observed;
+      },
+    } as Options['ui'],
+    evidence: {}, root: '/TEST-owner-availability', deadline: Date.now() + 5000,
+    assertCurrent() {}, contextId: observed.contextId, aPublic, bPublic,
+    discovery: { state: 'ready', bindings, unavailableOwners: [unavailableOwner] },
+    bTask: { handle: bPublic.handle, task,
+      receipt: { phase: 'completed', command: { operation: 'task.create', payload: { subject: task.subject } },
+        effects: { taskId: task.id }, result: { id: task.id } } },
+    async openTeam() { assert.fail('first observation must finish before further original navigation'); },
+  };
+  return { options, observed, bindings, steps, checkpoint, screenshots: () => screenshots };
+}
+
+test('owner availability admits every captured A Team through the actual first observation', async () => {
+  const f = ownerAvailabilityFixture();
+  await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options), error => {
+    assert.equal(error, f.checkpoint, 'all original identity, owner, notice and healthy B checks pass before the screenshot');
+    return true;
+  });
+  assert.equal(f.screenshots(), 1);
+  assert.deepEqual(f.steps, ownerAvailabilityPrefix);
+  assert.equal((f.options.evidence.availability as Record<string, unknown>).status, 'INCOMPLETE',
+    'the deliberate checkpoint does not qualify later actions or cleanup');
+});
+
+for (const [label, teamName] of [
+  ['healthy B', hostTeamSelectionKey('TEST-healthy-B')],
+  ['captured foreign owner', hostTeamSelectionKey('TEST-foreign')],
+  ['unknown Team', hostTeamSelectionKey('TEST-unknown')],
+  ['malformed Team', 123],
+] as const) {
+  test('owner availability refuses ' + label + ' in unavailable A rows', async () => {
+    const f = ownerAvailabilityFixture();
+    f.observed.unavailable[2]!.teamName = teamName;
+    await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options), assert.AssertionError);
+    assert.equal(f.screenshots(), 0);
+    assert.deepEqual(f.steps, ownerAvailabilityPrefix);
+  });
+}
+
+for (const label of ['missing selected A', 'non-string A handle', 'empty A handle', 'duplicate A handle', 'over-bound capture'] as const) {
+  test('owner availability refuses ' + label + ' before original navigation', async () => {
+    const f = ownerAvailabilityFixture();
+    if (label === 'missing selected A') f.bindings.shift();
+    if (label === 'non-string A handle') f.bindings[1]!.handle = { handleId: 123 };
+    if (label === 'empty A handle') f.bindings[1]!.handle = { handleId: '' };
+    if (label === 'duplicate A handle') f.bindings.push(f.bindings[1]!);
+    if (label === 'over-bound capture') while (f.bindings.length <= 16) f.bindings.push({
+      handle: { handleId: 'TEST-extra-' + f.bindings.length }, ownerResourceRef: 'c'.repeat(64),
+    });
+    await assert.rejects(assertDesktopOwnerRoutingAvailability(f.options),
+      label === 'empty A handle' ? /Invalid Host team/ : assert.AssertionError);
+    assert.equal(f.screenshots(), 0);
+    assert.deepEqual(f.steps, []);
+  });
+}
+
+
+test('Selection project navigation registers only the two original zero-session fixture scopes', async t => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-emulated-runtime-fixture.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = 'export async function prepareDesktopEmulatedRuntimeFixture(', end = '  const selectedSources = ';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end))
+    .replace(/^export /u, '') + '  return fixture;\n}');
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-selection-project-discovery-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, 'claude')); await mkdir(join(root, 'workspace'));
+  const configPath = join(root, 'claude/agent-teams-config.json');
+  const initial = { general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' }, providerConnections: [] };
+  const make = Function('environment', `'use strict';
+    const {assert,process,prepareDesktopBackendFixture,readFile,writeFile,join}=environment;
+    ${actual}
+    return prepareDesktopEmulatedRuntimeFixture;`) as (environment: Record<string, unknown>) =>
+      (repo: string, pnpm: string, provider: string, variant?: string) => Promise<unknown>;
+  let calls = 0;
+  const prepare = make({ assert, process: { platform: 'darwin', arch: 'arm64', env: {} }, readFile, writeFile, join,
+    async prepareDesktopBackendFixture(repo: string, options: unknown) {
+      calls++; assert.equal(repo, 'TEST-repo');
+      assert.deepEqual(options, { pnpmEntry: 'TEST-pnpm', seedUiPreferences: true, creation: true }); return { root };
+    } });
+  for (const [provider, variant] of [['codex', 'selection'], ['codex', 'installer'], ['codex', undefined],
+    ['claude', undefined], ['claude', 'lifecycle'], ['opencode', undefined]] as const) {
+    const before = JSON.stringify(initial); await writeFile(configPath, before, { mode: 0o600 });
+    await prepare('TEST-repo', 'TEST-pnpm', provider, variant);
+    const after = await readFile(configPath, 'utf8');
+    if (variant === 'selection' || variant === 'installer') {
+      assert.deepEqual(JSON.parse(after), { ...initial, general: { ...initial.general, customProjectPaths: [join(root, 'workspace')] } });
+    } else assert.equal(after, before, 'unrelated fixture configuration remains byte-identical');
+  }
+  assert.equal(calls, 6, 'only the original preparation prefix runs; no peer or native process is started');
+});
+
+function selectionProjectNavigationState() {
+  const key = hostTeamSelectionKey('TEST-selection-B'), seed = hostTeamSelectionKey('TEST-selection-A');
+  return {
+    activeContextId: 'local', selectedTeamName: null as string | null,
+    selectedProjectId: 'TEST-project', activeProjectId: 'TEST-project',
+    selectedRepositoryId: null as string | null, selectedWorktreeId: null as string | null,
+    projects: [{ id: 'TEST-project', path: join('/TEST-selection-navigation', 'workspace') }],
+    repositoryGroups: [] as { id: string; worktrees: { id: string; path: string }[] }[],
+    paneLayout: { focusedPaneId: 'TEST-pane', panes: [{ id: 'TEST-pane', activeTabId: 'TEST-tab-B',
+      tabs: [{ id: 'TEST-tab-B', type: 'team', teamName: key, taskDetail: undefined as object | undefined }] }] },
+    teamByName: {
+      [seed]: { teamName: seed, ownerResourceRef: 'TEST-original-owner', projectContextMode: 'shared' },
+      [key]: { teamName: key, ownerResourceRef: 'TEST-original-owner', projectContextMode: 'per_project' },
+    },
+  };
+}
+
+async function selectionProjectNavigation(state: unknown) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
+  const { record } = await import('./desktop-resume-records.ts');
+  const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const openTeam = async (', end = '  const openLaunch = async (';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const make = Function('environment', `'use strict';
+    const {assert,ui,hostTeamSelectionKey,literal,record,fixture,proof,projectOracle,join}=environment;
+    ${actual}
+    return openTeam;`) as (environment: Record<string, unknown>) => (selected: unknown) => Promise<void>;
+  const key = hostTeamSelectionKey('TEST-selection-B'), selector = `[role="button"][data-team-name=${literal(key)}]`;
+  const actions: string[] = [], values: boolean[] = [], failure = new Error('TEST original selection wait refused');
+  const open = make({ assert, hostTeamSelectionKey, literal, record, join, fixture: { root: '/TEST-selection-navigation' },
+    projectOracle: { identity: Object.freeze({ contextId: 'local', ownerResourceRef: 'TEST-original-owner',
+      projectPath: join('/TEST-selection-navigation', 'workspace') }) }, proof: { creation: { record: {
+      contextId: 'local', teamName: 'TEST-selection-next', binding: { handleId: 'TEST-selection-B' },
+    } } },
+    ui: { async click(target: string, label: string, text?: string) {
+      if (label === 'open original application menu') assert.equal(target, 'button[aria-label="More actions"]');
+      else if (label === 'open original Teams list') { assert.equal(target, 'button'); assert.equal(text, 'Teams'); }
+      else { assert.equal(label, 'open original captured Team'); assert.equal(target, selector); }
+      actions.push(label);
+    }, async scrollTo(target: string, label: string) {
+      assert.equal(target, selector); assert.equal(label, 'original captured Team card'); actions.push(label);
+    }, async waitRead(...args: unknown[]) {
+      assert.equal(args.length, 2, 'the original 30s read budget is not replaced');
+      assert.equal(args[1], 'original selected Team identity'); actions.push(String(args[1]));
+      const value: unknown = runInNewContext(String(args[0]), { window: { __agentTeamsDevStore: { getState: () => state } } });
+      assert.equal(typeof value, 'boolean'); values.push(value as boolean); if (!value) throw failure; return value;
+    } },
+  });
+  return { key, values, actions, failure, run: (projectDefinition = true) => open({
+    name: 'TEST-selection-next', handleId: 'TEST-selection-B', projectDefinition,
+  }) };
+}
+
+const selectionProjectNavigationActions = ['open original application menu', 'open original Teams list',
+  'original captured Team card', 'open original captured Team', 'original selected Team identity'];
+
+test('Selection project navigation admits the focused logical tab and explicit exact project before any Runtime exists', async () => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('../../src/renderer/components/team/teamProjectSelection.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = 'function findWorktreeSelection(', end = '/**\n * A previously shared team';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)).replace('export function ', 'function '));
+  const resolve = Function(`${actual}\nreturn resolveTeamProjectSelection;`)() as
+    (state: ReturnType<typeof selectionProjectNavigationState>) => { projectPath: string | null };
+  for (const grouped of [false, true]) {
+    const state = selectionProjectNavigationState();
+    if (grouped) {
+      state.selectedRepositoryId = 'TEST-repository'; state.selectedWorktreeId = state.selectedProjectId;
+      state.repositoryGroups = [{ id: state.selectedRepositoryId, worktrees: state.projects }]; state.projects = [];
+      state.selectedTeamName = hostTeamSelectionKey('TEST-selection-A');
+    }
+    assert.equal(resolve(state).projectPath, join('/TEST-selection-navigation', 'workspace'),
+      'the actual renderer resolver selects the same captured workspace');
+    const f = await selectionProjectNavigation(state); await f.run();
+    assert.deepEqual(f.values, [true]); assert.deepEqual(f.actions, selectionProjectNavigationActions);
+  }
+});
+
+test('Selection project navigation refuses other panes, logical owners, contexts and project fallbacks', async () => {
+  const key = hostTeamSelectionKey('TEST-selection-B'), seed = hostTeamSelectionKey('TEST-selection-A');
+  const mutations: [string, (state: ReturnType<typeof selectionProjectNavigationState>) => void][] = [
+    ['unfocused B', s => { s.paneLayout.panes.push({ id: 'TEST-other-pane', activeTabId: 'TEST-other', tabs: [] }); s.paneLayout.focusedPaneId = 'TEST-other-pane'; }],
+    ['duplicate pane', s => { s.paneLayout.panes.push(structuredClone(s.paneLayout.panes[0]!)); }],
+    ['duplicate active tab', s => { s.paneLayout.panes[0]!.tabs.push(structuredClone(s.paneLayout.panes[0]!.tabs[0]!)); }],
+    ['inactive B', s => { s.paneLayout.panes[0]!.activeTabId = 'TEST-missing-tab'; }],
+    ['task detail', s => { s.paneLayout.panes[0]!.tabs[0]!.taskDetail = {}; }],
+    ['graph tab', s => { s.paneLayout.panes[0]!.tabs[0]!.type = 'graph'; }],
+    ['physical execution tab', s => { s.paneLayout.panes[0]!.tabs[0]!.teamName = hostTeamSelectionKey('TEST-execution-B'); }],
+    ['foreign context', s => { s.activeContextId = 'TEST-other-context'; }],
+    ['foreign owner', s => { s.teamByName[key]!.ownerResourceRef = 'TEST-foreign'; }],
+    ['unavailable owner', s => { s.teamByName[seed]!.ownerResourceRef = ''; s.teamByName[key]!.ownerResourceRef = ''; }],
+    ['missing logical summary', s => { Reflect.deleteProperty(s.teamByName, key); }],
+    ['wrong logical summary', s => { s.teamByName[key]!.teamName = seed; }],
+    ['execution summary', s => { s.teamByName[key]!.projectContextMode = 'shared'; }],
+    ['no selected project', s => { s.selectedProjectId = ''; }],
+    ['no discovered project', s => { s.projects = []; }],
+    ['wrong project despite correct active fallback', s => { s.projects.push({ id: 'TEST-other-project', path: '/TEST-other-workspace' }); s.selectedProjectId = 'TEST-other-project'; }],
+    ['wrong project path', s => { s.projects[0]!.path = '/TEST-other-workspace'; }],
+    ['duplicate flat ID', s => { s.projects.unshift({ id: 'TEST-project', path: '/TEST-other-workspace' }); }],
+    ['repository fallback only', s => { s.repositoryGroups = [{ id: 'TEST-repository', worktrees: s.projects }]; s.projects = []; s.selectedProjectId = ''; s.selectedRepositoryId = 'TEST-repository'; }],
+    ['wrong selected repository', s => { s.repositoryGroups = [{ id: 'TEST-repository', worktrees: s.projects }]; s.projects = []; s.selectedWorktreeId = s.selectedProjectId; s.selectedRepositoryId = 'TEST-other-repository'; }],
+    ['duplicate worktree ID', s => { s.repositoryGroups = [{ id: 'TEST-other-repository', worktrees: [{ id: 'TEST-project', path: '/TEST-other-workspace' }] }, { id: 'TEST-repository', worktrees: s.projects }]; s.projects = []; s.selectedWorktreeId = s.selectedProjectId; s.selectedRepositoryId = 'TEST-repository'; }],
+  ];
+  for (const [label, mutate] of mutations) {
+    const state = selectionProjectNavigationState(); state.selectedTeamName = key; mutate(state);
+    const f = await selectionProjectNavigation(state);
+    await assert.rejects(f.run(), error => error === f.failure, label);
+    assert.deepEqual(f.values, [false], label); assert.deepEqual(f.actions, selectionProjectNavigationActions, label);
+  }
+});
+
+test('Selection project navigation preserves the original shared Runtime selection guard', async () => {
+  const key = hostTeamSelectionKey('TEST-selection-B');
+  const current = await selectionProjectNavigation({ selectedTeamName: key }); await current.run(false);
+  assert.deepEqual(current.values, [true]); assert.deepEqual(current.actions, selectionProjectNavigationActions);
+  const wrong = await selectionProjectNavigation({ selectedTeamName: hostTeamSelectionKey('TEST-other-runtime') });
+  await assert.rejects(wrong.run(false), error => error === wrong.failure);
+  assert.deepEqual(wrong.values, [false]); assert.deepEqual(wrong.actions, selectionProjectNavigationActions);
+});
+
+async function selectionStoppedConvergence(options: {
+  modes?: string[]; tables?: boolean[]; guardMs?: number[]; readMs?: number[]; bindingMismatch?: boolean;
+} = {}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { hostTeamRunId } = await import('../../src/features/agent-backend/contracts/teamRunSelection.ts');
+  const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
+  const source = (await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const pollBegin = '  const poll = async <T>(', pollEnd = '  const visible = (text: string) =>';
+  const stopBegin = '  const stop = async (', stopEnd = '\n\n  await ui.observeInput();';
+  for (const marker of [pollBegin, pollEnd, stopBegin, stopEnd]) assert.equal(source.split(marker).length, 2);
+  assert.ok(source.includes('proof.bStop = await stop(liveB);'));
+  assert.ok(source.includes('proof.aStop = await stop(liveA, true); proof.stoppedScreenshot = await screenshot(\'stopped\');'));
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(pollBegin), source.indexOf(pollEnd)) +
+    source.slice(source.indexOf(stopBegin), source.indexOf(stopEnd)));
+  const makeStop = Function('environment', `'use strict';
+    const {assert,effects,ui,cdp,options,processTable,literal,hostTeamSelectionKey,hostTeamRunId,Date,setTimeout}=environment;
+    ${actual}
+    return stop;`) as (environment: Record<string, unknown>) => (live: unknown, observeStoppedUi?: boolean) => Promise<unknown>;
+  const key = hostTeamSelectionKey('TEST-selection-owner');
+  const execution = { handleId: 'TEST-selection-execution' };
+  const runId = hostTeamRunId(execution.handleId, 'TEST-launch', 'TEST-roster');
+  const binding = { backendId: 'TEST-backend', teamId: 'TEST-team', runId: 'TEST-launch', memberId: 'TEST-lead', generation: 'TEST-generation' };
+  const trace: string[] = [], delays: number[] = [], budgets: number[] = [], values: boolean[] = [];
+  const failure = new Error('TEST original stopped observation refusal');
+  let now = 0, reads = 0, guards = 0, tables = 0, sessions = 0, storeReads = 0;
+  const box = (visible = true) => ({ visible, getBoundingClientRect: () => ({ width: 100, height: 30 }) });
+  const live = { handleId: 'TEST-selection-owner', execution, definition: { launchId: 'TEST-launch', rosterRevision: 'TEST-roster' },
+    initial: { binding }, thread: { pid: 104 }, async session() {
+      sessions++; trace.push('session');
+      return { phase: 'closed', custody: 'released', binding: options.bindingMismatch ? { ...binding, generation: 'TEST-other' } : { ...binding } };
+    } };
+  const stop = makeStop({ assert, literal, hostTeamSelectionKey, hostTeamRunId,
+    Date: { now: () => now }, setTimeout(done: () => void, delay: number) {
+      assert.equal(delay, 100); delays.push(delay); now += delay; done();
+    },
+    effects: async () => { trace.push('effects'); return []; },
+    ui: { async scrollTo(selector: string, label: string) {
+      assert.equal(selector, 'button[aria-label="Stop"]'); assert.equal(label, 'original Team Stop'); trace.push('scroll');
+    }, async click(selector: string, label: string, text: string) {
+      assert.equal(selector, 'button[aria-label="Stop"]'); assert.equal(label, 'stop original selected Team once');
+      assert.equal(text, 'Stop'); trace.push('click');
+    } },
+    options: { assertOwnedRenderer() { trace.push('guard'); const index = guards++; now += options.guardMs?.[index] ?? 0; } },
+    processTable() { trace.push('process'); const index = tables++; return options.tables?.[index] ? [{ pid: 104 }] : []; },
+    cdp: { async evaluate(expression: string, timeoutMs: number) {
+      trace.push('evaluate'); budgets.push(timeoutMs); const index = reads++, mode = options.modes?.[index];
+      if (mode === undefined) throw failure;
+      const changed = hostTeamRunId(execution.handleId, 'TEST-launch', 'TEST-other-roster');
+      const observedRun = mode === 'other-revision' ? changed : runId;
+      const state = { selectedTeamName: mode === 'other-owner' ? hostTeamSelectionKey('TEST-other-owner') : key,
+        currentProvisioningRunIdByTeam: { [key]: mode === 'provisioning-pin' ? changed : observedRun },
+        currentRuntimeRunIdByTeam: { [key]: mode === 'runtime-pin' ? changed : observedRun },
+        provisioningRuns: mode === 'missing-progress' ? {} : { [observedRun]: {
+          teamName: mode === 'progress-owner' ? hostTeamSelectionKey('TEST-other-owner') : key,
+          runId: mode === 'progress-run' ? changed : observedRun,
+          state: mode === 'ready' || mode === 'dismissed-ready' ? 'ready' : mode === 'cancelled' ? 'cancelled' : 'disconnected',
+        } } };
+      const launch = { ...box(mode !== 'hidden-launch'), textContent: 'Launch', disabled: mode === 'disabled-launch' };
+      const wrapper = { tagName: mode === 'wrong-wrapper' ? 'SECTION' : 'DIV',
+        childElementCount: mode === 'ready' || mode === 'render-pending' ? 1 : 0 };
+      const banner = { ...box(), nextElementSibling: wrapper, querySelectorAll(selector: string) {
+        if (selector === 'button') return mode === 'missing-launch' ? [] : [launch];
+        assert.equal(selector, ':scope > span'); return [{ textContent: mode === 'wrong-status' ? 'TEST unknown' : 'Team is offline' }];
+      } };
+      const team = { ...box(mode !== 'hidden-team'), getAttribute(name: string) {
+        assert.equal(name, 'data-team-name'); return mode === 'dom-owner' ? hostTeamSelectionKey('TEST-other-owner') : key;
+      }, querySelector(selector: string) { assert.equal(selector, '[data-section-id="team"]'); return {}; },
+      querySelectorAll(selector: string) { assert.equal(selector, ':scope > [role="status"]'); return mode === 'duplicate-status' ? [banner, banner] : [banner]; } };
+      const value = runInNewContext(expression, {
+        window: { __agentTeamsDevStore: { getState() { storeReads++; return state; } } },
+        document: { querySelectorAll(selector: string) {
+          assert.equal(selector, '[data-team-name]'); return mode === 'duplicate-team' ? [team, team] : [team];
+        } }, getComputedStyle: (element: { visible: boolean }) => ({ visibility: element.visible ? 'visible' : 'hidden' }),
+      });
+      assert.equal(typeof value, 'boolean'); values.push(value); now += options.readMs?.[index] ?? 0; return value;
+    } },
+  });
+  return { run: (observeStoppedUi = false) => stop(live, observeStoppedUi), binding, trace, delays, budgets, values, failure,
+    counts: () => ({ sessions, tables, guards, reads, storeReads, now }) };
+}
+
+test('original Selection final Stop joins physical absence with its exact stopped UI within the same poll budget', async () => {
+  const f = await selectionStoppedConvergence({ tables: [true, false, false, false],
+    modes: ['ready', 'render-pending', 'stopped'], guardMs: [60_000] });
+  assert.deepEqual(await f.run(true), { binding: f.binding, phase: 'closed', custody: 'released', originalPid: 104, absent: true });
+  assert.deepEqual(f.values, [false, false, true], 'accepted stopped progress and its rendered completion are both required');
+  assert.deepEqual(f.budgets, [14_900, 14_800, 14_700], 'new CDP reads consume the original second poll deadline');
+  assert.deepEqual(f.delays, [100, 100, 100]);
+  assert.deepEqual(f.counts(), { sessions: 1, tables: 4, guards: 3, reads: 3, storeReads: 3, now: 60_300 });
+  assert.deepEqual(f.trace, ['scroll', 'click', 'effects', 'session', 'effects', 'process',
+    'effects', 'process', 'guard', 'evaluate', 'effects', 'process', 'guard', 'evaluate', 'effects', 'process', 'guard', 'evaluate']);
+  const b = await selectionStoppedConvergence({ tables: [true, false] });
+  assert.deepEqual(await b.run(), { binding: b.binding, phase: 'closed', custody: 'released', originalPid: 104, absent: true });
+  assert.deepEqual(b.budgets, []); assert.deepEqual(b.delays, [100]);
+  assert.deepEqual(b.trace, ['scroll', 'click', 'effects', 'session', 'effects', 'process', 'effects', 'process']);
+});
+
+test('Selection stopped convergence refuses wrong identity, unaccepted progress, visible progress and exhausted observation budget', async () => {
+  for (const mode of ['other-owner', 'other-revision', 'provisioning-pin', 'runtime-pin', 'missing-progress', 'progress-owner',
+    'progress-run', 'cancelled', 'ready', 'dismissed-ready', 'render-pending', 'dom-owner', 'hidden-team', 'duplicate-team',
+    'duplicate-status', 'wrong-status', 'missing-launch', 'disabled-launch', 'hidden-launch', 'wrong-wrapper']) {
+    const f = await selectionStoppedConvergence({ modes: [mode] });
+    await assert.rejects(f.run(true), error => error === f.failure);
+    assert.deepEqual(f.values, [false], mode); assert.deepEqual(f.delays, [100], mode);
+    assert.equal(f.trace.filter(value => value === 'click').length, 1, mode);
+    assert.deepEqual(f.budgets, [30_000, 30_000], mode);
+  }
+  const expired = await selectionStoppedConvergence({ modes: ['stopped'], guardMs: [75_000] });
+  await assert.rejects(expired.run(true), /original stopped UI observation.*original action is never repeated/);
+  assert.deepEqual(expired.budgets, []); assert.deepEqual(expired.delays, []);
+  const late = await selectionStoppedConvergence({ modes: ['stopped'], guardMs: [60_000], readMs: [15_000] });
+  await assert.rejects(late.run(true), /original stopped UI observation.*original action is never repeated/);
+  assert.deepEqual(late.values, [true]); assert.deepEqual(late.budgets, [15_000]); assert.deepEqual(late.delays, []);
+  const mismatch = await selectionStoppedConvergence({ modes: ['stopped'], bindingMismatch: true });
+  await assert.rejects(mismatch.run(true), { code: 'ERR_ASSERTION' });
+  assert.deepEqual(mismatch.values, [true], 'the original exact stopped binding assertion remains after the UI read');
+});
+
+
+type NavigationState = { paneLayout: { focusedPaneId: unknown; panes: Record<string, unknown>[] }; selectedTeamName: unknown; secret: string };
+function navigationState(team = hostTeamSelectionKey('TEST-A'), paneId = 'pane-1', tabId = 'tab-A'): NavigationState {
+  return { paneLayout: { focusedPaneId: paneId, panes: [{ id: paneId, activeTabId: tabId,
+    tabs: [{ id: tabId, type: 'team', teamName: team }] }] }, selectedTeamName: team, secret: 'TEST-private-unrelated-value' };
+}
+async function passiveNavigationFixture() {
+  const counts = { reads: 0, target: 0, attribute: 0, clock: 0, queries: 0, send: 0, evaluate: 0, micro: 0, timer: 0 };
+  const listeners = new Map<string, (event: Record<string, unknown>) => void>(), microtasks: (() => void)[] = [], timers: (() => void)[] = [];
+  let state: unknown = navigationState();
+  class TestElement {
+    tagName = 'DIV'; id = ''; className = 'team-row-zebra-card'; name: unknown = hostTeamSelectionKey('TEST-A');
+    card: TestElement | null = this; targetThrows = false; attributeThrows = false; isCard = true;
+    closest(selector: string): TestElement | null {
+      if (selector === '[data-team-name]') { counts.target++; if (this.targetThrows) throw new Error('TEST target read'); return this.card; }
+      assert.ok(['button', '.kanban-task-card', '[role="dialog"]'].includes(selector)); return null;
+    }
+    matches(selector: string) { assert.equal(selector, '.team-row-zebra-card'); return this.isCard; }
+    getAttribute(name: string): unknown {
+      if (name === 'data-team-name') { counts.attribute++; if (this.attributeThrows) throw new Error('TEST target attribute'); return this.name; }
+      assert.equal(name, 'aria-label'); return null;
+    }
+  }
+  const element = new TestElement();
+  const store: (() => never) & { getState(this: unknown): unknown } = Object.assign(() => assert.fail('never invoke the Zustand bound hook'), {
+    getState(this: unknown): unknown { assert.equal(this, store); counts.reads++; return state; },
+  });
+  const window: Record<string, unknown> = { __agentTeamsDevStore: store };
+  const document = {
+    activeElement: element as TestElement | null,
+    addEventListener(name: string, listener: (event: Record<string, unknown>) => void, options: unknown) {
+      assert.deepEqual(JSON.parse(JSON.stringify(options)), { capture: true, passive: true });
+      assert.equal(listeners.has(name), false); listeners.set(name, listener);
+    },
+    querySelectorAll(selector: string) {
+      assert.ok(['[aria-roledescription="sortable"][aria-pressed="true"]', '[id^="DndLiveRegion-"]'].includes(selector));
+      counts.queries++; return [];
+    },
+  };
+  const json = { stringify(value: unknown): string { const text = JSON.stringify(value); assert.ok(typeof text === 'string'); return text; } };
+  const context = { window, document, Element: TestElement, HTMLButtonElement: TestElement, JSON: json,
+    performance: { now() { counts.clock++; return 123.4; } },
+    queueMicrotask(callback: () => void) { counts.micro++; microtasks.push(callback); },
+    setTimeout(callback: () => void, delay: number) { assert.equal(delay, 0); counts.timer++; timers.push(callback); return 1; } };
+  const ui = createDesktopUiControls({
+    async send(method, params) { counts.send++; assert.equal(method, 'Emulation.setFocusEmulationEnabled'); assert.deepEqual(params, { enabled: true }); return {}; },
+    async evaluate(expression) { counts.evaluate++; return expression === 'document.visibilityState' ? 'visible' : runInNewContext(expression, context); },
+  }, { assertOwnedRenderer() { assert.fail('observer adds no action-owner reads'); }, step() { assert.fail('observer adds no input action'); } });
+  await ui.observeInput();
+  assert.deepEqual([...listeners.keys()], ['pointerdown', 'pointerup', 'pointercancel', 'pointermove', 'click', 'keydown', 'keyup', 'focusin', 'focusout']);
+  assert.deepEqual([counts.send, counts.evaluate, counts.reads, counts.clock, counts.micro, counts.timer], [1, 2, 0, 0, 0, 0]);
+  const events = () => window.__TEST_desktopInputEvents as Record<string, unknown>[];
+  const dragEvents = () => window.__TEST_desktopDragEvents as Record<string, unknown>[];
+  const emit = (type = 'click', target: unknown = element, buttons = 0) => {
+    const event = { target, clientX: 191, clientY: 228, button: 0, buttons, key: 'TEST-key', code: 'TEST-code', isTrusted: true, defaultPrevented: false };
+    const listener = listeners.get(type); assert.ok(listener); listener(event);
+    return { event, row: (type === 'pointermove' || type === 'pointercancel' ? dragEvents() : events()).at(-1)! };
+  };
+  const micro = () => { const callback = microtasks.shift(); assert.ok(callback); callback(); };
+  const timer = () => { const callback = timers.shift(); assert.ok(callback); callback(); };
+  const flush = () => { while (microtasks.length) micro(); while (timers.length) timer(); };
+  return { counts, element, store, window, document, json, emit, micro, timer, flush, events, dragEvents, setState(value: unknown) { state = value; } };
+}
+const navigationPlain = (value: unknown): Record<string, unknown> => JSON.parse(JSON.stringify(value));
+const navigationSample = (team: string, pane = 'pane-1', tab = 'tab-A') => ({
+  status: 'available', focusedPaneId: pane, activeTabId: tab, activeTabType: 'team', activeTabTeamName: team, selectedTeamName: team,
+});
+
+test('passive input keeps its actual Team target and three separate original navigation samples', async () => {
+  const a = hostTeamSelectionKey('TEST-A'), b = hostTeamSelectionKey('TEST-B');
+  const f = await passiveNavigationFixture(); f.element.name = b;
+  const initial = navigationState(a, 'pane-1', 'tab-teams'); initial.paneLayout.panes[0]!.tabs = [{ id: 'tab-teams', type: 'teams' }]; f.setState(initial);
+  const teamsA = { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-teams', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: a };
+  const { event, row } = f.emit('pointerdown');
+  assert.deepEqual(navigationPlain(row), { type: 'pointerdown', timeMs: 123, x: 191, y: 228, button: 0, buttons: 0,
+    key: 'TEST-key', code: 'TEST-code', trusted: true, buttonClass: null, target: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' },
+    focusBefore: { tag: 'DIV', id: '', ariaLabel: null, className: 'team-row-zebra-card' }, defaultPreventedBefore: false,
+    sidebarRow: false, taskId: null, activeSortable: [], dragAnnouncement: [], taskClarification: null,
+    teamNavigation: { schemaVersion: 1, status: 'available', source: 'original-passive-input', atomicWithNavigation: false,
+      targetTeamName: b, before: teamsA, microtask: null, afterDispatch: null } });
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer], [1, 1, 1, 1, 1, 0]);
+  f.element.name = a; f.element.card = null; f.setState(navigationState(b)); event.defaultPrevented = true; f.micro();
+  assert.deepEqual(navigationPlain(row.teamNavigation).microtask, navigationSample(b));
+  f.setState(navigationState(a)); f.document.activeElement = null; f.timer();
+  const observation = navigationPlain(row.teamNavigation);
+  assert.equal(observation.targetTeamName, b); assert.deepEqual(observation.before, teamsA); assert.deepEqual(observation.afterDispatch, navigationSample(a));
+  assert.deepEqual([row.defaultPreventedAfterMicrotask, row.defaultPreventedAfterDispatch, row.focusAfterDispatch], [true, true, null]);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.queries, f.counts.send, f.counts.evaluate, f.counts.micro, f.counts.timer], [3, 1, 1, 1, 2, 1, 2, 1, 1]);
+  assert.equal(JSON.stringify(observation).includes('TEST-private-unrelated-value'), false);
+  const g = await passiveNavigationFixture(); const original = g.emit().row; g.element.name = b; g.element.card = null; g.setState(navigationState(b)); g.flush();
+  assert.equal(navigationPlain(original.teamNavigation).targetTeamName, a); assert.deepEqual(navigationPlain(original.teamNavigation).afterDispatch, navigationSample(b));
+});
+
+test('passive navigation preserves non-card events, the original ring bounds and null or non-Team state', async () => {
+  const f = await passiveNavigationFixture(); f.element.card = null;
+  for (const type of ['pointerdown', 'pointerup', 'click']) { const { row } = f.emit(type); f.flush(); assert.equal(row.teamNavigation, null); }
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute], [0, 3, 0]);
+  for (const type of ['keydown', 'keyup', 'focusin', 'focusout', 'pointercancel']) { const { row } = f.emit(type); f.flush(); assert.equal(Object.hasOwn(row, 'teamNavigation'), false); }
+  const count = f.counts.clock; f.emit('pointermove'); assert.equal(f.counts.clock, count);
+  for (let index = 0; index < 100; index++) f.emit('keydown');
+  for (let index = 0; index < 35; index++) f.emit('pointermove', f.element, 1);
+  f.flush(); assert.equal(f.events().length, 96); assert.equal(f.dragEvents().length, 32); assert.equal(f.counts.reads, 0);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.clock, f.counts.micro, f.counts.timer, f.counts.queries], [3, 0, 143, 143, 143, 286]);
+  assert.ok(f.dragEvents().every(row => !Object.hasOwn(row, 'teamNavigation')));
+  const g = await passiveNavigationFixture(), state = navigationState(); const pane = state.paneLayout.panes[0]!;
+  pane.activeTabId = null; state.selectedTeamName = null; g.setState(state);
+  const absent = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(absent.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: null, activeTabType: null, activeTabTeamName: null, selectedTeamName: null });
+  pane.activeTabId = 'tab-A'; pane.tabs = [{ id: 'tab-A', type: 'dashboard', get teamName() { return assert.fail('non-Team metadata is not read'); } }];
+  const other = g.emit().row; g.flush();
+  assert.deepEqual(navigationPlain(other.teamNavigation).before, { status: 'available', focusedPaneId: 'pane-1', activeTabId: 'tab-A', activeTabType: 'other', activeTabTeamName: null, selectedTeamName: null });
+});
+
+test('passive navigation refuses malformed target and store facts without losing original callbacks', async () => {
+  for (const name of [null, undefined, 12, 'host-team:', 'host-team:%', 'host-team:%41', 'host-team:%00', 'host-team:' + 'x'.repeat(247), { toString() { assert.fail('no target coercion'); } }]) {
+    const f = await passiveNavigationFixture(); f.element.name = name; const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+    assert.equal(f.counts.reads, 0); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const throwing = await passiveNavigationFixture(); throwing.element.targetThrows = true; const target = throwing.emit().row; throwing.flush();
+  assert.deepEqual(navigationPlain(target.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' });
+  const attr = await passiveNavigationFixture(); attr.element.attributeThrows = true; const attrRow = attr.emit().row; attr.flush();
+  assert.deepEqual(navigationPlain(attrRow.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'target' }); assert.equal(attr.counts.reads, 0);
+  let accessorCalls = 0; const operandAccessor = (): never => { accessorCalls++; throw new Error('TEST operand accessor'); };
+  const mutations: ((state: NavigationState) => void)[] = [
+    s => { s.selectedTeamName = undefined; }, s => { s.selectedTeamName = 'host-team:%41'; },
+    s => { s.paneLayout.panes[0] = Object.create({ id: 'pane-1' }) as Record<string, unknown>; },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; tab.teamName = 'host-team:%00'; },
+    s => { s.paneLayout.focusedPaneId = 'pane\n'; }, s => { s.paneLayout.focusedPaneId = 'p'.repeat(129); },
+    s => { s.paneLayout.panes = []; }, s => { s.paneLayout.panes = Array.from({ length: 5 }, (_, i) => ({ id: 'p' + i })); },
+    s => { s.paneLayout.panes.push(s.paneLayout.panes[0]!); }, s => { s.paneLayout.focusedPaneId = 'missing'; },
+    s => { s.paneLayout.panes[0]!.activeTabId = 'missing'; },
+    s => { const p = s.paneLayout.panes[0]!, tabs = p.tabs as Record<string, unknown>[]; p.tabs = [...tabs, ...tabs]; },
+    s => { s.paneLayout.panes[0]!.tabs = Array.from({ length: 129 }, (_, i) => ({ id: 'tab-' + i })); },
+    s => { Object.defineProperty(s, 'selectedTeamName', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout, 'panes', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes, '0', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!, 'activeTabId', { get: operandAccessor }); },
+    s => { Object.defineProperty(s.paneLayout.panes[0]!.tabs as object, '0', { get: operandAccessor }); },
+    s => { const tab = (s.paneLayout.panes[0]!.tabs as Record<string, unknown>[])[0]!; Object.defineProperty(tab, 'type', { get: operandAccessor }); },
+  ];
+  for (const mutate of mutations) {
+    const f = await passiveNavigationFixture(), state = navigationState(); accessorCalls = 0; mutate(state); f.setState(state);
+    const { row } = f.emit(); f.flush(); const record = navigationPlain(row.teamNavigation);
+    for (const phase of ['before', 'microtask', 'afterDispatch']) assert.deepEqual(record[phase], { status: 'unavailable' });
+    assert.equal(f.counts.reads, 3); assert.equal(accessorCalls, 0, 'operand getters are never invoked'); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  for (const invalid of [null, 'TEST-state', new Proxy({}, { getOwnPropertyDescriptor() { throw new Error('TEST reflection'); } })]) {
+    const f = await passiveNavigationFixture(); f.setState(invalid); const { row } = f.emit(); f.flush();
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'defaultPreventedAfterDispatch'), true);
+  }
+  for (const method of [null, 'TEST-method', () => { throw new Error('TEST store read'); }]) {
+    const f = await passiveNavigationFixture(); Object.defineProperty(f.store, 'getState', { value: method });
+    const { row } = f.emit(); f.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  }
+  const missing = await passiveNavigationFixture(); delete missing.window.__agentTeamsDevStore;
+  const row = missing.emit().row; missing.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+});
+
+test('passive navigation remains bounded and cannot interrupt original writes on diagnostic failure', async () => {
+  const f = await passiveNavigationFixture(), key = hostTeamSelectionKey('x'.repeat(246)), id = 'p'.repeat(128);
+  f.element.name = key; const maximum = navigationState(key, id, id); const pane = maximum.paneLayout.panes[0]!;
+  (pane.tabs as Record<string, unknown>[]).push(...Array.from({ length: 127 }, (_, i) => ({ id: 'other-' + i })));
+  maximum.paneLayout.panes.push(...Array.from({ length: 3 }, (_, i) => ({ id: 'other-pane-' + i })));
+  f.setState(maximum); const { row } = f.emit(); f.flush();
+  const observation = navigationPlain(row.teamNavigation); assert.equal(Buffer.byteLength(JSON.stringify(observation), 'utf8'), 3101);
+  assert.deepEqual(observation.before, observation.microtask); assert.deepEqual(observation.before, observation.afterDispatch);
+  assert.deepEqual([f.counts.reads, f.counts.target, f.counts.attribute, f.counts.clock, f.counts.send, f.counts.evaluate], [3, 1, 1, 1, 1, 2]);
+  const g = await passiveNavigationFixture(); const captured = g.emit().row; let getter = 0, setter = 0;
+  Object.defineProperty(captured, 'teamNavigation', { configurable: true, get() { getter++; throw new Error('TEST read'); }, set() { setter++; throw new Error('TEST write'); } });
+  g.flush(); assert.deepEqual([getter, setter, g.counts.reads], [0, 2, 3]);
+  assert.equal(Object.hasOwn(captured, 'defaultPreventedAfterMicrotask'), true); assert.equal(Object.hasOwn(captured, 'focusAfterDispatch'), true);
+  const h = await passiveNavigationFixture(); h.json.stringify = () => { throw new Error('TEST serialization'); };
+  const failed = h.emit().row; h.flush(); assert.equal(Object.hasOwn(failed, 'teamNavigation'), false); assert.equal(Object.hasOwn(failed, 'focusAfterDispatch'), true);
+  const over = await passiveNavigationFixture(); over.json.stringify = () => 'x'.repeat(4097);
+  const limited = over.emit().row; over.flush();
+  assert.deepEqual(navigationPlain(limited.teamNavigation), { schemaVersion: 1, status: 'unavailable', reason: 'projection-limit' });
+  assert.equal(Object.hasOwn(limited, 'focusAfterDispatch'), true);
+});
+
+
+test('passive navigation uses only the callable store own method and ignores unrelated card surfaces', async () => {
+  const f = await passiveNavigationFixture(); f.element.isCard = false;
+  const nonCard = f.emit().row; f.flush(); assert.equal(nonCard.teamNavigation, null);
+  assert.deepEqual([f.counts.target, f.counts.attribute, f.counts.reads], [1, 0, 0]);
+  const nonElement = f.emit('click', null).row; f.flush(); assert.equal(nonElement.teamNavigation, null); assert.equal(f.counts.reads, 0);
+  for (const location of ['store', 'getState']) {
+    const g = await passiveNavigationFixture(); let getter = 0;
+    Object.defineProperty(location === 'store' ? g.window : g.store, location === 'store' ? '__agentTeamsDevStore' : 'getState',
+      { configurable: true, get() { getter++; throw new Error('TEST accessor'); } });
+    const row = g.emit().row; g.flush(); assert.equal(getter, 0);
+    assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' }); assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+  }
+  const g = await passiveNavigationFixture();
+  g.window.__agentTeamsDevStore = new Proxy(g.store, { getOwnPropertyDescriptor() { throw new Error('TEST callable reflection'); } });
+  const row = g.emit().row; g.flush(); assert.deepEqual(navigationPlain(row.teamNavigation).before, { status: 'unavailable' });
+  assert.equal(Object.hasOwn(row, 'focusAfterDispatch'), true);
+});
+
+test('the selected provider receipt digest matches the actual manifest-selected archive bytes', async () => {
+  const repo = join(import.meta.dirname, '../..');
+  const manifest = JSON.parse(await readFile(join(repo, 'packages/legacy-agent-host/package.json'), 'utf8')) as {
+    dependencies: Record<string, unknown>;
+  };
+  const dependency = manifest.dependencies['@agent-teams/provider-implementations'];
+  assert.ok(typeof dependency === 'string' &&
+    /^file:\.\.\/\.\.\/vendor\/provider-migration\/[a-z0-9-]+\/agent-teams-provider-implementations-0\.0\.0\.tgz$/.test(dependency));
+  const path = dependency.slice('file:../../'.length);
+  const sha256 = createHash('sha256').update(await readFile(join(repo, path))).digest('hex');
+  assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+});
+
+test('provider receipt legacy, current and equal-dual implementation digests preserve manifest authority', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-positive-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const path = 'vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({
+    dependencies: { '@agent-teams/provider-implementations': 'file:../../' + path },
+  }));
+  for (const implementation of [
+    { newSha256: sha256 },
+    { sha256, file: 'agent-teams-provider-implementations-0.0.0.tgz' },
+    { newSha256: sha256, sha256, oldSha256: other },
+    { newSha256: sha256, file: 'TEST-not-the-selected-archive.tgz', existingPath: 'TEST-unselected', oldSha256: other },
+  ]) {
+    for (const aliases of [
+      { 'provider-implementations': implementation },
+      { 'agent-teams-provider-implementations-0.0.0.tgz': implementation },
+      { 'provider-implementations': implementation, 'agent-teams-provider-implementations-0.0.0.tgz': { sha256 } },
+    ]) {
+      await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+        packages: { ...aliases, 'provider-session-contracts': { sha256: other } },
+      }));
+      assert.deepEqual(await readNativeProviderArtifact(repo), { path, sha256 });
+    }
+  }
+});
+
+test('every present provider implementation digest must be valid and both recognized fields must agree', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-digest-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const sha256 = 'a1'.repeat(32), other = 'b2'.repeat(32);
+  await writeFile(join(host, 'package.json'), JSON.stringify({ dependencies: {
+    '@agent-teams/provider-implementations': 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz',
+  } }));
+  const refused: Record<string, unknown>[] = [{}, { oldSha256: sha256 }, { digest: sha256 },
+    { newSha256: sha256, sha256: other }];
+  for (const key of ['newSha256', 'sha256'] as const) {
+    const otherKey = key === 'newSha256' ? 'sha256' : 'newSha256';
+    for (const value of [null, '', 0, false, {}, [], 'A'.repeat(64), 'a'.repeat(63), 'a'.repeat(65), 'g'.repeat(64)]) {
+      refused.push({ [key]: value }, { [key]: value, [otherKey]: sha256 });
+    }
+  }
+  for (const implementation of refused) {
+    for (const alias of ['provider-implementations', 'agent-teams-provider-implementations-0.0.0.tgz']) {
+      const otherAlias = alias === 'provider-implementations' ? 'agent-teams-provider-implementations-0.0.0.tgz' : 'provider-implementations';
+      for (const both of [false, true]) {
+        await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+          packages: { [alias]: implementation, ...(both ? { [otherAlias]: { sha256 } } : {}),
+            'provider-session-contracts': { sha256 } },
+        }));
+        await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' }, JSON.stringify({ alias, both, implementation }));
+      }
+    }
+  }
+  for (const alias of ['provider-implementations', 'agent-teams-provider-implementations-0.0.0.tgz']) {
+    const otherAlias = alias === 'provider-implementations' ? 'agent-teams-provider-implementations-0.0.0.tgz' : 'provider-implementations';
+    for (const invalid of [null, [], sha256, { sha256: other }]) {
+      await writeFile(join(vendor, 'source-receipt.json'), JSON.stringify({
+        packages: { [alias]: invalid, [otherAlias]: { sha256 } },
+      }));
+      await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+    }
+  }
+});
+
+test('provider receipt shape, package selection and original file or JSON errors remain strict', async t => {
+  const repo = await mkdtemp(join(tmpdir(), 'TEST-provider-receipt-shape-'));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const host = join(repo, 'packages/legacy-agent-host');
+  const vendor = join(repo, 'vendor/provider-migration/test-receipt');
+  await mkdir(host, { recursive: true }); await mkdir(vendor, { recursive: true });
+  const manifestPath = join(host, 'package.json'), receiptPath = join(vendor, 'source-receipt.json');
+  const dependency = 'file:../../vendor/provider-migration/test-receipt/agent-teams-provider-implementations-0.0.0.tgz';
+  const sha256 = 'a1'.repeat(32);
+  const manifest = { dependencies: { '@agent-teams/provider-implementations': dependency } };
+  const receipt = { packages: { 'provider-implementations': { newSha256: sha256 } } };
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  for (const invalid of [null, [], {}, { packages: null }, { packages: [] }, { packages: {} },
+    { packages: { 'provider-implementations': null } }, { packages: { 'provider-implementations': [] } },
+    { packages: { 'provider-implementations': sha256 } },
+    { packages: { 'provider-session-contracts': { newSha256: sha256, sha256 } } },
+    { packages: { '@agent-teams/provider-implementations': { newSha256: sha256 } } },
+    { packages: { 'provider-implementations': { digest: sha256 } } }]) {
+    await writeFile(receiptPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  const invalidManifests: unknown[] = [null, [], {}, { dependencies: null }, { dependencies: [] },
+    { dependencies: {} }, { dependencies: { '@agent-teams/provider-session-contracts': dependency } }];
+  for (const invalid of [null, 7, '', 'https://example.invalid/TEST.tgz', '/TEST/archive.tgz',
+    dependency.replace('test-receipt', '../test-receipt'), dependency.replace('test-receipt', 'TEST-receipt'),
+    dependency.replace('0.0.0.tgz', '1.0.0.tgz'), dependency.replace('provider-implementations', 'provider-session-contracts')]) {
+    invalidManifests.push({ dependencies: { '@agent-teams/provider-implementations': invalid } });
+  }
+  for (const invalid of invalidManifests) {
+    await writeFile(manifestPath, JSON.stringify(invalid));
+    await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ERR_ASSERTION' });
+  }
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await writeFile(receiptPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(receiptPath, JSON.stringify(receipt));
+  await writeFile(manifestPath, '{');
+  await assert.rejects(() => readNativeProviderArtifact(repo), SyntaxError);
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  await rm(receiptPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: receiptPath });
+  await rm(manifestPath);
+  await assert.rejects(() => readNativeProviderArtifact(repo), { code: 'ENOENT', path: manifestPath });
+});
+
+type SavedLaunchFrame = {
+  count?: number; model?: string; id?: string | null; expanded?: string | null; dialog?: boolean;
+  rect?: { x: number; y: number; width: number; height: number };
+  animations?: { pending: boolean; playState: string }[];
+};
+
+async function savedLaunchReadinessFixture(t: import('node:test').TestContext, frames: SavedLaunchFrame[]) {
+  const { record } = await import('./desktop-resume-records.ts');
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "await ui.click('button', 'open original saved Team Launch', 'Launch');";
+  const last = "const lead = '[role=\"dialog\"] [data-role=\"lead-row\"]';";
+  assert.equal(source.split(first).length, 2, 'one actual saved-Launch action boundary');
+  assert.equal(source.split(last).length, 2, 'one actual end of the saved-settings prefix');
+  const begin = source.indexOf(first), end = source.indexOf(last, begin);
+  assert.ok(end > begin);
+  const prefix = source.slice(begin, end), model = 'TEST-model \'quoted\' <ready>';
+  let now = 0, reads = 0, owned = 0, queries = 0, animationReads = 0;
+  const waits: number[] = [], labels: string[] = [];
+  const clicks: { selector: string; label: string; text: string | undefined; read: number }[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100, 'the original wait cadence is unchanged');
+    waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const actual = createDesktopUiControls({
+    async evaluate(expression: string) {
+      const frame = frames[Math.min(reads++, frames.length - 1)]!;
+      assert.ok(frame, 'finite DOM frames are present');
+      const dialog = { getAnimations(options?: { subtree?: boolean }) {
+        animationReads++; assert.equal(options?.subtree ?? false, false, 'no descendant spinner observation');
+        return frame.animations ?? [];
+      } };
+      const row = {
+        textContent: 'Optional launch settings ' + (frame.model ?? model),
+        getAttribute(name: string) {
+          assert.ok(name === 'aria-controls' || name === 'aria-expanded');
+          return name === 'aria-controls' ? frame.id === undefined ? 'TEST-settings' : frame.id
+            : frame.expanded === undefined ? 'false' : frame.expanded;
+        },
+        getBoundingClientRect: () => frame.rect ?? { x: 412, y: 368.75, width: 200, height: 32 },
+        closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return frame.dialog === false ? null : dialog; },
+      };
+      const document = {
+        querySelectorAll(selector: string) {
+          queries++; assert.equal(selector, '[role="dialog"] button[aria-controls]');
+          return Array.from({ length: frame.count ?? 1 }, () => row);
+        },
+        get body() { return assert.fail('model preflight status must not gate editable launch settings'); },
+      };
+      return runInNewContext(expression, { document });
+    },
+    async send() { return assert.fail('the readiness fixture never dispatches browser input'); },
+  }, { assertOwnedRenderer() { owned++; }, step() { assert.fail('waitRead is observation only'); } });
+  const ui = {
+    async click(selector: string, label: string, text?: string) { clicks.push({ selector, label, text, read: reads }); },
+    waitRead(...args: Parameters<typeof actual.waitRead>) {
+      labels.push(args[1]); assert.equal(args[2] ?? 30_000, 30_000);
+      return actual.waitRead(...args);
+    },
+  };
+  return { run: () => runInNewContext('(async () => {\n' + prefix + '\n})()',
+    { ui, selected: { model }, record, literal: desktopJsLiteral }) as Promise<void>,
+  clicks, waits, labels, counts: () => ({ now, reads, owned, queries, animationReads }) };
+}
+
+function assertSavedLaunchBoundary(f: Awaited<ReturnType<typeof savedLaunchReadinessFixture>>, reads: number,
+  id = 'TEST-settings', expanded = false) {
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch'], 'one original readiness wait');
+  assert.deepEqual(f.clicks, [
+    { selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 },
+    ...expanded ? [] : [{ selector: `[role="dialog"] button[aria-controls=${JSON.stringify(id)}]`,
+      label: 'expand original saved launch settings', text: undefined, read: reads }],
+  ], 'the original settings action happens only after three equal eligible returned samples');
+  assert.equal(f.counts().reads, reads); assert.equal(f.counts().owned, reads);
+  assert.equal(f.counts().queries, reads);
+  assert.deepEqual(f.waits, Array.from({ length: reads - 1 }, () => 100));
+}
+
+test('saved Launch uses three stable actual DOM samples before its original settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}]); await f.run();
+  assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+test('saved Launch resets exact geometry when the original button shifts by a quarter pixel', async t => {
+  const shifted = { rect: { x: 412, y: 368.5, width: 200, height: 32 } };
+  const f = await savedLaunchReadinessFixture(t, [{}, shifted]); await f.run();
+  assertSavedLaunchBoundary(f, 4);
+});
+
+for (const [label, changed, id, expanded] of [
+  ['identity', { id: 'TEST-next-settings' }, 'TEST-next-settings', false],
+  ['expanded state', { expanded: 'true' }, 'TEST-settings', true],
+  ['horizontal position', { rect: { x: 413, y: 368.75, width: 200, height: 32 } }, 'TEST-settings', false],
+  ['width', { rect: { x: 412, y: 368.75, width: 201, height: 32 } }, 'TEST-settings', false],
+  ['height', { rect: { x: 412, y: 368.75, width: 200, height: 33 } }, 'TEST-settings', false],
+] as const)
+test('saved Launch restarts its three samples after changed ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, changed]); await f.run();
+  assertSavedLaunchBoundary(f, 5, id, expanded);
+});
+
+for (const [label, invalid] of [
+  ['absent target', { count: 0 }], ['ambiguous target', { count: 2 }], ['wrong model', { model: 'TEST-other-model' }],
+  ['absent identity', { id: null }], ['empty identity', { id: '' }], ['invalid expansion', { expanded: null }],
+  ['missing owning dialog', { dialog: false }],
+  ['nonfinite x', { rect: { x: NaN, y: 368.75, width: 200, height: 32 } }],
+  ['nonfinite y', { rect: { x: 412, y: Infinity, width: 200, height: 32 } }],
+  ['zero width', { rect: { x: 412, y: 368.75, width: 0, height: 32 } }],
+  ['negative height', { rect: { x: 412, y: 368.75, width: 200, height: -1 } }],
+  ['running own animation', { animations: [{ pending: false, playState: 'running' }] }],
+  ['paused own animation', { animations: [{ pending: false, playState: 'paused' }] }],
+  ['pending own animation', { animations: [{ pending: true, playState: 'finished' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch resets its original readiness after ' + label, async t => {
+  const f = await savedLaunchReadinessFixture(t, [{}, {}, invalid, {}]); await f.run();
+  assertSavedLaunchBoundary(f, 6);
+});
+
+for (const playState of ['finished', 'idle'])
+test('saved Launch allows ' + playState + ' own animation without inspecting descendant spinners or model status', async t => {
+  const f = await savedLaunchReadinessFixture(t, [{ animations: [{ pending: false, playState }] }]);
+  await f.run(); assertSavedLaunchBoundary(f, 3); assert.equal(f.counts().animationReads, 3);
+});
+
+for (const [label, frame] of [
+  ['no matching model', { model: 'TEST-other-model' }],
+  ['unsettled own dialog', { animations: [{ pending: false, playState: 'running' }] }],
+] satisfies readonly (readonly [string, SavedLaunchFrame])[])
+test('saved Launch exhausts its one original deadline with ' + label + ' and no settings action', async t => {
+  const f = await savedLaunchReadinessFixture(t, [frame]);
+  await assert.rejects(f.run(), /UI read timed out: saved model hydrates original Launch; no mutation retry/);
+  assert.deepEqual(f.labels, ['saved model hydrates original Launch']);
+  assert.deepEqual(f.clicks, [{ selector: 'button', label: 'open original saved Team Launch', text: 'Launch', read: 0 }]);
+  assert.equal(f.counts().reads, 300); assert.equal(f.counts().owned, 300); assert.equal(f.counts().queries, 300);
+  assert.equal(f.counts().now, 30_000); assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+});
+
+type ConversationPreviewState = {
+  content: string; centerY: number; count: number; width: number; disabled: boolean;
+  covered: boolean; duplicateHit: boolean; bodyText: string; neighborText: string;
+};
+function conversationPreviewFixture(t: import('node:test').TestContext,
+  onOwned: (state: ConversationPreviewState, check: number) => void = () => undefined) {
+  const selector = 'button[aria-label^="alice,"]', label = 'TEST original conversation';
+  const state: ConversationPreviewState = { content: 'alice TEST boot ready', centerY: 178, count: 1,
+    width: 200, disabled: false, covered: false, duplicateHit: false, bodyText: '', neighborText: '' };
+  let now = 0, owned = 0, reads = 0, bodyReads = 0, front = 0;
+  const waits: number[] = [], expressions: string[] = [], events: Record<string, unknown>[] = [];
+  t.mock.method(Date, 'now', () => now);
+  t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+    assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+    return 1 as unknown as NodeJS.Timeout;
+  });
+  const row = { get textContent() { return state.content; }, tagName: 'BUTTON',
+    getBoundingClientRect: () => ({ x: 69.5, y: state.centerY - 16, width: state.width, height: 32 }),
+    matches(actual: string) { assert.equal(actual, ':disabled'); return state.disabled; },
+    contains: () => false, getAttribute: () => null };
+  const duplicate = { ...row, textContent: 'alice TEST boot ready' };
+  const document = {
+    get body() { bodyReads++; return { textContent: state.content + state.bodyText + state.neighborText }; },
+    querySelectorAll(actual: string) {
+      assert.equal(actual, selector); return Array.from({ length: state.count }, (_, i) => i ? duplicate : row);
+    },
+    elementFromPoint: () => state.covered ? {} : state.duplicateHit ? duplicate : row,
+  };
+  const ui = createDesktopUiControls({
+    async evaluate(expression: string) {
+      reads++; expressions.push(expression);
+      return runInNewContext(expression, { document, innerWidth: 1000, innerHeight: 800,
+        getComputedStyle: () => ({ pointerEvents: 'auto' }) });
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { onOwned(state, ++owned); }, step() {} });
+  return { state, events, expressions, waits,
+    run: (marker?: string) => Reflect.apply(ui.click, undefined, [selector, label, undefined, marker]) as Promise<void>,
+    counts: () => ({ now, owned, reads, bodyReads, front }) };
+}
+
+test('original conversation waits for its own reply before one click at the hydrated coordinates', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) { state.content = 'alice TEST boot ready'; state.centerY = 186.5; }
+  });
+  f.state.content = 'alice You: TEST_UI_BOOT'; await f.run('TEST boot ready');
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 169.5, 186.5], ['mousePressed', 169.5, 186.5], ['mouseReleased', 169.5, 186.5]]);
+  assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'same full predicate in every original phase');
+});
+
+test('default conversation click retains its original final geometry refusal without a preview predicate', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check >= 6 && (check - 6) % 4 === 0) state.centerY += 8.5;
+  });
+  await assert.rejects(f.run(), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 1000, owned: 22, reads: 17, bodyReads: 0, front: 1 });
+});
+
+for (const [label, invalid] of [
+  ['body-only reply', { content: 'alice You: TEST_UI_BOOT', bodyText: 'TEST boot ready' }],
+  ['neighbor-only reply', { content: 'alice You: TEST_UI_BOOT', neighborText: 'bob TEST boot ready' }],
+  ['different required reply', { content: 'alice TEST stream partial' }],
+  ['empty preview', { content: '' }], ['missing target', { count: 0 }], ['zero-size target', { width: 0 }],
+  ['disabled target', { disabled: true }], ['covered target', { covered: true }],
+  ['two eligible rows with only the second ready', { content: 'alice You: TEST_UI_BOOT', count: 2, duplicateHit: true }],
+] satisfies readonly (readonly [string, Partial<ConversationPreviewState>])[])
+test('original conversation refuses ' + label + ' within its unchanged first read deadline', async t => {
+  const f = conversationPreviewFixture(t); Object.assign(f.state, invalid);
+  await assert.rejects(f.run('TEST boot ready'), /UI target read failed: TEST original conversation/);
+  assert.deepEqual(f.events, [], 'no hover or physical click on an ineligible original target');
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, bodyReads: 0, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]));
+});
+
+test('original conversation serializes its required preview as literal data', async t => {
+  const marker = 'TEST "quoted" \\ \u2028 </script> $' + '{notCode} ready';
+  const f = conversationPreviewFixture(t); f.state.content = 'alice ' + marker; await f.run(marker);
+  assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved', 'mousePressed', 'mouseReleased']);
+  assert.deepEqual(f.counts(), { now: 200, owned: 7, reads: 5, bodyReads: 0, front: 1 });
+});
+
+test('original conversation rereads a revoked preview at unchanged final coordinates before input', async t => {
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check === 6) state.content = 'alice You: TEST_UI_BOOT';
+  });
+  await assert.rejects(f.run('TEST boot ready'), /Original UI target unavailable after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 5, bodyReads: 0, front: 1 });
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'final direct read includes the readiness literal');
+});
+
+for (const kind of ['owner', 'movement'] as const)
+test('original conversation still refuses final ' + kind + ' despite a ready preview', async t => {
+  const refusal = new Error('TEST original renderer owner lost');
+  const f = conversationPreviewFixture(t, (state, check) => {
+    if (check < 6 || (check - 6) % 4 !== 0) return;
+    if (kind === 'owner') throw refusal;
+    state.centerY += 8.5;
+  });
+  await assert.rejects(f.run('TEST boot ready'), error => {
+    if (kind === 'owner') assert.equal(error, refusal);
+    else assert.match(String(error), /Original UI target moved after ownership check/);
+    return true;
+  });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 169.5, 178]]);
+  assert.equal(f.counts().reads, kind === 'owner' ? 4 : 17);
+  assert.equal(f.counts().owned, kind === 'owner' ? 6 : 22);
+  assert.equal(f.counts().now, kind === 'owner' ? 200 : 1000);
+});
+
+for (const memberName of ['alice', 'team-lead'])
+for (const expectedReply of ['TEST boot ready', 'TEST stream partial'])
+test('actual openChat forwards ' + expectedReply + ' for ' + memberName, async () => {
+  const { desktopJsLiteral } = await import('./desktop-ui-controls.ts');
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = 'const leadSelector =', last = 'const assertSameLive =';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end));
+  const calls: { method: string; args: unknown[] }[] = [];
+  const run = runInNewContext('(async () => { ' + actual + ' return openChat(live, ui, expectedReply); })',
+    { live: { memberName }, expectedReply, literal: desktopJsLiteral, ui: {
+      async scrollTo(...args: unknown[]) { calls.push({ method: 'scrollTo', args }); },
+      async click(...args: unknown[]) { calls.push({ method: 'click', args }); },
+    } }) as () => Promise<void>;
+  await run();
+  const selector = 'button[aria-label^=' + desktopJsLiteral((memberName === 'team-lead' ? 'lead' : memberName) + ',') + ']';
+  assert.deepEqual(calls, [
+    { method: 'scrollTo', args: [selector, 'original lead conversation'] },
+    { method: 'click', args: [selector, 'open original lead conversation', undefined, expectedReply] },
+  ], 'one original scroll and one original click carrying the expected reply as data');
+});
+
+test('original selected stream verifies the opened partial reply before its screenshot and one release', async () => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = await readFile(new URL('./desktop-emulated-selection-ui.ts', import.meta.url), 'utf8');
+  const first = "  await openChat(liveA, ui, 'TEST stream partial');";
+  const last = '  const completed = await poll(liveA.session';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const begin = source.indexOf(first), end = source.indexOf(last, begin); assert.ok(end > begin);
+  const actual = stripTypeScriptTypes(source.slice(begin, end));
+  for (const bodyReady of [true, false]) {
+    const calls: string[] = [], liveA = {}, ui = {}, proof: Record<string, unknown> = {};
+    const failure = new Error('TEST original partial reply not visible');
+    const run = () => runInNewContext('(async () => { ' + actual + ' })()', {
+      assert, liveA, ui, proof, join, fixture: { emulatedRuntime: { peers: [{ root: '/TEST-selected-peer' }] } },
+      async openChat(live: unknown, controls: unknown, reply: string) {
+        assert.equal(live, liveA); assert.equal(controls, ui); assert.equal(reply, 'TEST stream partial'); calls.push('open');
+      },
+      async visible(reply: string) {
+        assert.equal(reply, 'TEST stream partial'); calls.push('body'); if (!bodyReady) throw failure;
+      },
+      cdp: { async evaluate(expression: string) {
+        assert.equal(expression, "document.body.innerText.includes('TEST stream partial complete')");
+        calls.push('full-body-check'); return false;
+      } },
+      async screenshot(label: string) { assert.equal(label, 'a-survived'); calls.push('screenshot'); return 'TEST-screenshot'; },
+      async writeFile(path: string, text: string, options: { mode: number; flag: string }) {
+        assert.equal(path, join('/TEST-selected-peer', 'release-stream')); assert.equal(text, 'TEST release once\n');
+        assert.equal(options.mode, 0o600); assert.equal(options.flag, 'wx'); calls.push('release');
+      },
+    }) as Promise<void>;
+    if (bodyReady) {
+      await run(); assert.deepEqual(calls, ['open', 'body', 'full-body-check', 'screenshot', 'release']);
+      assert.deepEqual(proof, { aSurvivedScreenshot: 'TEST-screenshot' });
+    } else {
+      await assert.rejects(run(), error => error === failure);
+      assert.deepEqual(calls, ['open', 'body']); assert.deepEqual(proof, {});
+    }
+  }
+});
+
+
+type CrossCloseGeometry = {
+  centerY: number; width: number; height: number; count: number; text: string;
+  disabled: boolean; secondDisabled: boolean; covered: boolean; noHit: boolean;
+  descendantHit: boolean; foreignClose: boolean;
+};
+
+function crossCloseFixture(t?: import('node:test').TestContext) {
+  const identity = { contextId: 'TEST-context', teamName: 'host-team:TEST-owner', taskId: 'TEST-task' };
+  const captured = { contextId: identity.contextId, surfaceId: 'TEST-original-surface' };
+  const key = JSON.stringify([identity.contextId, identity.teamName, identity.taskId]);
+  const scope = { contextId: identity.contextId, teamName: identity.teamName, contextEpoch: 1, teamStateEpoch: 1 };
+  const controller = {
+    identity, surfaceId: captured.surfaceId, isOwner: true, canSubmit: true,
+    canEditNow: () => true, canResolveClarification: false, attachmentError: null,
+    session: { ownerSurfaceId: captured.surfaceId, ownerRevision: 1, commentText: '',
+      partRevisions: { commentText: 0, pendingAttachments: 0 }, submitPending: false,
+      submitError: null, pendingAttachments: [], pendingAttachmentPreparationIds: [] },
+  };
+  const detail = { identity: { ...identity }, phase: 'ready', loading: false, refreshPending: false,
+    error: null as unknown, deletionIntent: null as unknown,
+    full: { id: identity.taskId, owner: 'alice', status: 'pending',
+      needsClarification: undefined as unknown, deletedAt: undefined as unknown } };
+  const storedSession = { ...controller.session };
+  const state = { activeContextId: identity.contextId, selectedTeamName: identity.teamName,
+    isContextSwitching: false, taskDetailById: { [key]: detail },
+    taskDetailSessionById: { [key]: storedSession } as Record<string, typeof storedSession> };
+  const work = { refreshPending: false, teamUnavailable: false };
+  const geometry: CrossCloseGeometry = { centerY: 171.125, width: 40, height: 24, count: 1,
+    text: 'Close', disabled: false, secondDisabled: false, covered: false, noHit: false,
+    descendantHit: false, foreignClose: false };
+  const root = { return: null, stateNode: {} as { current: unknown } }; root.stateNode.current = root;
+  const dialogFiber = { return: root, memoizedProps: { open: true, teamName: identity.teamName,
+    task: { id: identity.taskId }, sessionController: controller } };
+  const trigger = { disabled: false, expanded: 'false', textContent: 'alice', tagName: 'BUTTON',
+    getAttribute: (name: string) => name === 'aria-expanded' ? trigger.expanded : null,
+    getBoundingClientRect: () => ({ x: 10, y: 10, width: 50, height: 20 }),
+    matches: () => trigger.disabled, contains: () => false };
+  const triggers = [trigger], descendant = {};
+  const closeButton = {
+    get textContent() { return geometry.text; }, tagName: 'BUTTON',
+    get disabled() { return geometry.disabled; },
+    getBoundingClientRect: () => ({ x: 1101, y: geometry.centerY - geometry.height / 2,
+      width: geometry.width, height: geometry.height }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.disabled; },
+    contains: (node: unknown) => node === descendant,
+    getAttribute: () => null,
+  };
+  const duplicate = { ...closeButton, textContent: 'Close',
+    get disabled() { return geometry.secondDisabled; },
+    matches(selector: string) { assert.equal(selector, ':disabled'); return geometry.secondDisabled; },
+    contains: () => false };
+  const foreignButton = { ...closeButton, textContent: 'Close', disabled: false,
+    getBoundingClientRect: () => ({ x: 1400, y: 100, width: 40, height: 24 }),
+    matches(selector: string) { assert.equal(selector, ':disabled'); return false; },
+    contains: () => false };
+  const ownButtons = () => [...triggers, ...Array.from({ length: geometry.count },
+    (_, index) => index === 0 ? closeButton : duplicate)];
+  const dialog = {
+    __reactFiber$TEST: dialogFiber, getClientRects: () => [1],
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === 'textarea') return [input];
+      if (selector === 'button[role="combobox"]') return triggers;
+      assert.equal(selector, 'button'); return ownButtons();
+    },
+  };
+  const foreignDialog = { getClientRects: () => [1],
+    querySelectorAll: () => geometry.foreignClose ? [foreignButton] : [] };
+  const input = { id: 'TEST-original-comment', disabled: false, getClientRects: () => [1],
+    closest(selector: string) { assert.equal(selector, '[role="dialog"]'); return dialog; },
+    __reactFiber$TEST: { return: dialogFiber, memoizedProps: { controller, contextId: identity.contextId,
+      teamName: identity.teamName, taskId: identity.taskId, surfaceId: captured.surfaceId } } };
+  const document = {
+    getElementById(id: string) { assert.equal(id, input.id); return input; },
+    querySelectorAll(selector: string): unknown[] {
+      if (selector === '[role="dialog"]') return [dialog, foreignDialog];
+      if (selector === 'textarea') return [input];
+      assert.equal(selector, '[role="dialog"] button');
+      return [...ownButtons(), ...(geometry.foreignClose ? [foreignButton] : [])];
+    },
+    elementFromPoint() {
+      if (geometry.noHit) return null;
+      if (geometry.covered) return {};
+      if (geometry.foreignClose && geometry.count === 0) return foreignButton;
+      return geometry.descendantHit ? descendant : closeButton;
+    },
+  };
+  let now = 0, owned = 0, reads = 0, front = 0;
+  let ownedHook: (check: number) => void = () => undefined;
+  let readHook: (read: number) => void = () => undefined;
+  const waits: number[] = [], imports: string[] = [], expressions: string[] = [];
+  const events: Record<string, unknown>[] = [];
+  if (t) {
+    t.mock.method(Date, 'now', () => now);
+    t.mock.method(globalThis, 'setTimeout', (callback: () => void, delay: number) => {
+      assert.equal(delay, 100); waits.push(delay); now += delay; queueMicrotask(callback);
+      return 1 as unknown as NodeJS.Timeout;
+    });
+  }
+  const evaluate = async (expression: string) => {
+    reads++; expressions.push(expression);
+    readHook(reads);
+    return runInNewContext(expression.replaceAll('await import(', 'await __testImport('), {
+      window: { __agentTeamsDevStore: { getState: () => state } }, document,
+      innerWidth: 2000, innerHeight: 1000, getComputedStyle: () => ({ pointerEvents: 'auto' }),
+      async __testImport(path: string) {
+        imports.push(path);
+        if (path === '/store/slices/teamSlice.ts')
+          return { isTeamDataRefreshPending(team: string, getState: unknown) {
+            assert.equal(team, identity.teamName); assert.equal(typeof getState, 'function');
+            return work.refreshPending;
+          } };
+        assert.equal(path, '/store/team/taskDetailReadAuthority.ts');
+        return {
+          captureTaskDetailReadScope(teamName: string, contextId: string) {
+            assert.deepEqual({ teamName, contextId }, { teamName: identity.teamName, contextId: captured.contextId });
+            return { ...scope };
+          },
+          isTaskDetailTeamUnavailable(observed: unknown, team: string, observedScope: unknown) {
+            assert.equal(observed, state); assert.equal(team, identity.teamName);
+            assert.deepEqual(observedScope, scope); return work.teamUnavailable;
+          },
+        };
+      },
+    }) as Promise<Record<string, unknown> | null>;
+  };
+  const ui = createDesktopUiControls({ evaluate,
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      if (method === 'Page.bringToFront') front++; else events.push({ ...params });
+      return {};
+    },
+  }, { assertOwnedRenderer() { ownedHook(++owned); }, step() {} });
+  return { identity, captured, key, controller, detail, storedSession, state, work, geometry,
+    trigger, triggers, ui, events, expressions, imports, waits,
+    setOwnedHook(callback: (check: number) => void) { ownedHook = callback; },
+    setReadHook(callback: (read: number) => void) { readHook = callback; },
+    advanceTime(milliseconds: number) { now += milliseconds; },
+    counts: () => ({ now, owned, reads, front }),
+    evaluateTarget: () => {
+      const expression = Reflect.apply(desktopTaskBoardAssignmentReadyExpression, undefined,
+        ['TEST-owner', identity.taskId, captured, 'clarification-cleared']) as string;
+      assert.equal(expression.match(/await import\(/g)?.length, 2, 'only the two original readonly imports');
+      return evaluate(expression);
+    },
+  };
+}
+
+async function runActualCrossClose(f: ReturnType<typeof crossCloseFixture>) {
+  const source = await readFile(new URL('./desktop-task-board-ui-smoke.ts', import.meta.url), 'utf8');
+  const first = '  proof.clarificationReceipt = await receiptFor(';
+  const last = '  await ui.waitRead(' + String.fromCharCode(96) +
+    '!document.querySelector(\'[role="dialog"]\')' + String.fromCharCode(96) + ', \'Task detail closed\');';
+  assert.equal(source.split(first).length, 2); assert.equal(source.split(last).length, 2);
+  const receiptBegin = source.indexOf(first), receiptEnd = source.indexOf('\n  );\n', receiptBegin);
+  const end = source.indexOf(last, receiptBegin);
+  assert.ok(receiptEnd > receiptBegin && end > receiptEnd);
+  const actual = source.slice(receiptEnd + '\n  );\n'.length, end).trim();
+  assert.ok(actual.length > 20 && actual.length < 512);
+  const call = /^await ([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)?)\(([\s\S]*)\);$/.exec(actual);
+  assert.ok(call, 'exactly one awaited original Close call');
+  assert.match(call[2]!, /^(?:\s+|[A-Za-z_$][\w$]*|[.,{}]|'(?:[^'\\\r\n]|\\.)*'|"(?:[^"\\\r\n]|\\.)*")*$/,
+    'only literal strings, names, property reads and a captured-identity object; no nested or extra statement');
+  const helpers = await import('./desktop-task-comment-input-target.ts');
+  const imports = [...source.matchAll(/import\s*\{([^{}]*)\}\s*from\s*(['"])\.\/desktop-task-comment-input-target\.ts\2\s*;/g)];
+  assert.equal(imports.length, 1, 'one actual named helper import block');
+  const bindings: Record<string, unknown> = {};
+  for (const name of imports[0]![1]!.split(',').map(value => value.trim()).filter(Boolean)) {
+    assert.match(name, /^[A-Za-z_$][\w$]*$/, 'unsupported import binding');
+    assert.ok(!Object.hasOwn(bindings, name), 'duplicate import binding');
+    assert.ok(Object.hasOwn(helpers, name), 'unknown actual helper export');
+    const value = Reflect.get(helpers, name);
+    assert.equal(typeof value, 'function'); bindings[name] = value;
+  }
+  assert.ok(call[1] === 'ui.click' || Object.hasOwn(bindings, call[1]!), 'direct helper must be actually imported');
+  await runInNewContext('(async () => { ' + actual + ' })()', {
+    ...bindings, ui: f.ui, options: { handleId: 'TEST-owner' }, taskId: f.identity.taskId,
+    contextId: f.captured.contextId, surfaceId: f.captured.surfaceId,
+  });
+}
+
+test('original Cross Close target admits the ready cleared Task when canResolveClarification is false', async () => {
+  const f = crossCloseFixture();
+  const point = await f.evaluateTarget();
+  assert.ok(point);
+  assert.deepEqual([point.x, point.y, point.tag, point.text], [1121, 171.125, 'BUTTON', 'Close']);
+  assert.equal(f.controller.canResolveClarification, false);
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.imports, ['/store/slices/teamSlice.ts', '/store/team/taskDetailReadAuthority.ts']);
+});
+
+for (const [label, change] of [
+  ['retained user clarification', f => { f.detail.full.needsClarification = 'user'; }],
+  ['retained external clarification', f => { f.detail.full.needsClarification = 'external'; }],
+  ['null clarification', f => { f.detail.full.needsClarification = null; }],
+  ['full-detail refreshPending', f => { f.detail.refreshPending = true; }],
+  ['full-detail loading', f => { f.detail.loading = true; }],
+  ['current detail error', f => { f.detail.error = 'TEST detail error'; }],
+  ['current deletionIntent', f => { f.detail.deletionIntent = { pending: true }; }],
+  ['full Task deletedAt', f => { f.detail.full.deletedAt = '2026-11-16T00:00:00.000Z'; }],
+  ['full Task deleted status', f => { f.detail.full.status = 'deleted'; }],
+  ['non-ready full-detail phase', f => { f.detail.phase = 'loading'; }],
+  ['foreign full Task ID', f => { f.detail.full.id = 'TEST-foreign-task'; }],
+  ['foreign detail identity', f => { f.detail.identity.taskId = 'TEST-foreign-task'; }],
+  ['changed active context', f => { f.state.activeContextId = 'TEST-foreign-context'; }],
+  ['different selected Team', f => { f.state.selectedTeamName = 'host-team:TEST-foreign'; }],
+  ['rebound controller surface', f => { f.controller.surfaceId = 'TEST-foreign-surface'; }],
+  ['missing stored session', f => { delete f.state.taskDetailSessionById[f.key]; }],
+  ['different stored session owner surface', f => { f.storedSession.ownerSurfaceId = 'TEST-foreign-surface'; }],
+  ['changed stored owner revision', f => { f.storedSession.ownerRevision++; }],
+  ['current canEditNow false', f => { f.controller.canEditNow = () => false; }],
+  ['non-owning controller', f => { f.controller.isOwner = false; }],
+  ['scoped Team refresh', f => { f.work.refreshPending = true; }],
+  ['unavailable accepted Team metadata', f => { f.work.teamUnavailable = true; }],
+  ['disabled assignment control', f => { f.trigger.disabled = true; }],
+  ['expanded assignment control', f => { f.trigger.expanded = 'true'; }],
+  ['another assignee', f => { f.trigger.textContent = 'bob'; }],
+  ['missing assignment control', f => { f.triggers.length = 0; }],
+  ['duplicate assignment controls', f => { f.triggers.push({ ...f.trigger }); }],
+] satisfies readonly (readonly [string, (f: ReturnType<typeof crossCloseFixture>) => void])[])
+test('original Cross Close target refuses ' + label, async () => {
+  const f = crossCloseFixture(); change(f);
+  assert.equal(await f.evaluateTarget(), null);
+  assert.deepEqual(f.events, [], 'readiness observation never performs an input action');
+});
+
+test('actual original Cross Close waits for same-Task cleared readiness before one pair at settled coordinates', async t => {
+  for (const descendantHit of [false, true]) {
+    t.mock.restoreAll();
+    const f = crossCloseFixture(t);
+    f.geometry.descendantHit = descendantHit; f.geometry.centerY = 167.125;
+    f.detail.full.needsClarification = 'user'; f.detail.loading = true; f.work.refreshPending = true;
+    f.setOwnedHook(check => {
+      if (check === 6) {
+        f.detail.full.needsClarification = undefined; f.detail.loading = false;
+        f.work.refreshPending = false; f.geometry.centerY = 171.125;
+      }
+    });
+    await runActualCrossClose(f);
+    assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+      [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+    assert.deepEqual(f.counts(), { now: 700, owned: 12, reads: 10, front: 1 });
+    assert.deepEqual(f.waits, Array.from({ length: 7 }, () => 100));
+    assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one complete predicate in every phase');
+  }
+});
+
+function assertCrossCloseNoInputDeadline(f: ReturnType<typeof crossCloseFixture>) {
+  assert.deepEqual(f.events, []);
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 300, reads: 300, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'one unchanged first-read predicate');
+}
+
+test('actual original Cross Close retains the first-read deadline while renderer readiness is pending', async t => {
+  const f = crossCloseFixture(t); f.detail.refreshPending = true;
+  await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+  assertCrossCloseNoInputDeadline(f);
+});
+
+test('actual original Cross Close cannot use a foreign dialog or an absent ineligible own control', async t => {
+  for (const invalid of [
+    { count: 0, foreignClose: true }, { count: 0 }, { text: 'Close another task' },
+    { width: 0 }, { height: 0 },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses duplicate eligible controls before disabled or hit narrowing', async t => {
+  for (const invalid of [
+    { count: 2 }, { count: 2, secondDisabled: true }, { count: 2, descendantHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close refuses disabled covered and absent-hit controls', async t => {
+  for (const invalid of [
+    { disabled: true }, { covered: true }, { noHit: true },
+  ] satisfies Partial<CrossCloseGeometry>[]) {
+    t.mock.restoreAll(); const f = crossCloseFixture(t); Object.assign(f.geometry, invalid);
+    await assert.rejects(runActualCrossClose(f), /UI (?:read timed out|target read failed)/);
+    assertCrossCloseNoInputDeadline(f);
+  }
+});
+
+test('actual original Cross Close rereads revoked same-Task readiness at unchanged final coordinates', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) f.detail.refreshPending = true; });
+  await assert.rejects(runActualCrossClose(f), /UI read timed out: close original Task detail final target; no mutation retry/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 30_000, owned: 602, reads: 302, front: 1 });
+  assert.deepEqual(f.waits, Array.from({ length: 300 }, () => 100));
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'the final direct read rechecks readiness');
+});
+
+test('actual original Cross Close waits for a pending final read before its single click', async t => {
+  const f = crossCloseFixture(t);
+  f.setReadHook(read => { f.detail.refreshPending = read === 5; });
+  await runActualCrossClose(f);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]),
+    [['mouseMoved', 1121, 171.125], ['mousePressed', 1121, 171.125], ['mouseReleased', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 300, owned: 9, reads: 6, front: 1 });
+  assert.deepEqual(f.waits, [100, 100, 100]);
+  assert.ok(f.expressions.every(value => value === f.expressions[0]), 'only the original owner and control are read');
+});
+
+for (const late of [30_000, 30_001]) test(
+  `actual original Cross Close rejects a final ready result at ${late} within its original budget`, async t => {
+    const f = crossCloseFixture(t);
+    f.setReadHook(read => {
+      f.detail.refreshPending = read === 5;
+      if (read === 6) f.advanceTime(late - 300);
+    });
+    await assert.rejects(runActualCrossClose(f), /UI read timed out: close original Task detail final target; no mutation retry/);
+    assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved']);
+    assert.deepEqual(f.counts(), { now: late, owned: 9, reads: 6, front: 1 });
+    assert.deepEqual(f.waits, [100, 100, 100]);
+    assert.ok(f.expressions.every(value => value === f.expressions[0]));
+  }
+);
+
+for (const failure of ['revoked owner', 'unavailable control', 'transport'] as const) test(
+  `actual original Cross Close preserves ${failure} after a pending final read without input`, async t => {
+    const f = crossCloseFixture(t), refusal = new Error('TEST original final read refusal');
+    f.setReadHook(read => {
+      f.detail.refreshPending = read === 5;
+      if (read === 6) {
+        if (failure === 'transport') throw refusal;
+        f.geometry.disabled = true;
+      }
+    });
+    if (failure === 'revoked owner') f.setOwnedHook(check => { if (check === 7) throw refusal; });
+    await assert.rejects(runActualCrossClose(f), error => failure === 'unavailable control'
+      ? error instanceof Error && /Original UI target unavailable after ownership check/.test(error.message)
+      : error === refusal);
+    assert.deepEqual(f.events.map(({ type }) => type), ['mouseMoved']);
+    assert.equal(f.counts().reads, failure === 'revoked owner' ? 5 : 6);
+    assert.deepEqual(f.waits, failure === 'revoked owner' ? [100, 100] : [100, 100, 100]);
+    assert.ok(f.expressions.every(value => value === f.expressions[0]));
+  }
+);
+
+test('actual original Cross Close preserves final renderer ownership refusal without a press', async t => {
+  const refusal = new Error('TEST original renderer ownership lost');
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check === 6) throw refusal; });
+  await assert.rejects(runActualCrossClose(f), error => { assert.equal(error, refusal); return true; });
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 200, owned: 6, reads: 4, front: 1 });
+});
+
+test('actual original Cross Close preserves final exact geometry refusal without replay', async t => {
+  const f = crossCloseFixture(t);
+  f.setOwnedHook(check => { if (check >= 6 && (check - 6) % 4 === 0) f.geometry.centerY += 4; });
+  await assert.rejects(runActualCrossClose(f), /Original UI target moved after ownership check/);
+  assert.deepEqual(f.events.map(({ type, x, y }) => [type, x, y]), [['mouseMoved', 1121, 171.125]]);
+  assert.deepEqual(f.counts(), { now: 1000, owned: 22, reads: 17, front: 1 });
+});
+
+async function originalLiveMembershipPoll() {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const poll = async <T>(', end = "  const workspace = join(fixture.root, 'workspace');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original P11 poll boundary');
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
+  const makePoll = Function('environment', `'use strict';
+    const {assert,current,Date,setTimeout}=environment;
+    ${actual}
+    return poll;`) as (environment: Record<string, unknown>) =>
+      (observe: () => Promise<boolean>, accepts: (value: boolean) => boolean, label: string) => Promise<boolean>;
+  return (observations: { at: number; value?: boolean; error?: Error }[], guardError?: Error) => {
+    let now = 0, reads = 0;
+    const trace: string[] = [], delays: number[] = [];
+    const poll = makePoll({ assert, Date: { now: () => now },
+      current() { trace.push('guard'); if (guardError) throw guardError; },
+      setTimeout(done: () => void, delay: number) {
+        assert.equal(delay, 100); delays.push(delay); now += delay; done();
+      },
+    });
+    return { trace, delays, reads: () => reads,
+      run: (label: string) => poll(async () => {
+        const observation = observations[reads++]; assert.ok(observation, 'no unplanned observation');
+        trace.push('read'); assert.ok(observation.at >= now); now = observation.at;
+        if (observation.error) throw observation.error;
+        assert.equal(typeof observation.value, 'boolean'); return observation.value!;
+      }, value => value, label),
+    };
+  };
+}
+
+for (const scenario of [
+  { name: 'first result at the exact cutoff', values: [{ at: 90_000, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'first result after the cutoff', values: [{ at: 90_001, value: true }], reads: 1, trace: ['read'], delays: [] },
+  { name: 'polled result after the cutoff', values: [{ at: 0, value: false }, { at: 90_001, value: true }], reads: 2,
+    trace: ['read', 'guard', 'read'], delays: [100] },
+]) test('P11 keeps the original 90-second cutoff for ' + scenario.name, async () => {
+  const make = await originalLiveMembershipPoll(), f = make(scenario.values), label = 'TEST original P11 deadline';
+  await assert.rejects(f.run(label), error => error instanceof assert.AssertionError && error.message.includes(label));
+  assert.equal(f.reads(), scenario.reads); assert.deepEqual(f.trace, scenario.trace); assert.deepEqual(f.delays, scenario.delays);
+});
+
+test('P11 actual poll retains timely acceptance, original cadence, currentness and read-error identity', async () => {
+  const make = await originalLiveMembershipPoll(), label = 'TEST original P11 observation';
+  const immediate = make([{ at: 89_999, value: true }]);
+  assert.equal(await immediate.run(label), true); assert.equal(immediate.reads(), 1);
+  assert.deepEqual(immediate.trace, ['read']); assert.deepEqual(immediate.delays, []);
+  const later = make([{ at: 0, value: false }, { at: 101, value: true }]);
+  assert.equal(await later.run(label), true); assert.equal(later.reads(), 2);
+  assert.deepEqual(later.trace, ['read', 'guard', 'read']); assert.deepEqual(later.delays, [100]);
+  const refusal = new Error('TEST original observation failure'), failed = make([{ at: 90_001, error: refusal }]);
+  await assert.rejects(failed.run(label), error => error === refusal);
+  assert.equal(failed.reads(), 1); assert.deepEqual(failed.trace, ['read']); assert.deepEqual(failed.delays, []);
+  const stale = new Error('TEST original currentness failure'), guarded = make([{ at: 0, value: false }], stale);
+  await assert.rejects(guarded.run(label), error => error === stale);
+  assert.equal(guarded.reads(), 1); assert.deepEqual(guarded.trace, ['read', 'guard']); assert.deepEqual(guarded.delays, []);
+  const noReady = make([{ at: 90_000, value: false }]);
+  await assert.rejects(noReady.run(label), assert.AssertionError);
+  assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
+});
+
+test('repeated final click movement exhausts the original shared observations without a press', { timeout: 5000 }, async t => {
+  const expression = 'TEST_originalGeometryTarget()', label = 'TEST original geometry target';
+  const positions = [100, 100, 100, 100, 101, 102, 102, 102, 103, 103, 103, 104, 104, 104, 105, 105, 105, 106];
+  const expressions: string[] = [], commands: Record<string, unknown>[] = [];
+  const steps: Record<string, unknown>[] = [], output: string[] = [];
+  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      expressions.push(actual);
+      assert.ok(expressions.length <= positions.length, 'the original observation allowance is never replenished');
+      return { x: positions[expressions.length - 1], y: 100, tag: 'BUTTON',
+        text: 'TEST-private-original-target', geometry: {
+          targetRect: [90, 90, 20, 20], dialogRect: [20, 30, 400, 300],
+          targetAnimations: 1, dialogAnimations: 0, fonts: 'loaded',
+        } };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params }); return {};
+    },
+  }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
+  await assert.rejects(ui.clickExpression(expression, label),
+    /Original UI target moved after ownership check/);
+  assert.deepEqual(expressions, Array.from({ length: 18 }, () => expression));
+  assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
+    { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0]!.action, 'mouseMoved');
+  const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
+  assert.deepEqual(trace.samples.map(row => row.phase), ['initial', 'after-hover', 'stable', 'stable', 'final',
+    'stable', 'stable', 'stable', 'final', 'stable', 'stable', 'final', 'stable', 'stable', 'final',
+    'stable', 'stable', 'final']);
+  assert.equal(trace.overflow, false);
+  assert.deepEqual(trace.samples.map(row => row.x), positions);
+  for (const row of trace.samples) {
+    assert.deepEqual(Object.keys(row).sort(), ['dialogAnimations', 'dialogRect', 'fonts', 'phase',
+      'tag', 'targetAnimations', 'targetRect', 'unavailable', 'x', 'y']);
+    assert.deepEqual(row.targetRect, [90, 90, 20, 20]);
+    assert.deepEqual(row.dialogRect, [20, 30, 400, 300]);
+    assert.equal(row.targetAnimations, 1); assert.equal(row.dialogAnimations, 0);
+    assert.equal(row.fonts, 'loaded');
+  }
+  assert.equal(output.length, 1);
+  assert.ok(Buffer.byteLength(output[0]!, 'utf8') <= 8192);
+  assert.deepEqual(JSON.parse(output[0]!) as unknown, { kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: trace });
+  assert.equal(output[0]!.includes('TEST-private'), false);
+});
+
+test('geometry metadata getters cannot replace the original unavailable-target refusal when stdout throws', { timeout: 5000 }, async t => {
+  const secret = 'TEST-private-geometry-value', stdoutFailure = new Error('TEST-geometry-stdout-failure');
+  const expression = 'TEST_originalGeometryAccessors()', expressions: string[] = [];
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [], output: string[] = [];
+  const descriptors: { fonts: number; rectangle: number[] }[] = [];
+  let diagnosticGetterReads = 0, businessTagReads = 0;
+  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); throw stdoutFailure; });
+  const ui = createDesktopUiControls({
+    async evaluate(actual: string) {
+      expressions.push(actual);
+      if (expressions.length === 5) return {
+        unavailableTarget: true, matches: 1,
+        get geometry() { diagnosticGetterReads++; throw new Error(secret); },
+        get tag() { diagnosticGetterReads++; throw new Error(secret); },
+      };
+      const reads = { fonts: 0, rectangle: [0, 0, 0, 0] };
+      descriptors.push(reads);
+      const targetRect = Object.defineProperty([90, 90, 20, 20], '0', {
+        get() { diagnosticGetterReads++; throw new Error(secret); },
+      });
+      const dialogRect = new Proxy([20, 30, 400, 300], {
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          if (typeof key === 'string' && /^[0-3]$/.test(key) && descriptor) {
+            const index = Number(key);
+            reads.rectangle[index] = reads.rectangle[index]! + 1;
+            return { ...descriptor, value: reads.rectangle[index] === 1 ? descriptor.value : secret };
+          }
+          return descriptor;
+        },
+      });
+      const geometry = new Proxy({
+        targetRect, dialogRect,
+        get targetAnimations() { diagnosticGetterReads++; throw new Error(secret); },
+        dialogAnimations: 1, fonts: 'loaded',
+      }, {
+        getOwnPropertyDescriptor(target, key) {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+          if (key === 'fonts' && descriptor) {
+            reads.fonts++;
+            return { ...descriptor, value: reads.fonts === 1 ? 'loaded' : secret };
+          }
+          return descriptor;
+        },
+      });
+      return { x: 100, y: 100, text: secret, geometry,
+        get tag() { businessTagReads++; return businessTagReads <= 4 ? 'BUTTON' : secret; } };
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      commands.push({ method, ...params }); return {};
+    },
+  }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
+  await assert.rejects(ui.clickExpression(expression, 'TEST original unavailable geometry'), error => {
+    assert.ok(error instanceof Error);
+    assert.notEqual(error, stdoutFailure);
+    assert.equal(error.name, 'AssertionError');
+    assert.match(error.message, /^Original UI target unavailable after ownership check/);
+    return true;
+  });
+  assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression));
+  assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
+    { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
+  assert.equal(diagnosticGetterReads, 0);
+  assert.equal(businessTagReads, 4, 'only the two original stable comparisons read the business tag');
+  assert.deepEqual(descriptors, Array.from({ length: 4 }, () => ({ fonts: 1, rectangle: [1, 1, 1, 1] })));
+  const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
+  assert.equal(steps.length, 1); assert.equal(trace.samples.length, 5); assert.equal(trace.overflow, false);
+  for (const row of trace.samples.slice(0, 4)) {
+    assert.equal(row.tag, null); assert.equal(row.targetRect, null); assert.equal(row.targetAnimations, null);
+    assert.deepEqual(row.dialogRect, [20, 30, 400, 300]); assert.equal(row.fonts, 'loaded');
+  }
+  assert.equal(trace.samples[4]!.unavailable, true);
+  assert.equal(trace.samples[4]!.tag, null); assert.equal(trace.samples[4]!.targetRect, null);
+  assert.equal(output.length, 1);
+  assert.ok(Buffer.byteLength(output[0]!, 'utf8') <= 8192);
+  assert.deepEqual(JSON.parse(output[0]!) as unknown, { kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: trace });
+  assert.equal(output[0]!.includes(secret), false);
+  assert.equal(JSON.stringify(trace).includes(secret), false);
+});
+
+test('the actual generated target expression keeps the same eligible click when optional geometry APIs fail', { timeout: 5000 }, async t => {
+  const output: string[] = [];
+  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
+  for (const failOptionalGeometry of [false, true]) {
+    const selector = '#TEST-original-geometry-control', visibleText = 'TEST-private-visible-target';
+    const expressions: string[] = [], selectors: string[] = [];
+    const hits: { x: number; y: number }[] = [], commands: Record<string, unknown>[] = [];
+    const steps: Record<string, unknown>[] = [], animationArguments: unknown[][] = [];
+    let targetRectReads = 0, dialogRectReads = 0, fontReads = 0;
+    const child = {};
+    const dialog = {
+      getBoundingClientRect() { dialogRectReads++; return { x: 10, y: 20, width: 300, height: 200 }; },
+      getAnimations(...args: unknown[]) {
+        animationArguments.push(args); return [{ playState: 'running', pending: false }];
+      },
+    };
+    const control = {
+      textContent: visibleText, tagName: 'BUTTON',
+      getBoundingClientRect() { targetRectReads++; return { x: 20, y: 40, width: 100, height: 30 }; },
+      contains: (value: unknown) => value === child,
+      matches(actual: string) { assert.equal(actual, ':disabled'); return false; },
+      closest(actual: string) { assert.equal(actual, '[role="dialog"]'); return dialog; },
+      getAnimations(...args: unknown[]) {
+        animationArguments.push(args);
+        return [{ playState: 'running', pending: false }, { playState: 'finished', pending: false },
+          { playState: 'paused', pending: true }];
+      },
+    };
+    const ui = createDesktopUiControls({
+      async evaluate(expression: string) {
+        expressions.push(expression);
+        return runInNewContext(expression, {
+          innerWidth: 1000, innerHeight: 720,
+          getComputedStyle: () => ({ pointerEvents: 'auto' }),
+          document: {
+            querySelectorAll(actual: string) { selectors.push(actual); return [control]; },
+            elementFromPoint(x: number, y: number) { hits.push({ x, y }); return child; },
+            fonts: { get status() {
+              fontReads++;
+              if (failOptionalGeometry) throw new Error('TEST-private-optional-font-error');
+              return 'loaded';
+            } },
+          },
+        });
+      },
+      async send(method: string, params: Record<string, unknown> = {}) {
+        commands.push({ method, ...params }); return {};
+      },
+    }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
+    await ui.click(selector, 'TEST original generated target', visibleText);
+    assert.equal(expressions.length, 5);
+    assert.ok(expressions.every(expression => expression === expressions[0]));
+    assert.deepEqual(selectors, Array.from({ length: 5 }, () => selector));
+    assert.deepEqual(hits, Array.from({ length: 5 }, () => ({ x: 70, y: 55 })));
+    assert.equal(targetRectReads, 10, 'the original eligibility and center reads remain unchanged');
+    assert.equal(dialogRectReads, failOptionalGeometry ? 0 : 5); assert.equal(fontReads, 5);
+    assert.deepEqual(animationArguments, Array.from({ length: failOptionalGeometry ? 0 : 10 }, () => []),
+      'optional animation observations query each original element without a descendant option');
+    assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 70, y: 55 },
+      { method: 'Input.dispatchMouseEvent', type: 'mousePressed', x: 70, y: 55, button: 'left', clickCount: 1 },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseReleased', x: 70, y: 55, button: 'left', clickCount: 1 }]);
+    assert.deepEqual(steps.map(step => step.action), ['mouseMoved', 'mouseClick']);
+    const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
+    assert.deepEqual(trace.samples.map(row => row.phase), ['initial', 'after-hover', 'stable', 'stable', 'final']);
+    for (const row of trace.samples) {
+      assert.equal(row.x, 70); assert.equal(row.y, 55); assert.equal(row.tag, 'BUTTON');
+      assert.deepEqual(row.targetRect, failOptionalGeometry ? null : [20, 40, 100, 30]);
+      assert.deepEqual(row.dialogRect, failOptionalGeometry ? null : [10, 20, 300, 200]);
+      assert.equal(row.targetAnimations, failOptionalGeometry ? null : 2);
+      assert.equal(row.dialogAnimations, failOptionalGeometry ? null : 1);
+      assert.equal(row.fonts, failOptionalGeometry ? null : 'loaded');
+    }
+    assert.equal(JSON.stringify(trace).includes('TEST-private'), false);
+  }
+  assert.deepEqual(output, [], 'a successful original click does not emit a failure diagnostic');
+});
+
+async function originalReviewCorrectionStage(observations: unknown[], insertFailure?: Error, settleObservations?: unknown[]) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-task-review-cycle-ui-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '  const commentTarget = record(', end = "  await snapshotStage(await newReceipt(commentBefore, 'task.comment'), 'in_progress');";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original correction input boundary');
+  const start = source.indexOf(begin), finish = source.indexOf(end);
+  assert.ok(finish > start, 'original source boundaries are ordered');
+  const actual = stripTypeScriptTypes(source.slice(start, finish));
+  const selector = '[role="dialog"] textarea[id="TEST-original-correction-input"]';
+  const original = { selector, canEditNow: true, inputId: 'TEST-original-correction-input', ownerRevision: 7,
+    identity: { contextId: 'TEST-current-context', teamName: 'TEST-original-correction-owner', taskId: 'TEST-original-correction-task' },
+    surfaceId: 'TEST-current-surface' }, trace: string[] = [], budgets: number[] = [];
+  let reads = 0, settledReads = 0, inserted = false;
+  const ready = () => ({ settled: true, inputEnabled: true, visibility: 'visible', focused: true, documentFocused: true,
+    domValue: inserted ? 'TEST original correction text' : '', owner: { ...original,
+      commentText: inserted ? 'TEST original correction text' : '', submitPending: false, submitError: null,
+      canSubmit: true, pendingAttachmentCount: 0, pendingPreparationCount: 0, attachmentError: null } });
+  const cdp = {
+    async evaluate(expression: string) {
+      if (expression !== 'TEST-original-current-correction-expression') {
+        assert.ok(expression.includes('const settled=await TEST-original-settled-correction-expression'));
+        assert.ok(expression.includes('owner=TEST-original-current-correction-expression'));
+        trace.push('settled-read');
+        const observation = settleObservations ? settleObservations[settledReads++] : ready();
+        if (observation instanceof Error) throw observation;
+        if (observation && typeof observation === 'object' && !Array.isArray(observation)) {
+          const value = observation as Record<string, unknown>, owner = value.owner as Record<string, unknown> | undefined;
+          return { ...ready(), ...value, ...(owner ? { owner: { ...ready().owner, ...owner,
+            identity: { ...ready().owner.identity, ...(owner.identity as Record<string, unknown> | undefined) } } } : {}) };
+        }
+        return observation === 'ready' ? ready() : observation;
+      }
+      assert.equal(expression, 'TEST-original-current-correction-expression');
+      assert.ok(reads < observations.length, 'no unplanned currentness observation');
+      const value = observations[reads++]; trace.push('read');
+      if (value instanceof Error) throw value;
+      return value === 'current' ? original : value && typeof value === 'object' && !Array.isArray(value)
+        ? { selector, ...value } : value;
+    },
+    async send(method: string, params?: Record<string, unknown>) {
+      assert.equal(method, 'Input.insertText');
+      assert.deepEqual(params, { text: 'TEST original correction text' });
+      trace.push('insert');
+      if (insertFailure) throw insertFailure;
+      inserted = true;
+      return {};
+    },
+  };
+  const controls = createDesktopUiControls(cdp, { assertOwnedRenderer() {}, step() {} });
+  const ui = {
+    ...controls,
+    waitRead: ((expression: string, label: string, timeoutMs = 30_000, accepts?: (value: unknown) => boolean) => {
+      assert.ok(['exact current correction Task/owner/surface',
+        'original correction empty owner and document focused after one click',
+        'original correction insertion reaches DOM and current owner',
+        'original correction exact draft before single submit'].includes(label));
+      budgets.push(timeoutMs);
+      return controls.waitRead(expression, label, timeoutMs, accepts);
+    }) as typeof controls.waitRead,
+    async scrollTo(target: string, label: string, text?: string) {
+      if (label === 'existing Task comment composer') {
+        assert.equal(target, selector); assert.equal(text, undefined); trace.push('scroll');
+      } else {
+        assert.equal(target, '[role="dialog"] button.message-composer-send-button');
+        assert.equal(label, 'original correction Comment viewport'); assert.equal(text, 'Comment'); trace.push('submit-scroll');
+      }
+    },
+    async click(target: string, label: string, text?: string) {
+      if (label === 'focus existing correction comment') {
+        assert.equal(target, selector); assert.equal(text, undefined); trace.push('focus');
+      } else {
+        assert.equal(target, '[role="dialog"] button.message-composer-send-button');
+        assert.equal(label, 'original correction Comment once'); assert.equal(text, 'Comment'); trace.push('submit');
+      }
+    },
+  };
+  const run = Function('environment', `'use strict';
+    const {assert,record,ui,cdp,options,taskId,commentText,desktopTaskCommentInputExpression,desktopTaskBoardAssignmentReadyExpression,proof,step}=environment;
+    return (async()=>{${actual}})();`) as (environment: Record<string, unknown>) => Promise<void>;
+  return { trace, budgets, reads: () => reads, run: () => run({ assert, ui, cdp,
+    record(value: unknown) { assert.ok(value && typeof value === 'object' && !Array.isArray(value)); return value; },
+    options: { handleId: 'TEST-original-correction-owner', assertOwnedRenderer() {} }, taskId: 'TEST-original-correction-task',
+    proof: {}, step() {},
+    commentText: 'TEST original correction text',
+    desktopTaskCommentInputExpression(handleId: string, taskId: string) {
+      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
+      return 'TEST-original-current-correction-expression';
+    },
+    desktopTaskBoardAssignmentReadyExpression(handleId: string, taskId: string, captured: unknown, stage: string) {
+      assert.equal(handleId, 'TEST-original-correction-owner'); assert.equal(taskId, 'TEST-original-correction-task');
+      assert.deepEqual(captured, { contextId: 'TEST-current-context', surfaceId: 'TEST-current-surface' });
+      assert.equal(stage, 'in-progress-comment'); return 'TEST-original-settled-correction-expression';
+    },
+  }) };
+}
+
+test('original review correction refuses missing or false live edit authority before any input action', { timeout: 5000 }, async () => {
+  for (const observation of [null, {}, { canEditNow: false }, { canEditNow: 1 }, [{ canEditNow: true }]]) {
+    const refusal = new Error('TEST original currentness read failed');
+    const f = await originalReviewCorrectionStage([observation, refusal]);
+    await assert.rejects(f.run(), error => error === refusal);
+    assert.deepEqual(f.trace, ['read', 'read']); assert.deepEqual(f.budgets, [30_000]);
+    assert.equal(f.reads(), 2);
+  }
+});
+
+test('original review correction admits current authority with one original insertion and submit', { timeout: 5000 }, async () => {
+  for (const observations of [['current'], [{ canEditNow: false }, 'current']]) {
+    const f = await originalReviewCorrectionStage(observations);
+    await f.run();
+    assert.deepEqual(f.trace, [...observations.map(() => 'read'), 'scroll', 'focus', 'settled-read', 'insert',
+      'settled-read', 'submit-scroll', 'settled-read', 'submit']);
+    assert.deepEqual(f.budgets, [30_000, 30_000, 30_000, 30_000]); assert.equal(f.reads(), observations.length);
+  }
+  const failure = new Error('TEST original insertion response failed');
+  const refused = await originalReviewCorrectionStage(['current'], failure);
+  await assert.rejects(refused.run(), error => error === failure);
+  assert.deepEqual(refused.trace, ['read', 'scroll', 'focus', 'settled-read', 'insert']);
+  assert.deepEqual(refused.budgets, [30_000, 30_000]); assert.equal(refused.reads(), 1);
+});
+
+test('original review correction stops on unsettled focus or missing committed text without reinsertion', { timeout: 5000 }, async () => {
+  const failure = new Error('TEST original settled observation failed');
+  for (const observations of [[null, failure], [{ focused: false }, failure], [{ documentFocused: false }, failure],
+    [{ settled: false }, failure], [{ owner: { identity: { contextId: 'TEST-successor-context' } } }, failure],
+    [{ owner: { surfaceId: 'TEST-successor-surface' } }, failure], ['ready', { domValue: 'TEST uncommitted draft' }, failure],
+    ['ready', { owner: { selector: 'TEST other owner' } }, failure], ['ready', 'ready', { inputEnabled: false }, failure]]) {
+    const f = await originalReviewCorrectionStage(['current'], undefined, observations);
+    await assert.rejects(f.run(), error => error === failure);
+    assert.equal(f.trace.filter(value => value === 'focus').length, 1);
+    assert.equal(f.trace.filter(value => value === 'insert').length, observations[0] === 'ready' ? 1 : 0);
+    assert.equal(f.trace.includes('submit'), false);
+    assert.ok(f.budgets.every(value => value === 30_000));
+  }
+});
+
+async function originalEmulatedBootChat(fixture: {
+  clock: { now: number }; modes: string[]; expireAfter?: 'preview' | 'final-target' | 'reply'; memberName?: string;
+  scenario?: 'selection' | 'lifecycle' | 'runtime' | 'collaboration'; backShown?: boolean;
+}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopJsLiteral: literal } = await import('./desktop-ui-controls.ts');
+  const scenario = fixture.scenario ?? 'selection', timeoutMs = scenario === 'lifecycle' ? 30_000 : 60_000;
+  const source = (await readFile(new URL(`./desktop-emulated-${scenario}-ui.ts`, import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const [begin, end] = scenario === 'selection' ? ['  const leadSelector = (live: Live) => {', '  const assertSameLive = async (']
+    : scenario === 'collaboration' ? ['  const back = async (', '  const commandText = (row: Row) =>']
+      : ['  await openDesktopEmulatedBootChat(cdp, {', '  proof.launchScreenshot ='];
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original initial conversation boundary');
+  if (scenario === 'selection') for (const live of ['liveA', 'liveB']) assert.equal(source.split(`await openInitialChat(${live});`).length, 2);
+  if (scenario === 'collaboration') assert.equal(source.split("await openMember('alice', true);").length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)));
+  const shared = await readFile(new URL('./desktop-emulated-boot-chat.ts', import.meta.url), 'utf8');
+  const sharedBegin = 'export async function openDesktopEmulatedBootChat(';
+  assert.equal(shared.split(sharedBegin).length, 2, 'one actual shared BOOT gate');
+  const sharedActual = stripTypeScriptTypes(shared.slice(shared.indexOf(sharedBegin)).replace(/^export /u, ''));
+  const memberName = fixture.memberName ?? (scenario === 'selection' ? 'team-lead' : 'alice');
+  const name = memberName === 'team-lead' ? 'lead' : memberName;
+  const selector = `button[aria-label^=${literal(name + ',')}]`;
+  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [];
+  const budgets: { label: string; ms: number }[] = [], values: boolean[] = [], trace: string[] = [];
+  const refusal = new Error('TEST original preview observation failed');
+  let previews = 0, targets = 0, opened = false, backShown = fixture.backShown === true;
+  const rect = { x: 20, y: 40, width: 100, height: 30, top: 40, bottom: 70 };
+  const button = (label: string, texts: string[]) => ({
+    label, tagName: 'BUTTON', parentElement: null,
+    textContent: texts.join(' '), getBoundingClientRect: () => rect,
+    matches(actual: string) { assert.equal(actual, ':disabled'); return false; },
+    closest(actual: string) { assert.equal(actual, '[role="dialog"]'); return null; },
+    getAnimations: () => [], contains: () => false,
+    querySelectorAll(actual: string) { assert.equal(actual, 'span'); return texts.map(textContent => ({ textContent })); },
+  });
+  let buttons = [button(name + ', conversation', ['TEST pending'])];
+  const backSelector = 'button[aria-label="Back to chats"]', backButton = button('Back to chats', ['Back to chats']);
+  let pointedButton = buttons[0];
+  const cdp = {
+    async evaluate(expression: string) {
+      const back = expression.startsWith('Boolean(document.querySelector(');
+      const preview = expression.includes('TEST boot ready') && !expression.startsWith('document.body.');
+      const reply = expression.startsWith('document.body.');
+      if (preview) {
+        const mode = fixture.modes[previews++];
+        if (mode === undefined) throw refusal;
+        const text = mode === 'current' || mode === 'duplicate-row' || mode === 'duplicate-span' ? 'TEST boot ready'
+          : mode === 'user-prefix' ? 'You: TEST boot ready' : mode === 'substring' ? 'TEST boot ready later' : 'TEST pending';
+        const row = button(name + ', conversation', mode === 'duplicate-span' ? [text, text] : [text]);
+        buttons = mode === 'missing' ? [] : mode === 'wrong-row'
+          ? [row, button('TEST-other-lead, conversation', ['TEST boot ready'])]
+          : mode === 'duplicate-row' ? [row, row] : [row];
+      }
+      const value = runInNewContext(expression, {
+        innerWidth: 1000, innerHeight: 720, getComputedStyle: () => ({ pointerEvents: 'auto' }),
+        document: {
+          querySelectorAll(actual: string) {
+            if (actual === backSelector) { pointedButton = backButton; return backShown ? [backButton] : []; }
+            assert.equal(actual, selector, 'the original captured lead selector is unchanged');
+            pointedButton = buttons[0];
+            return buttons.filter(row => row.label.startsWith(name + ','));
+          },
+          querySelector(actual: string) { assert.equal(actual, backSelector); return backShown ? backButton : null; },
+          elementFromPoint: () => pointedButton, fonts: { status: 'loaded' },
+          documentElement: { getBoundingClientRect: () => ({ x: 0, width: 1000, top: 0, bottom: 720 }) },
+          body: { innerText: opened ? 'TEST boot ready' : '' },
+        },
+      });
+      await Promise.resolve();
+      if (preview) {
+        assert.equal(typeof value, 'boolean'); values.push(value); trace.push('preview');
+        fixture.clock.now += 10_000;
+        if (fixture.expireAfter === 'preview') fixture.clock.now = timeoutMs;
+      } else if (reply) {
+        trace.push('reply'); fixture.clock.now += 1000;
+        if (fixture.expireAfter === 'reply') fixture.clock.now = timeoutMs;
+      } else if (back) {
+        trace.push('back'); fixture.clock.now += 1000;
+      } else if (expression.includes('const elements =')) {
+        targets++; trace.push('target'); fixture.clock.now += 500;
+        if (fixture.expireAfter === 'final-target' && targets === 5) fixture.clock.now = timeoutMs;
+      } else {
+        assert.ok(expression.includes('const top=Math.max')); trace.push('scroll'); fixture.clock.now += 1000;
+      }
+      return value;
+    },
+    async send(method: string, params: Record<string, unknown> = {}) {
+      assert.ok(method === 'Page.bringToFront' || method === 'Input.dispatchMouseEvent');
+      commands.push({ method, ...params }); trace.push(String(params.type ?? method));
+      if (params.type === 'mouseReleased') {
+        if (pointedButton === backButton) backShown = false;
+        else opened = true;
+      }
+      return {};
+    },
+  };
+  const make = Function('environment', `'use strict';
+    const {assert,literal,ui,createDesktopUiControls,cdp,options,steps,memberName}=environment;
+    ${sharedActual}
+    ${scenario === 'selection' || scenario === 'collaboration' ? actual : ''}
+    return ${scenario === 'selection' ? '() => openInitialChat({memberName})' : scenario === 'collaboration'
+      ? "() => openMember('alice', true)" : `async () => {${actual}}`};`) as (environment: Record<string, unknown>) => () => Promise<void>;
+  const run = make({ assert, literal, ui: undefined, cdp, steps, memberName, options: { assertOwnedRenderer() {} },
+    createDesktopUiControls(port: typeof cdp, options: Parameters<typeof createDesktopUiControls>[1]) {
+      const controls = createDesktopUiControls(port, options);
+      return { ...controls, waitRead: ((expression: string, label: string, timeoutMs = 30_000,
+        accepts?: (value: unknown) => boolean) => {
+        budgets.push({ label, ms: timeoutMs }); return controls.waitRead(expression, label, timeoutMs, accepts);
+      }) as typeof controls.waitRead };
+    },
+  });
+  return { run, commands, steps, budgets, values, trace, refusal };
+}
+
+test('original first A and B conversation waits for its exact preview before one physical click in the shared budget', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const memberName of ['team-lead', 'TEST-captured-lead']) {
+    clock.now = 0;
+    const f = await originalEmulatedBootChat({ clock, memberName, modes: ['pending', 'current'] });
+    await f.run();
+    assert.deepEqual(f.values, [false, true]);
+    assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 },
+      { label: 'original visible reply TEST boot ready', ms: 36_500 }]);
+    assert.deepEqual(f.commands, [{ method: 'Page.bringToFront' },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 70, y: 55 },
+      { method: 'Input.dispatchMouseEvent', type: 'mousePressed', x: 70, y: 55, button: 'left', clickCount: 1 },
+      { method: 'Input.dispatchMouseEvent', type: 'mouseReleased', x: 70, y: 55, button: 'left', clickCount: 1 }]);
+    assert.deepEqual(f.trace, ['preview', 'preview', 'scroll', 'Page.bringToFront', 'target', 'mouseMoved',
+      'target', 'target', 'target', 'target', 'mousePressed', 'mouseReleased', 'reply']);
+    assert.deepEqual(f.steps.map(row => [row.action, row.label]), [
+      ['mouseMoved', 'hover open original lead conversation'], ['mouseClick', 'open original lead conversation']]);
+  }
+});
+
+test('original initial conversation rejects observations crossing the same cutoff without a late press or replay', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const expireAfter of ['preview', 'final-target', 'reply'] as const) {
+    clock.now = 0;
+    const f = await originalEmulatedBootChat({ clock, modes: ['current'], expireAfter });
+    await assert.rejects(f.run(), expireAfter === 'final-target'
+      ? /original initial conversation deadline/
+      : { message: `UI read timed out: ${expireAfter === 'preview' ? 'original lead BOOT preview' : 'original visible reply TEST boot ready'}; no mutation retry` });
+    assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, expireAfter === 'reply' ? 1 : 0);
+    assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, expireAfter === 'reply' ? 1 : 0);
+    assert.equal(f.values.length, 1); assert.equal(f.budgets[0]!.ms, 60_000);
+    assert.equal(f.budgets.length, expireAfter === 'reply' ? 2 : 1);
+    assert.equal(f.trace.filter(value => value === 'reply').length, expireAfter === 'reply' ? 1 : 0);
+  }
+});
+
+test('original initial conversation refuses missing wrong or duplicate terminal previews before opening a chat', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const mode of ['missing', 'pending', 'wrong-row', 'user-prefix', 'substring', 'duplicate-row', 'duplicate-span']) {
+    clock.now = 0;
+    const f = await originalEmulatedBootChat({ clock, modes: [mode] });
+    await assert.rejects(f.run(), error => error === f.refusal);
+    assert.deepEqual(f.values, [false], mode); assert.deepEqual(f.commands, [], mode);
+    assert.deepEqual(f.steps, [], mode); assert.deepEqual(f.trace, ['preview'], mode);
+    assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: 60_000 }]);
+  }
+});
+
+test('original lifecycle runtime and collaboration retain their boot budgets and navigation before one chat click', { timeout: 5000 }, async t => {
+  const clock = { now: 0 }; t.mock.method(Date, 'now', () => clock.now);
+  for (const [scenario, backShown, previewBudget, replyBudget, replyLabel] of [
+    ['lifecycle', false, 30_000, 7500, 'original lifecycle boot reply'],
+    ['runtime', false, 60_000, 37_500, 'original visible reply TEST boot ready'],
+    ['collaboration', false, 59_000, 35_500, 'original visible TEST boot ready'],
+    ['collaboration', true, 55_500, 32_000, 'original visible TEST boot ready'],
+  ] as const) {
+    clock.now = 0;
+    const f = await originalEmulatedBootChat({ clock, scenario, backShown, modes: ['pending', 'current'] });
+    await f.run();
+    assert.deepEqual(f.values, [false, true]);
+    assert.deepEqual(f.budgets, [{ label: 'original lead BOOT preview', ms: previewBudget }, { label: replyLabel, ms: replyBudget }]);
+    assert.equal(f.trace.filter(value => value === 'back').length, scenario === 'collaboration' ? 1 : 0);
+    assert.equal(f.trace.filter(value => value === 'scroll').length, scenario === 'collaboration' ? backShown ? 2 : 1 : 0);
+    const clicks = f.steps.filter(row => row.action === 'mouseClick');
+    assert.deepEqual(clicks.map(row => row.label), [...(backShown ? ['original Back to chats'] : []),
+      scenario === 'lifecycle' ? 'original lifecycle lead chat' : scenario === 'runtime' ? 'open original lead conversation' : 'open original alice conversation']);
+    assert.equal(f.commands.filter(row => row.type === 'mousePressed').length, backShown ? 2 : 1);
+    assert.equal(f.commands.filter(row => row.type === 'mouseReleased').length, backShown ? 2 : 1);
+    assert.ok(f.trace.indexOf('preview') < f.trace.lastIndexOf('mousePressed'));
+    clock.now = 0;
+    const expired = await originalEmulatedBootChat({ clock, scenario, backShown, modes: ['current'], expireAfter: 'preview' });
+    await assert.rejects(expired.run(), { message: 'UI read timed out: original lead BOOT preview; no mutation retry' });
+    assert.equal(expired.commands.filter(row => row.type === 'mousePressed').length, backShown ? 1 : 0);
+    assert.equal(expired.commands.filter(row => row.type === 'mouseReleased').length, backShown ? 1 : 0);
+  }
+});
+
+async function finiteMembershipFunction(begin: string, end: string, name: string, environment: Record<string, unknown>) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-controlled.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one private finite P11 source boundary');
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end)).replace(/^export /u, ''));
+  return Function('environment', `'use strict';const {assert,process,processFacts,command,readFile,realpath,join,dirname}=environment;
+    ${actual}
+    return ${name};`)(environment) as (...args: unknown[]) => unknown;
+}
+
+test('finite V2 P11 admission rejects mixed selectors before any fixture or process observation', async () => {
+  const allowed = { LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: '1', LEGACY_DESKTOP_BACKEND_GO: '1',
+    LEGACY_DESKTOP_PROOF_MODE: 'native-mixed-create-launch-ui', LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: '1',
+    LEGACY_DESKTOP_OPENCODE_GENERATION: 'v2', OPENCODE_V2_EMBEDDED_BUN: '/TEST-bun',
+    OPENCODE_V2_EMBEDDED_GRAPH: '/TEST-graph', OPENCODE_V2_EMBEDDED_BUN_SHA256: 'a'.repeat(64) };
+  const select = async (env: Record<string, string | undefined>, platform = 'linux', arch = 'x64') => {
+    const actual = await finiteMembershipFunction('export function desktopFiniteV2MembershipSelected()',
+      '/** One existing private owner;', 'desktopFiniteV2MembershipSelected', { assert, process: { env, platform, arch } });
+    return actual();
+  };
+  assert.equal(await select({}), false); assert.equal(await select(allowed), true);
+  const finiteHeap = { ...allowed, LEGACY_DESKTOP_TEST_FINITE_HEAP_1536: '1' };
+  assert.equal(await select(finiteHeap), true);
+  for (const context of [allowed, finiteHeap]) for (const override of [{ LEGACY_DESKTOP_FINITE_V2_MEMBERSHIP: 'yes' }, { LEGACY_DESKTOP_BACKEND_GO: '0' },
+    { LEGACY_DESKTOP_PROOF_MODE: 'team-ui' }, { LEGACY_DESKTOP_MIXED_MEMBERSHIP_UI: undefined },
+    { LEGACY_DESKTOP_OPENCODE_GENERATION: 'v1' }, { LEGACY_DESKTOP_EMULATED_ONLY: '1' },
+    { LEGACY_DESKTOP_CLAUDE_PATH: '/TEST-unselected' }, { LEGACY_DESKTOP_CODEX_PATH: '/TEST-unselected' },
+    { LEGACY_DESKTOP_PACKED_CAPTURE_PATH: '/TEST-other.json' }, { LEGACY_DESKTOP_TEST_FINITE_HEAP_8192: '1' },
+    { OPENCODE_V2_EMBEDDED_GRAPH: undefined },
+    { OPENCODE_V2_EMBEDDED_BUN_SHA256: 'bad' }])
+    await assert.rejects(select({ ...context, ...override }), assert.AssertionError);
+  await assert.rejects(select(allowed, 'darwin'), assert.AssertionError);
+  await assert.rejects(select(allowed, 'linux', 'arm64'), assert.AssertionError);
+});
+
+test('finite V2 P11 registers its original zero-session workspace before preparing peers', async t => {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const source = (await readFile(new URL('./desktop-live-membership-controlled.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = 'export async function prepareDesktopFiniteMembershipFixture(', end = '  const sources = await Promise.all(';
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2);
+  const actual = stripTypeScriptTypes(source.slice(source.indexOf(begin), source.indexOf(end))
+    .replace(/^export /u, '') + '  return base;\n}');
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-p11-project-discovery-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(join(root, 'claude')); await mkdir(join(root, 'workspace'));
+  const configPath = join(root, 'claude/agent-teams-config.json');
+  const initial = { general: { appLocale: 'en', agentLanguage: 'en', theme: 'dark' },
+    providerConnections: { anthropic: { nativeNextPromptSuggestionsEnabled: false }, codex: { nativeNextPromptSuggestionsEnabled: false } } };
+  const before = JSON.stringify(initial); await writeFile(configPath, before, { mode: 0o600 });
+  let admitted = false, calls = 0; const base = { root };
+  const prepare = Function('environment', `'use strict';
+    const {assert,desktopFiniteV2MembershipSelected,prepareDesktopBackendFixture,readFile,writeFile,join}=environment;
+    ${actual}
+    return prepareDesktopFiniteMembershipFixture;`)({ assert, readFile, writeFile, join,
+    desktopFiniteV2MembershipSelected: () => admitted,
+    async prepareDesktopBackendFixture(repo: string, options: unknown) {
+      assert.equal(repo, 'TEST-repo'); assert.deepEqual(options, { pnpmEntry: 'TEST-pnpm', seedUiPreferences: true, creation: true });
+      calls++; return base;
+    } }) as (repo: string, pnpm: string) => Promise<typeof base>;
+  await assert.rejects(prepare('TEST-repo', 'TEST-pnpm'), assert.AssertionError);
+  assert.equal(calls, 0); assert.equal(await readFile(configPath, 'utf8'), before);
+  admitted = true;
+  assert.equal(await prepare('TEST-repo', 'TEST-pnpm'), base);
+  assert.equal(calls, 1, 'only the admitted original preparation prefix runs; no peer or native process starts');
+  assert.deepEqual(JSON.parse(await readFile(configPath, 'utf8')), {
+    ...initial, general: { ...initial.general, customProjectPaths: [join(root, 'workspace')] },
+  });
+});
+
+test('finite V2 P11 effects count exact probes from both original profile roles and refuse business inputs', async t => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-finite-p11-effects-')));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const pin = async (name: string, bytes: string) => {
+    const path = join(root, name); await writeFile(path, bytes, { flag: 'wx' });
+    return { path, sha256: createHash('sha256').update(bytes).digest('hex') };
+  };
+  const source = await pin('TEST-source.mjs', 'export const source = "TEST finite protocol";\n');
+  const peers: Parameters<typeof readDesktopFiniteMembershipPeers>[0]['peers'][number][] = [];
+  for (const provider of ['claude', 'codex'] as const) {
+    const peerRoot = join(root, provider); await mkdir(peerRoot);
+    peers.push({ provider, root: peerRoot, executable: await pin(`TEST-${provider}.mjs`, `// TEST ${provider} wrapper; never executed\n`) });
+  }
+  const selected = { sources: [source], peers };
+  const original = peers.map(({ provider }, index) => ['management', 'runtime'].flatMap((role, roleIndex) => {
+    const common = { provider, role, pid: 200 + index * 10 + roleIndex, inputId: `TEST-${provider}-${role}` };
+    return [{ ...common, event: 'launch' }, { ...common, event: 'input', marker: 'TEST_MODEL_PROBE' },
+      { ...common, event: 'terminal', marker: 'Reply only OK. Do not use tools, access files or run commands.', outcome: 'succeeded' }];
+  }));
+  const writeRows = async (rows: Record<string, unknown>[][] = original) => {
+    for (const [index, peer] of peers.entries())
+      await writeFile(join(peer.root, 'effects.ndjson'), rows[index]!.map(row => JSON.stringify(row)).join('\n') + '\n');
+  };
+  await writeRows();
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: original.flat(), probeCounts: [2, 2] });
+  for (const [providerIndex] of peers.entries()) for (const role of ['management', 'runtime']) {
+    for (const marker of ['TEST_UI_BOOT', 'TEST_UI_HOLD', '/cost', 'TEST_MODEL_PROBE extra', 'TEST_MODEL_PROBE ',
+      'Reply only OK. Do not use tools, access files or run commands.', undefined, null]) {
+      const rows: Record<string, unknown>[][] = structuredClone(original);
+      rows[providerIndex]!.find(row => row.role === role && row.event === 'input')!.marker = marker;
+      await writeRows(rows);
+      await assert.rejects(readDesktopFiniteMembershipPeers(selected), error =>
+        error instanceof assert.AssertionError && error.actual === marker && error.expected === 'TEST_MODEL_PROBE');
+    }
+  }
+  for (const mutation of [{ event: 'failure' }, { role: 'other' }, { provider: 'opencode' },
+    { pid: 1 }, { pid: '200' }, { pid: 1.5 }, { pid: Number.MAX_SAFE_INTEGER + 1 }]) {
+    const rows: Record<string, unknown>[][] = structuredClone(original); Object.assign(rows[0]![1]!, mutation);
+    await writeRows(rows); await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  }
+  await writeRows();
+  for (const captured of [source, ...peers.map(peer => peer.executable)]) {
+    const bytes = await readFile(captured.path);
+    await writeFile(captured.path, Buffer.concat([bytes, Buffer.from('changed')]));
+    await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+    await writeFile(captured.path, bytes);
+  }
+  const effectsPath = join(peers[0]!.root, 'effects.ndjson');
+  await writeFile(effectsPath, ' '.repeat(1024 * 1024 + 1));
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  await writeRows([Array.from({ length: 4097 }, () => original[0]![0]!), []]);
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  await rm(effectsPath); await symlink(join(peers[1]!.root, 'effects.ndjson'), effectsPath);
+  await assert.rejects(readDesktopFiniteMembershipPeers(selected), assert.AssertionError);
+  for (const peer of peers) await rm(join(peer.root, 'effects.ndjson'));
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: [], probeCounts: [0, 0] });
+  await writeRows();
+  assert.deepEqual(await readDesktopFiniteMembershipPeers(selected), { effects: original.flat(), probeCounts: [2, 2] });
+});
+
+test('finite V2 P11 Linux projection keeps exact kernel identity and refuses changed or foreign children', async () => {
+  const { dirname, join } = await import('node:path');
+  const host = { pid: 200, parentPid: 100, groupId: 100, birth: 'original ps host', command: 'node' };
+  const peer = { pid: 201, parentPid: 200, groupId: 201, birth: 'original ps peer', command: 'node' };
+  const native = { pid: 202, parentPid: 200, groupId: 202, birth: 'original ps V2', command: 'bun' };
+  const unrelated = { pid: 300, parentPid: 1, groupId: 300, birth: 'original other', command: 'other' };
+  const exercise = async (variant: 'ready' | 'no-host' | 'changed-birth' | 'foreign-executable' | 'foreign-wrapper' | 'wrong-parent' |
+    'candidate-exited-before-capture' | 'host-exited-before-capture' | 'candidate-exited-after-capture' | 'candidate-denied') => {
+    const reads: string[] = [], stats = new Map<number, number>(); let censuses = 0;
+    const observationError = Object.assign(new Error('original process observation failed'), {
+      code: variant === 'candidate-denied' ? 'EACCES' : 'ENOENT',
+    });
+    const table = variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated];
+    const fixture = { node: '/TEST/node', hostEntry: '/TEST/host/cli.js', finiteInitialPeers: {
+      peers: [{ provider: 'claude', executable: { path: '/TEST/peer' } }] } };
+    const actual = await finiteMembershipFunction('export async function desktopFiniteMembershipProcesses(',
+      'export function captureDesktopFiniteMembershipScope(', 'desktopFiniteMembershipProcesses', {
+        assert, process: { platform: 'linux', env: { OPENCODE_V2_EMBEDDED_BUN: '/TEST/bun' } }, dirname, join,
+        processFacts() { censuses++; return table; },
+        command(pid: number) { assert.equal(pid, 200); return '/TEST/node /TEST/host/cli.js'; },
+        async realpath(path: string) {
+          reads.push(path); const pid = Number(path.split('/')[2]);
+          assert.equal(path, `/proc/${pid}/exe`);
+          return variant === 'foreign-executable' && pid === 201 ? '/TEST/foreign' : pid === 202 ? '/TEST/bun' : '/TEST/node';
+        },
+        async readFile(path: string) {
+          reads.push(path); const pid = Number(path.split('/')[2]), row = table.find(value => value.pid === pid); assert.ok(row);
+          if (path.endsWith('/stat')) {
+            const count = (stats.get(pid) ?? 0) + 1; stats.set(pid, count);
+            if ((pid === 201 && count === 1 && ['candidate-exited-before-capture', 'candidate-denied'].includes(variant)) ||
+              (pid === 200 && count === 1 && variant === 'host-exited-before-capture') ||
+              (pid === 201 && count === 2 && variant === 'candidate-exited-after-capture')) throw observationError;
+            const fields = Array<string>(20).fill('0'); fields[0] = 'S';
+            fields[1] = String(variant === 'wrong-parent' && pid === 201 ? 299 : row.parentPid);
+            fields[2] = String(row.groupId); fields[19] = String(pid * 10 + (variant === 'changed-birth' && pid === 201 && count === 2 ? 1 : 0));
+            return `${pid} (TEST name with ) bracket) ${fields.join(' ')}`;
+          }
+          assert.equal(path, `/proc/${pid}/cmdline`);
+          const args = pid === 200 ? ['/TEST/node', '/TEST/host/cli.js'] : pid === 201
+            ? ['/TEST/node', variant === 'foreign-wrapper' ? '/TEST/other' : '/TEST/peer', '--original']
+            : ['/TEST/bun', '--no-env-file', '--config=/dev/null', '--no-install', '/TEST/host/adapters/providers/OpenCodeV2EmbeddedChild.js'];
+          return Buffer.from(args.join('\0') + '\0');
+        },
+      });
+    const promise = actual(100, fixture) as Promise<unknown>;
+    if (['host-exited-before-capture', 'candidate-exited-after-capture', 'candidate-denied'].includes(variant))
+      await assert.rejects(promise, error => error === observationError);
+    else if (variant !== 'ready' && variant !== 'no-host' && variant !== 'candidate-exited-before-capture')
+      await assert.rejects(promise, assert.AssertionError);
+    else {
+      const result = await promise;
+      assert.deepEqual(result, variant === 'no-host' ? table : [
+        { ...host, birth: 'linux-starttime:2000', command: '/TEST/node' },
+        ...(variant === 'candidate-exited-before-capture' ? [] : [{ ...peer, birth: 'linux-starttime:2010', command: '/TEST/node' }]),
+        { ...native, birth: 'linux-starttime:2020', command: '/TEST/bun' }, unrelated]);
+      assert.equal(censuses, 1); assert.ok(reads.every(path => !path.includes('/300/')));
+      assert.equal(reads.length, variant === 'no-host' ? 0 : variant === 'candidate-exited-before-capture' ? 9 : 12);
+    }
+    assert.deepEqual(table, variant === 'no-host' ? [unrelated] : [host, peer, native, unrelated]);
+  };
+  for (const variant of ['ready', 'no-host', 'changed-birth', 'foreign-executable', 'foreign-wrapper', 'wrong-parent',
+    'candidate-exited-before-capture', 'host-exited-before-capture', 'candidate-exited-after-capture', 'candidate-denied'] as const)
+    await exercise(variant);
+});
+
+async function finiteMembershipTerminalCompletion() {
+  const source = (await readFile(new URL('./desktop-backend-smoke.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const begin = '    assertDesktopProofCompleted(evidence, {', end = "  if (mode === 'task-board-cross-team-ui') {";
+  for (const marker of [begin, end]) assert.equal(source.split(marker).length, 2, 'one original terminal completion boundary');
+  const actual = source.slice(source.indexOf(begin), source.indexOf(end));
+  const invoke = Function('assert', 'options', `'use strict';
+    const { evidence, finiteMembership, primaryError, finalError } = options;
+    const packed = false, emulatedOnly = false, controlledProcessMode = false;
+    const mode = 'native-mixed-create-launch-ui', scheduleUiMode = false, capturedMcpUiMode = false;
+    const cleanupFailure = undefined, remaining = [];
+    let originalCompletions = 0;
+    const assertDesktopProofCompleted = () => {
+      originalCompletions++;
+      if (finalError) throw finalError;
+    };
+    try { if (primaryError) throw primaryError; }
+    catch (error) { throw error; }
+    finally {
+      ${actual}
+    return originalCompletions;
+  `);
+  return (options: { evidence: { status: string }; finiteMembership: boolean; primaryError?: Error; finalError?: Error }) =>
+    invoke(assert, options) as number;
+}
+
+test('finite V2 terminal completion retains the original scenario Error after successful original final assertions', async () => {
+  const complete = await finiteMembershipTerminalCompletion();
+  const original = new Error('original finite membership scenario failure');
+  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true, primaryError: original }),
+    error => error === original);
+});
+
+test('finite V2 terminal completion retains original finally precedence and refuses incomplete successful work', async () => {
+  const complete = await finiteMembershipTerminalCompletion();
+  const original = new Error('original body failure'), finalError = new Error('original final assertion failure');
+  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true, primaryError: original, finalError }),
+    error => error === finalError);
+  assert.throws(() => complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: true }), {
+    name: 'AssertionError', message: /original finite-peer V2 membership and cleanup must both pass/u,
+  });
+  assert.equal(complete({ evidence: { status: 'PASS' }, finiteMembership: true }), 1);
+  assert.equal(complete({ evidence: { status: 'INCOMPLETE' }, finiteMembership: false }), 1);
+});
+
+type NativeSetupStep = 'global-catalog' | 'global-source' | 'global-lineage' | 'global-digest' |
+  'initial-read' | 'project-catalog' | 'project-lineage' | 'start' | 'progress' | 'sessions' | 'native' | 'digest';
+
+async function originalNativeSetupWindow(options: {
+  clock: { now: number }; openCode?: boolean; opening?: boolean; startReady?: boolean; progressReady?: boolean;
+  readyCount?: number; actorCount?: number; tickMs?: number; sessions?: Record<string, unknown>[];
+  hostVariant?: 'missing' | 'duplicate' | 'reused-birth';
+  preparationProof?: { consumed: number; probes: { requestedModel: string }[] };
+  onStep?: (step: NativeSetupStep, count: number) => void | Promise<void>;
+  guard?: (count: number) => void; arm?: () => void; disarm?: () => void;
+}) {
+  const { stripTypeScriptTypes } = await import('node:module');
+  const { desktopMetadataProfileHash, desktopMetadataReadyScopeCount } = await import('./desktop-opencode-metadata-lineage.ts');
+  const source = (await readFile(new URL('./desktop-native-stop-fixture.ts', import.meta.url), 'utf8')).replace(/\r\n/gu, '\n');
+  const markers = ['const object = (value: unknown): Record<string, unknown> => {',
+    'export async function prepareDesktopNativeStop(', '/** Closed diagnostic projection of one already completed Runtime file read. */',
+    'export async function captureDesktopOpenCodeGlobalMetadata(',
+    '/** Preserve the full original lineage and correlate both captured scopes with their actual native owners. */'];
+  for (const marker of markers) assert.equal(source.split(marker).length, 2, 'one original native setup source boundary');
+  const positions = markers.map(marker => source.indexOf(marker));
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+  const metadataMarkers = ['export function readDesktopNativeHostProcesses(',
+    'export function separateDesktopOpenCodeRuntimeChildren(', 'type MetadataObservationBudget = {',
+    "/** Actual source-derived profile IDs, not the descriptor's common seed profile. */"];
+  for (const marker of metadataMarkers) assert.equal(source.split(marker).length, 2, 'one actual metadata helper boundary');
+  const metadataPositions = metadataMarkers.map(marker => source.indexOf(marker));
+  assert.deepEqual([...metadataPositions].sort((a, b) => a - b), metadataPositions);
+  assert.ok(positions[2]! < metadataPositions[0]! && metadataPositions[3]! < positions[3]!);
+  const actual = stripTypeScriptTypes(source.slice(positions[0], positions[1]) +
+    source.slice(positions[1], positions[2]).replace(/^export /u, '') +
+    source.slice(metadataPositions[0], metadataPositions[1]).replace(/^export /u, '') +
+    source.slice(metadataPositions[2], metadataPositions[3]) +
+    source.slice(positions[3], positions[4]).replace(/^export /u, ''));
+  const trace: string[] = [], calls: { step: NativeSetupStep; timeoutMs: number | undefined }[] = [];
+  const counts = new Map<NativeSetupStep, number>(), evidence: Record<string, unknown> = {};
+  let guards = 0, arms = 0, disarms = 0, hostReads = 0, sourceChecks = 0;
+  const guardsBefore = new Map<NativeSetupStep, number>();
+  const fixture = { handleId: 'TEST-handle', node: 'TEST-node', hostEntry: 'TEST-host', root: 'TEST-root' }, group = 7;
+  const host = { pid: 10, parentPid: 7, groupId: group, birth: 'TEST-host-birth', command: 'TEST-node TEST-host' };
+  const globalSource = { sourceId: 'TEST-global', revision: 'TEST-revision', profileId: 'TEST-profile',
+    configRevision: 'TEST-config', scope: 'global', projectPath: null };
+  const globalProfileHash = desktopMetadataProfileHash(globalSource);
+  const metadataChild = { pid: 11, parentPid: host.pid, groupId: 11,
+    birth: 'TEST-metadata-birth', command: 'TEST-native --metadata' };
+  const globalCaptured = { host, children: [metadataChild] }, projectCaptured = { host, children: [metadataChild, { pid: 12 }] };
+  const runtimeCaptured = { host, children: [...projectCaptured.children, { pid: 31 }] };
+  const metadataSources = [{ scope: 'global' }, { scope: 'project' }];
+  const selection = { launchId: 'TEST-launch', rosterRevision: 'TEST-roster', members: [{ memberId: 'alice-id' }] };
+  const openingSession = { binding: { runId: selection.launchId, memberId: 'alice-id' },
+    phase: 'opening', nativeReady: false, sealed: false, inputs: [] };
+  const actors = Array.from({ length: options.actorCount ?? 1 }, (_, index) => ({ pid: 31 + index, parentPid: host.pid, groupId: group }));
+  const configuration = { members: [{ memberId: 'alice-id', model: options.openCode === false ? 'claude-opus-4-6' : 'test-local/TEST-model',
+    ...(options.openCode === false ? { effort: 'medium', fastMode: false, context: 'model-default' } : {}), permissions: 'bypass' }] };
+  const catalog = { runtimeId: 'opencode', models: { providerId: 'test-local', catalogState: 'fresh',
+    models: [{ modelId: 'test-local/TEST-model', providerId: 'test-local', declaredInputModalities: ['image'] }] } };
+  const armPayloads: unknown[] = [], probes: { requestedModel: string }[] = [];
+  const preparation = { consumed: 0, arm(payload: unknown) {
+    trace.push('arm'); arms++; armPayloads.push(payload); options.arm?.();
+    return () => { trace.push('disarm'); disarms++; options.disarm?.(); };
+  } };
+  async function observe<T>(step: NativeSetupStep, value: T): Promise<T> {
+    trace.push(step); if (!guardsBefore.has(step)) guardsBefore.set(step, guards);
+    const count = (counts.get(step) ?? 0) + 1; counts.set(step, count);
+    assert.ok(count <= (step === 'progress' || step === 'sessions' ? 3 : 1), 'no setup operation replay or unbounded read loop');
+    await options.onStep?.(step, count); return value;
+  }
+  function guard() { trace.push('guard'); guards++; options.guard?.(guards); }
+  const cdp = {
+    async evaluate(expression: string, timeoutMs?: number): Promise<unknown> {
+      const prefix = 'window.electronAPI.runtimeProviderManagement.loadModels(';
+      if (expression.startsWith(prefix)) {
+        assert.ok(expression.endsWith(')'));
+        const request = JSON.parse(expression.slice(prefix.length, -1)) as Record<string, unknown>;
+        const step = request.projectPath === null ? 'global-catalog' : 'project-catalog';
+        assert.deepEqual(request, { runtimeId: 'opencode', providerId: 'test-local',
+          projectPath: step === 'global-catalog' ? null : join(fixture.root, 'workspace') });
+        calls.push({ step, timeoutMs }); return observe(step, catalog);
+      }
+      const invoke = 'window.electronAPI.agentBackend.invoke(';
+      assert.ok(expression.startsWith(invoke) && expression.endsWith(')'));
+      const request = JSON.parse(expression.slice(invoke.length, -1)) as Record<string, unknown>;
+      assert.deepEqual(request.handle, { handleId: fixture.handleId });
+      if (request.commandId === 'TEST-setup-read' || request.commandId === 'TEST-setup-progress') {
+        assert.equal(request.operation, 'team.launch.read'); assert.deepEqual(request.payload, {});
+        const step = request.commandId === 'TEST-setup-read' ? 'initial-read' : 'progress';
+        calls.push({ step, timeoutMs });
+        return observe(step, { ok: true, value: step === 'initial-read' ? selection : {
+          status: options.progressReady === false ? 'starting' : 'ready', ready: options.readyCount ?? 1 } });
+      }
+      assert.equal(request.commandId, 'TEST-explicit-sandbox-setup-launch', 'no input, retry or second launch command');
+      assert.equal(request.operation, 'team.launch.start');
+      assert.deepEqual(request.payload, { launchId: selection.launchId, rosterRevision: selection.rosterRevision, configuration });
+      calls.push({ step: 'start', timeoutMs });
+      const result = await observe('start', { ok: true, value: { status: options.startReady ? 'ready' : 'starting',
+        ready: options.startReady ? options.readyCount ?? 1 : 0 } });
+      preparation.consumed = options.preparationProof?.consumed ?? 1;
+      probes.push(...(options.preparationProof?.probes ?? [{ requestedModel: 'TEST-model' }]));
+      return result;
+    },
+    async send() { assert.fail('native setup must not add a CDP action or input'); },
+  };
+  const make = Function('environment', `'use strict';
+    const {assert,Date,setTimeout,process,join,desktopJsLiteral,assertOwnedCdpListener,
+      readDesktopOpenCodeMetadataSource,desktopMetadataProfileHash,captureMetadataObservation,metadataOnlyRuntimeDigest,
+      captureDesktopOpenCodeProjectMetadata,observeDesktopOpenCodeMetadata,readDesktopNativeStopSessions,fileDigest,processTable,
+      processFacts,readDesktopMetadataEvents,desktopMetadataReadyScopeCount,command}=environment;
+    ${actual}
+    return {prepareDesktopNativeStop,captureDesktopOpenCodeGlobalMetadata};`) as (environment: Record<string, unknown>) => {
+      prepareDesktopNativeStop: (input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+      captureDesktopOpenCodeGlobalMetadata: (...args: unknown[]) => Promise<Record<string, unknown>>;
+    };
+  const functions = make({ assert, Date: { now: () => options.clock.now }, process: { env: {} }, join,
+    setTimeout(done: () => void, ms: number) { assert.equal(ms, 100); trace.push('tick'); options.clock.now += options.tickMs ?? ms; done(); },
+    desktopJsLiteral: JSON.stringify,
+    assertOwnedCdpListener(value: number) { assert.equal(value, group); guard(); },
+    processFacts() {
+      assert.ok(++hostReads <= 32, 'bounded original Host census');
+      const current = options.hostVariant === 'reused-birth' && hostReads > 1
+        ? { ...host, birth: 'TEST-reused-host-birth' } : host;
+      return options.hostVariant === 'missing' ? [metadataChild]
+        : options.hostVariant === 'duplicate' ? [current, { ...current }, metadataChild] : [current, metadataChild];
+    },
+    readDesktopMetadataEvents(root: string, hostPid: number, allowEmpty: boolean) {
+      assert.equal(root, fixture.root); assert.equal(hostPid, host.pid); assert.equal(allowEmpty, true);
+      return [{ hostPid, profileHash: globalProfileHash, mode: 'directory', providerHash: null,
+        pid: metadataChild.pid, startIdentityHash: 'a'.repeat(64), stage: 'ready' }];
+    },
+    desktopMetadataReadyScopeCount,
+    readDesktopOpenCodeMetadataSource(root: string, projectPath: null) {
+      assert.equal(root, fixture.root); assert.equal(projectPath, null);
+      if (!counts.has('global-source')) return observe('global-source', globalSource);
+      trace.push('global-source-check'); assert.ok(++sourceChecks <= 3, 'bounded passive source rechecks');
+      return globalSource;
+    },
+    desktopMetadataProfileHash(value: unknown) { assert.equal(value, globalSource); return globalProfileHash; },
+    captureMetadataObservation(value: unknown, observedGroup: number, hashes: string[], original: unknown, expected: number) {
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.deepEqual(hashes, [globalProfileHash]);
+      assert.equal(original, undefined); assert.equal(expected, 0); return observe('global-lineage', { captured: globalCaptured });
+    },
+    metadataOnlyRuntimeDigest(root: string) { assert.equal(root, fixture.root); return observe('global-digest', 'TEST-runtime-digest'); },
+    captureDesktopOpenCodeProjectMetadata(value: unknown, observedGroup: number, global: unknown) {
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group);
+      assert.deepEqual(global, { source: globalSource, captured: globalCaptured, runtimeDigest: 'TEST-runtime-digest' });
+      return observe('project-lineage', { captured: projectCaptured, metadataSources });
+    },
+    observeDesktopOpenCodeMetadata(value: unknown, observedGroup: number, original: unknown) {
+      assert.deepEqual(value, fixture); assert.equal(observedGroup, group); assert.equal(original, projectCaptured);
+      return observe('native', { captured: runtimeCaptured, runtime: actors });
+    },
+    readDesktopNativeStopSessions(root: string) { assert.equal(root, fixture.root); return observe('sessions', options.sessions ?? [openingSession]); },
+    fileDigest(executable: string) { assert.equal(executable, 'TEST-native'); return observe('digest', 'a'.repeat(64)); },
+    processTable() { trace.push('native-table'); return [{ pid: host.pid, ppid: 7, pgid: group },
+      ...actors.map(row => ({ pid: row.pid, ppid: row.parentPid, pgid: row.groupId }))]; },
+    command(pid: number) { assert.ok(pid === host.pid || actors.some(row => row.pid === pid));
+      return pid === host.pid ? `${fixture.node} ${fixture.hostEntry}` : 'TEST-native --original'; },
+  });
+  return { trace, calls, counts, guardsBefore, evidence, armPayloads, configuration, globalSource, globalCaptured, openingSession,
+    metadataReads: () => ({ hostReads, sourceChecks }),
+    projectCaptured, runtimeCaptured, metadataSources, countsOfPreparation: () => ({ arms, disarms }),
+    run: () => functions.prepareDesktopNativeStop({ cdp, fixture, group, evidence, executable: 'TEST-native',
+      ...(options.openCode === false ? {} : { openCode: { model: { configuredLaunchPreparation: preparation, probes } } }),
+      ...(options.opening ? { returnAt: 'opening' } : {}) }),
+    global: () => functions.captureDesktopOpenCodeGlobalMetadata(cdp, fixture, group, guard) };
+}
+
+test('original native setup carries one live OpenCode window through actual global metadata and one configured start', { timeout: 5000 }, async () => {
+  const clock = { now: 1000 }, elapsed: Partial<Record<NativeSetupStep, number>> = { 'global-catalog': 35_000,
+    'global-source': 5000, 'global-lineage': 7000, 'global-digest': 3000, 'initial-read': 1000,
+    'project-catalog': 20_000, 'project-lineage': 4000, start: 5000, progress: 1000, native: 2000, digest: 500 };
+  const f = await originalNativeSetupWindow({ clock, onStep(step) { clock.now += elapsed[step] ?? 0; } });
+  assert.deepEqual(await f.run(), { hostPid: 10, nativeChildren: [{ pid: 31, ppid: 10, pgid: 7 }] });
+  assert.deepEqual(f.calls, [{ step: 'global-catalog', timeoutMs: 180_000 }, { step: 'initial-read', timeoutMs: 30_000 },
+    { step: 'project-catalog', timeoutMs: 129_000 }, { step: 'start', timeoutMs: 105_000 }, { step: 'progress', timeoutMs: 30_000 }]);
+  assert.deepEqual(f.armPayloads, [{ commandId: 'TEST-explicit-sandbox-setup-launch', launchId: 'TEST-launch',
+    rosterRevision: 'TEST-roster', memberId: 'alice-id', model: 'test-local/TEST-model' }]);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  assert.ok(f.trace.indexOf('project-lineage') < f.trace.indexOf('arm'));
+  assert.ok(f.trace.indexOf('disarm') < f.trace.indexOf('tick'));
+  assert.deepEqual(f.evidence.nativeConfiguredPreparation, { commandId: 'TEST-explicit-sandbox-setup-launch',
+    consumed: 1, probe: { requestedModel: 'TEST-model' } });
+  const setup = f.evidence.nativeSetup as Record<string, unknown>;
+  assert.equal(setup.status, 'ready'); assert.deepEqual(setup.configuration, f.configuration);
+  assert.equal(setup.metadataBeforeLaunch, f.projectCaptured); assert.equal(setup.metadataAtRuntimeObservation, f.runtimeCaptured);
+  assert.equal(setup.metadataSources, f.metadataSources); assert.equal(setup.nativeExecutableSha256, 'a'.repeat(64));
+  assert.ok([...f.counts.values()].every(count => count === 1));
+  assert.equal(f.metadataReads().sourceChecks, 3, 'the actual passive helper rechecks the same source without replaying operations');
+  assert.ok(f.metadataReads().hostReads > 1);
+});
+
+test('original native setup never replenishes the start window and clamps ordinary reads to its smaller remainder', { timeout: 5000 }, async () => {
+  const clock = { now: 0 };
+  const f = await originalNativeSetupWindow({ clock, onStep(step) {
+    if (step === 'project-lineage') clock.now = 160_000;
+    if (step === 'start') clock.now += 5000;
+  } });
+  await f.run();
+  assert.deepEqual(f.calls.map(row => [row.step, row.timeoutMs]), [
+    ['global-catalog', 180_000], ['initial-read', 30_000], ['project-catalog', 180_000], ['start', 20_000], ['progress', 14_900]]);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+});
+
+test('actual global metadata awaits one deferred response and refuses a successful response at the common cutoff', { timeout: 5000 }, async () => {
+  for (const elapsed of [35_000, 180_000, 180_001]) {
+    const clock = { now: 0 }, entered = deferred<void>(), release = deferred<void>();
+    const f = await originalNativeSetupWindow({ clock, onStep(step) {
+      if (step === 'global-catalog') { entered.resolve(); return release.promise; }
+    } });
+    const pending = f.run();
+    const completed = elapsed < 180_000 ? pending : assert.rejects(pending, /Original OpenCode setup observation deadline expired/u);
+    await entered.promise;
+    assert.deepEqual(f.calls, [{ step: 'global-catalog', timeoutMs: 180_000 }]);
+    assert.equal(f.counts.get('global-source'), undefined); clock.now = elapsed; release.resolve(); await completed;
+    assert.equal(f.counts.get('global-catalog'), 1);
+    assert.equal(f.counts.get('global-source'), elapsed < 180_000 ? 1 : undefined);
+    assert.deepEqual(f.countsOfPreparation(), elapsed < 180_000 ? { arms: 1, disarms: 1 } : { arms: 0, disarms: 0 });
+  }
+});
+
+test('original setup rejects exact and late successful observations before a following request or accepted setup', { timeout: 5000 }, async () => {
+  const boundaries: [NativeSetupStep, string][] = [['global-catalog', 'global-source'], ['global-source', 'global-lineage'],
+    ['global-lineage', 'global-digest'], ['global-digest', 'initial-read'], ['initial-read', 'project-catalog'],
+    ['project-catalog', 'project-lineage'], ['project-lineage', 'arm'], ['start', 'tick'], ['progress', 'native'],
+    ['native', 'digest'], ['digest', 'accepted-setup']];
+  for (const [step, next] of boundaries) for (const late of [0, 1]) {
+    const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, onStep(observed) {
+      if (observed === step) clock.now = 180_000 + late;
+    } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u, `${step}/${late}`);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.equal(f.trace.includes(next), false, `${step} cannot reach ${next}`);
+    assert.ok([...f.counts.values()].every(count => count === 1), 'no replay after a successful late observation');
+    const armed = ['start', 'progress', 'native', 'digest'].includes(step);
+    assert.deepEqual(f.countsOfPreparation(), { arms: Number(armed), disarms: Number(armed) });
+  }
+});
+
+test('pending-open setup checks the same cutoff after session native and digest observations', { timeout: 5000 }, async () => {
+  for (const step of ['sessions', 'native', 'digest'] as const) for (const late of [0, 1]) {
+    const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, opening: true, onStep(observed) {
+      if (observed === 'project-lineage') clock.now = 160_000;
+      if (observed === 'start') clock.now += 5000;
+      if (observed === step) clock.now = 180_000 + late;
+    } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.equal(f.counts.get('progress'), undefined);
+    if (step === 'sessions') assert.equal(f.counts.get('native'), undefined);
+    if (step !== 'digest') assert.equal(f.counts.get('digest'), undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+});
+
+test('pending-open keeps original session identity empty-input and native actor predicates', { timeout: 5000 }, async () => {
+  const good = await originalNativeSetupWindow({ clock: { now: 0 }, opening: true }); await good.run();
+  const setup = good.evidence.nativeSetup as Record<string, unknown>;
+  assert.equal(setup.status, 'opening'); assert.equal(setup.session, good.openingSession);
+  assert.equal(setup.nativeExecutableSha256, 'a'.repeat(64)); assert.equal(good.counts.get('progress'), undefined);
+  assert.ok(good.trace.indexOf('disarm') < good.trace.indexOf('sessions'));
+  const original = good.openingSession;
+  for (const sessions of [[{ ...original, binding: { ...original.binding, runId: 'TEST-foreign' } }],
+    [{ ...original, binding: { ...original.binding, memberId: 'TEST-foreign' } }], [{ ...original, phase: 'ready' }],
+    [{ ...original, nativeReady: true }], [{ ...original, sealed: true }], [{ ...original, inputs: ['TEST-unselected-input'] }],
+    [original, original]]) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, opening: true, sessions });
+    await assert.rejects(f.run(), assert.AssertionError);
+    assert.equal(f.counts.get('native'), undefined); assert.equal(f.counts.get('digest'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+  for (const variant of [{ actorCount: 0 }, { actorCount: 2 }, { readyCount: 0 }, { readyCount: 2 }, { opening: true, actorCount: 2 }]) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, ...variant });
+    await assert.rejects(f.run(), assert.AssertionError); assert.equal(f.counts.get('digest'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+});
+
+test('owned guards and the original polling tick cannot dispatch after the setup cutoff', { timeout: 5000 }, async () => {
+  const reference = await originalNativeSetupWindow({ clock: { now: 0 } }); await reference.run();
+  for (const denied of ['global-catalog', 'global-source', 'initial-read', 'project-catalog', 'start', 'progress'] as const) {
+    const guardIndex = reference.guardsBefore.get(denied); assert.ok(guardIndex, 'an original guard precedes this fixed operation');
+    const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) clock.now = 180_000; } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
+    assert.equal(f.trace.includes(denied), false); assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), ['start', 'progress'].includes(denied) ? { arms: 1, disarms: 1 } : { arms: 0, disarms: 0 });
+  }
+  const clock = { now: 0 }, armed = await originalNativeSetupWindow({ clock, arm() { clock.now = 180_000; } });
+  await assert.rejects(armed.run(), /Original OpenCode setup observation deadline expired/u);
+  assert.equal(armed.counts.get('start'), undefined); assert.deepEqual(armed.countsOfPreparation(), { arms: 1, disarms: 1 });
+  for (const opening of [false, true]) {
+    const tickClock = { now: 0 }, f = await originalNativeSetupWindow({ clock: tickClock, opening,
+      ...(opening ? { sessions: [] } : {}), onStep(step) { if (step === (opening ? 'sessions' : 'start')) tickClock.now = 179_950; } });
+    await assert.rejects(f.run(), /Original OpenCode setup observation deadline expired/u);
+    assert.equal(f.trace.filter(value => value === 'tick').length, 1); assert.equal(f.counts.get('progress'), undefined);
+    assert.equal(f.counts.get('sessions'), opening ? 1 : undefined); assert.equal(f.counts.get('native'), undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+});
+
+test('rejected original setup awaits and guards retain their exact Error even after the common cutoff', { timeout: 5000 }, async () => {
+  const steps: NativeSetupStep[] = ['global-catalog', 'global-source', 'global-lineage', 'global-digest', 'initial-read',
+    'project-catalog', 'project-lineage', 'start', 'progress', 'native', 'digest'];
+  for (const step of steps) {
+    const clock = { now: 0 }, original = new Error(`TEST original ${step}`);
+    const f = await originalNativeSetupWindow({ clock, onStep(observed) { if (observed === step) { clock.now = 180_001; throw original; } } });
+    await assert.rejects(f.run(), error => error === original); assert.equal(f.evidence.nativeSetup, undefined);
+    assert.ok([...f.counts.values()].every(count => count === 1));
+    const armed = ['start', 'progress', 'native', 'digest'].includes(step);
+    assert.deepEqual(f.countsOfPreparation(), { arms: Number(armed), disarms: Number(armed) });
+  }
+  for (const step of ['sessions', 'native', 'digest'] as const) {
+    const clock = { now: 0 }, original = new Error(`TEST original opening ${step}`);
+    const f = await originalNativeSetupWindow({ clock, opening: true, onStep(observed) {
+      if (observed === step) { clock.now = 180_001; throw original; }
+    } });
+    await assert.rejects(f.run(), error => error === original); assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+  }
+  const reference = await originalNativeSetupWindow({ clock: { now: 0 } }); await reference.run();
+  for (const target of ['global-catalog', 'start'] as const) {
+    const guardIndex = reference.guardsBefore.get(target); assert.ok(guardIndex);
+    const clock = { now: 0 }, original = new Error('TEST original ownership guard');
+    const f = await originalNativeSetupWindow({ clock, guard(count) { if (count === guardIndex) { clock.now = 180_001; throw original; } } });
+    await assert.rejects(f.run(), error => error === original);
+    assert.deepEqual(f.countsOfPreparation(), target === 'global-catalog' ? { arms: 0, disarms: 0 } : { arms: 1, disarms: 1 });
+  }
+});
+
+test('configured setup retains its original probe assertions and finally error precedence', { timeout: 5000 }, async () => {
+  for (const preparationProof of [{ consumed: 0, probes: [{ requestedModel: 'TEST-model' }] }, { consumed: 1, probes: [] },
+    { consumed: 1, probes: [{ requestedModel: 'TEST-other-model' }] }]) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, preparationProof });
+    await assert.rejects(f.run(), assert.AssertionError); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+    assert.equal(f.trace.includes('tick'), false); assert.equal(f.evidence.nativeSetup, undefined);
+  }
+  for (const rejectStart of [false, true]) {
+    const clock = { now: 0 }, original = new Error('TEST original start failure'), finalError = new Error('TEST original disarm failure');
+    const f = await originalNativeSetupWindow({ clock, onStep(step) {
+      if (step === 'start' && rejectStart) { clock.now = 180_001; throw original; }
+    }, disarm() { throw finalError; } });
+    await assert.rejects(f.run(), error => error === finalError); assert.deepEqual(f.countsOfPreparation(), { arms: 1, disarms: 1 });
+    assert.equal(f.trace.includes('tick'), false); assert.equal(f.evidence.nativeSetup, undefined);
+  }
+});
+
+test('legacy native setup keeps undefined CDP overrides and its separate 45-second post-start readiness window', { timeout: 5000 }, async () => {
+  const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, openCode: false, onStep(step) {
+    if (step === 'initial-read') clock.now += 40_000;
+    if (step === 'start') clock.now += 60_000;
+    if (step === 'progress') clock.now += 44_000;
+  } });
+  await f.run(); assert.equal(clock.now, 144_100);
+  assert.deepEqual(f.calls, [{ step: 'initial-read', timeoutMs: undefined }, { step: 'start', timeoutMs: undefined },
+    { step: 'progress', timeoutMs: undefined }]);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 });
+  assert.equal(f.counts.get('global-catalog'), undefined); assert.equal(f.counts.get('project-catalog'), undefined);
+  assert.equal((f.evidence.nativeSetup as Record<string, unknown>).status, 'ready');
+  const expired = await originalNativeSetupWindow({ clock: { now: 0 }, openCode: false, progressReady: false, tickMs: 45_000 });
+  await assert.rejects(expired.run(), { name: 'AssertionError', message: /starting/u });
+  assert.equal(expired.counts.get('progress'), 1, 'the unchanged legacy polling boundary retains its original last read');
+  assert.equal(expired.evidence.nativeSetup, undefined); assert.equal(expired.trace.includes('native-table'), false);
+});
+
+test('actual native setup refuses missing duplicate or reused original Host facts before metadata qualification', async () => {
+  for (const hostVariant of ['missing', 'duplicate', 'reused-birth'] as const) {
+    const f = await originalNativeSetupWindow({ clock: { now: 0 }, hostVariant });
+    await assert.rejects(f.run(), /one exact TEST Host|same retained metadata Host birth/u);
+    assert.equal(f.counts.get('global-source'), undefined);
+    assert.equal(f.counts.get('global-lineage'), undefined);
+    assert.equal(f.counts.get('initial-read'), undefined);
+    assert.equal(f.counts.get('start'), undefined);
+    assert.equal(f.evidence.nativeSetup, undefined);
+    assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 });
+  }
+});
+
+test('standalone actual global metadata retains its default CDP override without selecting a setup window', { timeout: 5000 }, async () => {
+  const clock = { now: 0 }, f = await originalNativeSetupWindow({ clock, onStep() { clock.now += 200_000; } });
+  assert.deepEqual(await f.global(), { captured: f.globalCaptured, source: f.globalSource, runtimeDigest: 'TEST-runtime-digest' });
+  assert.deepEqual(f.calls, [{ step: 'global-catalog', timeoutMs: undefined }]);
+  assert.deepEqual(f.trace, ['guard', 'global-catalog', 'guard', 'global-source', 'global-lineage', 'global-digest']);
+  assert.deepEqual(f.countsOfPreparation(), { arms: 0, disarms: 0 }); assert.deepEqual(f.evidence, {});
+});
+await import('./desktop-ui-controls-deadline.test.ts');
+
+function moduleActivityFixture() {
+  const listeners = new Map<string, (value: unknown) => void>();
+  let frame: unknown = 'TEST-frame', clock = 0;
+  const observer = observeDesktopModuleLoads({
+    on(method, listener) {
+      assert.equal(listeners.has(method), false, 'one existing subscription per method');
+      listeners.set(method, listener);
+    },
+  }, 'http://localhost:5173/', () => frame, () => ++clock);
+  const emit = (method: string, value: unknown) => listeners.get(method)!(value);
+  const start = (requestId: string, overrides: Record<string, unknown> = {}) =>
+    emit('Network.requestWillBeSent', { requestId, type: 'Script', frameId: frame,
+      request: { url: 'http://localhost:5173/component.tsx?private=query#secret' }, ...overrides });
+  const finish = (requestId: string) => emit('Network.loadingFinished', { requestId });
+  const fail = (requestId: string, errorText = 'net::ERR_INSUFFICIENT_RESOURCES', type = 'Script') =>
+    observer.loadingFailed({ requestId, errorText, type });
+  return { ...observer, listeners, emit, start, finish, fail, setFrame(value: unknown) { frame = value; } };
+}
+
+test('module request activity retains completions and peak after module history eviction', () => {
+  const f = moduleActivityFixture();
+  for (let index = 0; index < 300; index++) f.start(String(index));
+  assert.equal(f.evidence.loads.length, 256);
+  assert.equal(f.evidence.overflow, true);
+  const activity = f.evidence.activity;
+  assert.ok(activity, 'request pressure must survive the bounded module history');
+  assert.equal(activity.allRequests.pending, 300);
+  assert.equal(activity.allRequests.peakPending, 300);
+  for (let index = 0; index < 299; index++) f.finish(String(index));
+  assert.equal(activity.allRequests.pending, 1, 'evicted rows still retire their active request');
+  f.fail('299');
+  assert.deepEqual(activity.allRequests, {
+    started: 300, finished: 299, failed: 1, redirected: 0, pending: 0, peakPending: 300,
+  });
+  assert.deepEqual(activity.mainFrameSameOriginScripts, activity.allRequests);
+  const first = activity.firstResourceFailure;
+  assert.ok(first);
+  assert.equal(first.requestTracked, true);
+  assert.equal(first.mainFrameSameOriginScript, true);
+  assert.equal(first.allRequests.pending, 1, 'failure snapshot includes the failing observed request');
+  assert.equal(first.allRequests.failed, 0, 'snapshot precedes terminal accounting');
+  assert.equal(first.overflow, false, 'history eviction does not make active tracking incomplete');
+  const retained = JSON.stringify(first);
+  f.start('later'); f.fail('later');
+  assert.equal(JSON.stringify(first), retained, 'first failure is an immutable observation');
+  assert.equal(activity.firstResourceFailure, first);
+  assert.deepEqual([...f.listeners.keys()], [
+    'Network.requestWillBeSent', 'Network.responseReceived', 'Network.loadingFinished',
+  ], 'existing Network stream only; failures remain forwarded by the enclosing observer');
+  assert.equal(JSON.stringify(f.evidence).includes('private'), false);
+  assert.equal(JSON.stringify(f.evidence).includes('secret'), false);
+});
+
+test('module request activity counts all resources and redirects without duplicating active requests', () => {
+  const f = moduleActivityFixture();
+  f.start('script'); f.start('script');
+  f.start('style', { type: 'Stylesheet', frameId: 'TEST-child-frame',
+    request: { url: 'https://external.example/private.css?token=secret' } });
+  f.start('script', { type: 'Fetch', redirectResponse: { status: 302 },
+    request: { url: 'https://external.example/private?token=secret' } });
+  const activity = f.evidence.activity;
+  assert.equal(activity.duplicateStartEvents, 1);
+  assert.deepEqual(activity.allRequests, {
+    started: 3, finished: 0, failed: 0, redirected: 1, pending: 2, peakPending: 2,
+  });
+  assert.deepEqual(activity.mainFrameSameOriginScripts, {
+    started: 1, finished: 0, failed: 0, redirected: 1, pending: 0, peakPending: 1,
+  });
+  f.setFrame('TEST-next-frame');
+  f.finish('style'); f.fail('script', 'net::ERR_INSUFFICIENT_RESOURCES', 'Fetch');
+  assert.deepEqual(activity.allRequests, {
+    started: 3, finished: 1, failed: 1, redirected: 1, pending: 0, peakPending: 2,
+  });
+  assert.equal(activity.firstResourceFailure!.mainFrameSameOriginScript, false);
+  assert.equal(activity.firstResourceFailure!.requestType, 'Fetch');
+  assert.equal(activity.firstResourceFailure!.allRequests.pending, 1);
+  assert.equal(JSON.stringify(activity).includes('external'), false);
+  assert.equal(JSON.stringify(activity).includes('secret'), false);
+  assert.equal(JSON.stringify(activity).includes('TEST-child-frame'), false);
+});
+
+test('module request activity preserves the captured script membership across navigation', () => {
+  const f = moduleActivityFixture();
+  f.start('old-document');
+  f.setFrame(undefined);
+  f.start('during-navigation');
+  f.setFrame('TEST-next-frame');
+  f.start('new-document');
+  f.finish('old-document');
+  f.finish('during-navigation');
+  assert.equal(f.evidence.activity.mainFrameSameOriginScripts.pending, 1);
+  f.finish('new-document');
+  assert.deepEqual(f.evidence.activity.mainFrameSameOriginScripts, {
+    started: 2, finished: 2, failed: 0, redirected: 0, pending: 0, peakPending: 2,
+  });
+  assert.equal(f.evidence.activity.allRequests.started, 3);
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+});
+
+test('module request activity active tracking cap is explicit, preserves existing requests and never fabricates completion', () => {
+  const f = moduleActivityFixture();
+  const activity = f.evidence.activity;
+  assert.equal(activity.activeLimit, 8192);
+  for (let index = 0; index <= activity.activeLimit; index++)
+    f.start(String(index), { type: 'Fetch' });
+  assert.equal(activity.overflow, true);
+  assert.equal(activity.untrackedRequestEvents, 1);
+  assert.equal(activity.allRequests.started, 8192);
+  assert.equal(activity.allRequests.pending, 8192);
+  assert.equal(activity.allRequests.peakPending, 8192);
+  f.fail('8192');
+  const first = activity.firstResourceFailure!;
+  assert.equal(first.requestTracked, false);
+  assert.equal(first.mainFrameSameOriginScript, null);
+  assert.equal(first.overflow, true);
+  assert.equal(first.untrackedRequestEvents, 1);
+  assert.equal(first.allRequests.pending, 8192);
+  assert.equal(activity.allRequests.failed, 0, 'an omitted ID cannot retire another request');
+  assert.equal(activity.orphanTerminalEvents, 1);
+  for (let index = 0; index < 8192; index++) f.finish(String(index));
+  assert.equal(activity.allRequests.pending, 0);
+  assert.equal(activity.allRequests.finished, 8192);
+  assert.equal(first.allRequests.pending, 8192, 'subsequent cleanup cannot rewrite the failure');
+  assert.equal(activity.overflow, true, 'tracking incompleteness stays visible after cleanup');
+  assert.ok(JSON.stringify(f.evidence).length < 4096, 'active IDs never enter the receipt');
+});
+
+test('module request activity malformed and unobserved events cannot create negative counts or leak error payloads', () => {
+  const f = moduleActivityFixture();
+  for (const value of [null, [], {}, { requestId: '' }, { requestId: 'x'.repeat(129) },
+    { requestId: 'invalid-url', request: { url: 'invalid' } }])
+    assert.doesNotThrow(() => f.emit('Network.requestWillBeSent', value));
+  f.finish('unobserved');
+  assert.equal(f.evidence.activity.allRequests.started, 0);
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+  assert.equal(f.evidence.activity.orphanTerminalEvents, 1);
+  f.start('TEST-private-id');
+  f.fail('TEST-private-id', 'PRIVATE request payload');
+  assert.equal(f.evidence.activity.firstResourceFailure, null);
+  f.start('resource-refusal');
+  f.fail('resource-refusal', 'net::ERR_INSUFFICIENT_RESOURCES', 'PRIVATE unknown type');
+  assert.equal(f.evidence.activity.firstResourceFailure!.requestType, null);
+  f.finish('resource-refusal');
+  assert.equal(f.evidence.activity.allRequests.pending, 0);
+  assert.equal(f.evidence.activity.orphanTerminalEvents, 2);
+  assert.equal(JSON.stringify(f.evidence).includes('PRIVATE'), false);
+  assert.equal(JSON.stringify(f.evidence).includes('TEST-private-id'), false);
+});

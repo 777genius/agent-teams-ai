@@ -1,0 +1,944 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-pure-git-tree-reconstruction",
+  "reviewer": "/root/composition_review_030",
+  "computedAt": "2026-11-19T01:09:41.358605+00:00",
+  "method": "Read immutable547 Git tree through git ls-tree only; validate its canonical pure SHA1 tree serialization, apply pinned30leaf030 delta, validate030 tree, then overlay all approved publication25 sources and final proofs/documents and recursively hash full candidate. No Git object/ref/index/worktree writes and no CI queries or tests.",
+  "base": {
+    "commit": "547e603c555be471394e9c6e4b6a53092a33a6d7",
+    "tree": "47ac6f88dbe6726e7f6fe83ba0a4497975969eb9",
+    "leaves": 11452
+  },
+  "current": {
+    "commit": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "tree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+    "leaves": 11476,
+    "deltaLeaves": 30
+  },
+  "candidate": {
+    "tree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+    "leaves": 11561,
+    "changedLeaves": 107,
+    "sourceLeaves": 25,
+    "evidenceLeaves": 80,
+    "documentLeaves": 2,
+    "deletions": 0,
+    "allUnchangedLeavesPreserved": true
+  },
+  "documentationReview": {
+    "candidateAcceptanceKeptPending": true,
+    "historicalOriginal030ScopesPreserved": true,
+    "soloMetadataClarificationExplicit": true,
+    "retainedObserverDoesNotClaimBehaviorFix": true,
+    "nativeObserverDesktopLimitExplicit": true,
+    "fullF1GuardedSigtermQualified": true,
+    "terminalCollectionGapExplicit": true,
+    "notes": "Final docs identify030 as the last completed original CI source. Closed category/hash prose is shorthand; the already-pinned retained R2 spells out all six existing diagnostic fields."
+  },
+  "actualGitTreeComparison": {
+    "shaProvidedByParentFromActualGitTree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+    "matches": true,
+    "reviewerQueriedRemote": false
+  },
+  "inputPins": [
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/delta547to030.json",
+      "sha": "1c901ac60800dd48f600b3bc7e554610b77e9b87",
+      "sha256": "f869f380914a7a4528827a68cf0d5b3a1dbc222ce32923fddc1d1d3c2cac4a5f",
+      "bytes": 7561
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/source-rows-publication.json",
+      "sha": "94d3567f0c66b730142b46977dfcc77290f1c9c0",
+      "sha256": "fde3bf37ac2cdb4727c1e69091527ce0fa42fc049414fdee05fcd220c4ff8b9b",
+      "bytes": 14213
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/evidence-rows-publication.json",
+      "sha": "02fc010778922f75b2a3633fbe2e61235b26a5e0",
+      "sha256": "d9bbf6dc554e5f119dfaad2d6e8b655e4b6fb2030a63dda226e2f75a7047d4cf",
+      "bytes": 38920
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/document-rows-publication.json",
+      "sha": "540c847b4434f9a65d9a95b04b0fde772f0b5cbb",
+      "sha256": "5d5317295316348a532486e70c133b0f05727dfe87f1d6709ef2fdb95a78cc8e",
+      "bytes": 909
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/quit-active-030-followup/STATUS-publication.md",
+      "sha": "4a0cb44e3616a214dc7c6ff69fb9f842bdb9a21c",
+      "sha256": "d668ffaf22dc15e9d166dff71343626121db355012b78ed1064432e2668965c8",
+      "bytes": 67697
+    },
+    {
+      "path": "/workspace/scratch/c714f5bce554/publication-followup-030/parity-030-followup-index-20261119.json",
+      "sha": "66bd8228b70828981f05e84a4c95fd7720bbd84c",
+      "sha256": "8556245467252ac45a7dccb91d1eb7408252a68607959e28af29efd8ddb66ddf",
+      "bytes": 60500
+    }
+  ],
+  "changedLeaves": [
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "025a124b317917cdceb5d6072977bd2d24508cdd",
+      "sha256": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+      "bytes": 20176
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3022c10041dd8bceabdd9e9982ab78a305e9c167",
+      "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+      "bytes": 44790
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1e4522ba6e600545535c116e59a53a95f6120b37",
+      "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+      "bytes": 52804
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4dbce7ddf863f4b1513bdb018c67b29ec31eac71",
+      "sha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+      "bytes": 11220
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4765acd5e153d6fd601e2cd9645ab6966e042400",
+      "sha256": "62358a4efb31ae20948c1e81571780742121304d4b302ecb513efa3c58801dc6",
+      "bytes": 2173
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7733ec9dd14269c6ba4d8c276fbb0bf64849019e",
+      "sha256": "56fbdd59fbb15dc7e9bf2543b9ae92011e46fd7ba671381f7eae6ab6e4df3614",
+      "bytes": 9836
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "05b5b1f8d17396c2c690d6e0c7b0c896abad1d7a",
+      "sha256": "3f750eef4be35d55fbffa81640e27f97f22f5504ed6adaeb3f6490fa66b99a3e",
+      "bytes": 22749
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de7adc5a25d63b84888460dc08a518de426946e7",
+      "sha256": "8de1ca5ecbfbfe9823478dd370f861234c05c74e3bf67f35a7fb95fc5ecbf798",
+      "bytes": 44827
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "566b24275d634a213d732564fc3319631f2de0d1",
+      "sha256": "67d52fa4e5e0fcf56dcaa5a07184c8eaeb5f04c27e33be87ba40fd7887987fe4",
+      "bytes": 26283
+    },
+    {
+      "path": "src/features/agent-backend/main/application/createRetainedLegacyLaunchScope.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "48601395b8993858c5c03dc391f32620bff6d6cf",
+      "sha256": "9022504401848b9ec452fcb59e696a3c3e6c70410a68a88c5766a44e9678c4fc",
+      "bytes": 4875
+    },
+    {
+      "path": "src/main/composition/createDesktopStoppedTeamOperations.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fbcf8cef5d9c9258418bd4aa98c4a6b15cd5a547",
+      "sha256": "9d84942df095ebe4350ad9336031e896885275165e1558ba0b349f4cfbe18a87",
+      "bytes": 13306
+    },
+    {
+      "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a77c040eea4d316cd2f0fec5596bbebc31210ca",
+      "sha256": "765d969d6956679e0559017507d5f7289859ba81abd988a8f85fc97ed657bdc2",
+      "bytes": 8604
+    },
+    {
+      "path": "src/main/services/schedule/ScheduleRepository.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "052e724d9ddc699b24c96aaf563cf874d475720a",
+      "sha256": "ff0b29ebbbf8936c01d94916798889185d3336081000d1327f428f885cfb883f",
+      "bytes": 1307
+    },
+    {
+      "path": "src/main/services/schedule/SchedulerService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e80ea7cb896ec3c802f130afff36f32f48b1483",
+      "sha256": "a42eeacd8e4ad2dda44b9941a18d9c4b8023a2a3711f625d81142e63065a5235",
+      "bytes": 32983
+    },
+    {
+      "path": "src/main/services/team/TeamLaunchStateStore.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1aa8fe6afded73ad22b41784e94ce42b18142a4",
+      "sha256": "f44abe9b34f83a2738342ba84f0cf99ed134b357eb36b9e51844b94249604c41",
+      "bytes": 23353
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8e2479b4b5c3a555f94bb283e4a1cdd65ccfa59",
+      "sha256": "7465b7a62856f0cc6d654df57033cec3b48e63b1b4ee763ec920a949c143fb97",
+      "bytes": 19156
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f61a31f00a759a68091b0fd9c90df1c7259713e",
+      "sha256": "dce03e1761ad9886296e930422b8242f7330c183a8254f2c477e587e4e96c161",
+      "bytes": 10081
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1af3316624c7d46629ca275638f38707259ae0d1",
+      "sha256": "e3f57dcb97331a166751395bdccddc41538b686061cd7574a05e855eb3486bdc",
+      "bytes": 12871
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff077d66c2f1b027d8fc42bd4e517090b4df1316",
+      "sha256": "7b154e6a055f067315f4d414f9241356696ca680376b2ed67feeeb28a0ff47cd",
+      "bytes": 11223
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca326f89632042a98c5bc459250df221980bdd4",
+      "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+      "bytes": 28169
+    },
+    {
+      "path": "test/features/agent-backend/retainedLegacyEligibilityDiagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5db9d3cde4be97705bdd1218037dffc7d7771acf",
+      "sha256": "11bae932d7b9bb2a6d73bbbd2cfb4c1841bc14a715fd925f7b42faf368154144",
+      "bytes": 11154
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa4fc950036305a7f5f2de09e1508f652ff655c1",
+      "sha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+      "bytes": 9242
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerService.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f04861c30e17c66e13f433a997a121e42d4150ac",
+      "sha256": "0e3882d1cd88571759a59fc29c5352b5baf9298283d9685c8fd7026134d27a22",
+      "bytes": 41784
+    },
+    {
+      "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "434b4689a4e9ca01243e7f2da5af21d803252094",
+      "sha256": "4d0dadaeda026ec8836539ca34212bc98a1c0a05b6788ef3f41d396f794b86aa",
+      "bytes": 21111
+    },
+    {
+      "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ebc6e322cc41d83fd8ecb07b5d4bdc7dab927c6e",
+      "sha256": "f198cafb5532b7028d7c50537592f2ceda7afdcc73735e0c2ce29fa56c916843",
+      "bytes": 33407
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167669631.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cea5b5ce5234693077a8207849008285f0401e3f",
+      "sha256": "0cd5ffc4706a821bc61b28641f906e9605478a2e88309b714e5877b278a74ade",
+      "bytes": 4938
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167669943.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bbcd92705e99d3988d963537ef6fe6ab4ed68e93",
+      "sha256": "c6dd53c0d652db08053e86baf7f44a3d623cb83ebe41b8672f25339f9b4fbdac",
+      "bytes": 5129
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167670062.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "916f0f2b86ed93c5da53208423d79fe46b403da6",
+      "sha256": "dc92270dc6a24cdc69150eea7e2432644498c81f0480d3b2764e4ac1b2718b21",
+      "bytes": 5817
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167681954.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7f04c627901ba9a0381067b879d11dd2d43ac2be",
+      "sha256": "fef04792caa0c1d6da39a3d5b65534f4b044f2dc684a9dcf47bb1ea1fdc1f954",
+      "bytes": 3859
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682379.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ea3769bbc50aff19151ba6f8d3ac8c1ff72a7d0",
+      "sha256": "6a9e4fc2d1c56123ad62cacecd2eae9a475327a7390d4b4b9d34a1a10a7f474d",
+      "bytes": 4530
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682463.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1490477544f4991e381073d9e1ed4e3b330369f1",
+      "sha256": "7b6f86cd6bfd8ad517c78f60ee2b94a0e2a1e3b86d03e44bf0ac4a2469d62483",
+      "bytes": 4460
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682526.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f0425165fce86ce540f654610e2fa1b4792258de",
+      "sha256": "35e888324c92950f9bdad18f1d043d7979e88e50584615a6a726a766d88b6c58",
+      "bytes": 4534
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682607.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4d36d87622e7fbc6400d7733143a6ad712a58649",
+      "sha256": "fb5c9daa83c3c0f4301366dc75ce4529d97ca3db27e9d917cce2437010063a09",
+      "bytes": 2857
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682752.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa4806760c6c79da283905ba0da6ff3976c841cc",
+      "sha256": "cd7601e617958ee772b4dfc758cba9e48ff178b2d0404c3e4d21c3bae118b889",
+      "bytes": 7348
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682766.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "24995ae3c454c2ccdecacc617e603fac1444594d",
+      "sha256": "4a00281edabd42e433ba54ee75923ca8ac51b19c0776bdeee237e53995c40bc1",
+      "bytes": 29937
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682769.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36cacc247213ce49515f47ee4d86a4dfddefa9f3",
+      "sha256": "01bdba3f5b8abd142ac72fce9c175116679a5d96a2ceb2fd84169c2bcd5c39b6",
+      "bytes": 4611
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682827.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "51c8ed18084e5f88190d73d86cec7d5b3839eb44",
+      "sha256": "151e2bfe609c5234028a29b0b7ef2269da8faf0b068a238c7b8ac436bdca9f4f",
+      "bytes": 28086
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167683004.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2e5e2330c862987cf3428fbed54111ee385fb410",
+      "sha256": "0e81d19be19191ffae83cb6aa8c3c450c91acdc79561e6fadd82ba2d101214ba",
+      "bytes": 14685
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-host-darwin-x64-success.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a89cf68b3775a80aec747611f97b6181184652ae",
+      "sha256": "3f2eeb972aa5527f090fb6687397b0a39cb934a674a6d580e1d14935365d711b",
+      "bytes": 20556
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-completed-native-proofs-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7cf4fe5617cab272f91e7db960c9faab027520ea",
+      "sha256": "3690aa110b2a191ac80c81e4bece8a41eb81da5d17b28b48e5931ea49964c969",
+      "bytes": 33346
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-host-arm-source-refusal-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "29838e2af06790442a5439b79a81484934b05ac6",
+      "sha256": "92f03f3c151feae327c898c154fcc01244a2d46cab7998ca687e24b4ed8c213a",
+      "bytes": 43619
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-host-arm-readiness-rawtrace-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "dd11df591d100918e691073875b857f1b9d1614d",
+      "sha256": "624695fc5a2fc4e3822cb49a247228d0ffdf591da72c57aa934356927f10b751",
+      "bytes": 6487
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-packaged-darwin-arm-module-failure-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "75c168587a4453de455b42e3e559b2145f61e091",
+      "sha256": "ebe3f63b44ccd91f922c78c0fc398333200ce2213698cbf862b9da3126683694",
+      "bytes": 29891
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-native-arm-original-proofs-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0a10868789805c986ae70e1cdd0909c991b8c206",
+      "sha256": "b623fcbd9ec6386e1a0816a86e3a9a5ba1badc970c459cb0ef95b8cd1b01dfaa",
+      "bytes": 51211
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-host-x64-opencode-first-refusal-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4cc860a87a4edab0783e6056d16f13baa8ce9cca",
+      "sha256": "da74ee12a0d0c506fac27a7b2acef28c6361174182b9128ef950114c0343fcff",
+      "bytes": 37268
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-v2021-test-discovery-original-proofs-030.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66b248eb37484778c92d5a0f4f465ad88ca10348",
+      "sha256": "96c8a205b77615e041b856e8eb43c12924da67b5b8ebfd5639cd78bf266d43ed",
+      "bytes": 51534
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-quit-source-review-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "86b3f1ce46a2d22a4257bf730a6f511b308de937",
+      "sha256": "f8d732c1262f6a499961abc08e32f21c541dbb7281051eb1fc5ff3cedc7b5db8",
+      "bytes": 16160
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-review-preflight-source-classification.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c7173b268c78d8dae37da42fb937515cabd6044c",
+      "sha256": "fba2055b4a9d526e1dea11f7cc093657ab4b03544b120060c4b0b944117fbad8",
+      "bytes": 18513
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-merge-tree-typecheck-scope-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bf9177296bc3c4d4b24ffd9760897d4ab6345845",
+      "sha256": "2bfacc11685fa725ebb62d80422dd862918bbdae8f9c32a6d0d029c04eaa0196",
+      "bytes": 3209
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-schedule-metadata-review-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "613ab2961e685b00172f692489f46db17640b56c",
+      "sha256": "002d3bbcc85a25c63b0f022001078b2022f454301268eb79c86da9ddc8ca3eb3",
+      "bytes": 25104
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-teams-terminal-closure.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0df1df3e546a47577a8e4b9cc79adb2b39c00453",
+      "sha256": "0938d5b825fe175a05a37d9f7f5221276ac38a848812e8d09ec2320c00150d58",
+      "bytes": 19565
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-teams-windows-visual.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8d747cbfa00ff16d7378546312fa0eb46f95da1b",
+      "sha256": "e66249c2f6103733d752ae6b3af25e5c43590f90b7b37411c5de4d3c873f1dc2",
+      "bytes": 12837
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682454.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bef4e1065d2f11632033e58088c52dd4eac14e1d",
+      "sha256": "619f14259354dcb3bf2e038bcfb46281293f62952e4b5685b8a7dab7401a5362",
+      "bytes": 8993
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682886.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ddf01ae5b5af85cadeb72a95515826acf6a241d",
+      "sha256": "3972444198a8cb7f9a3791abda813fe22bc6893790191e5777f962b4d475bb93",
+      "bytes": 15819
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682948.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "90416b3da2752e79082347113c942db0e2f54041",
+      "sha256": "a26fd8fd01c1a47221aa72eed8766244b1ab5e6593da1eae626431d9a44bbe66",
+      "bytes": 15977
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682392.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5fac62a609226f601051271adcd6b65a29baec0d",
+      "sha256": "98cf8fc7f736495407cca652bd2f2aef8d0a345639633b7da38fa7ff1ab28639",
+      "bytes": 59523
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-native-windows-x64-v1-linux.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "98815b37dba0fa5b98d7a3c47adc048790448e43",
+      "sha256": "60ad03164e42eb660a060682a2136d07e62b12daf5984159934322ed39b69bfd",
+      "bytes": 34668
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-packaged-attachment-review-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3d04f8cc743b4dab014da5edd74e0b5322fc5af8",
+      "sha256": "8ae7be3660632e3494ce8624019e1a74ae55cd2f8f6d9efa7b844e819bce6c95",
+      "bytes": 17593
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-source-size-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "28208674065ab731a53ebbab5965dbae90d06229",
+      "sha256": "6f3e6ddf5e269af000dd12352dbbc5ffc2ef50649744a6012f501d893821faec",
+      "bytes": 17950
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-source-freeze-amendment-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "59ce18d92221aaa767e48f3b7e10d5c871c1b001",
+      "sha256": "391cca3b5c1f82c94679c1f4d3f7f069530d27ea6579c0e82c6642d6573cb70d",
+      "bytes": 1220
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-integration-source-review-20261118.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5e25653130afdc78c816a213149fbcf3bb9a0c6d",
+      "sha256": "56ca464185a03b4631b1e6154a8e0d53be41b94c48056d1140aa4defd1e03781",
+      "bytes": 18973
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-retained-import-source-classification.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f5519de87e8a42d92922e0e8be4ddb7ccba33414",
+      "sha256": "f061bb5457ca31d39ce819e6caa7f459f51c46ca0520b9669d0bd5adc64a0fc7",
+      "bytes": 7918
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682733.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d50c073875ffff7d8070b741dc1e0582a4c07ba4",
+      "sha256": "b6a9a2b1f53b521480d51741712826912e6dbeb959f96a13cb23faf6bf7809ca",
+      "bytes": 4436
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682738.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e6cfd14680ae6f01d2a0931db11dc8fee6d345ef",
+      "sha256": "73b502f55123c2802895d51f8ab4359fbc03c3086b4cd055f0404bb2bf2e7e5f",
+      "bytes": 2917
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-native-linux-credential-refusal.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c15b39e1a79bd5f6b679eb446e05457a1925e4fb",
+      "sha256": "28d2cd31f1ca573320a357b2c4dcccf84c80f57dc5bec772d22c1c87c27e3060",
+      "bytes": 26170
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-main-fast-feedback.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f25c38e51ae8e64e53c71f683ac560e67e6d8a3f",
+      "sha256": "15327f0b948b528976856622a1086552541598eea5d02ff7dfa57c42739a0e4c",
+      "bytes": 4200
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-main-retained-desktop-refusal.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2605117c83a33b4b386cffcb50522e460a5d0085",
+      "sha256": "5fb42f6fc15c3b1d5ddd468e45ffad167c8731b0a7719e3af273848b7e72bf19",
+      "bytes": 22725
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682976.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "44d3475cfa5f68257b4a0594842d587e0485c395",
+      "sha256": "0aad10e1639e9ba7da0616fdfc98e0745320a61c5e80b9fa9a5d98a59968079f",
+      "bytes": 13686
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682430.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b46667183a947d54b4525530d8848a5554df5f51",
+      "sha256": "4e45f4591f20a42a88ecb77a9225585d67e70979679f06359557e49480620a73",
+      "bytes": 27354
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682446.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5750bbf1102fab97728e90a89a170f7e5cfc979c",
+      "sha256": "027c19f35f2f1b7177a1f65b13039ec5846e8fc388e92850dafef92ff259c0b5",
+      "bytes": 4425
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682754.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f018b471948e8fc3ada3f20c67ad390a61102b16",
+      "sha256": "341ab785b35f24082f8f11ffa0fd3fcf42d8d2d2325c3be8b98f006b30db54d0",
+      "bytes": 4428
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682895.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "34c06e725520864a247baaf2668d40e41a11fc51",
+      "sha256": "985e4842ac69c0d33e6ff3e44f084937c1c02ae20f51fc25254d4c2bd60cf6ea",
+      "bytes": 4474
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682686.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff15fe23363ff87f7e31cfc1ae8e0ee8a2bf0aec",
+      "sha256": "95ba32e4f160f14f197ff4c299b2e1ae49ff40b79699a33fd844458056bace9d",
+      "bytes": 4434
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682972.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "446396293a623bf32d1ccdf758d6b29d4a1c9457",
+      "sha256": "c85d3eb77e747ec0b6d250a4f250f6d8dc0c754b41c7ae7b161c2a16119e4b73",
+      "bytes": 4593
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682844.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "521c37efd919df14d22a6a37f54fcea475570085",
+      "sha256": "313f88c058a083ea72d4957e15d1545ed8015870631900e16465d3787110ea00",
+      "bytes": 2885
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682858.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "54d50ef45383a626eedd6eeefa3a6ef9d7e9c779",
+      "sha256": "71fd511ba819f81660f2110d3f7e7c73b8fc28bfcdf7a386a776dfc9ad1bfea3",
+      "bytes": 4475
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682918.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "95a4303fb314c69e99a4f0c3d457d8d403ef9cc0",
+      "sha256": "06859fdaf95e8453139951ca45ce6d4e730af332a14b7eac05f6627e80116c25",
+      "bytes": 5085
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167683345.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f467c0682424063ba05555354a31bf3b6bc071a2",
+      "sha256": "cb0c1916965afad836b13dcb3f5d84db92fd8edaf8816b80267303190bfcee4e",
+      "bytes": 4588
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682932.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15e690d4737d80a81f521b099f05d110461ccb49",
+      "sha256": "0ce1225b0ec72f5e1943b2ddce1fabb768f16eca522e171c81bce9ba31d727e5",
+      "bytes": 4483
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-job-135167682983.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0df90f89159111924257141a0306f6ef94e26fea",
+      "sha256": "1089ee063ae84dd1ef9c652a568591b11188e35ce86c3fbcbd60a783e4d81417",
+      "bytes": 40678
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-packaged-win-arm-module-failure.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ce2d3c18acf1f049e29cb8cd3010b4f512656554",
+      "sha256": "8aa85d8e546f5aecf29c7eddb7d0f17367bcc75e0bd240959b0a27467f2ca863",
+      "bytes": 30786
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-packaged-win-x64-module-failure.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a453c5de51cfff1d7454debd41d8b3cd90c45757",
+      "sha256": "bb8303322a1bae21a8a778e3baf787cc7b123937db34a2534bb11043da448bc1",
+      "bytes": 31290
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-review-flow-final-receipt.json.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ef69498f23dc3ab697ce3ddd3d39cfe823d23c93",
+      "sha256": "4c78095a0abc9c87c49c4c2749ac560b7c92ccc4cbfe838054c3b2218755c083",
+      "bytes": 507578
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-native-close-diagnostics-review-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4024048b731e5c795521e6382ccb5c7f3f77cacf",
+      "sha256": "c26d748a64d73b66e531b29137244fda2b7aba23650e2265ab4d520553bddcaf",
+      "bytes": 10346
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-native-close-diagnostics-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e72c6f51e0bf174ec39aa775303828564bbd6993",
+      "sha256": "db831b0901998a318c28184b7ec7e70111985bccfb4952e703bb164771846a3f",
+      "bytes": 6215
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-publication-review-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d110dc5a8a6325e6e81f810f5c3203aab6a96733",
+      "sha256": "ed751d1c2000ef0a76e09c7d1d0ccdb0a07036cba764f9a8da8be759ccc9040c",
+      "bytes": 39463
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-publication-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5f0d4b57daf12a0d9979e67ffcdc5b72b99f264c",
+      "sha256": "5d18c5eeb3f1a0fdf2702409b30f41c1d22f62a2d275a268d44deaafcc78372a",
+      "bytes": 17429
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-source-size-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "26375ac230bea01301cad94104b6c60d7d0eda01",
+      "sha256": "c580ea87df7e063d4e9e67a6dacd2cafb2fc632b905db85368319b597ccd8d84",
+      "bytes": 21169
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-source-freeze-amendment-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "522366c3091b5ed7791f65d7ae9a5621269d60a9",
+      "sha256": "6989648b629cdbc32f6d1eff2b1cd613946a4599f5e7b969aad8fef8d20cb7ef",
+      "bytes": 1261
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-publication-finite-receipts-20261119.json.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "080cdbbfb345297d4253e0a1100a4e3697204a51",
+      "sha256": "6f6a395535672a1283ad2ee51a086e75ea1b0179bf62554d60849eaa90bbe165",
+      "bytes": 7489
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-integration-source-review-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e78bfc3c8d6e6cfb55eabcf6db212ce7c8ec8a26",
+      "sha256": "d9e4518e048f54f6ebe470e5efd1627e44930b0b5a8cbab3ca05cab1a72d5424",
+      "bytes": 16914
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-packaged-posix-x64-module-failures.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a3e6f6ae35170b34da2dcfab5b6447a3d35b22d8",
+      "sha256": "ef854707a9a96735e2499b57e0143fca342c6268a6ddd6b6cd61d205a81df66e",
+      "bytes": 67077
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-main-final-original-verdict.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b70c109906b56b61ea1ef2ec1383eceed90f5267",
+      "sha256": "346bf8c07c80e3c11e599fcbaffe5e379dfa103e67d874ef8fb681318ecb35bd",
+      "bytes": 11576
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-main-terminal-capture.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8080dcf23c1a12f9bc23ded336512fb8de7315db",
+      "sha256": "63a35081cde725ea93dbe66cee76fb46582a762c582ace4ccc9e9634a374d364",
+      "bytes": 61243
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-solo-metadata-scope-clarification-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fef1ddc854219e5ae4ff7db71fcf892a5a5f133c",
+      "sha256": "109fbdcaad068c73dd85a7a30ec8fdf52056f1f5c60e8a5f379e88bddc4cf2c1",
+      "bytes": 4090
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-retained-eligibility-source-freeze-proposal-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "77c592c113b0e570179aabf5ae14e9add0fc769e",
+      "sha256": "5931e9e0d4c91ddf0a56a0cd52e8947b89fb0ed4fbee908f72abd44594378fd1",
+      "bytes": 4857
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-source-freeze-publication-amendment-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "839c16b7396094fd6dc92e1538910f207565e986",
+      "sha256": "80e15b8e6e33a1da9b0e2569841ed31a0075038b366d3b8166b5700a324c53b9",
+      "bytes": 2906
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-retained-eligibility-observer-manifest-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "15f9cec259b074ca5a073d6b9d6d571a13ddea7c",
+      "sha256": "f6d7fb4a1d6ce391300c4b1b5e340b7ca97629d0c49949ea3dbca35dd409795a",
+      "bytes": 5811
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-retained-eligibility-observer-r2-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4fd0e12979e4cdd97ac3fd22b0cb315a94db3afb",
+      "sha256": "7fcb5a18caa1a0ab3c2b6cc50a1eff383e1a64427def2784655cca3213a4ad36",
+      "bytes": 13603
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-retained-eligibility-finite-receipt-bundle-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a83931e243c3b6ac125350074d1f1763c05fe98a",
+      "sha256": "017f5752652c6523f5a2ffff7fe46834ada1afbeaae8556ff8ce43aed9bbfe72",
+      "bytes": 4149
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-source-size-publication-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8f215f414a4b4d67fa8bddec78d4ea6d5ad8d663",
+      "sha256": "22f020d07c5665a0f076340aba70ea3bdb4c958a55c561e62d83c852d484407b",
+      "bytes": 22113
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-packaged-terminal-observation-gap.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1fb02d9d72c71410d78a9c55035b0c5bc56cb33d",
+      "sha256": "b8ede8221921eae23dd5324959c1c4b520c891fe750be1c8cb0dab1d53e09db2",
+      "bytes": 100543
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-host-terminal-closure.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "901a5ed1154fc273d857b4baad72e87f8a57d9aa",
+      "sha256": "887dea79a7f69458363ae2c279d78fbfb458b7d738760f3dce6a142638ab7bba",
+      "bytes": 86670
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-retained-eligibility-finite-receipts-20261119.json.gz",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d51aa3f0397ca3f09b417b841a9d70970e811fda",
+      "sha256": "5c0652d68e52c0e0a378742113e805eb7bb6f83fa9adf17582434b96b551b766",
+      "bytes": 11150
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-followup-integration-publication-source-review-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fd7038f734066e942374745cbfcf71798fd46999",
+      "sha256": "dc7d0f80c4f3bca60b1e02718ac4e6872ac1ee294661399bab333a14c94ae253",
+      "bytes": 19270
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4a0cb44e3616a214dc7c6ff69fb9f842bdb9a21c",
+      "sha256": "d668ffaf22dc15e9d166dff71343626121db355012b78ed1064432e2668965c8",
+      "bytes": 67697
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/parity-030-followup-index-20261119.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66bd8228b70828981f05e84a4c95fd7720bbd84c",
+      "sha256": "8556245467252ac45a7dccb91d1eb7408252a68607959e28af29efd8ddb66ddf",
+      "bytes": 60500
+    }
+  ],
+  "limits": [
+    "Reconstructed hash equals the actual Git tree SHA provided by parent; reviewer performed no remote query or Git write.",
+    "Source/finite test outcomes retain their already-pinned component review limits.",
+    "Fresh actual live-job leases and current ref/PR/base checks remain root publication gates."
+  ]
+}

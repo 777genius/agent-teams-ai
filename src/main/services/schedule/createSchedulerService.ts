@@ -1,15 +1,19 @@
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
+
 import { isControllerTaskNotFoundError } from '../team/taskCreationIdempotency';
 import { TeamConfigReader } from '../team/TeamConfigReader';
 
 import { JsonScheduleRepository } from './JsonScheduleRepository';
 import { ScheduledTaskExecutor } from './ScheduledTaskExecutor';
 import { SchedulerService } from './SchedulerService';
+import { SelectedScheduleDispatcher } from './SelectedScheduleDispatcher';
 import { SmartScheduleDispatcher } from './SmartScheduleDispatcher';
 
 import type { TeamIpcHandlerApis } from '../team/contracts/TeamProvisioningApis';
 import type { TeamDataService } from '../team/TeamDataService';
 import type { TeamProvisioningService } from '../team/TeamProvisioningService';
 import type { ScheduleTargets } from './scheduleTarget';
+import type { HostScheduleRuntimeFactory } from './SelectedScheduleDispatcher';
 
 /** Composes the scheduler from existing main-process APIs; no new runtime owner. */
 export function createSchedulerService(
@@ -27,7 +31,8 @@ export function createSchedulerService(
     TeamProvisioningService,
     'launchTeam' | 'prepareForProvisioning' | 'hasTeamOperationInProgress'
   >,
-  targets: ScheduleTargets
+  host?: HostScheduleRuntimeFactory,
+  targets?: ScheduleTargets
 ): SchedulerService {
   const executor = new ScheduledTaskExecutor();
   const repository = new JsonScheduleRepository();
@@ -40,6 +45,7 @@ export function createSchedulerService(
     getMemberStatuses: (teamName) => apis.memberLifecycle.getMemberSpawnStatuses(teamName),
     getLeadName: (teamName) => data.getLeadMemberName(teamName),
     getSavedRequest: (teamName) => data.getSavedRequest(teamName),
+    hasLaunchConfig: async (teamName) => (await configReader.getConfigVerified(teamName)) !== null,
     hasActiveOwnedTask: (teamName, memberName) => data.hasActiveOwnedTask(teamName, memberName),
     hasRunnableConfig: async (teamName) => {
       const config = await configReader.getConfig(teamName);
@@ -60,16 +66,42 @@ export function createSchedulerService(
       }
     },
     startTaskByUser: (teamName, taskId, admission) =>
-      data.startTaskByUser(teamName, taskId, admission),
-    attachMember: (teamName, memberName) =>
-      apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
+      data.startTaskByUser(
+        teamName,
+        taskId,
+        admission && {
+          ...admission,
+          isCurrent: () =>
+            admission.isCurrent() &&
+            apis.runtime.getCurrentRunId(teamName) === admission.expectedRunId &&
+            apis.runtime.isTeamAlive(teamName) &&
+            !provisioning.hasTeamOperationInProgress(teamName),
+        }
+      ),
+    attachMember: (teamName, memberName, expected) => {
+      if (
+        expected &&
+        (apis.runtime.getCurrentRunId(teamName) !== expected.runId ||
+          !apis.runtime.isTeamAlive(teamName) ||
+          provisioning.hasTeamOperationInProgress(teamName))
+      )
+        throw new Error('Scheduled recipient changed before attach');
+      return apis.memberLifecycle.attachLiveRosterMember(teamName, memberName, {
         reason: 'member_added',
-      }),
+      });
+    },
     createTask: (teamName, request) => data.createTask(teamName, request),
     launchTeam: (request) => provisioning.launchTeam(request, () => undefined),
     runOneShot: (request) => executor.execute(request),
-    resolveTarget: (schedule) => targets.resolve(schedule),
-    launchProjectTeam: (schedule, request) => targets.launch(schedule, request),
+    ...(targets
+      ? {
+          resolveTarget: (schedule: import('@shared/types').Schedule) => targets.resolve(schedule),
+          launchProjectTeam: (
+            schedule: import('@shared/types').Schedule,
+            request: import('@shared/types').TeamLaunchRequest
+          ) => targets.launch(schedule, request),
+        }
+      : {}),
   });
 
   return new SchedulerService(
@@ -79,7 +111,15 @@ export function createSchedulerService(
       const result = await provisioning.prepareForProvisioning(cwd, { forceFresh: true });
       return { ready: result.ready, message: result.message };
     },
-    dispatcher,
-    (teamName, change) => targets.admit(teamName, change)
+    new SelectedScheduleDispatcher(
+      dispatcher,
+      async (scheduleId, runId) =>
+        (await repository.listRuns(scheduleId, { limit: 50 })).filter((run) => run.id !== runId),
+      host
+    ),
+    (teamName, change) =>
+      isHostTeamSelectionKey(teamName)
+        ? Promise.resolve(true)
+        : (targets?.admit(teamName, change) ?? Promise.resolve(true))
   );
 }

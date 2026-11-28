@@ -600,15 +600,23 @@ describe('TaskChangeLedgerReader', () => {
     await writeFile(path.join(blobsDir, 'shared.txt'), content, 'utf8');
 
     const reader = new TaskChangeLedgerReader();
-    const instrumentedReader = reader as unknown as {
-      readConfinedLedgerFile: (
-        projectDir: string,
-        filePath: string,
-        maxBytes: number,
-        containmentRoot?: string
-      ) => Promise<Buffer | null>;
-    };
-    const originalReadConfinedFile = instrumentedReader.readConfinedLedgerFile.bind(reader);
+    // The extracted filesystem owner keeps one limiter across concurrent reads.
+    const instrumentedReader = (
+      reader as unknown as {
+        reader: {
+          files: {
+            readConfinedLedgerFile: (
+              projectDir: string,
+              filePath: string,
+              maxBytes: number,
+              containmentRoot?: string
+            ) => Promise<Buffer | null>;
+          };
+        };
+      }
+    ).reader.files;
+    const originalReadConfinedFile =
+      instrumentedReader.readConfinedLedgerFile.bind(instrumentedReader);
     let activeReads = 0;
     let maximumActiveReads = 0;
     instrumentedReader.readConfinedLedgerFile = async (

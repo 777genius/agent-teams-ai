@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention -- vi.mock component exports must stay PascalCase. */
 import React, { act } from 'react';
+import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
+import { useStableActiveMembers } from '@renderer/components/team/useStableActiveMembers';
 import { createEncodedTaskReference } from '@renderer/utils/taskReferenceUtils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -124,12 +126,14 @@ const suggestionHarness = vi.hoisted(() => {
     taskOptions: [] as SuggestionHookOptions[],
     teamOptions: [] as SuggestionHookOptions[],
     currentTaskSuggestions: [] as MentionSuggestion[],
+    realEditor: false,
   };
   return {
     reset: () => {
       state.taskOptions = [];
       state.teamOptions = [];
       state.currentTaskSuggestions = [];
+      state.realEditor = false;
     },
     state,
   };
@@ -198,7 +202,9 @@ vi.mock('@renderer/components/team/messages/OpenCodeDeliveryWarning', () => ({
   OpenCodeDeliveryWarning: () => null,
 }));
 
-vi.mock('@renderer/components/ui/MentionableTextarea', () => {
+vi.mock('@renderer/components/ui/MentionableTextarea', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('@renderer/components/ui/MentionableTextarea')>();
   const MockMentionableTextarea = React.forwardRef<
     HTMLTextAreaElement,
     {
@@ -214,6 +220,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
       cornerAction?: React.ReactNode;
       cornerActionLeft?: React.ReactNode;
       footerRight?: React.ReactNode;
+      showHint?: boolean;
       onBlur?: React.FocusEventHandler<HTMLTextAreaElement>;
       onFocus?: React.FocusEventHandler<HTMLTextAreaElement>;
     }
@@ -232,6 +239,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
         cornerAction,
         cornerActionLeft,
         footerRight,
+        showHint,
         onBlur,
         onFocus,
       },
@@ -262,11 +270,27 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
           React.createElement('div', null, cornerActionLeft),
           React.createElement('div', null, cornerAction)
         ),
-        React.createElement('div', { className: footerClassName }, footerRight)
+        React.createElement(
+          'div',
+          { className: footerClassName },
+          showHint
+            ? React.createElement('span', { 'data-composer-focus-hint': true }, 'hint')
+            : null,
+          footerRight
+        )
       )
   );
   MockMentionableTextarea.displayName = 'MockMentionableTextarea';
-  return { MentionableTextarea: MockMentionableTextarea };
+  const TestMentionableTextarea = React.forwardRef<
+    HTMLTextAreaElement,
+    React.ComponentPropsWithoutRef<typeof actual.MentionableTextarea>
+  >((props, ref) =>
+    suggestionHarness.state.realEditor
+      ? React.createElement(actual.MentionableTextarea, { ...props, ref })
+      : React.createElement(MockMentionableTextarea, { ...props, ref })
+  );
+  TestMentionableTextarea.displayName = 'TestMentionableTextarea';
+  return { MentionableTextarea: TestMentionableTextarea };
 });
 
 vi.mock('@renderer/components/ui/popover', () => {
@@ -498,7 +522,10 @@ const members: ResolvedTeamMember[] = [
   },
 ];
 
-function renderComposer(overrides: Partial<MemberMessageComposerProps> = {}): {
+function renderComposer(
+  overrides: Partial<MemberMessageComposerProps> = {},
+  Component: React.ComponentType<MemberMessageComposerProps> = MessageComposer
+): {
   host: HTMLDivElement;
   render: (next?: Partial<MemberMessageComposerProps>) => void;
   root: ReturnType<typeof createRoot>;
@@ -526,7 +553,7 @@ function renderComposer(overrides: Partial<MemberMessageComposerProps> = {}): {
 
   const render = (next: Partial<MemberMessageComposerProps> = {}): void => {
     act(() => {
-      root.render(React.createElement(MessageComposer, { ...baseProps, ...overrides, ...next }));
+      root.render(React.createElement(Component, { ...baseProps, ...overrides, ...next }));
     });
   };
   render();
@@ -655,7 +682,8 @@ describe('MessageComposer pending send lifecycle', () => {
   });
 
   it('renders the footer below the flat composer card', () => {
-    const { host, root } = renderComposer();
+    suggestionHarness.state.realEditor = true;
+    const { host, render, root } = renderComposer();
     const layout = host.querySelector('.message-composer-flat-layout');
     const toolbar = layout?.querySelector('.message-composer-flat-toolbar');
     const body = layout?.querySelector('.message-composer-flat-body');
@@ -681,6 +709,13 @@ describe('MessageComposer pending send lifecycle', () => {
     expect(toolbar?.textContent).toContain('Group chat');
     expect(toolbar?.textContent).toContain('Group chat');
 
+    expect(footer?.classList.contains('empty:flex')).toBe(true);
+    expect(footer?.classList.contains('empty:hidden')).toBe(false);
+    render({ layout: 'compact' });
+    const compactFooter = host.querySelector('.message-composer-flat-footer');
+    expect(compactFooter).not.toBeNull();
+    expect(compactFooter?.classList.contains('empty:hidden')).toBe(true);
+    expect(compactFooter?.classList.contains('empty:flex')).toBe(false);
     act(() => {
       root.unmount();
     });
@@ -1161,6 +1196,96 @@ describe('MessageComposer pending send lifecycle', () => {
     }
   );
 
+  it('does not add a hint footer when pointer focus enters through a Composer control', () => {
+    draftHarness.state.text = '';
+    const { host, root } = renderComposer();
+    const selector = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Select Team: team-alpha"]'
+    );
+    expect(selector).not.toBeNull();
+    const hint = () => host.querySelector('[data-composer-focus-hint]');
+    expect(hint()).toBeNull();
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      selector!.focus();
+    });
+    expect(document.activeElement).toBe(selector);
+    expect(hint()).toBeNull();
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      selector!.click();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
+  it('keeps the hint footer while focus moves to Composer controls and clears it outside', () => {
+    suggestionHarness.state.realEditor = true;
+    draftHarness.state.text = '';
+    const { host, root } = renderComposer({
+      cornerActionPrefix: createPortal(
+        React.createElement('button', { id: 'TEST-portal-focus' }, 'portal'),
+        document.body
+      ),
+    });
+    const textarea = host.querySelector('textarea');
+    if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Message textarea not found');
+    textarea.style.lineHeight = '20px';
+    const selector = host.querySelector<HTMLButtonElement>(
+      'button[aria-label="Select Team: team-alpha"]'
+    );
+    expect(selector).not.toBeNull();
+    const footer = () => host.querySelector('.message-composer-flat-footer');
+    const hint = () => footer()?.querySelector(':scope > span.min-h-6') ?? null;
+    const originalFooter = footer();
+    expect(originalFooter).not.toBeNull();
+    expect(originalFooter?.classList.contains('empty:flex')).toBe(true);
+    expect(originalFooter?.classList.contains('empty:hidden')).toBe(false);
+    expect(hint()).toBeNull();
+
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+    expect(footer()?.textContent).toContain('Saved');
+
+    // Native pointerdown focuses this toolbar button before pointerup/click.
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      selector!.focus();
+    });
+    expect(document.activeElement).toBe(selector);
+    expect(hint()).not.toBeNull();
+    expect(footer()?.textContent).not.toContain('Saved');
+    act(() => {
+      selector!.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
+      selector!.click();
+    });
+    expect(storeHarness.methods.fetchCrossTeamTargets).toHaveBeenCalledTimes(1);
+
+    // React portal events bubble through Composer, but their DOM focus is outside it.
+    const portalButton = document.getElementById('TEST-portal-focus');
+    act(() => portalButton!.focus());
+    expect(document.activeElement).toBe(portalButton);
+    expect(hint()).toBeNull();
+    expect(footer()).toBe(originalFooter);
+    expect(footer()?.textContent).not.toContain('Saved');
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    act(() => outside.focus());
+    expect(document.activeElement).toBe(outside);
+    expect(hint()).toBeNull();
+    expect(footer()).toBe(originalFooter);
+    expect(footer()?.childElementCount).toBe(0);
+    expect(footer()?.classList.contains('empty:flex')).toBe(true);
+    expect(footer()?.classList.contains('empty:hidden')).toBe(false);
+    act(() => textarea.focus());
+    expect(hint()).not.toBeNull();
+    act(() => root.unmount());
+    outside.remove();
+  });
+
   it('does not autofocus the textarea until a chat thread is opened', () => {
     const { host, root } = renderComposer();
     expect(document.activeElement).not.toBe(getTextarea(host));
@@ -1452,6 +1577,84 @@ describe('MessageComposer pending send lifecycle', () => {
     act(() => {
       root.unmount();
     });
+  });
+
+  it('opens only captured commands on the first single slash input', () => {
+    suggestionHarness.state.realEditor = true;
+    draftHarness.state.text = '';
+    const lead: ResolvedTeamMember = {
+      ...members[0],
+      agentType: 'team-lead',
+      providerId: 'codex',
+    };
+    const observedMembers: ResolvedTeamMember[][] = [];
+    const StableComposer = (props: MemberMessageComposerProps) => {
+      const active = useStableActiveMembers(props.members);
+      observedMembers.push(active);
+      return React.createElement(MessageComposer, { ...props, members: active });
+    };
+    const captured: ResolvedTeamMember = { ...lead, runtimeOwner: 'captured-host' };
+    const ready: ResolvedTeamMember = {
+      ...captured,
+      sessionCommands: [{ name: 'cost', description: 'Captured session token usage' }],
+      nativeInboxAttachmentsSupported: true,
+      nativeInboxTextAttachmentsSupported: true,
+    };
+    const { host, render, root, onSend } = renderComposer({ members: [lead] }, StableComposer);
+    try {
+      render({ members: [captured] });
+      expect(observedMembers.at(-1)?.[0].runtimeOwner).toBe('captured-host');
+      render({ members: [ready] });
+      expect(observedMembers.at(-1)?.[0].nativeInboxAttachmentsSupported).toBe(true);
+      expect(observedMembers.at(-1)?.[0].nativeInboxTextAttachmentsSupported).toBe(true);
+      const originalMembers = observedMembers.at(-1);
+      render({
+        members: [
+          { ...ready, sessionCommands: ready.sessionCommands?.map((command) => ({ ...command })) },
+        ],
+      });
+      expect(observedMembers.at(-1), 'equal cloned capabilities retain stable members').toBe(
+        originalMembers
+      );
+      const textarea = host.querySelector('textarea');
+      if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Message textarea not found');
+      textarea.style.lineHeight = '20px';
+      act(() => textarea.focus());
+      expect(host.querySelector('[role="listbox"]')).toBeNull();
+      const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+      if (!setValue) throw new Error('Native textarea value setter unavailable');
+      act(() => {
+        setValue.call(textarea, '/');
+        expect(textarea.selectionStart).toBe(1);
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      render({ members: [ready] });
+      expect(draftHarness.methods.setText.mock.calls).toEqual([['/']]);
+      expect(
+        Array.from(host.querySelectorAll('[role="option"] .font-medium')).map(
+          (option) => option.textContent
+        )
+      ).toEqual(['/cost']);
+
+      render({
+        members: [
+          {
+            ...ready,
+            sessionCommands: [],
+            nativeInboxAttachmentsSupported: false,
+            nativeInboxTextAttachmentsSupported: false,
+          },
+        ],
+      });
+      expect(host.querySelectorAll('[role="option"]')).toHaveLength(0);
+      expect(observedMembers.at(-1)?.[0].nativeInboxAttachmentsSupported).toBe(false);
+      expect(observedMembers.at(-1)?.[0].nativeInboxTextAttachmentsSupported).toBe(false);
+      expect(onSend).not.toHaveBeenCalled();
+      expect(storeHarness.methods.fetchSkillsCatalog).not.toHaveBeenCalled();
+      expect(storeHarness.methods.fetchCrossTeamTargets).not.toHaveBeenCalled();
+    } finally {
+      act(() => root.unmount());
+    }
   });
 
   it('defers expensive mention data until the matching trigger is typed', () => {

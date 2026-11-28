@@ -1,0 +1,60 @@
+{
+  "stage": "K",
+  "status": "ACTUAL published exact source, documentation and independent readbacks; no K command executed at binding",
+  "manifest": {
+    "bytes": 223781,
+    "blob": "9ee92856321b14011122258e39e638ec1ca862b1",
+    "sha256": "3ee139e0911084f4a37bf944ef8594b8a80e72068f4a131be264ce731099037b"
+  },
+  "recorder": {
+    "bytes": 21172,
+    "blob": "7766822c39ed7581c1f8d883d34e33069e3170ac",
+    "sha256": "599f2e5c57cb57afa53e9666d57ccc087c242ac0ba362bffa3e2edb10ea1906b"
+  },
+  "independentValidationReview": {
+    "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/independent-prospective-review.json",
+    "bytes": 9328,
+    "blob": "dea3de262a2fb70f54de6cd0bec7e59a9c66d154",
+    "sha256": "969259e163d7a4849b390bd21276d2621add257b670fc38fc7e8f54d5acc59e2"
+  },
+  "documentation": {
+    "head": "fdd6d0317a90a9ae78e121a319b6fe1c068f00f1",
+    "tree": "fb9bbbdf42060bae7ba860bea668a86c3d194494",
+    "parents": [
+      "9df2adf381b5965315634f68f2f105fa7fb6fb6e"
+    ],
+    "planBlob": "80e59bbc1bce8e6baca014d2743a9a09328d8529",
+    "readback": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-publication-v2-independent-published-review.json",
+      "bytes": 24669,
+      "blob": "049a14269f52c8f81cf70a3f21e19490ca116bd3",
+      "sha256": "2234709192e9f05dbafd91ceae9bb0a7ddad72bc14bc9a7d4c5f42c0f493cbe8"
+    },
+    "validationPaths": {
+      "manifest": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/validation/validation-manifest.json",
+      "recorder": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/validation/run_check.py",
+      "hostSourceClosure": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/validation/host-source-closure.json",
+      "ledgerTrackedClosure": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-k-prospective-adoption-2026-11-15/validation/ledger-tracked-closure.json"
+    }
+  },
+  "source": {
+    "head": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+    "tree": "de63f46beda4d0aba7c0ff79e8b3f0b330a377f0",
+    "parents": [
+      "fdd6d0317a90a9ae78e121a319b6fe1c068f00f1",
+      "27b1acf48278dcd0fb348c626696eac2dc64de73"
+    ],
+    "readback": {
+      "path": "/workspace/scratch/82d3f9ba6b85/stage-k-adoption/independent-published-source-review.json",
+      "bytes": 6477,
+      "blob": "7fb2bef17a431e0fb4411be9d287ef6723a99771",
+      "sha256": "fcc97aa6e0e21b86f25f1d4d6a7706107893d0f92e98c90513202ca354fadd2c"
+    }
+  },
+  "limits": [
+    "Null publication/review fields are intentionally unusable. Final stage-bindings.json is a separate actual record; no rewriting this prospective template.",
+    "Recorder requires exact immutable review and readback file identities and independently checks Git source/doc trees, published recorder/manifest, complete declared source and output closures.",
+    "No project commands, Node, compiler, lint, tests, native processes, providers, workflow dispatch/rerun/cancel or tracked/ref changes were performed while preparing these files."
+  ],
+  "recordedUtc": "2026-11-15T23:20:21.308342+00:00"
+}

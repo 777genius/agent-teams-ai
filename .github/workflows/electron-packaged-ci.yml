@@ -3,42 +3,8 @@ name: Electron packaged CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled, edited]
-    paths:
-      - '.github/workflows/electron-packaged-ci.yml'
-      - 'scripts/ci/packaged-ci-*.mts'
-      - 'scripts/ci/verify-bundled-undici.cjs'
-      - 'test/scripts/verify-bundled-undici.test.cjs'
-      - '.node-version'
-      - 'scripts/ci/ci-change-scope.mts'
-      - 'scripts/ci/verify-dmg-artwork.mts'
-      - 'resources/dmg/**'
-      - 'scripts/tsconfig/tsconfig.packaged-ci.json'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'scripts/electron-builder/**'
-      - 'runtime.lock.json'
-      - 'scripts/e2e/opencode-project-path-packaged.mjs'
-      - 'src/main/services/runtime/ClaudeMultimodelBridgeService.ts'
-      - 'src/main/services/runtime/runtimeStatusExecutionContext.ts'
-      - 'src/main/services/team/provisioning/TeamProvisioningProviderPreflight.ts'
-      - 'managed-git.lock.json'
-      - 'scripts/stage-managed-git.mjs'
-      - 'src/main/utils/managedGit.ts'
-      - 'scripts/stage-runtime.mjs'
-      - 'scripts/lib/github-release-download-error.mjs'
-      - 'scripts/lib/runtime-archive-checksum.mjs'
-      - 'scripts/lib/runtime-payload-cache.mjs'
-      - 'scripts/lib/runtime-payload-inventory.mts'
-      - 'scripts/lib/runtime-windows-zip-extraction.mts'
-      - 'scripts/lib/runtime-windows-zip-extraction.test.mts'
-      - 'scripts/lib/runtime-archive-extraction.mts'
-      - 'scripts/ensure-electron-install.cjs'
-      - 'scripts/prepare-cpu-features-rebuild.cjs'
-      - 'scripts/postinstall-electron.cjs'
-      - 'src/main/ipc/window.ts'
-      - 'src/main/utils/electronDevPathOverrides.ts'
-      - 'src/main/bootstrapUserDataMigration.ts'
+    # No GitHub paths filter: its 3,000-file cap can silently skip Host/provider changes.
+    # The checked-out exact local git diff is classified by packaged-ci-cli.mts.
 
 permissions:
   contents: read
@@ -69,6 +35,8 @@ jobs:
           node-version-file: .node-version
       - name: Verify packaged CI policy contracts
         run: node --test scripts/ci/packaged-ci-policy.test.mts
+      - name: Test provider archive integrity gate
+        run: node --test scripts/ci/packaged-ci-provider-integrity.test.ts
       - name: Classify exact local PR diff
         id: scope
         run: node scripts/ci/packaged-ci-cli.mts classify
@@ -114,9 +82,18 @@ jobs:
             pack: pack:linux
             bundle: release/linux-unpacked
 
+    env:
+      OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+      OPENCODE_V2_TEST_PLATFORM: ${{ matrix.platform }}
+
     steps:
+      - name: Enable Windows long paths
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: git config --global core.longpaths true
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
@@ -138,6 +115,8 @@ jobs:
               find "$root" -path '*/node-gyp/gyp/gyp_main.py' -exec chmod +x {} \; 2>/dev/null || true
             fi
           done
+      - name: Verify selected provider archives against frozen lock before install
+        run: node scripts/ci/packaged-ci-provider-integrity.ts
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
       - name: Verify managed Git pins and archive path safety
@@ -170,6 +149,45 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
+      - name: Select exact Host Node for candidate staging
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Prepare actual pinned V2 Bun, engine and admitted process custody
+        env:
+          GH_TOKEN: ${{ secrets.RUNTIME_BUILD_DISPATCH_TOKEN }}
+          OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged-inputs.json
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Prefill pinned macOS arm64 Host Node archive
+        if: matrix.platform == 'darwin-arm64'
+        run: node scripts/ci/prefill-legacy-host-macos-node.mts
+      - name: Stage V2 Host closure in existing candidate extraResources
+        run: node scripts/legacy-agent-host/stage-opencode-v2-packaged.ts
+      - name: Typecheck and test packaged Host capture boundaries
+        shell: bash
+        run: |
+          node node_modules/@typescript/native/bin/tsc -p tsconfig.legacy-agent-host-scripts.json
+          node --test scripts/legacy-agent-host/candidate-closure.test.ts scripts/legacy-agent-host/packaged-opencode-v2-inputs.test.ts scripts/legacy-agent-host/stage-node.test.ts
+      - name: Verify and stage original Windows scoped broker for packaged Retry
+        if: matrix.os == 'win32'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.json
+          if ($LASTEXITCODE -ne 0) { throw 'Original broker compiler failed' }
+          node node_modules/@typescript/native/bin/tsc --noEmit -p tools/owned-process-broker/tsconfig.retained-host.json
+          if ($LASTEXITCODE -ne 0) { throw 'Original retained Host compiler failed' }
+          node node_modules/vitest/vitest.mjs run --maxWorkers=1 --config tools/owned-process-broker/vitest.config.ts
+          if ($LASTEXITCODE -ne 0) { throw 'Original broker protocol cases failed' }
+          node --check tools/owned-process-broker/nativeWindowsAppGate.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged Windows driver syntax failed' }
+          $build = Join-Path $env:RUNNER_TEMP ("TEST-Windows-UI-build-" + $env:GITHUB_RUN_ID + "-" + $env:RUNNER_ARCH)
+          $stage = Join-Path $PWD 'resources\legacy-agent-host\windows-retry-custody'
+          if (Test-Path $stage) { throw 'Windows Retry broker destination must be absent' }
+          $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source
+          pnpm exec tsx scripts/build/buildOwnedProcessBroker.ts ${{ matrix.arch }} $build $stage $cmake service-scopes-v1
+          if ($LASTEXITCODE -ne 0) { throw 'Original scoped broker stage failed' }
+          "WINDOWS_RETRY_BUILD=$build" >> $env:GITHUB_ENV
       - name: Package unsigned test bundle
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -199,6 +217,81 @@ jobs:
       - name: Smoke packaged app under Xvfb
         if: matrix.os == 'linux'
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "${{ matrix.bundle }}" linux
+      - name: Qualify actual packaged V2 Host tools, MCP, Stop and cold Resume
+        # The runner restores its disposable checkout and the intact legacy payload
+        # in finally. No parent shell may keep the Windows checkout as its cwd.
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        env:
+          OPENCODE_V2_PACKAGED_RECEIPT: ${{ runner.temp }}/opencode-v2-packaged.json
+        run: node "${{ github.workspace }}/scripts/legacy-agent-host/run-packaged-opencode-v2.ts" "${{ matrix.bundle }}" "${{ matrix.platform }}"
+      - name: Qualify packaged Windows same-Main Retry and original Processes UI Kill with finite peers
+        if: matrix.os == 'win32'
+        shell: pwsh
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bundle = (Resolve-Path '${{ matrix.bundle }}').Path
+          $apps = @(Get-ChildItem -LiteralPath $bundle -File -Filter '*.exe' | Where-Object { $_.Name -notmatch 'uninstall' })
+          if ($apps.Count -ne 1) { throw 'Expected one original packaged application executable' }
+          $app = $apps[0].FullName
+          $broker = Join-Path $bundle 'resources\legacy-agent-host\windows-retry-custody\owned-process-broker.exe'
+          $query = Join-Path $env:WINDOWS_RETRY_BUILD 'Release\owned-process-fixture.exe'
+          $receipt = Join-Path $env:RUNNER_TEMP 'windows-same-main-process-ui.json'
+          $controller = Join-Path $env:WINDOWS_RETRY_BUILD 'Release\owned-process-gate-controller.exe'
+          $controllerHash = (Get-FileHash -Algorithm SHA256 $controller).Hash
+          $controllerLog = Join-Path $env:RUNNER_TEMP 'windows-same-main-process-ui.controller.log'
+          $node = (Get-Command node.exe -ErrorAction Stop).Source
+          $loader = ([System.Uri]((Resolve-Path 'node_modules\tsx\dist\loader.mjs').Path)).AbsoluteUri
+          $gate = (Resolve-Path 'tools\owned-process-broker\nativeWindowsAppGate.mjs').Path
+          $env:TSX_TSCONFIG_PATH = (Resolve-Path 'tsconfig.json').Path
+          & $controller $node --import $loader $gate $app $broker $query $receipt 2>&1 | Tee-Object -FilePath $controllerLog
+          if ($LASTEXITCODE -ne 0) { throw 'Original controller did not confirm finite UI cleanup' }
+          if ((Get-FileHash -Algorithm SHA256 $controller).Hash -ne $controllerHash) { throw 'Original controller changed' }
+          node --input-type=module -e "import assert from 'node:assert/strict';import fs from 'node:fs';const b=fs.readFileSync(process.argv[1]);assert.ok(b.length>0&&b.length<=65536);const lines=b.toString('utf8').trim().split(/\r?\n/u);const rows=lines.filter(line=>line.startsWith('{')).map(line=>JSON.parse(line)).filter(row=>row.gateController!==undefined);assert.deepEqual(rows,[{gateController:'drained',rootExitCode:0,activeProcesses:0}]);" $controllerLog
+          if ($LASTEXITCODE -ne 0) { throw 'Exact original controller accounting refused' }
+          node --input-type=module -e "import assert from 'node:assert/strict';import fs from 'node:fs';const r=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));assert.equal(r.kind,'TEST_WINDOWS_PACKAGED_SAME_MAIN_PROCESS_UI');assert.equal(r.status,'PASS');assert.equal(r.cleanup,true);assert.equal(r.sourceHead,process.env.EXPECTED_SOURCE_SHA);assert.equal(r.platform,'win32-'+process.arch);assert.deepEqual(r.counts,{mainStarts:1,initialRuntimeOpen:1,businessInput:1,refreshClicks:1,retryClicks:1,uiStops:2,quit:1});assert.equal(r.actualHostSuccessors,1);assert.equal(r.originalRuntimeGenerations,1);assert.equal(r.modelRequests,0);assert.equal(r.modelProbes,0);assert.equal(r.realVendorExecutions,0);assert.equal(r.peer.provider,'codex');assert.equal(r.peer.connected,1);assert.equal(r.peer.registrations,1);assert.equal(r.peer.serviceExitObservations,2);assert.equal(r.peer.failures,0);assert.deepEqual(r.nativeCleanup,{phase:'completed',cleanup:true,originalQueryWitnesses:3,runtimeGenerations:1,runtimeInputs:1,modelRequests:0,probes:0,realVendorExecutions:0,originalUiStops:2,serviceExitObservations:2});assert.equal(r.packagedAndNativeInputsUnchanged,true);assert.equal(r.sourceFreezeFailure,undefined);assert.equal(r.peerEvidenceFailure,undefined);assert.equal(r.originalMain.pid,r.sameMainAfterRetry.pid);assert.equal(r.originalMain.birth,r.sameMainAfterRetry.birth);" $receipt
+          if ($LASTEXITCODE -ne 0) { throw 'Exact finite same-Main UI receipt refused' }
+      - name: Qualify original packaged macOS app relaunch with finite SDK peer
+        if: matrix.os == 'darwin'
+        shell: bash
+        env:
+          TMPDIR: ${{ runner.temp }}
+          LEGACY_DESKTOP_BACKEND_GO: '1'
+          LEGACY_DESKTOP_EMULATED_ONLY: '1'
+          LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui
+        run: |
+          set -euo pipefail
+          inputs="$(mktemp -d "$RUNNER_TEMP/TEST-packaged-relaunch-inputs-XXXXXX")"
+          mkdir "$inputs/corepack"
+          printf '{"private":true}\n' > "$inputs/corepack/package.json"
+          pnpm --dir "$inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          node --import tsx scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \
+            "${{ matrix.bundle }}" "$inputs/corepack/node_modules/corepack/dist/pnpm.js" \
+            "$RUNNER_TEMP/packaged-app-relaunch.json"
+      - name: Preserve exact packaged Host evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: packaged-v2-host-${{ matrix.platform }}-${{ github.event.pull_request.head.sha }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/opencode-v2-packaged-inputs.json
+            ${{ runner.temp }}/opencode-v2-packaged.json
+            ${{ runner.temp }}/opencode-v2-packaged-native.json
+            ${{ github.workspace }}/resources/legacy-agent-host/opencode-v2-candidate.json
+            ${{ runner.temp }}/windows-same-main-process-ui.json
+            ${{ runner.temp }}/windows-same-main-process-ui.app.log
+            ${{ runner.temp }}/windows-same-main-process-ui.controller.log
+            ${{ runner.temp }}/windows-same-main-process-ui.*.png
+            ${{ runner.temp }}/packaged-app-relaunch.json
+            ${{ runner.temp }}/packaged-app-relaunch.app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-launch.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-emulated-lifecycle-stopped.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-automatic-app-relaunch-successor.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-packaged-relaunch-failure.png
 
   packaged-full-gate:
     needs: [packaged-scope, packaged-smoke]

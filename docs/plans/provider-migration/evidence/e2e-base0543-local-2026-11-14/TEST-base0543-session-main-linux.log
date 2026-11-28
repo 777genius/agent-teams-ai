@@ -1,0 +1,45 @@
+
+ RUN  v3.2.6 /workspace/scratch/391e21b06e24/reconcile-base0543
+
+ ✓ test/main/utils/childProcess.test.ts (54 tests) 161ms
+stdout | test/features/agent-backend/capturedHostClient.test.ts
+Downloading Electron binary...
+
+ ✓ test/features/agent-backend/capturedHostClient.test.ts (30 tests) 21465ms
+   ✓ captured legacy host client over real subprocess stdio > keeps the original service intent and scope through late ACK and a successor Host  899ms
+   ✓ captured legacy host client over real subprocess stdio > derives retained service absence only from the original whole-Job proof: job-membership  379ms
+   ✓ captured legacy host client over real subprocess stdio > derives retained service absence only from the original whole-Job proof: no-local-dispatch  726ms
+   ✓ captured legacy host client over real subprocess stdio > retains Main launch/stdio/receipt ownership across graceful Host close  666ms
+   ✓ captured legacy host client over real subprocess stdio > retains Main launch/stdio/receipt ownership across crash Host close  678ms
+   ✓ captured legacy host client over real subprocess stdio > queues multi-member launch and graceful cleanup without caching capacity refusals  806ms
+   ✓ captured legacy host client over real subprocess stdio > queues multi-member launch and expired cleanup without caching capacity refusals  580ms
+   ✓ captured legacy host client over real subprocess stdio > holds Main reply bytes before native effect, expiry=false  437ms
+   ✓ captured legacy host client over real subprocess stdio > holds Main reply bytes before native effect, expiry=true  409ms
+   ✓ captured legacy host client over real subprocess stdio > keeps the original TEST physical owner across Host loss, without replaying an unacknowledged write  1216ms
+   ✓ captured legacy host client over real subprocess stdio > reserves native control under full reverse request and shared reply-byte budgets  370ms
+   ✓ captured legacy host client over real subprocess stdio > starts the actual public CLI with the selected standalone Node artifact  328ms
+   ✓ captured legacy host client over real subprocess stdio > handshakes with the packed host, serves two inputs, then confirms scoped close  393ms
+   ✓ captured legacy host client over real subprocess stdio > keeps a committed effect unknown after response loss and never replays it  355ms
+   ✓ captured legacy host client over real subprocess stdio > does not turn a generic remote exception after an effect into a rejection receipt  822ms
+   ✓ captured legacy host client over real subprocess stdio > rejects malformed frames before treating them as successful responses  389ms
+   ✓ captured legacy host client over real subprocess stdio > rejects oversized frames before treating them as successful responses  436ms
+   ✓ captured legacy host client over real subprocess stdio > rejects invalid UTF8 frames before treating them as successful responses  338ms
+   ✓ captured legacy host client over real subprocess stdio > reserves request capacity for control while work requests wait  339ms
+   ✓ captured legacy host client over real subprocess stdio > request timeout retains unknown outcome while independent control remains available  551ms
+   ✓ captured legacy host client over real subprocess stdio > bounds notifications and exposes a gap without blocking responses  356ms
+   ✓ captured legacy host client over real subprocess stdio > rejects mismatched host build identity  6651ms
+   ✓ captured legacy host client over real subprocess stdio > shutdown does not kill an unrelated captured test child  343ms
+   ✓ captured legacy host client over real subprocess stdio > waits for advertised cleanup budget 200 before signaling the original Host  741ms
+   ✓ captured legacy host client over real subprocess stdio > waits for advertised cleanup budget 6000 before signaling the original Host  427ms
+   ✓ captured legacy host client over real subprocess stdio > keeps finite Host cleanup timeout distinct from confirmed child exit and provider release  394ms
+ ✓ test/main/utils/shellEnv.test.ts (46 tests) 169ms
+ ✓ test/main/utils/processStartTime.test.ts (17 tests) 23ms
+ ✓ test/main/utils/electronNodeLaunch.test.ts (6 tests) 19ms
+ ✓ test/main/services/team/AgentTeamsMcpHttpServer.test.ts (39 tests) 496ms
+ ✓ test/main/services/team/WorkspaceMcpBundle.test.ts (6 tests) 117ms
+
+ Test Files  7 passed (7)
+      Tests  198 passed (198)
+   Start at  02:27:01
+   Duration  59.87s (transform 7.73s, setup 1.72s, collect 33.09s, tests 22.45s, environment 461ms, prepare 607ms)
+

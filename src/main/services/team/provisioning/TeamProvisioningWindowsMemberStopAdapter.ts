@@ -40,8 +40,8 @@ function killOriginalWindowsDirectMember(child: ChildProcess): Promise<void> {
     };
     const onExit = () => finish();
     const onError = () => finish(new Error('Original Windows teammate process failed on exit'));
-    const timer = setTimeout(() =>
-      finish(new Error('Original Windows teammate exit not confirmed')),
+    const timer = setTimeout(
+      () => finish(new Error('Original Windows teammate exit not confirmed')),
       WINDOWS_ORIGINAL_MEMBER_EXIT_TIMEOUT_MS
     );
     child.once('exit', onExit);
@@ -103,4 +103,3 @@ export async function stopOriginalWindowsDirectMembers(
   );
   if (firstFailure) throw firstFailure.reason;
 }
-

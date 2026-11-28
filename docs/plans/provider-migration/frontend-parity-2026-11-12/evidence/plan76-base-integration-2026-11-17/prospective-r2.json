@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "plan": 76,
+  "reviewer": "/root/p08_remaining_audit",
+  "decision": "GO_EXACT_PROSPECTIVE_DOCUMENT_PUBLICATION_ONLY",
+  "blockingFindings": [],
+  "scope": "Independent full prospective review of the frozen 68-line plan and 2036-line root R1, their immutable input states, selected108 integration paths and bounded composition. No source afterimages or runtime approval.",
+  "independence": "Reviewer authored the preceding immutable overlap diagnosis, not this Plan76 selection/R1, and authored no integration source. Root retains source selection and Git publication authority.",
+  "reviewedDocuments": {
+    "plan": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan76/prospective/plan.md",
+      "bytes": 12742,
+      "physicalLines": 68,
+      "gitBlob": "0b02400bac5b2ed2540bec03f9ce1ca576298862",
+      "sha256": "5438a25fc1ddcbdd5538f534a98e47daa5faaede7bc89dd2ed5cfc2f1997c1f1"
+    },
+    "rootR1": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan76/prospective/prospective-r1.json",
+      "bytes": 63915,
+      "physicalLines": 2036,
+      "gitBlob": "c4f303b394907039cc8e09fd25824302a6ca8223",
+      "sha256": "662fde9cfdd0ad12e6bc0668517d5b3a6afa48c6072598f351438aa0446ed57d"
+    }
+  },
+  "readLedger": [
+    "Full plan.md68 lines read at the frozen identity.",
+    "Full prospective-r1.json2036 lines read. The truncated middle of the last tool result was separately reread as1638-1913; no hidden interval is counted as read.",
+    "Prior own216-line integration diagnosis and full P09 264-line contract diagnosis bind the incoming source, constructor/recovery, native/pin and cap observations. No broad survey repeated.",
+    "Bounded additional original source windows: canonical factory options, current/incoming client notification branch and runtime-pin await order. Existing source-size guard231 lines read as data only.",
+    "All three recursive trees,170 retained UTF8 bodies,102 incoming tuples,8 extra states,2 head-exact exceptions,66 base-exact choices and3 document absences independently checked by inert stdlib."
+  ],
+  "anchors": {
+    "old": "def734338f13bcc3209e78079a0cedbc48f05a5b",
+    "liveBase": "301d00f46db3389ff6e3042afd04c5b064a26270",
+    "head": "3fc8054864c320c0489782cf1ab829b06dceea73"
+  },
+  "completeTrees": {
+    "old": {
+      "sha": "845f7a051367d7413412e3d7b83013590acd29a6",
+      "leaves": 9042,
+      "directories": 1383,
+      "allDirectoryHashesReconstructed": true
+    },
+    "base": {
+      "sha": "038c5405acb894fe5272df611f1e9b979f1b6745",
+      "leaves": 9086,
+      "directories": 1396,
+      "allDirectoryHashesReconstructed": true
+    },
+    "head": {
+      "sha": "49b5f8337248f272fcdc98b17885130e242ad339",
+      "leaves": 11169,
+      "directories": 1713,
+      "allDirectoryHashesReconstructed": true
+    }
+  },
+  "scopeVerification": {
+    "incoming": {
+      "paths": 102,
+      "baseOnly": 67,
+      "bothChanged": 35,
+      "additions": 44,
+      "modifications": 58,
+      "deletions": 0
+    },
+    "selected": {
+      "paths": 108,
+      "additions": 48,
+      "modifications": 60
+    },
+    "equation": "102 incoming minus2 head-exact paths plus8 disjoint integration paths =108;44 incoming additions plus4 new helpers/tests =48 additions;60 modifications.",
+    "selectedPathSetSha256": "fb6db54e0702a627ca29d6f331aaf5a9887ed0d1e32dad58f862cf3db985567b",
+    "baseExact": 66,
+    "baseOnlyException": ".github/workflows/native-prompt-suggestions-host.yml",
+    "headExact": [
+      {
+        "path": "pnpm-lock.yaml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "b709c1ecdf6a29532ebaefca35b75ed44b2428af"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-sources.ts",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "a8be2617b2c765091cecce789f028ef2bf67af60"
+      }
+    ],
+    "extraEight": [
+      {
+        "path": "packages/legacy-agent-host/src/composition/teamHostProfile.ts",
+        "head": null,
+        "identity": null
+      },
+      {
+        "path": "src/features/agent-backend/main/infrastructure/CapturedHostNotificationBuffer.ts",
+        "head": null,
+        "identity": null
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/captureHostPromptSuggestions.ts",
+        "head": null,
+        "identity": null
+      },
+      {
+        "path": "src/features/agent-backend/main/composition/recoverCapturedHost.ts",
+        "head": {
+          "mode": "100644",
+          "type": "blob",
+          "sha": "91a5862903f8a32c067ae0cff00eb166ed7eff62"
+        },
+        "identity": {
+          "bytes": 3835,
+          "physicalLines": 76,
+          "gitBlob": "91a5862903f8a32c067ae0cff00eb166ed7eff62",
+          "sha256": "d6aa188569187aba0eb0182828f89b220152b9af458eb3ffdfa258fd5e299566"
+        }
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "head": {
+          "mode": "100644",
+          "type": "blob",
+          "sha": "141fc6641b6084c6f3ea6932e4eb728137debcc5"
+        },
+        "identity": {
+          "bytes": 23054,
+          "physicalLines": 354,
+          "gitBlob": "141fc6641b6084c6f3ea6932e4eb728137debcc5",
+          "sha256": "3d045b160687a2c41aab42990d27501d931cb447fd1911fe561d2422117e0aa6"
+        }
+      },
+      {
+        "path": "test/features/agent-backend/capturedHostClient.test.ts",
+        "head": {
+          "mode": "100644",
+          "type": "blob",
+          "sha": "272e7c3f6ca10d890148fa16080464b395535125"
+        },
+        "identity": {
+          "bytes": 52301,
+          "physicalLines": 1046,
+          "gitBlob": "272e7c3f6ca10d890148fa16080464b395535125",
+          "sha256": "a974eadfc088aa488412b34840a138ef4187e5382592b19493af4a4eeb66d86f"
+        }
+      },
+      {
+        "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+        "head": {
+          "mode": "100644",
+          "type": "blob",
+          "sha": "1bd21c24852ebfade85b23b425342e6665f447e7"
+        },
+        "identity": {
+          "bytes": 56748,
+          "physicalLines": 1121,
+          "gitBlob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+          "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810"
+        }
+      },
+      {
+        "path": "test/features/agent-backend/recoverCapturedHost.test.ts",
+        "head": null,
+        "identity": null
+      }
+    ],
+    "allInputTuplesMatch": true,
+    "closed63Through75Preservation": "Incoming102 intersects none of the previous64 changed leaves. Only the explicitly selected supplementary roster from the eight extras intersects that cut; all other leaves remain preserved.",
+    "unrelatedChangesAuthorized": false
+  },
+  "semanticReview": [
+    {
+      "topic": "Live base and delivery",
+      "result": "PASS",
+      "reason": "Live301d is the sole-parent child of def734; compare to current3fc is737 ahead/1 behind. The historical def734 comparison cannot establish live-base mergeability. Full trees and complete one-commit delta define scope; capped head compare and absence of CI runs do not supply a conflict cause or result."
+    },
+    {
+      "topic": "Selected dependency pins",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "Current c930 implementations,9423 contracts and exact current lock remain coherent. Package change is only the incoming tests/team operand. P09 source/API evidence supports compatibility, while stronger c930 ownership behavior and incoming native oracle remain intact and unqualified. Native candidate true26f8fc/false24040cc expectations stay separate; neither is replaced with ordinary current-archive digest."
+    },
+    {
+      "topic": "Native execution boundary",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "Job-level exclusion is limited to the seven conjunctive event/repository/PR/head-repository/base-repository/head-ref/base-ref conditions in R1. It does not use stale base SHA, exclude all Draft PRs, modify other event/manual behavior or change budgets/oracles. Whole-job skip includes its binding step and is explicitly SKIPPED, never PASS. Normal unit-test inclusion supplies no native qualification."
+    },
+    {
+      "topic": "Host client constructor and capture",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "The first three current constructor arguments and original native/startup lifecycle are preserved. Fourth options capture strict Boolean and publisher reference once. A fresh raw-only wrapper supplies the actual client as internal source identity, never through IPC. Mutable caller options are not retained."
+    },
+    {
+      "topic": "Current-client prompt projection and recovery",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "Shared owner factory retains original owner/roster/unique-handle/current-feature validation and captures enablement/publisher once. Its source comparison rejects old-client callbacks after replacement. Explicit recovery reuses that capture with a fresh client wrapper while retaining exact nativeCustody/remaining callback and existing Win32/source/definition/install fences. No automatic start, recovery, queue, retry or authority API is introduced."
+    },
+    {
+      "topic": "Notification extraction",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "Only buffer bytes/count/gap/accept/take and synchronous auxiliary prompt routing move. Plan explicitly preserves negotiated limits, original frame length, gap precedence, dropped-frame/reset behavior, callback error isolation, normal buffering without a callback and prompt exclusion when a callback exists. No new failure/shutdown clearing or changes to native requests/deadlines are selected."
+    },
+    {
+      "topic": "Authority, UI and finite harness preservation",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "providerAuthorized and isOriginalHumanDirect coexist; original process/readiness/custody/output authority remains. Existing finite/emulated modes and cleanup retain all branches/deadlines/oracles. Native modes remain explicit. Mention handling stays unconditional with original return guards; suggestion Tab/Escape keeps lower priority and IME/menu/chip/modifier/empty-editor checks, no auto-send. Runtime-pin helper returns the original digest with fileDigest before realpath and all five assertions unchanged."
+    },
+    {
+      "topic": "Composition size and architecture",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "The six cap pressures have bounded owners: canonical factory parameter Pick, private profile schema with stable exports, transport notification buffer, shared prompt composition, supplementary source closure and runtime-pin digest helper. No framework, unrelated extraction, packed formatting or baseline increase is selected. Actual production line counts still require frozen-source review."
+    },
+    {
+      "topic": "Focused verification",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "Existing real-stdio client and feature suites test meaningful behaviors: captured enablement overrides env, synchronous isolated delivery without pullbuffer growth, ordinary notification bounds, original owner/handle and stale-client refusal. New explicit-recovery suite checks preserved custody/remaining budget and rejected/stale no-create/no-start. Original assertions stay. These cases require no genuine providers and remain CI-only; test files are already excluded from the production-size guard."
+    },
+    {
+      "topic": "Roster and CI scope",
+      "result": "PASS_DATA",
+      "reason": "Static expansion proves common266+22 native+5 additional=293 and main1788+27=1815. New entries are unique and absent from old main; every old main entry keeps relative order. Process27 and WindowsRetry46 blocks remain exact, main source body stays exact, fast141 workflow is outside selection. Existing whole-workspace CI coverage is retained; no execution or result claimed."
+    },
+    {
+      "topic": "Publication protocol",
+      "result": "PASS_PROSPECTIVE",
+      "reason": "Exactly three absent documents are selected before source authoring. Source remains gated on their actual R2. Later source integration must have actual document head first and exact301d second parent, immediate ordinary CAS and full actual readback/R2. Primary FF additionally requires fresh leases/useful-job guard. No PR merge, Ready, force/main write, dispatch, rerun, cancel or synthetic trigger is selected."
+    }
+  ],
+  "sourceGuard": {
+    "guardGitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+    "policyGitBlob": "8f5deeed4e406894e1ee587ed541014bcb7dde77",
+    "maxProductionLines": 800,
+    "testEligibility": "Existing guard13-14 excludes test/tests path segments and23-31 test/spec filename segments;35-43 applies both. The two inherited suites1046/1121 lines and new recovery suite require no legacy exception or baseline change.",
+    "execution": false
+  },
+  "rosterData": {
+    "oldCommon": {
+      "count": 266,
+      "orderedSha256": "7c20f61f9b7aa1a4b8219a17d8a4e217cafc690d12007688a58c910901d0102a"
+    },
+    "prospectiveCommon": {
+      "count": 293,
+      "orderedSha256": "978b7754d2eb0bcecbcf6c6690f871454c936a34832aec4c64d99ad8a374c24b"
+    },
+    "oldMain": {
+      "count": 1788,
+      "orderedSha256": "8fa29c056bdcfb1663adc6c6d42bcc5d1280f9b943766a7a771428a5f28bfb91"
+    },
+    "prospectiveMain": {
+      "count": 1815,
+      "orderedSha256": "83b8d175c085f39307042213cf21401f6cc677a3b0a5786ab8158d91948b58cd"
+    },
+    "allOldRelativeOrderPreserved": true,
+    "processBlock": {
+      "count": 27,
+      "sha256": "bb544809bbde58355d92ff5b926a3ef99bdd00e2ccf7d03893ebe3d355b76ed0"
+    },
+    "windowsRetryBlock": {
+      "count": 46,
+      "sha256": "99e57cb76aefa557c758e90ae73ae5f3eb5d8f11c137b7b600e0e07c681cc915"
+    },
+    "fast": {
+      "count": 141,
+      "orderedSha256": "41a31eabc24245b3cf54203d61e3d04034ffbb774044f84fa0c979c6b309108c",
+      "wholeWorkflowUnselectedForChange": true
+    }
+  },
+  "documentPublication": {
+    "newPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/76-incorporate-native-suggestions-base-2026-11-17.md",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan76-base-integration-2026-11-17/prospective-r1.json",
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan76-base-integration-2026-11-17/prospective-r2.json"
+    ],
+    "sourceStartsOnlyAfterActualDocumentR2": true
+  },
+  "sourceGateStillClosed": true,
+  "evidence": {
+    "independentDataProof": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan76/prospective/independent-data-proof.json",
+      "bytes": 12908,
+      "physicalLines": 333,
+      "gitBlob": "111379a872d1e4b42877f78182533470570b4ab5",
+      "sha256": "0cdb4713789a59c9f9c6236418cf7664d495de93f8c8486d757d59bf89f200ea"
+    },
+    "independentVerifier": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan76/prospective/independent-verify-data.py",
+      "bytes": 16053,
+      "physicalLines": 285,
+      "gitBlob": "aeb65df718b0522b366783a6e55c6fe3255696eb",
+      "sha256": "6f1dceed826a61f774ffcda79357b7909bde94cb5a0ad5f141dee5400f32005f"
+    },
+    "priorDiagnosisPins": [
+      {
+        "path": "/workspace/scratch/b87c90489dab/e2e-recovery/integration/independent-base-integration-findings.json",
+        "bytes": 13357,
+        "physicalLines": 216,
+        "gitBlob": "278aef17fbb641bbfd3d3d6addf9ed3b48b3fd80",
+        "sha256": "3890386b326bf4d0087df6db24f247c77bf7d7c08be822f3e4d599925f774df9"
+      },
+      {
+        "path": "/workspace/scratch/b87c90489dab/e2e-recovery/integration/independent-base-contract-findings.json",
+        "bytes": 11983,
+        "physicalLines": 264,
+        "gitBlob": "8b2b288acd58c52570820dd8bdf749937e98c958",
+        "sha256": "689c9680fb4f3acb7f5a121dcba22706bb862fbcdef1184830f8ff6aee368b08"
+      }
+    ]
+  },
+  "limitations": [
+    "Prospective document GO only. No integration source afterimages exist or are approved by this report; exact code, new tests, workflow predicate, full source tree and patch need the later source gates.",
+    "Two incoming binary archives are bound by existing official tree identities; this review does not add binary-body or vendor-runtime proof.",
+    "Input manifest physicalLines=0 in R1 counts LF bytes for compact JSON without terminal LF; independently recomputed bytes/Git/SHA match. This harmless metadata convention does not alter source tuples.",
+    "No native or original e2e PASS is inferred. Plan40 writer A/B and all previously unselected native scopes remain unselected.",
+    "No source edits, Git/API mutations, Actions reads, compiler/test/lint/app/provider/GUI execution. Only inert stdlib data and report generation."
+  ]
+}

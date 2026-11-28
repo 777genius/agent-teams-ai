@@ -1,0 +1,402 @@
+{
+  "kind": "ROOT_PLAN74_PROSPECTIVE_R1",
+  "preparedBy": "/root/p08_remaining_audit",
+  "selectedBy": "/root",
+  "verdict": "GO_EXACT_SIX_EXISTING_PATH_PRESENTATION_SELECTION_ONLY",
+  "status": "ROOT_FULL_READ_AND_OWNERSHIP_COMPLETE; INDEPENDENT_R2_PENDING",
+  "baseCommit": "b3ddf344cbfdb13b152036f5a865c0d3c29365b4",
+  "baseTree": "1150bc2c4e9d6a2b7dda0e4215fe138092402a86",
+  "plan": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/plan.md",
+    "bytes": 11339,
+    "physicalLines": 67,
+    "gitBlob": "3600ab86bd3e979bf0a3fc0ef614fdf241dce73a",
+    "sha256": "e9d050a1a0ba6b0bc736bdc52db80de427f3ba78071487d3b3fef134a0bb8ae4"
+  },
+  "preimageBindings": {
+    "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/preimage-bindings.json",
+    "bytes": 16196,
+    "physicalLines": 366,
+    "gitBlob": "dbb1c06a1731c68968941b002da3c4d608d7952e",
+    "sha256": "b052c4d48fa020ce42ad80295e4073a269cfc3b9969c804dd9d25f4064ef4237"
+  },
+  "baseOfficialPacket": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/actual-document/official-packet.json",
+    "bytes": 3785051,
+    "physicalLines": 1,
+    "gitBlob": "2e489158e23f06d46f8a00b53903258c8fc6c505",
+    "sha256": "ff9f4d47065aaa05bd51806c448e519315d9f0d5fd808c9c7469245a8ba88284"
+  },
+  "closedActualPlan71R2": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/actual-document/independent-actual-document-r2.json",
+    "bytes": 13698,
+    "physicalLines": 231,
+    "gitBlob": "fe5cd8f3a40e23772605caf99d19b4aa28adccdc",
+    "sha256": "ef70b1201f7688829df2d8ec5e033636eebad8dd9d40263103bff8f1a319dc97"
+  },
+  "closedActualPlan71R2ReadInFull": true,
+  "repositoryDocument": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/74-truthful-credential-verification-copy-2026-11-17.md",
+    "absentAtExactBase": true,
+    "evidenceRoot": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan74-truthful-credential-verification-copy-2026-11-17",
+    "evidenceRootAbsentAtExactBase": true
+  },
+  "rootAcceptedEvidence": {
+    "sourceFinding": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/incoming-0bc2-intake/finding.json",
+      "bytes": 10686,
+      "physicalLines": 168,
+      "gitBlob": "482199257d42d928af9b502f6659fac28bb355d4",
+      "sha256": "65e7d1753ba29817ed375d13d4d2daeb892971c7bdcfee5fce252477887b64d4"
+    },
+    "references": {
+      "path": "/workspace/scratch/b87c90489dab/e2e-recovery/incoming-0bc2-intake/refs.json",
+      "bytes": 13578,
+      "physicalLines": 272,
+      "gitBlob": "e3cb3b9370dd58eff78cb6771ecf32830a98cbff",
+      "sha256": "70e816e609855e0443041d4a766653db6dcd2fd8388cf569469ebfa852fd827e"
+    },
+    "limit": "Independent source-only contradiction/current preimage finding; no new receipt, screenshot, run or vendor qualification."
+  },
+  "sourceSelection": {
+    "existingPathCount": 6,
+    "newPathCount": 0,
+    "paths": [
+      {
+        "repositoryPath": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "mode": "100644",
+        "treeBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+        "preimage": {
+          "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+          "bytes": 6481,
+          "physicalLines": 161,
+          "gitBlob": "907fb16a613785324fdbd342c2993e08c8209a55",
+          "sha256": "5e1015def1c50a2c2982617336d7e8ed46495295b5769aed8a5b2b885f53f1a0"
+        },
+        "fullBodyMatchesBaseLeaf": true,
+        "selectedExistingWindow": [
+          108,
+          132
+        ]
+      },
+      {
+        "repositoryPath": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+        "mode": "100644",
+        "treeBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+        "preimage": {
+          "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+          "bytes": 97366,
+          "physicalLines": 2584,
+          "gitBlob": "176344903eaee49ced9607a29f28a3c556e59f6e",
+          "sha256": "11871dd43b1c704230c83e722577ba4cdd4f4fd6c2eebce89cab02457b52b81a"
+        },
+        "fullBodyMatchesBaseLeaf": true,
+        "selectedExistingWindow": [
+          783,
+          801
+        ]
+      },
+      {
+        "repositoryPath": "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "mode": "100644",
+        "treeBlob": "162fb1fccf81b97d1c2b9c741189584016ff3667",
+        "preimage": {
+          "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+          "bytes": 183020,
+          "physicalLines": 5126,
+          "gitBlob": "162fb1fccf81b97d1c2b9c741189584016ff3667",
+          "sha256": "3057f23d318ec62a902bb869c288108f27800bdd354952faba21a875b4d97d6b"
+        },
+        "fullBodyMatchesBaseLeaf": true,
+        "selectedExistingWindow": [
+          2345,
+          2398
+        ]
+      },
+      {
+        "repositoryPath": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "mode": "100644",
+        "treeBlob": "c9e19b14b433c58494c10b06eac9f82d5f5cd118",
+        "preimage": {
+          "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+          "bytes": 195789,
+          "physicalLines": 6034,
+          "gitBlob": "c9e19b14b433c58494c10b06eac9f82d5f5cd118",
+          "sha256": "008d47eafc5f9113af654cd42c29bdc398ed1969695d15c3650898b281cbb195"
+        },
+        "fullBodyMatchesBaseLeaf": true,
+        "selectedExistingWindow": [
+          3787,
+          3880
+        ]
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+        "mode": "100644",
+        "treeBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+        "preimage": {
+          "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+          "bytes": 20435,
+          "physicalLines": 278,
+          "gitBlob": "7f224d52e429bbdecb173d65b470a2ac154de475",
+          "sha256": "4aa1e0c6944d0154f4cee2eaa3cef4390ffdcc25cad93cac40488c1d7c2fa8d6"
+        },
+        "fullBodyMatchesBaseLeaf": true,
+        "selectedExistingWindow": [
+          205,
+          218
+        ]
+      },
+      {
+        "repositoryPath": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "mode": "100644",
+        "treeBlob": "eb917dd3cf76a917430b3a0cb3b20ea387307f99",
+        "preimage": {
+          "path": "/workspace/scratch/b87c90489dab/e2e-recovery/plan74/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "bytes": 22669,
+          "physicalLines": 349,
+          "gitBlob": "eb917dd3cf76a917430b3a0cb3b20ea387307f99",
+          "sha256": "94ba59ade125b165474fa54bb108a2784b24b332ba2cf286a1082c7299a21448"
+        },
+        "fullBodyMatchesBaseLeaf": true,
+        "selectedExistingWindow": [
+          33,
+          299
+        ]
+      }
+    ]
+  },
+  "selectedContract": {
+    "formatter": {
+      "path": "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+      "existingLines": [
+        121,
+        127,
+        130
+      ],
+      "change": "Delete only the unsupported The new credential was not kept. sentence from exactly three current return literals.",
+      "resultingTexts": [
+        "${displayName} rejected this API key. Copy the key from the correct account or subscription plan, then try again.",
+        "${displayName} rejected the verification request because of an account or security policy. Check the key permissions and account restrictions, then try again.",
+        "${displayName} could not verify this credential with a real model request.\\n${error.message}"
+      ],
+      "preserve": [
+        "All error-branch predicates and ordering",
+        "Provider display-name substitution",
+        "Specific rejection reason and guidance",
+        "Raw error suffix and literal newline escape",
+        "Existing credential replacement refusal",
+        "Fallback passthrough, success/cancellation and all other helpers",
+        "Every source byte outside the three selected literals"
+      ],
+      "noReplacementRetentionAssertion": true
+    },
+    "panel": {
+      "path": "src/features/runtime-provider-management/renderer/ui/RuntimeProviderManagementPanelView.tsx",
+      "existingLine": 797,
+      "resultingText": "Saving the credential, then running one minimal model request.",
+      "preserve": [
+        "busy and non-OAuth guard",
+        "selectedMethod API and verification.kind model-request predicate",
+        "Verifying connection heading",
+        "Spinner and live/busy roles",
+        "Save-only alternative",
+        "Quota/model warnings",
+        "All operation/state/credential behavior",
+        "All source bytes outside the one existing literal"
+      ],
+      "newStateDtoOrResult": false
+    },
+    "existingTests": [
+      {
+        "path": "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "case": "explains the real model verification while an API credential is being checked",
+        "existingLines": [
+          2345,
+          2398
+        ],
+        "selectedLine": 2397,
+        "selectedAssertion": "expect(status?.textContent).not.toMatch(/temporarily|new credential is removed|previous connection is restored/);",
+        "preserve": "Entire setup/actions/mocks, original heading and minimal-model-request assertions, all other cases and bytes."
+      },
+      {
+        "path": "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts",
+        "case": "keeps the API key draft when provider connect fails",
+        "existingLines": [
+          3787,
+          3880
+        ],
+        "selectedLine": 3863,
+        "selectedExpectedText": "OpenRouter rejected this API key. Copy the key from the correct account or subscription plan, then try again.",
+        "preserve": "Exact connect payload, error state, input-draft retention, telemetry, all other case actions/assertions and bytes."
+      }
+    ],
+    "newTests": 0,
+    "originalUiPredicate": {
+      "path": "scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts",
+      "existingLine": 207,
+      "label": "original key rejection visible",
+      "sameElement": "[data-testid=\"runtime-provider-setup-submit-error\"]",
+      "selectedPredicate": "Within the same original evaluation, query the error element once; require its existence and require its text not to match the fixed false-retention/rollback regex.",
+      "forbiddenTextPattern": "/The new credential was not kept|the new credential is removed|the previous connection is restored/i",
+      "preserve": [
+        "Exactly the original waitRead call at the original position",
+        "Existing observation loop/deadline",
+        "Original rejected-key submission at205-206",
+        "Private auth equality at208",
+        "Rejection screenshot at209",
+        "One subsequent explicit replacement at210-211",
+        "Replacement auth equality at213",
+        "Existing model/default/inheritance/reload/source/owner/cleanup checks"
+      ],
+      "noAdditional": [
+        "waitRead call",
+        "CDP/RPC request",
+        "timer or sleep",
+        "submit or business action",
+        "retry",
+        "secret-file read",
+        "screenshot"
+      ],
+      "failureMeaning": "A false claim makes the existing bounded observation fail; no success fallback or storage-assertion weakening."
+    },
+    "sourceRoster": {
+      "currentCommonCount": 261,
+      "currentCommonOrderedSha256": "4460cc1dbcb1ff3ccdf0ae89d727b3a5158e37afadd1118bfd54268f645fe7de",
+      "appendExactlyInOrder": [
+        "src/features/runtime-provider-management/renderer/hooks/runtimeProviderManagementPresentation.ts",
+        "src/shared/utils/opencodeModelRef.ts",
+        "test/renderer/features/runtime-provider-management/RuntimeProviderManagementPanelView.test.ts",
+        "test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts"
+      ],
+      "allFourAbsentFromEveryCurrentMainRosterBody": true,
+      "selectedResultCommonCount": 265,
+      "selectedResultCommonOrderedSha256": "eafffa09aae67652da558043f55c0f33b833123964c95ed9c0711b459deb2820",
+      "currentMainVectorCount": 1783,
+      "currentMainOrderedSha256": "ef73662d6baadbb38ee4c7b382c716c87387aa1353ad24939497685c3ce2ed55",
+      "selectedResultMainVectorCount": 1787,
+      "selectedResultMainOrderedSha256": "4d50aac95c4fc8f2e746f60baa22e598f8366339d70a7a0d09b2071579da40c2",
+      "serialization": "UTF-8 join(paths, LF) + final LF; explicit literal array expansion then first-occurrence Set order; no project code run.",
+      "prospectiveMainIndicesZeroBased": [
+        1014,
+        1015,
+        1016,
+        1017
+      ],
+      "removingExactlyFourSelectedPathsRecoversEntireCurrentMainOrder": true,
+      "processArray": {
+        "count": 27,
+        "sourceBlockBytes": 1747,
+        "sourceBlockLines": 29,
+        "sourceBlockSha256": "b0b9a8e47246e2488adc4431e1177ee2ab19bce12e08fde479de11d33fb165c5",
+        "orderedSha256": "73dc6fbe76872d787696b92e7e888908e07bb47fc6dab7c632c18b20c32c854e",
+        "mustRemainByteIdentical": true
+      },
+      "windowsRetryArray": {
+        "count": 46,
+        "sourceBlockBytes": 2701,
+        "sourceBlockLines": 48,
+        "sourceBlockSha256": "717c0d65009fcada4128fb907daa2aaffb2165f8f5647143a2fbfea8d5623a60",
+        "orderedSha256": "fc6f99ce162e811d35a139d027470a1fd048afd5007a373e96a9bb7e7a4e7e17",
+        "mustRemainByteIdentical": true
+      },
+      "currentCommonSourceBlock": {
+        "bytes": 17938,
+        "physicalLines": 267,
+        "sha256": "7ded3243864a1dd55ad49316df6f862e292099bd184a4965ace0a1aba4ebf453"
+      },
+      "noRosterSourceAfterimage": "Selected-result values are inert path-list arithmetic only, not generated TypeScript or a candidate source body."
+    }
+  },
+  "whyThisIsInScope": {
+    "sourceContradiction": "The current renderer promises removal/rollback without a retention result, whereas the current original finite V2 UI contract requires rejected-key persistence until explicit replacement.",
+    "fixLevel": "Presentation copy plus existing regression expectations and capture closure. No product operation/storage/protocol change is necessary to stop making unsupported promises.",
+    "causalLimit": "The source finding does not establish every provider/error/cancellation retention outcome and does not justify replacing the false deletion claim with a universal retention claim.",
+    "separateCatalogueProposal": "External71 provider-catalogue projection remains unselected diagnostics; missing-catalogue cause is not solved or qualified here.",
+    "separatePlans": "Our Plans71/72/73 and Plan40 unresolved A/B writer contract remain separate; no source/authority/qualification transfer."
+  },
+  "preimageAndPreservation": {
+    "allSixWholeBodiesMatchCompleteBaseTree": true,
+    "referenceFilesMatchBase": 11,
+    "uniqueSelectedOldText": {
+      "formatterUnsupportedSentenceOccurrences": 3,
+      "busyUnsupportedLiteralOccurrences": 1,
+      "selectedPanelTestAssertionOccurrences": 1,
+      "selectedHookTestExpectedLiteralOccurrences": 1,
+      "originalUiRejectionWaitOccurrences": 1,
+      "originalFiveIntentsAssertionOccurrences": 1
+    },
+    "fiveSettingsIntents": "Existing native UI lines262-264 require exactly five original intents and no held final resources. Preserve the complete unchanged actions and assertions; no new business input.",
+    "independentReadWindows": "Small formatter and pure dependency reviewed; exact panel/test/UI windows read. Large whole bodies hashed to official tree; no claim of executing or re-proving unrelated large suites.",
+    "strictLaterSourceReview": "Full before/after byte comparison and reversible patch must prove only selected literals/assertions/predicate/four roster entries changed. Full official actual-source readback remains required."
+  },
+  "sourceSize": {
+    "maxLines": 800,
+    "panelFrozenLegacyCap": 2584,
+    "panelSelectedNaturalLines": 2584,
+    "testPathsRemainExcludedByCurrentGuard": true,
+    "formatterSelectedNaturalLines": 161,
+    "panelTestSelectedNaturalLines": 5126,
+    "hookTestSelectedNaturalLines": 6034,
+    "nativeUiCurrentLines": 278,
+    "nativeUiSelectedMaximum": 300,
+    "supplementaryCurrentLines": 349,
+    "supplementarySelectedLines": 353,
+    "guardEdits": 0,
+    "baselineEdits": 0,
+    "newExceptions": 0,
+    "statementPackingOrUnrelatedExtraction": 0
+  },
+  "validation": {
+    "referenceWorkflow": "bd50fd9636f7b63bf8501bca0c6c5a296e2e21bb",
+    "currentTypeAndLint": "Existing host-emulated workflow lines276-281: workspace types and original typed source scopes, including src/features.",
+    "currentScopedOperands": "Native UI at161, supplementary roster at164 and hook test at250 already occur in current136 fast list.",
+    "currentRendererTests": "Existing complete safe frontend shard lines1738-1746 includes both ordinary renderer test files; no live/native routing change.",
+    "currentE2E": "Use the same original V2 Settings journey and original requested cleanup when normal resulting-head CI reaches it.",
+    "workflowEdits": 0,
+    "newRoutesOrDispatch": 0,
+    "preserveQueuedChanges": "Do not reset workflow or rosters to this old full body after Plans71/72/73; exact rebind required.",
+    "executionRequired": "Only resulting-head original type/lint/frontend/Settings receipts can qualify the new source. Preserve deadlines, source/epoch identities, five intents and original native/Host cleanup.",
+    "runtimeQualified": false
+  },
+  "gates": {
+    "next": "Root full read/ownership and independent prospective R2 before documentary publication and independent actual-document R2.",
+    "sourceAuthoring": "Only after that gate and separate root source instruction; exact six paths only.",
+    "sourcePublication": "Frozen source R1/R2 and strict reversible patch, then immediate ordinary-CAS publication and complete official bodies/tree/compare/ref readback with independent actual-source R2.",
+    "baseAdvance": "Rebind all six preimages and source-closure arithmetic to the actual publication parent. Preserve intervening selected work and all unrelated leaves. No stale whole-file or external-chain adoption."
+  },
+  "notSelected": [
+    "Credential storage or rollback implementation",
+    "Provider/auth/model operation changes",
+    "Cancellation/replacement policy changes",
+    "Other UI flows",
+    "New helpers/test cases/frameworks",
+    "Source-size cap/baseline edits or formatting changes",
+    "Provider-catalogue failure projection",
+    "Plan40 contract/source-semantics choice",
+    "W01/native qualification or activation",
+    "Ready/merge/release/defaults/direct-main"
+  ],
+  "operations": {
+    "writtenArtifacts": "Prospective plan/R1/bindings and exact immutable preimage copies only.",
+    "sourceAfterimages": 0,
+    "projectCompilerTestsVmNativeVendorGuiExecution": 0,
+    "ciReadsDownloadsOrDispatch": 0,
+    "gitApiMutations": 0,
+    "newNetworkReadsInThisPlan74Preparation": 0
+  },
+  "blockersToProspectiveReview": [],
+  "runtimeQualified": false,
+  "rootOwnership": {
+    "fullPlanLinesRead": 67,
+    "fullDelegatedR1LinesRead": 390,
+    "fullBindingsLinesRead": 366,
+    "decision": "GO exact six existing presentation/test/UI-predicate/roster paths; no storage or provider operation change. Preserve original source newline and all original actions/caps.",
+    "delegatedR1BeforeOwnershipSHA256": "6b40041b4d9343507df5a2cdcce79c15f8873ec1d7f10b1eb4b68ae214ee44f1",
+    "currentDocumentaryDescendant": "73d4faf441cfe23ef2cb979cf1b04d33a6c3e4f7",
+    "currentTree": "9903963cf4379503a0fb0df7a76fd2bca61a72ac",
+    "allSixPreimagesAndElevenReferencesRecheckedExact": true,
+    "documentAndEvidenceStillAbsent": true,
+    "publicationRebind": "Recheck exact actual parent, all selected/preimage references and source roster before publication; preserve queued71/72/73."
+  }
+}

@@ -77,6 +77,27 @@ afterEach(() => {
   beginOpenCodeStartupRuntimeSweep()();
 });
 
+it('proven empty legacy inputs settle Windows startup without native dispatch while keeping preflight/maintenance', async () => {
+  const cleanup = vi.fn();
+  const scans = vi.fn(async () => empty);
+  const maintenance = vi.fn(async () => {});
+  const owner = new OpenCodeWindowsStartupCleanup({
+    appStartedAtMs: 100,
+    profileScope: 'TEST-empty-legacy',
+    logWarning: vi.fn(),
+    sweep: scans,
+    maintenance,
+    nativeMaintenanceRequired: async () => false,
+  });
+  await owner.preflight();
+  await owner.finish({ cleanupOpenCodeStartupHosts: cleanup });
+  expect(cleanup).not.toHaveBeenCalled();
+  expect(scans).toHaveBeenCalledTimes(1);
+  expect(maintenance).toHaveBeenCalledTimes(1);
+  expect(owner.getStatus().state).toBe('complete');
+  await whenOpenCodeStartupRuntimeSweepSettled();
+});
+
 it('production recovery UI -> preload -> validated IPC runs one explicit pass and never queues a launch', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   Object.defineProperty(process, 'platform', { value: 'win32' });

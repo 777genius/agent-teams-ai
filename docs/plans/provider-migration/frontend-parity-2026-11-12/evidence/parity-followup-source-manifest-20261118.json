@@ -1,0 +1,598 @@
+{
+  "schemaVersion": 4,
+  "kind": "Reviewed parity failure follow-up source composition",
+  "repository": "777genius/agent-teams-ai",
+  "pr": 1192,
+  "branch": "fix/frontend-parity-completion-20261113",
+  "baseHead": "c8ab4139c4f3e0f763effffdd44d6412188ba388",
+  "baseTree": "63b10cff826df66f65a917a3cd2e458931983069",
+  "prBase": "8d46f13fe87b4a25156b6be8331119eb8d0f790e",
+  "createdAt": "2026-11-18T19:50:02.470Z",
+  "sourceEntries": [
+    {
+      "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+      "baseSha256": "29bdcd6acfdbfb6d07f093713acef893b899e2941c6a54160db4d2329ca74642",
+      "postSha256": "fb3d1f3fc6937403d83f70ee7de58d51aa79881a76a21fc6d6c8e7c824498d50",
+      "physicalLines": 401,
+      "baseBlob": "be33c2136f29ce526c3186e2fd7bd2f412d22f78",
+      "baseMode": "100644"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+      "baseSha256": "bfe8fd389bd9c57b1ac2596c27bf55df118dfb29d4365815d7143475286f5b30",
+      "postSha256": "441c945581582257e7c1d7fd949ab02f489f95e2972885fca75a9e620c01e50a",
+      "physicalLines": 4719,
+      "baseBlob": "b191ac79ce38d67b16fb58adfebf2045ccbe4878",
+      "baseMode": "100644"
+    },
+    {
+      "path": "test/main/services/runtime/AnthropicModelCatalogPicker.safe-e2e.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+      "baseSha256": "a8bfef183a2a8e725c9575fb5ff3ef0eaf24d040c6c2bc3ac7369e8299037783",
+      "postSha256": "37550ae7d5c23c098c2d01abdb2f236ae023cbd76710daef8d412f84dc5a0d39",
+      "physicalLines": 563,
+      "intermediateM16PostBlob": "b401643d97311155cd613b2de223df8b0cb0a6db",
+      "composedWithRetainedFixtureManifest": "d07dbabf9ee83969b00e0f333a734aa543e3cace",
+      "baseBlob": "187a9d7b68fa964dec516a5bede5066216249524",
+      "baseMode": "100644"
+    },
+    {
+      "path": "tools/owned-process-broker/fixtures/retainedLegacyBootstrapPeer.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+      "baseSha256": "f7abffb23eebf59dde932fd02f0cf9d3e8a14386ec7acc70078335e492b8f3c0",
+      "postSha256": "29ed68986991d1b042cc697c2dff2ee42f2a51d6edfd36e7e27aab7677b172bf",
+      "physicalLines": 235,
+      "baseBlob": "8968a6611ae5cd71e64bb1dc918fe1454a2b8080",
+      "baseMode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-authority.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+      "baseBlob": null,
+      "baseSha256": null,
+      "postSha256": "6b6661a8ad73c8ebbbc70733cc221a209dbb7568e5b8614747324ec3849d783f",
+      "physicalLines": 51,
+      "baseMode": null
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+      "baseBlob": "3f28793853448ab5b4654ca734d27b46d2e4bfa8",
+      "baseSha256": "11ef06da0a4fcbe12d45973348684df229275a9ef5e9eb9231a34191bf180c75",
+      "postSha256": "1ca3df4b0f1465406b6b0c8b0221fe01c033086e882e16f169a1f5a2c59039b1",
+      "physicalLines": 782,
+      "baseMode": "100644"
+    },
+    {
+      "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5ddbca20786812c1506a8d04fe281668dda770ca",
+      "baseBlob": "072a22e0e1d05ea0ddaa2fc5f52331184e0fc98b",
+      "baseSha256": "9844bead94ed6fe2f3e8fdbd6b90b4a68727f44222c89a27135ce0ad9c307029",
+      "postSha256": "c4965fd7ea800d0a6829beeed5428ac563588a7294dcd2989d6734d8b87cc94b",
+      "physicalLines": 1388,
+      "baseMode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "20ff0af5b1d83a4ee48b53e8ac5def8da69f88e5",
+      "baseBlob": "d68106613a9315b37acbfc519af9663848bf01c4",
+      "baseSha256": "c03ca25255dd573c02d828fc6a47a1ff37f6fc850d69abcd32843e45db4e2f34",
+      "postSha256": "e695cba8166366778a00977dc329d40fd51501695d18e22d5bc630cfc1132bd2",
+      "physicalLines": 388,
+      "intermediateReviewedBlob": "918b4f52d816a7676b426d5cfdca1552a7ee24cb",
+      "addedPublicHttpPin": "src/features/review-flow/renderer/http/index.ts",
+      "baseMode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+      "baseBlob": "d59562cd38b4bf6c90d12805b07d59063d5c08e7",
+      "baseSha256": "11396934656152e42498f68b2aaab144a545b3a158b8d63d4907046823892d10",
+      "postSha256": "e84a189178a440aa57137ce2213a425d4b2231d78f708afe07501b9ba121d85d",
+      "physicalLines": 782,
+      "baseMode": "100644"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+      "baseBlob": "9224c9e32ef260cddbfffa1a09610e44583c4a21",
+      "baseSha256": "41f85552abfc510df60889655e4caeb42a17c977cc693c604f1bfcc11922b5e1",
+      "postSha256": "164cf15058711b645c741710a758c08adc06c11dca277335ec988ee476a32152",
+      "physicalLines": 911,
+      "baseMode": "100644"
+    },
+    {
+      "path": "src/renderer/api/httpClient.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+      "baseSha256": "f5cc4faec7566a1a73d851aa30ce739719149d35c33a48c81292f1b0a74731e2",
+      "postSha256": "1f9631c6e89d0c23f13b03239f810c522177267ef8381061057bd9b3cb9da89f",
+      "physicalLines": 1864,
+      "frozenExistingProductionLinesUnchanged": true,
+      "baseBlob": "e32e806351da52be90fad7866fb3188d60463cc1",
+      "baseMode": "100644"
+    },
+    {
+      "path": "src/features/review-flow/renderer/http/index.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+      "baseBlob": null,
+      "baseSha256": null,
+      "postSha256": "2f051a8b310f35d75921a2fa3822d42a99f07b0a405cdadeefc05cdc7284f301",
+      "physicalLines": 5,
+      "baseMode": null
+    },
+    {
+      "path": "eslint.review-flow-boundaries.mts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+      "postSha256": "6c79ec2b184bd7f6959a72d38975d6c16495b6796878863859e726a64b1e8c3f",
+      "physicalLines": 158,
+      "baseBlob": "0c874cd5d409e10444b4bc3faa0c0ee5079c50c0",
+      "baseSha256": "23e666216420516fcef5692c021709a61c18190f368982103e3bf0ce46188e3a",
+      "baseMode": "100644"
+    },
+    {
+      "path": "test/main/services/team/TeamDataService.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+      "baseBlob": "9b31ea01968ada8842b10601f3aa389ddb9097fb",
+      "baseSha256": "5ff089f5b19683bc89967708b7342b1cde84dc90bdb86358fe6bcee902c32d61",
+      "postSha256": "f465b401ce65e445a517db640482f9a5744da7e78f0a1b91987cc565ea8a8ef9",
+      "physicalLines": 8918,
+      "baseMode": "100644"
+    },
+    {
+      "path": "agent-teams-controller/test/reviewFlow.test.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+      "baseBlob": "ab31ab5c02cc5d70e96deeae11c981e110133522",
+      "baseSha256": "6a226a4d61e675389ec6f1cab9d3941a94bdad571886ed429d8b516b38729768",
+      "postSha256": "21a0145d8aad5910eb0165610e29b6d8202d3d13e1e19d3a03a83d23d9bc35fe",
+      "physicalLines": 743,
+      "baseMode": "100644"
+    },
+    {
+      "path": "eslint.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+      "baseSha256": "a47a249fa1c6899b47041d1b8491a2ba8faa620a5811343ac9b6b13f88a5b02a",
+      "postSha256": "8c28e3af29eca6659bcef7988af3a3de75101f7960b194f101215172968697a0",
+      "physicalLines": 1168,
+      "baseBlob": "61839f5e40e4e40d7a0bb92ef1e07e28222bffe8",
+      "baseMode": "100644"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+      "baseSha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88",
+      "postSha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335",
+      "physicalLines": 258,
+      "baseBlob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "baseMode": "100644"
+    },
+    {
+      "path": "src/features/agent-attachments/core/domain/validation.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+      "baseBlob": "bed1c70f5c88a6a2d428112da29cb23cc912b619",
+      "baseSha256": "ee4e576c4b50f98fc35df407735b388b7da3258ecda8cf3285790be5af16bf6e",
+      "postSha256": "e2b37754df5e232d2832f998846999fe083bd69165a7a5099049a2a6d4966afb",
+      "physicalLines": 313,
+      "baseMode": "100644"
+    },
+    {
+      "path": "agent-teams-controller/src/internal/kanban.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+      "baseBlob": "8cd30aab69df46d7f4fd7b6465e33a9c9a2a60ed",
+      "baseSha256": "b5f3b559ee2aaf53f9732e9f7cd63a9f1a8bc17b378db5acdb00e8a2a25d7d33",
+      "postSha256": "a9deade357832c8e5e19953362ba86e5f2c0d6ac77af6d7f78eae6db939e303a",
+      "physicalLines": 220,
+      "baseMode": "100644"
+    },
+    {
+      "path": "agent-teams-controller/test/controller.test.js",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+      "baseBlob": "1c1daf20147d151e8d64da0719afa02f29e00037",
+      "baseSha256": "36803e62c2b157e51398e04d0b6d7d2e6a47d4a12a70f95d2e6e6b820fa26402",
+      "postSha256": "33e359e3a4762766eea0e1f89cf9147ee446f0ffa1dc537cc84cc8be797a3984",
+      "physicalLines": 5186,
+      "baseMode": "100644"
+    },
+    {
+      "path": "src/features/localization/renderer/resources.d.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+      "baseBlob": "5f4f7fb8acac12b4679d5e1755a1448a54057efa",
+      "baseSha256": "3d201ec7f37ee59357d3a66a374e61d4e07a9ab645cacd7965f05e313bb6b151",
+      "postSha256": "51e22757808ea4fb66cfacf53dc1b9e7968737be51a557366e2c6bf56b7e2b25",
+      "physicalLines": 7172,
+      "baseMode": "100644"
+    },
+    {
+      "path": "test/features/agent-backend/hostReviewFlow.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+      "baseBlob": "97ddec15839c607d69b7bff69eea304fc4217290",
+      "baseSha256": "fd41a5b8d4fb24a75477a78681e73752f42e50fc3c4fa39348c297db8a5fa0e4",
+      "postSha256": "e4b1cd0b6a8b8b91d4aaa4e600b61ba0126e20b84d9a3e97c35d1ee24239729b",
+      "physicalLines": 128,
+      "baseMode": "100644"
+    }
+  ],
+  "featureReadme": {
+    "path": "src/features/review-flow/README.md",
+    "mode": "100644",
+    "type": "blob",
+    "sha": "0c12798ff5d72b3565807e132a2511cba72d8b5b",
+    "baseBlob": null,
+    "baseSha256": null,
+    "postSha256": "94793f486177e1bed84822ecbfdbcb85150ca8b2cd1b24b4a4f7532e7793c5fb",
+    "physicalLines": 17
+  },
+  "sourceFileCount": 22,
+  "newProductionPaths": [
+    "scripts/legacy-agent-host/desktop-retained-opencode-authority.ts",
+    "src/features/review-flow/renderer/http/index.ts"
+  ],
+  "fullBaseTreeEntries": 11433,
+  "alreadyDeliveredAndPreserved": {
+    "snapshotPostimage": {
+      "path": "src/features/agent-backend/main/adapters/output/projectTeamSnapshot.ts",
+      "blob": "f35f2ee4440f888cb1d878bba0dfef242e037b0e",
+      "sha256": "9181d5945c598da2b167be40f6ba8bedb35ddfcf5a09c66e6e4e19f9d94ebc70",
+      "committedIn": "19b5bf34d6875ac005e580db9f4c7097a9223f10"
+    },
+    "earlier": "Ordinary finite peer and three earlier lint postimages already integrated; external ReviewFlow and native media archives/lock/workspace/source/Test work retained."
+  },
+  "sourceGroups": [
+    {
+      "kind": "Runtime diagnostic ledger",
+      "files": 2,
+      "effect": "Latest valid private tuple for the same public digest/final bit; conflicting final bits remain sticky unknown."
+    },
+    {
+      "kind": "Finite metadata contracts",
+      "files": 2,
+      "effect": "Complete retained DTO, both summary orders and fresh static finite model catalog; actual resolver/picker/authority negative cases retained."
+    },
+    {
+      "kind": "Retained import authority",
+      "files": 3,
+      "effect": "Matched Main descriptor and Host creation context without opaque runtime recipe changes; actual metadata-only capture/read tests."
+    },
+    {
+      "kind": "CrossTeam trusted input",
+      "files": 2,
+      "effect": "Bounded passive target geometry reacquisition within the original deadline; same trusted input and owner/effect checks."
+    },
+    {
+      "kind": "Proof roster",
+      "files": 1,
+      "effect": "Add only authority helper and public HTTP index; preserve previous paths/order."
+    },
+    {
+      "kind": "HTTP import boundary",
+      "files": 3,
+      "effect": "HTTP-only public entrypoint breaks renderer store cycle; explicit resolved feature boundary; unchanged factory."
+    },
+    {
+      "kind": "Trusted controller tests",
+      "files": 2,
+      "effect": "Correct3actual service doubles;2actual controller authorization and replay regression cases."
+    },
+    {
+      "kind": "Global HTTP import policy",
+      "files": 2,
+      "effect": "Exact public root exception plus descendant denial in full/fast configs; frozen1168line cap unchanged."
+    },
+    {
+      "kind": "Attachment capability test",
+      "files": 1,
+      "effect": "Align the existing image-only model refusal assertion with the current captured PDF capability boundary; production unchanged."
+    },
+    {
+      "kind": "Strict canonical Kanban",
+      "files": 2,
+      "effect": "Read the requested strict state before existing effective policy lookup; preserve closed safety refusal and publication oracle."
+    },
+    {
+      "kind": "ReviewFlow generated types and immutable-snapshot test",
+      "files": 2,
+      "effect": "Regenerate one missing translation declaration and mutate the same shared mutable fixture handle without assigning through the readonly contract."
+    }
+  ],
+  "roster": {
+    "baseUniquePaths": 1880,
+    "candidateUniquePaths": 1882,
+    "mainPhysicalLines": 794,
+    "uiPhysicalLines": 41,
+    "supplementaryPhysicalLines": 388,
+    "addedPaths": [
+      "scripts/legacy-agent-host/desktop-retained-opencode-authority.ts",
+      "src/features/review-flow/renderer/http/index.ts"
+    ],
+    "removals": 0,
+    "previousOrderPreserved": true
+  },
+  "reviews": [
+    {
+      "key": "next199.integrationReview",
+      "blob": "6ee4e0ff8cb17435547543aa4218ee22983f2001",
+      "sha256": "0f5d872b5bf076a14aa5814cb88812e324d6602c1f7f794997e9bc57bc785191",
+      "bytes": 12412
+    },
+    {
+      "key": "next88cc.httpIndependentReview",
+      "blob": "0b69f20b983a2bd3e730609e8b7331bfccbb2ed9",
+      "sha256": "c45e50ffd2a031883dc500a1468fb61c9a265d5079473839e71bb129e569c1f7",
+      "bytes": 5278,
+      "readbackVerified": true
+    },
+    {
+      "key": "next047.globalBoundaryIndependentReview",
+      "blob": "3454a5a131977610fbaa26994fe5ece5c3545be1",
+      "sha256": "ce580a26dc35fdb6646d165e05b57f8f0ca1bcac8636e52702288f072c8305fc",
+      "bytes": 7491,
+      "readbackVerified": true
+    },
+    {
+      "key": "next199.controllerTestsIndependentReview",
+      "blob": "8485b70d51611bc422f9b2fbb30dc2672ae01b41",
+      "sha256": "8b1e47edb20572d7028474ccd08bb60ac03afccfffa532eabadc66c581ab8546",
+      "bytes": 6042
+    },
+    {
+      "key": "next88cc.snapshotIndependentReview",
+      "blob": "45dfebec8a5dd2ad49e25a8c20307fa462dd421a",
+      "sha256": "21c3cd243dd8a87715d322b262cc87b1ad56a2ba51ddda89706d694db254c1f7",
+      "bytes": 3015
+    },
+    {
+      "key": "next19b5.sourceEquivalence",
+      "blob": "56b2073c7c2b40daf822f2192736dc9f433c3f91",
+      "sha256": "dffc0553fb6baccbf69ae2237495d37558466b64c8ca87ad9bfc555edab4f71f",
+      "bytes": 8822,
+      "readbackVerified": true
+    },
+    {
+      "key": "attachmentIndependentReview",
+      "blob": "21911c415752c9cf05b05753308a35bc6b0e4201",
+      "sha256": "07c3d420bfb83585a3a4839044ae1ec406e0c15b65fdb0bf5b10ab49b73538d8"
+    },
+    {
+      "key": "kanbanIndependentReview",
+      "blob": "b68efd8700330f1aec8060e1aa8b429f54fa53df",
+      "sha256": "83c61d0ca6809ae1517471d45e37beb11d5242c1bc4af3414860b0283c914cfb"
+    },
+    {
+      "key": "typesIndependentReview",
+      "blob": "a92802dc61d8002359f24b998f6b6ad7504675ab",
+      "sha256": "6b43b246760ea3468194bbb1d7f71f90e25a46248d71409a68c396c4a2223158"
+    },
+    {
+      "key": "publicationParentProductionEquivalence",
+      "blob": "6e1b2ebaf42ccf6390fb6ec5381741c73f06ca00",
+      "sha256": "80618a296c61f6508b831ea72ee457e2914373f6026376823e6f4f106213a60d",
+      "bytes": 2961,
+      "readbackVerified": true
+    },
+    {
+      "key": "latestPublicationParentSizeAndAdoption",
+      "blob": "a1a442ed47b42471f0d303a7f9dcddfd07b7d120",
+      "sha256": "3c4671b4a51d9ccaddb46a3858be06062d03df2b587e663ad84661044bbdf10d",
+      "bytes": 14793,
+      "readbackVerified": true
+    }
+  ],
+  "validation": {
+    "finiteChecks": {
+      "blob": "a7a85b95d341788942087479ab22d2167161938c",
+      "sha256": "c412839d25360b0685e9e68c7d13e991d1a557ce5295dc57b5930f5191ea3080",
+      "bytes": 237532
+    },
+    "cross52": {
+      "blob": "9134c1efff62d3d174db691d33967bf2774ca32c",
+      "sha256": "2143aa04e00d34b633f66fe08b0c01e6f2eb2b15a9af53e94ae1ff134c4cff50",
+      "bytes": 20739,
+      "readbackVerified": true
+    },
+    "metadata5": {
+      "blob": "f7f3279147afaf05afcc616cd81e2075d0eab390",
+      "sha256": "c53195f32c506b3664b838fd8d83b5ad7004d183d2637848e28c4b1374431450",
+      "bytes": 11566,
+      "readbackVerified": true
+    },
+    "globalBoundary90": {
+      "blob": "265b79f1c3d6c4065a880f10104374ed397932bd",
+      "sha256": "841c2ac55c3534a64423d14824f70e0177741f437493e9fde60e826f1fbf5709",
+      "bytes": 165967,
+      "readbackVerified": true
+    },
+    "fullSizeGuard": {
+      "blob": "a1a442ed47b42471f0d303a7f9dcddfd07b7d120",
+      "sha256": "3c4671b4a51d9ccaddb46a3858be06062d03df2b587e663ad84661044bbdf10d",
+      "bytes": 14793,
+      "readbackVerified": true
+    },
+    "sourceSizeReuseByExactProductionTree": {
+      "blob": "6e1b2ebaf42ccf6390fb6ec5381741c73f06ca00",
+      "sha256": "80618a296c61f6508b831ea72ee457e2914373f6026376823e6f4f106213a60d",
+      "bytes": 2961,
+      "readbackVerified": true
+    },
+    "finalCombinedLint": {
+      "exitCode": -9,
+      "result": "INCOMPLETE",
+      "stdoutBytes": 0,
+      "stderrBytes": 0
+    },
+    "noFullCurrentNativeOrWorkspaceQualification": true,
+    "previousFullSizeGuard": {
+      "blob": "9cf61e805431df10d7cd7c0b3bdb46e1728420bb",
+      "sha256": "ab398dc890539fae883c44c3c8f43653daac47da5801f782af0f7764f08a90c5",
+      "bytes": 33461,
+      "readbackVerified": true
+    },
+    "frontendIPC": {
+      "passed": 611,
+      "distinctFiles": 20,
+      "separateScopedRuns": true
+    },
+    "lateChecks": {
+      "attachment": {
+        "passed": 15,
+        "skipped": 0,
+        "manifest": {
+          "blob": "536d83ea90183782c660ffe916956795e581b320",
+          "sha256": "0675fc0f2a37c5cbe8940c8e3c4548b40ac6c58ccfe23a24dcf9a4b609335294"
+        },
+        "scope": "Current Host source aliases; original image-only capability refusal, no build"
+      },
+      "kanban": {
+        "selectedController": {
+          "redFailed": 1,
+          "greenPassed": 1,
+          "filteredSkipped": 148
+        },
+        "selectedNativeMember": {
+          "redFailed": 1,
+          "greenPassed": 1,
+          "filteredSkipped": 9
+        },
+        "manifest": {
+          "blob": "faa3896082c941b99e213317c0f622c3a3cbac42",
+          "sha256": "7d3a9546bdede62fb91f7dba738fe3d8f11fe00c9f8e71cf8d8dbeac27ef22ef"
+        },
+        "originalNativeTestUnchanged": true
+      },
+      "reviewFlowTypes": {
+        "pinnedGeneratorExit": 0,
+        "translationOnlyTS7Exit": 0,
+        "hostReviewFlowPassed": 10,
+        "hostReviewFlowSkipped": 0,
+        "combinedTSProjectTimeoutSeconds": 45,
+        "combinedTSProjectResult": "INCOMPLETE; not PASS",
+        "manifest": {
+          "blob": "e842f7675f28a34fc8af29cf253a5cb2dd63d2d6",
+          "sha256": "927e74559fa2323861fad98b784b499711247ee583a0dbac4f4324fe1e657053",
+          "bytes": 13111,
+          "readbackVerified": true
+        }
+      }
+    },
+    "previousE114FullSizeGuard": {
+      "blob": "15b9036b2c52a24e9297bc4db96bf482d3e813fd",
+      "sha256": "786432d2e11fcbe452449f6d13804c300a39f9383dc5cee25b5a71dac8a49535",
+      "bytes": 23574,
+      "readbackVerified": true
+    }
+  },
+  "publication": {
+    "state": "Reviewed22-source composition on c8; immediate expected-head push after commit creation",
+    "requirements": [
+      "Fresh exact remote branch and unchanged Draft PR/base lease before commit",
+      "Preserve later external changes; no force update",
+      "Create commit and immediately attempt expected-head push",
+      "Observe resulting original cohort separately; no rerun/cancel/dispatch"
+    ]
+  },
+  "limits": [
+    "Each successful finite result retains its source base and prepared dependency scope.",
+    "Source equivalence only transfers the completed production-size evaluation.",
+    "Final broad lint SIGKILL is retained as unqualified; no full lint/typecheck/native/GUI PASS inferred.",
+    "P09 and remaining Windows/native/GUI acceptance gaps stay open; no deadlines/oracles/authority weakened.",
+    "The combined ReviewFlow test+translation TypeScript project timed out after45s and is not a pass; only the completed translation-only project is qualified.",
+    "Historical snapshot recovery is partial and explicitly indexed; no missing roster or terminal data is reconstructed."
+  ],
+  "preimageVerification": {
+    "all22AgainstExactE114": true,
+    "allPostBlobAndSha256Matched": true,
+    "reviewed17Preserved": true,
+    "external19ToE114ChangedPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider.ts",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/coordination-probe.ts",
+      "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "scripts/lib/desktop-finite-node-options.ts",
+      "test/features/agent-backend/hostOpenCodeV2EmbeddedMember.test.ts"
+    ],
+    "overlapWithSourceEntries": false,
+    "verification": "Read-only immutable Git objects plus exact local postimage SHA1/SHA256; no external checkout writes",
+    "all22AgainstExactPublicationParent": true,
+    "externalE114To2f33ChangedPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "packages/legacy-agent-host/tests/native-host-close.test.ts"
+    ],
+    "external2fToC8ChangedPaths": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "packages/legacy-agent-host/src/composition/readProfile.ts"
+    ]
+  },
+  "previousPublicationParent": "2f33d5668944ef6804557690b20ce51b70245aab",
+  "parentAdoption": {
+    "receipt": {
+      "blob": "a1a442ed47b42471f0d303a7f9dcddfd07b7d120",
+      "sha256": "3c4671b4a51d9ccaddb46a3858be06062d03df2b587e663ad84661044bbdf10d",
+      "bytes": 14793,
+      "readbackVerified": true
+    },
+    "sourceEntriesUnchanged": true,
+    "oneExternalProductionDelta": "packages/legacy-agent-host/src/composition/readProfile.ts",
+    "externalPhysicalLines": "9 to9; two import targets only; body unchanged",
+    "statusPreservesExternalF1M1AndJournal": true,
+    "noExecutionResultsTransferred": true
+  },
+  "parentAdoptionHistory": [
+    {
+      "receipt": {
+        "blob": "6e1b2ebaf42ccf6390fb6ec5381741c73f06ca00",
+        "sha256": "80618a296c61f6508b831ea72ee457e2914373f6026376823e6f4f106213a60d",
+        "bytes": 2961,
+        "readbackVerified": true
+      },
+      "sourceEntriesUnchanged": true,
+      "productionTreeIdentical": true,
+      "statusMustPreserveNewF1M1AndJournal": true,
+      "noExecutionResultsTransferred": true
+    }
+  ]
+}

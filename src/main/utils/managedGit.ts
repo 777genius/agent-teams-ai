@@ -41,7 +41,11 @@ function findRuntime(options: ManagedGitLocationOptions = {}): GitRuntimeLocatio
       platform?: string;
       sha256?: string;
     };
-    if (info.platform === `${platform}-${arch}` && /^[a-f0-9]{64}$/.test(info.sha256 ?? '') && existsSync(executable)) {
+    if (
+      info.platform === `${platform}-${arch}` &&
+      /^[a-f0-9]{64}$/.test(info.sha256 ?? '') &&
+      existsSync(executable)
+    ) {
       return { executable, root };
     }
   } catch {
@@ -82,29 +86,48 @@ export function createManagedGitEnv(
 
   const platform = options.platform ?? process.platform;
   const root = resolved.root;
-  const dirs = platform === 'win32'
-    ? [
-        path.join(root, 'cmd'),
-        path.join(root, (options.arch ?? process.arch) === 'arm64' ? 'clangarm64' : 'ucrt64', 'bin'),
-        path.join(root, (options.arch ?? process.arch) === 'arm64' ? 'clangarm64' : 'ucrt64', 'usr', 'bin'),
-      ]
-    : [path.join(root, 'bin')];
+  const dirs =
+    platform === 'win32'
+      ? [
+          path.join(root, 'cmd'),
+          path.join(
+            root,
+            (options.arch ?? process.arch) === 'arm64' ? 'clangarm64' : 'ucrt64',
+            'bin'
+          ),
+          path.join(
+            root,
+            (options.arch ?? process.arch) === 'arm64' ? 'clangarm64' : 'ucrt64',
+            'usr',
+            'bin'
+          ),
+        ]
+      : [path.join(root, 'bin')];
 
   // Windows treats PATH/Path as the same variable; avoid duplicate keys.
-  const previousPath = env.PATH ?? Object.entries(env).find(([key]) => key.toUpperCase() === 'PATH')?.[1];
+  const previousPath =
+    env.PATH ??
+    Object.entries(env).find(
+      ([key, value]) => key.toUpperCase() === 'PATH' && value !== undefined
+    )?.[1];
   if (platform === 'win32') {
     for (const key of Object.keys(env)) {
       if (key !== 'PATH' && key.toUpperCase() === 'PATH') delete env[key];
     }
   }
   const separator = platform === 'win32' ? ';' : ':';
-  env.PATH = [...new Set([
-    ...dirs,
-    ...(previousPath ?? '').split(separator).filter(Boolean),
-  ])].join(separator);
-  env.GIT_EXEC_PATH = platform === 'win32'
-    ? path.join(root, (options.arch ?? process.arch) === 'arm64' ? 'clangarm64' : 'ucrt64', 'libexec', 'git-core')
-    : path.join(root, 'libexec', 'git-core');
+  env.PATH = [...new Set([...dirs, ...(previousPath ?? '').split(separator).filter(Boolean)])].join(
+    separator
+  );
+  env.GIT_EXEC_PATH =
+    platform === 'win32'
+      ? path.join(
+          root,
+          (options.arch ?? process.arch) === 'arm64' ? 'clangarm64' : 'ucrt64',
+          'libexec',
+          'git-core'
+        )
+      : path.join(root, 'libexec', 'git-core');
 
   if (!env.GIT_CONFIG_SYSTEM && platform !== 'win32') {
     env.GIT_CONFIG_SYSTEM = path.join(root, 'etc', 'gitconfig');

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useGatewayMemberBindings } from '@features/gateway-provider/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -36,9 +37,9 @@ import {
   displayMemberName,
 } from '@renderer/utils/memberHelpers';
 import { MAX_TEAM_DEFINITION_TEXT_LENGTH } from '@shared/constants/teamLimits';
-import { parseNumericSuffixName } from '@shared/utils/teamMemberName';
 import { Loader2 } from 'lucide-react';
 
+import { createEditTeamHostSubmission } from './editTeamHostSubmission';
 import {
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
@@ -46,6 +47,7 @@ import {
   getLiveRosterIdentityChanges,
   getMembersRequiringRuntimeRestart,
 } from './editTeamRuntimeChanges';
+import { getInvalidMemberNamesError } from './editTeamValidation';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -107,41 +109,6 @@ function useEditTeamErrorReset(
   };
 }
 
-function getInvalidMemberNamesError(
-  members: readonly {
-    name: string;
-    removedAt?: number | string | null;
-  }[],
-  messages: {
-    empty: string;
-    invalid: string;
-    reserved: (name: string) => string;
-    numericSuffix: (name: string, base: string) => string;
-  }
-): string | null {
-  for (const member of members) {
-    if (member.removedAt) {
-      continue;
-    }
-    const name = member.name.trim();
-    if (!name) {
-      return messages.empty;
-    }
-    if (validateMemberNameInline(name) !== null) {
-      return messages.invalid;
-    }
-    const lower = name.toLowerCase();
-    if (lower === 'user' || lower === 'team-lead') {
-      return messages.reserved(name);
-    }
-    const suffixInfo = parseNumericSuffixName(name);
-    if (suffixInfo && suffixInfo.suffix >= 2) {
-      return messages.numericSuffix(name, suffixInfo.base);
-    }
-  }
-  return null;
-}
-
 function applyRemovedMembersToSnapshot(
   members: readonly ResolvedTeamMember[],
   removedMemberNames: readonly string[]
@@ -195,6 +162,14 @@ export const EditTeamDialog = ({
   const initializedTeamNameRef = useRef<string | null>(null);
   const baselineSourceSnapshotRef = useRef<string | null>(null);
   const pendingCommittedSourceSnapshotRef = useRef<string | null>(null);
+  const hostSubmissionRef = useRef<ReturnType<typeof createEditTeamHostSubmission> | null>(null);
+  const dialogActiveRef = useRef(false);
+  useEffect(() => {
+    dialogActiveRef.current = true;
+    return () => {
+      dialogActiveRef.current = false;
+    };
+  }, []);
 
   useFileListCacheWarmer(projectPath ?? null);
   useOpenCodePassiveStatusPrefetch({
@@ -230,6 +205,23 @@ export const EditTeamDialog = ({
     if (open) {
       const shouldInitialize = !wasOpen || initializedTeamNameRef.current !== teamName;
       if (shouldInitialize) {
+        const submission: ReturnType<typeof createEditTeamHostSubmission> | null =
+          isHostTeamSelectionKey(teamName)
+            ? createEditTeamHostSubmission({
+                teams: api.teams,
+                teamName,
+                baseline: {
+                  name: currentName,
+                  description: currentDescription,
+                  color: currentColor,
+                  prompt: currentLeadPrompt,
+                  members: currentMembers,
+                },
+                isCurrent: () =>
+                  dialogActiveRef.current && hostSubmissionRef.current === submission,
+              })
+            : null;
+        hostSubmissionRef.current = submission;
         setName(currentName);
         setDescription(currentDescription);
         setColor(currentColor);
@@ -260,6 +252,7 @@ export const EditTeamDialog = ({
         }
       }
     } else if (wasOpen) {
+      hostSubmissionRef.current = null;
       initializedTeamNameRef.current = null;
       baselineSourceSnapshotRef.current = null;
       pendingCommittedSourceSnapshotRef.current = null;
@@ -465,6 +458,20 @@ export const EditTeamDialog = ({
       let refreshAfterSaveAttempted = false;
       let committedMembersForSnapshot: ResolvedTeamMember[] = currentMembers;
       try {
+        if (isHostTeamSelectionKey(teamName)) {
+          const submission = hostSubmissionRef.current;
+          if (!submission) throw new Error('Saved team configuration unavailable.');
+          // Live props may acknowledge a save before its reply; retries retain the draft.
+          const prompt = currentLeadPrompt !== undefined ? leadPrompt.trim() : undefined;
+          await submission.submit({ name, description, color, members: builtMembers, prompt });
+          configSaved = true;
+          membersSaved = true;
+          gatewayBindings.markSaved(builtMembers.map((member) => member.name));
+          refreshAfterSaveAttempted = true;
+          await Promise.resolve(onSaved());
+          onClose();
+          return;
+        }
         await api.teams.updateConfig(teamName, {
           name: name.trim(),
           description: description.trim(),

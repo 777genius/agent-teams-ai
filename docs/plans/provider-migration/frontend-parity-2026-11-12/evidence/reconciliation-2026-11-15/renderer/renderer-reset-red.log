@@ -1,0 +1,331 @@
+
+ RUN  v3.2.6 /workspace/scratch/82d3f9ba6b85/agent-teams-e2e
+
+ ❯ test/renderer/store/teamSlice.test.ts (276 tests | 2 failed) 870ms
+   ✓ teamSlice actions > addresses group tasks to the existing team tab and consumes only the newest intent 11ms
+   ✓ teamSlice actions > normalizes complete arrays and matches only the original unavailable Team or owner 1ms
+   ✓ teamSlice actions > keeps healthy Teams and the original notice through repeated owner outages and a failed refresh 8ms
+   ✓ teamSlice actions > retains only an unknown Host notice when owner membership cannot yet be observed 6ms
+   ✓ teamSlice actions > clears both unavailable collections through the original context reset 4ms
+   ✓ teamSlice actions > keeps an explicit project intent when opening Teams and clears it for generic navigation 5ms
+   ✓ teamSlice actions > records task first output once through createTask and refresh without leaking prompt text 8ms
+   ✓ teamSlice actions > records task attachment metadata through saveTaskAttachment without leaking file names 6ms
+   ✓ teamSlice actions > records launch step transitions from provisioning progress once per step 5ms
+   ✓ teamSlice actions > restores the selected messages panel mode from localStorage 5ms
+   ✓ teamSlice actions > persists messages panel mode changes and ignores invalid stored values 4ms
+   ✓ teamSlice actions > updates selected team task change presence in one batch 5ms
+   ✓ teamSlice actions > records terminal provisioning fanout diagnostics without changing visible graph hydrate behavior 6ms
+   ✓ teamSlice actions > keeps the latest Host roster when a deferred original status read resolves after its notification 8ms
+   ✓ teamSlice actions > keeps the latest Host roster when a deferred unseen-roster status read resolves after its notification 5ms
+   ✓ teamSlice actions > does not roll back a newer Runtime roster while its provisioning read is still pending 4ms
+   ✓ teamSlice actions > keeps the Host status request scope for initial 4ms
+   ✓ teamSlice actions > keeps the Host status request scope for spawn successor 3ms
+   × teamSlice actions > keeps the Host status request scope for team reset 32ms
+     → expected 'host-run:%5B%22TEST-status-owner%22%2…' to be undefined // Object.is equality
+   ✓ teamSlice actions > keeps ready log updates without restarting terminal hydration, and hydrates the next terminal state 5ms
+   ✓ teamSlice actions > retains a terminal cleanup error after ready → disconnected and rejects late ready 3ms
+   ✓ teamSlice actions > retains a terminal cleanup error after failed → failed and rejects late ready 3ms
+   ✓ teamSlice actions > retains a terminal cleanup error after cancelled → cancelled and rejects late ready 3ms
+   ✓ teamSlice actions > does not demand team-wide provisioning refreshes from a visible task-detail tab 3ms
+   ✓ teamSlice actions > maps inbox verify failure to user-friendly text 4ms
+   ✓ teamSlice actions > returns the accepted send result even when detached refresh rejects 3ms
+   ✓ teamSlice actions > returns the exact typed cross-team result 3ms
+   ✓ teamSlice actions > keeps queued optimistic messages unread until live delivery is confirmed 4ms
+   ✓ teamSlice actions > does not present an unconfirmed send as a sent message 3ms
+   ✓ teamSlice actions > keeps send dialog result non-terminal when OpenCode runtime delivery fails after inbox persistence 4ms
+   ✓ teamSlice actions > stores hidden OpenCode runtime diagnostics while live response is pending 3ms
+   ✓ teamSlice actions > updates pending OpenCode runtime diagnostics when delivery becomes terminal 3ms
+   ✓ teamSlice actions > checks the original message when queued blocker impact is no longer user-visible 3ms
+   ✓ teamSlice actions > clears OpenCode runtime diagnostics only for the matching message id 3ms
+   ✓ teamSlice actions > clears OpenCode runtime diagnostics after normal success or send failure 4ms
+   ✓ teamSlice actions > maps task status verify failure in updateKanban and rethrows 30ms
+   ✓ teamSlice actions > maps task status verify failure in requestReview and rethrows 1ms
+   ✓ teamSlice actions > does not warm task-change summaries on team open 2ms
+   ✓ teamSlice actions > commits owner slot drops in the current session while persistence is disabled 2ms
+   ✓ teamSlice actions > stores non-default graph layout mode without mutating radial slot assignments 1ms
+   ✓ teamSlice actions > swaps grid owners from canonical visible order without mutating radial slots 1ms
+   ✓ teamSlice actions > keeps grid owner order unchanged when radial slots are committed 1ms
+   ✓ teamSlice actions > replaces persisted slot assignments with defaults while persistence is disabled 9ms
+   ✓ teamSlice actions > seeds first-open cardinal slot defaults for small visible teams with no saved placements 1ms
+   ✓ teamSlice actions > uses config member order instead of transient visible member array order for defaults 3ms
+   ✓ teamSlice actions > ignores the lead member when deriving small-team cardinal defaults 3ms
+   ✓ teamSlice actions > drops hidden persisted slot assignments and reseeds visible members while persistence is disabled 4ms
+   ✓ teamSlice actions > resets stale slot assignments when slot layout version mismatches 4ms
+   ✓ teamSlice actions > ignores hidden-member persisted slot assignments while persistence is disabled 4ms
+   ✓ teamSlice actions > reseeds defaults again while the team remains in default mode and visible owners change 3ms
+   ✓ teamSlice actions > does not reshuffle existing owners after the team enters manual mode 4ms
+   ✓ teamSlice actions > normalizes legacy six-owner row-orbit slots before preserving manual layout 4ms
+   ✓ teamSlice actions > resets graph slot assignments back to defaults when reopening the graph surface 4ms
+   ✓ teamSlice actions > syncs both team and graph tab labels when the team display name changes 5ms
+   ✓ teamSlice actions > clears stale selectedTeamData immediately when selecting an uncached team 4ms
+   ✓ teamSlice actions > repoints selectedTeamData to the cached snapshot immediately on team switch 5ms
+   ✓ teamSlice actions > commits selectTeam thin snapshot before post-paint messages and activity meta refreshes 8ms
+   ✓ teamSlice actions > refetches messages head after paint even if a head was already hydrated during this load 4ms
+   ✓ teamSlice actions > does not apply deleted tasks from a team that is no longer selected 4ms
+   ✓ teamSlice actions > does not let a stale deleted-task fetch clear loading for a newer request 3ms
+   ✓ teamSlice actions > clears deleted tasks when selectTeam switches to a different team 3ms
+   ✓ teamSlice actions > keeps deleted tasks when selectTeam reloads the same team 3ms
+   ✓ teamSlice actions > refetches messages head after paint when the cached head is from an older load 4ms
+   ✓ teamSlice actions > keeps selected team data visible when post-paint message refresh fails 3ms
+   ✓ teamSlice actions > queues a full team refresh behind an in-flight thin selectTeam snapshot 5ms
+   ✓ teamSlice actions > drains queued full team refresh through the post-paint fallback when rAF never fires 4ms
+   ✓ teamSlice actions > keeps selected team data visible when post-paint activity meta refresh fails 5ms
+   ✓ teamSlice actions > does not share a forced full refresh request with an in-flight thin selectTeam request 5ms
+   ✓ teamSlice actions > does not let a late thin selectTeam snapshot clear members loaded by an earlier full refresh 6ms
+   ✓ teamSlice actions > does not let a late failed selectTeam request clear members loaded by a full refresh 4ms
+   ✓ teamSlice actions > preserves an earlier full refresh even when the cached baseline had the same member names 4ms
+   ✓ teamSlice actions > does not let an empty selectTeam snapshot clear an already cached member roster 4ms
+   ✓ teamSlice actions > does not treat a lead-only selectTeam snapshot as a confirmed teammate roster 4ms
+   ✓ teamSlice actions > uses summary fallback instead of a stale cached roster when names no longer match 5ms
+   ✓ teamSlice actions > commits an empty selectTeam snapshot when the team summary is already solo 6ms
+   ✓ teamSlice actions > commits an empty cached-team selectTeam snapshot when no summary confirms teammates 7ms
+   ✓ teamSlice actions > does not preserve a cached roster from a summary count without member names 5ms
+   ✓ teamSlice actions > preserves a cached roster when full launch failure metadata confirms the member names 4ms
+   ✓ teamSlice actions > does not preserve a cached roster when launch failure metadata only names part of the team 4ms
+   ✓ teamSlice actions > commits a late selectTeam snapshot that explicitly marks members as removed 4ms
+   ✓ teamSlice actions > still commits a late selectTeam snapshot when concurrent local state only changed tasks 4ms
+   ✓ teamSlice actions > does not preserve a stale roster when concurrent local state only changed tasks 4ms
+   ✓ teamSlice actions > keeps one queued full refresh for repeated fanout while thin selectTeam is pending 32ms
+   ✓ teamSlice actions > drains queued full refresh when thin selectTeam becomes stale after switching teams 3ms
+   ✓ teamSlice actions > clears queued full refresh when thin selectTeam fails structurally 2ms
+   ✓ teamSlice actions > lets the newer same-team selectTeam drain queued full refresh after its own paint 3ms
+   ✓ teamSlice actions > does not run stale post-paint messages for a team after switching away 2ms
+   ✓ teamSlice actions > clears queued full refresh and post-paint timer when deleting a loaded team 3ms
+   ✓ teamSlice actions > keeps selected team data visible when post-structural sync work throws 2ms
+   ✓ teamSlice actions > distinguishes historical feed changes from visible head changes in refreshTeamMessagesHead 1ms
+   ✓ teamSlice actions > retains only explicitly requested older pages at the same source revision 2ms
+   ✓ teamSlice actions > retains incomplete source history notices through paging and clears them on a complete fresh head 1ms
+   ✓ teamSlice actions > keeps a 50-message head bounded across advancing polls without Load older 4ms
+   ✓ teamSlice actions > invalidates explicitly loaded history on a rewritten source and exposes explicit reload demand 1ms
+   ✓ teamSlice actions > acknowledges optimistic messages found in an explicitly loaded older page 1ms
+   ✓ teamSlice actions > finishes stale paging before a queued head refresh without joining its own promise 1ms
+   ✓ teamSlice actions > rehydrates the current owner before paging from a retained prior-incarnation cache 1ms
+   ✓ teamSlice actions > invalidates an exhausted older range when a same-revision live overlay shifts the head boundary 3ms
+   ✓ teamSlice actions > observes head IPC failure during initial hydration without rejecting the paging action or replacing trusted history 2ms
+   ✓ teamSlice actions > observes head IPC failure during owner rehydration without rejecting the paging action or replacing trusted history 1ms
+   ✓ teamSlice actions > observes head IPC failure during stale-page recovery without rejecting the paging action or replacing trusted history 2ms
+   ✓ teamSlice actions > observes a shared head IPC failure for paging while direct head callers still receive rejection 1ms
+   ✓ teamSlice actions > fences an obsolete owner head failure observed by paging without clearing replacement loading or errors 1ms
+   ✓ teamSlice actions > exposes paging failures without replacing trusted history or its cursor 1ms
+   ✓ teamSlice actions > single-flights concurrent head refreshes and runs one fresh follow-up pass 1ms
+   ✓ teamSlice actions > serializes head refresh behind an in-flight older-page load 1ms
+   ✓ teamSlice actions > drops a queued head refresh behind an older-page load when launch invalidates the team epoch 2ms
+   ✓ teamSlice actions > does not continue an older-page fetch with a stale cursor after launch invalidates while waiting for head refresh 1ms
+   ✓ teamSlice actions > schedules pending-reply refresh through store-owned timers 2ms
+   ✓ teamSlice actions > keeps pending-reply refresh ownership active while another source still waits for the same team 1ms
+   ✓ teamSlice actions > single-flights concurrent member activity refreshes and re-fetches after feed revision changes 1ms
+   ✓ teamSlice actions > reuses member activity facts and resolved member refs when only meta wrapper fields change 1ms
+   ✓ teamSlice actions > prefers selected team data over stale cached data for the active team 1ms
+   ✓ teamSlice actions > falls back to config roster when snapshot members are temporarily empty 1ms
+   ✓ teamSlice actions > falls back to team summary roster when detail snapshot temporarily has no members 2ms
+   ✓ teamSlice actions > falls back to team summary roster when detail snapshot only has the synthetic lead 1ms
+   ✓ teamSlice actions > does not synthesize member cards from launch failure names when summary roster is missing 1ms
+   ✓ teamSlice actions > memoizes team-scoped member messages selectors over the merged message feed 1ms
+   ✓ teamSlice actions > removes non-selected team cache entries on permanent delete 2ms
+   ✓ teamSlice actions > does not clean drafts for soft delete 1ms
+   ✓ teamSlice actions > keeps the captured context when permanent delete resolves after a context switch 1ms
+   ✓ teamSlice actions > does not roll back a confirmed permanent delete when local draft cleanup fails 1ms
+   ✓ teamSlice actions > clears selected team state and cache on soft delete 1ms
+   ✓ teamSlice actions > drops stale cache on restore so the next open refetches fresh data 1ms
+   ✓ teamSlice actions > clears team-scoped selector and transient caches on delete and restore flows 2ms
+   ✓ teamSlice actions > ignores stale async team snapshot and message refreshes after delete invalidates the team 1ms
+   ✓ teamSlice actions > ignores stale async team refreshes after launch starts a new local epoch for the same team 1ms
+   ✓ teamSlice actions > clears stale selectedTeamLoading when launch invalidates an in-flight selectTeam request 2ms
+   ✓ teamSlice actions > clears stale loadingOlder when launch invalidates an in-flight older messages request 1ms
+   ✓ teamSlice actions > ignores stale refreshTeamData failures after launch starts a new local epoch 1ms
+   ✓ teamSlice actions > keeps the newer messages-head request pinned when a stale pre-launch request settles 1ms
+   ✓ teamSlice actions > does not reuse a pre-delete in-flight team snapshot request after the same team is reselected 1ms
+   ✓ teamSlice actions > does not reuse a pre-delete in-flight messages head request after the same team is reselected 21ms
+   ✓ teamSlice actions > tombstones current progress runs when delete clears a team so late progress cannot resurrect it 2ms
+   ✓ teamSlice actions > stores runtime snapshots and suppresses semantic no-op refreshes 2ms
+   ✓ teamSlice actions > updates runtime snapshots when renderer-facing entry metadata changes 1ms
+   ✓ teamSlice actions > updates runtime snapshots when renderer-facing snapshot metadata changes 1ms
+   ✓ teamSlice actions > uses timestamp-only runtime observations for stabilization without replacing visible snapshots 2ms
+   ✓ teamSlice actions > does not reuse freshness memory after runtime state resets for the same team and run id 1ms
+   ✓ teamSlice actions > does not reuse older freshness memory over a newer visible runtime snapshot 1ms
+   ✓ teamSlice actions > keeps runtime freshness memory scoped by team name when run ids collide 3ms
+   ✓ teamSlice actions > updates runtime snapshots when liveness diagnostics change 1ms
+   ✓ teamSlice actions > updates runtime snapshots when resource history changes 1ms
+   ✓ teamSlice actions > does not crash when runtime resource history contains malformed samples 1ms
+   ✓ teamSlice actions > updates runtime snapshots when aggregate runtime load breakdown changes 1ms
+   ✓ teamSlice actions > updates runtime snapshots when copy-diagnostics details change 1ms
+   ✓ teamSlice actions > updates runtime snapshots when historical bootstrap state changes 1ms
+   ✓ teamSlice actions > restartMember refreshes spawn statuses and runtime snapshot 1ms
+   ✓ teamSlice actions > adopts a completed explicit primary restart while secondary members stay live and rejects late predecessor events 2ms
+   ✓ teamSlice actions > does not hand off a restart snapshot after stop invalidates its authority 1ms
+   ✓ teamSlice actions > does not hand off a restart snapshot after launch invalidates its authority 1ms
+   ✓ teamSlice actions > does not hand off a restart snapshot after other-restart invalidates its authority 1ms
+   ✓ teamSlice actions > does not hand off a restart snapshot after ignored-successor invalidates its authority 1ms
+   ✓ teamSlice actions > does not hand off a restart snapshot after dead-successor invalidates its authority 1ms
+   ✓ teamSlice actions > does not grant successful-action handoff to a failed restart with live secondary lanes 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: valid 2ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: wrong-team 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: wrong-member 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: wrong-predecessor 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: wrong-successor 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: primary-alive 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: no-secondary 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: stop 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: launch 1ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: other-restart 2ms
+   ✓ teamSlice actions > adopts only this failed retained restart authority: ignored-successor 1ms
+   ✓ teamSlice actions > only authoritative failed progress retains live secondary status: ordinary 1ms
+   ✓ teamSlice actions > only authoritative failed progress retains live secondary status: retained 1ms
+   ✓ teamSlice actions > only authoritative failed progress retains live secondary status: revoked 1ms
+   ✓ teamSlice actions > only authoritative failed progress retains live secondary status: cancelled 1ms
+   ✓ teamSlice actions > only authoritative failed progress retains live secondary status: disconnected 1ms
+   ✓ teamSlice actions > only authoritative failed progress retains live secondary status: foreign-run 1ms
+   ✓ teamSlice actions > recovers an authoritative restarted handoff after a transient snapshot read failure 1ms
+   ✓ teamSlice actions > recovers an authoritative failed_retained handoff after a transient snapshot read failure 1ms
+   ✓ teamSlice actions > recovers an authoritative failed_restored handoff after a transient snapshot read failure 1ms
+   ✓ teamSlice actions > reports unavailable status after all three restarted handoff reads fail 1ms
+   ✓ teamSlice actions > reports unavailable status after all three failed_retained handoff reads fail 4ms
+   ✓ teamSlice actions > reports unavailable status after all three failed_restored handoff reads fail 25ms
+   ✓ teamSlice actions > revokes handoff recovery while a failed snapshot read awaits stop 3ms
+   ✓ teamSlice actions > revokes handoff recovery while a failed snapshot read awaits launch 2ms
+   ✓ teamSlice actions > revokes handoff recovery while a failed snapshot read awaits overlap 2ms
+   ✓ teamSlice actions > revokes handoff recovery while a failed snapshot read awaits runtime-pin 1ms
+   ✓ teamSlice actions > revokes handoff recovery while a failed snapshot read awaits provisioning-pin 1ms
+   ✓ teamSlice actions > revokes handoff recovery while a failed snapshot read awaits context 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: valid 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: wrong-team 2ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: wrong-member 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: wrong-predecessor 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: wrong-successor 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: stop 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: launch 1ms
+   ✓ teamSlice actions > adopts only exact restored rollback authority while preserving the restart error: ignored-successor 1ms
+   ✓ teamSlice actions > a delayed earlier restart cannot replace the successor adopted by a rapid second restart 1ms
+   ✓ teamSlice actions > retryFailedOpenCodeSecondaryLanes refreshes only spawn statuses and runtime snapshot 1ms
+   ✓ teamSlice actions > restartMember refreshes spawn statuses and runtime snapshot even when restart fails 1ms
+   ✓ teamSlice actions > skipMemberForLaunch refreshes spawn statuses, runtime snapshot, and team list 2ms
+   ✓ teamSlice actions > skipMemberForLaunch refreshes launch data even when skip fails 1ms
+   ✓ teamSlice actions > clears stale runtime snapshots on delete 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > does not set fatal error on TEAM_PROVISIONING 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > preserves existing data on transient refresh error 2ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > reuses the existing selectedTeamData ref on a semantic no-op refresh 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > memoizes focused resolved member selection against unrelated member activity churn 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > re-canonicalizes selectedTeamData into the cache on a no-op refresh 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > clears non-selected cache on TEAM_DRAFT refresh failure 3ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > clears non-selected cache when the team no longer exists 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > clears stale selectedTeamError when TEAM_PROVISIONING with existing data 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > clears stale selectedTeamError on transient error when data exists 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > sets error when no previous data exists 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > invalidates changed task summaries without warming task availability on refresh 2ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > preserves known task changePresence across refresh when task change signature is unchanged 1ms
+   ✓ teamSlice actions > refreshTeamData provisioning safety > does not clear known task changePresence when presence refresh returns unknown 1ms
+   ✓ teamSlice actions > per-team tool approval settings > loads the selected team settings and synchronizes them to main 1ms
+   ✓ teamSlice actions > per-team tool approval settings > merges a background team update with that team settings without changing the selected team 1ms
+   ✓ teamSlice actions > per-team tool approval settings > keeps the latest desired policy and retries until main acknowledges it 24ms
+   ✓ teamSlice actions > per-team tool approval settings > stages launch settings for the target team without replacing another selected team projection 3ms
+   ✓ teamSlice actions > provisioning run scoping > restores valid launch params when another persisted entry is malformed 2ms
+   ✓ teamSlice actions > provisioning run scoping > adopts canonical Host Create progress without writing legacy name settings 2ms
+   ✓ teamSlice actions > provisioning run scoping > persists providerBackendId into createTeam launch params 2ms
+   ✓ teamSlice actions > provisioning run scoping > persists providerBackendId into launchTeam launch params 1ms
+   ✓ teamSlice actions > provisioning run scoping > stages changed launchTeam params before the launch IPC resolves 1ms
+   ✓ teamSlice actions > provisioning run scoping > sanitizes stale providerBackendId before staging launchTeam params 1ms
+   ✓ teamSlice actions > provisioning run scoping > does not stage a previous model when launchTeam changes provider without a model 1ms
+   ✓ teamSlice actions > provisioning run scoping > stages Default when launchTeam keeps the provider but explicitly clears the model 1ms
+   ✓ teamSlice actions > provisioning run scoping > keeps previous launch params while a metadata-only relaunch request is pending 1ms
+   ✓ teamSlice actions > provisioning run scoping > rolls back staged launch state without claiming a confirmed run (rejected) 2ms
+   ✓ teamSlice actions > provisioning run scoping > rolls back staged launch state without claiming a confirmed run (unconfirmed) 1ms
+   ✓ teamSlice actions > provisioning run scoping > clears a real provisioning run promoted before launchTeam rejects 2ms
+   ✓ teamSlice actions > provisioning run scoping > preserves a newer same-millisecond attempt when an older launch rejects 2ms
+   ✓ teamSlice actions > provisioning run scoping > createTeam clears cleanup busy pending state and waits for an explicit retry 2ms
+   ✓ teamSlice actions > provisioning run scoping > launchTeam clears cleanup busy pending state and waits for an explicit retry 1ms
+   ✓ teamSlice actions > provisioning run scoping > rolls back optimistic pending run on early createTeam failure 1ms
+   ✓ teamSlice actions > provisioning run scoping > hydrates visible non-selected graph tabs when config becomes ready 1ms
+   ✓ teamSlice actions > provisioning run scoping > refreshes visible non-selected graph tabs when the canonical run reaches ready 1ms
+   ✓ teamSlice actions > provisioning run scoping > keeps the current run pinned when stale progress from another run arrives 1ms
+   ✓ teamSlice actions > provisioning run scoping > ignores provisioning heartbeat updates when only updatedAt changes 1ms
+   ✓ teamSlice actions > provisioning run scoping > promotes a pending run to a real run without throwing 1ms
+   ✓ teamSlice actions > provisioning run scoping > clears orphaned runs when polling reports Unknown runId 1ms
+   ✓ teamSlice actions > provisioning run scoping > does not resurrect a cleared missing run when late progress arrives 1ms
+   ✓ teamSlice actions > provisioning run scoping > keeps runtime run id separate from provisioning run id when fetching spawn statuses 1ms
+   ✓ teamSlice actions > provisioning run scoping > suppresses renderer rewrites when only lastHeartbeatAt changes 1ms
+   ✓ teamSlice actions > provisioning run scoping > suppresses renderer rewrites when only firstSpawnAcceptedAt changes 1ms
+   ✓ teamSlice actions > provisioning run scoping > suppresses renderer rewrites when only updatedAt changes 1ms
+   ✓ teamSlice actions > provisioning run scoping > rewrites renderer state when runtimeAlive changes 1ms
+   ✓ teamSlice actions > provisioning run scoping > rewrites renderer state when error semantics change 1ms
+   ✓ teamSlice actions > provisioning run scoping > rewrites renderer state when only hard failure reason changes 2ms
+   ✓ teamSlice actions > provisioning run scoping > rewrites renderer state when top-level launch summary changes 1ms
+   ✓ teamSlice actions > provisioning run scoping > preserves spawn snapshot references while still updating bookkeeping on suppressed snapshots 2ms
+   ✓ teamSlice actions > provisioning run scoping > does not suppress spawn snapshots when pending permission request ids change 4ms
+   ✓ teamSlice actions > provisioning run scoping > ignores stale spawn-status fetches after runtime already went offline 1ms
+   ✓ teamSlice actions > provisioning run scoping > tombstones the previous runtime run and clears tool layers before creating a new run 2ms
+   ✓ teamSlice actions > provisioning run scoping > keeps tombstoned runtime ids ignored during createTeam startup before the new run is pinned 1ms
+   ✓ teamSlice actions > provisioning run scoping > keeps older tombstoned runtime ids after canonical provisioning progress arrives 1ms
+   ✓ teamSlice actions > provisioning run scoping > ignores tombstoned runtime spawn-status snapshots 1ms
+   ✓ teamSlice actions > provisioning run scoping > retargets spawn snapshots onto a live successor after the pinned run is stopped 1ms
+   ✓ teamSlice actions > provisioning run scoping > does not retarget a different run while the pinned spawn is still live 1ms
+   ✓ teamSlice actions > provisioning run scoping > preserves current spawn statuses when clearing a non-canonical missing run 1ms
+   ✓ teamSlice actions > provisioning run scoping > keeps the terminal canonical run pinned and does not fall back to other team runs 16ms
+   ✓ teamSlice actions > provisioning run scoping > refreshes retained terminal spawn errors after disconnected progress 56ms
+   ✓ teamSlice actions > provisioning run scoping > does not fall back to a team-wide latest run when no current run is pinned 5ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > converges the original global poll from a ready predecessor without a new member RPC 7ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > converges the original global poll from a assembling predecessor without a new member RPC 4ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > redelivers unchanged R1 on the next original poll after before-store invalidation 5ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > redelivers unchanged R1 on the next original poll after after-snapshot invalidation 4ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > converges from the actual superseding progress read while a prior member read is held 5ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > rejects actual direct progress invalidated by context after await, even with offline members 5ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > rejects actual direct progress invalidated by mutation after await, even with offline members 2ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > rejects actual direct progress invalidated by launch-read after await, even with offline members 2ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > does not grant same-launch handoff to clone progress through the offline fallback 3ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > does not grant same-launch handoff to plain progress through the offline fallback 2ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > does not grant same-launch handoff to other-owner progress through the offline fallback 2ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > does not grant same-launch handoff to changed-run progress through the offline fallback 2ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > keeps skipped R1 and retired R0 progress from rolling R2 back after its members become offline 2ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > rejects an unseen same-launch progress notification after a fresh ready R2 2ms
+   × teamSlice actions > captured Host progress and live-roster snapshots > refuses an actual captured status after the original Team request scope is reset 4ms
+     → expected 'host-run:%5B%22TEST-progress-owner%22…' to be 'host-run:%5B%22TEST-progress-owner%22…' // Object.is equality
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > keeps each observer clone independent while applying its matching current companion 3ms
+   ✓ teamSlice actions > captured Host progress and live-roster snapshots > preserves the existing confirmed Stop projection after a current live-roster handoff 3ms
+ ✓ test/features/agent-backend/hostMemberSpawnStatuses.test.ts (37 tests) 288ms
+ ✓ test/features/agent-backend/hostProvisioningProgress.test.ts (15 tests) 123ms
+ ✓ test/features/agent-backend/hostTeamChanges.test.ts (7 tests) 14ms
+ ✓ test/renderer/store/teamRuntimeRunAdoption.test.ts (14 tests) 5ms
+ ✓ test/renderer/store/teamProvisioningStateRules.test.ts (5 tests) 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  test/renderer/store/teamSlice.test.ts > teamSlice actions > keeps the Host status request scope for team reset
+AssertionError: expected 'host-run:%5B%22TEST-status-owner%22%2…' to be undefined // Object.is equality
+
+- Expected: 
+undefined
+
++ Received: 
+"host-run:%5B%22TEST-status-owner%22%2C%22TEST-launch%22%2C%22selected%22%5D"
+
+ ❯ test/renderer/store/teamSlice.test.ts:1247:10
+    1245|       await pending;
+    1246|       expect(store.getState().currentProvisioningRunIdByTeam[teamName])
+    1247|         .toBe(scenario === 'team reset' ? undefined : runId);
+       |          ^
+    1248|     }
+    1249|   );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  test/renderer/store/teamSlice.test.ts > teamSlice actions > captured Host progress and live-roster snapshots > refuses an actual captured status after the original Team request scope is reset
+AssertionError: expected 'host-run:%5B%22TEST-progress-owner%22…' to be 'host-run:%5B%22TEST-progress-owner%22…' // Object.is equality
+
+Expected: "host-run:%5B%22TEST-progress-owner%22%2C%22TEST-progress-launch%22%2C%22TEST-R0%22%5D"
+Received: "host-run:%5B%22TEST-progress-owner%22%2C%22TEST-progress-launch%22%2C%22TEST-R1%22%5D"
+
+ ❯ test/renderer/store/teamSlice.test.ts:10003:52
+    10001|       await pending;
+    10002|       const state = f.store.getState();
+    10003|       expect(state.currentRuntimeRunIdByTeam[key]).toBe(f.initial.runI…
+       |                                                    ^
+    10004|       expect(state.currentProvisioningRunIdByTeam[key]).toBe(f.initial…
+    10005|       expect(Object.keys(state.provisioningRuns)).toEqual([f.initial.r…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  2 failed | 352 passed (354)
+   Start at  19:30:40
+   Duration  10.08s (transform 3.10s, setup 106ms, collect 6.24s, tests 1.30s, environment 1.10s, prepare 295ms)
+

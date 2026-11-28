@@ -1,0 +1,389 @@
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { basename, join } from 'node:path';
+import { CodexAppServerClient, createCodexDriverFactory } from '@agent-teams/provider-implementations/codex';
+import { CONTEXT_MARKER, REQUIRED_TOOLS, record } from './model.ts';
+import type { CodexAppServerTransport, CodexDriverConfig } from '@agent-teams/provider-implementations/codex';
+import type { DriverFactory, Event, Input, OpenConfig, Session } from '@agent-teams/provider-session-contracts';
+import type { TeamMcpEndpoint } from '../../../dist/mcp/index.js';
+import type { ChildProcess } from 'node:child_process';
+
+const tick = () => new Promise<void>(resolve => setTimeout(resolve, 20));
+
+const metadataStages = ['initialize', 'model-list', 'config-read', 'assertions', 'closing', 'closed'] as const;
+const metadataTypes = ['thread_started', 'turn_started', 'assistant_text', 'tool_call_started',
+  'tool_call_completed', 'usage_updated', 'turn_completed', 'turn_failed', 'turn_interrupted',
+  'warning', 'unsupported_raw_event', 'other'] as const;
+const metadataMethods = ['remoteControl/status/changed', 'configWarning', 'warning', 'deprecationNotice',
+  'account/updated', 'account/rateLimits/updated', 'mcpServer/startupStatus/updated', 'thread/started',
+  'turn/started', 'turn/completed', 'item/started', 'item/completed', 'other', 'not-exposed'] as const;
+type MetadataStage = (typeof metadataStages)[number];
+type MetadataRow = Readonly<{ stage: MetadataStage; type: (typeof metadataTypes)[number];
+  method: (typeof metadataMethods)[number]; thread: boolean; turn: boolean }>;
+type MetadataObservation = { stage: MetadataStage; count: number; overflow: boolean; invalid: boolean;
+  completed: { initialize: boolean; modelList: boolean; configRead: boolean }; events: MetadataRow[] };
+function metadataOwn(value: unknown, key: string): unknown {
+  if (!value || typeof value !== 'object') return undefined;
+  try {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && Object.hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+  } catch { return undefined; }
+}
+const metadataLiteral = <T extends string>(value: unknown, allowed: readonly T[], fallback: T): T =>
+  allowed.find(item => item === value) ?? fallback;
+
+/** TEST-only closed projection. No event payload, native text, identifier or getter escapes. */
+export function projectCodexMetadataObservation(value: unknown) {
+  try {
+    if (metadataOwn(value, 'invalid') === true) return null;
+    const count = metadataOwn(value, 'count'), overflow = metadataOwn(value, 'overflow');
+    const events = metadataOwn(value, 'events'), completed = metadataOwn(value, 'completed');
+    const stage = metadataOwn(value, 'stage'), length = metadataOwn(events, 'length');
+    if (!metadataStages.some(item => item === stage) || typeof count !== 'number' ||
+        !Number.isSafeInteger(count) || count < 0 || count > 9 || typeof overflow !== 'boolean' ||
+        overflow !== (count === 9) || !Array.isArray(events) || length !== Math.min(count, 8)) return null;
+    const initialize = metadataOwn(completed, 'initialize'), modelList = metadataOwn(completed, 'modelList'),
+      configRead = metadataOwn(completed, 'configRead');
+    if (typeof initialize !== 'boolean' || typeof modelList !== 'boolean' || typeof configRead !== 'boolean')
+      return null;
+    const projected: MetadataRow[] = [];
+    for (let index = 0; index < Math.min(count, 8); index++) {
+      const row = metadataOwn(events, String(index)), phase = metadataOwn(row, 'stage');
+      if (!metadataStages.some(item => item === phase)) return null;
+      const thread = metadataOwn(row, 'thread'), turn = metadataOwn(row, 'turn');
+      if (typeof thread !== 'boolean' || typeof turn !== 'boolean') return null;
+      projected.push(Object.freeze({ stage: metadataLiteral(phase, metadataStages, 'initialize'),
+        type: metadataLiteral(metadataOwn(row, 'type'), metadataTypes, 'other'),
+        method: metadataLiteral(metadataOwn(row, 'method'), metadataMethods, 'other'), thread, turn }));
+    }
+    return Object.freeze({ stage: metadataLiteral(stage, metadataStages, 'initialize'), count, overflow,
+      completed: Object.freeze({ initialize, modelList, configRead }), events: Object.freeze(projected) });
+  } catch { return null; }
+}
+
+export async function cleanupCapturedCodexChild(child: ChildProcess): Promise<void> {
+  const alive = () => child.pid !== undefined && child.exitCode === null && child.signalCode === null;
+  child.stdin?.end();
+  if (alive()) child.kill('SIGTERM');
+  let deadline = Date.now() + 3000;
+  while (Date.now() < deadline && alive()) await tick();
+  if (alive()) child.kill('SIGKILL');
+  deadline = Date.now() + 3000;
+  while (Date.now() < deadline && alive()) await tick();
+  assert.equal(alive(), false, 'captured Codex child exit confirmed');
+}
+
+type Candidate = { version: '0.169.0'; deadline: number } & (
+  | { phase: 'catalog' }
+  | { phase: 'start'; model: string; previousConfigSha256: string }
+  | { phase: 'resume'; model: string; previousConfigSha256: string;
+      readCheckpoint(reference: string, request: OpenConfig): Promise<unknown> }
+);
+const digest = (value: string) => createHash('sha256').update(value, 'utf8').digest('hex');
+
+/** Only process IO/custody and read-only wire observations live here; D owns RPC. */
+export async function nativeCodexDriver(options: {
+  root: string; binary: string; modelUrl: string; endpoint: TeamMcpEndpoint;
+  candidate?: Candidate;
+  /** Optional original Host-like observation port, never a Session SPI change. */
+  promptSuggestions?: {
+    eligible(input: Readonly<{ inputId: string; operationRef: string }>): boolean;
+    offer(value: Readonly<{
+      provider: 'claude' | 'codex'; sessionRef: string; inputId: string;
+      operationRef: string; nativeSessionRef: string; nativeTurnRef?: string; text: string;
+    }>): void | Promise<void>;
+  };
+  currentBinding(): boolean;
+  onCapturedChild(child: ChildProcess): void;
+}) {
+  // Factory construction validates the actual public Codex capability vocabulary
+  // before allocating a native process. The configuration callback is lazy.
+  const candidate = options.candidate;
+  if (candidate) assert.equal(candidate.version, '0.169.0');
+  const remaining = () => {
+    const value = candidate ? Math.ceil(candidate.deadline - performance.now()) : 30_000;
+    assert.ok(value > 0, 'original candidate deadline remains');
+    return Math.min(30_000, value);
+  };
+  const capabilities = candidate ? ['text', 'tools', 'permission', 'interrupt', 'checkpoint'] : ['text', 'tools'];
+  const native = createCodexDriverFactory({ capabilities,
+    resolveConfiguration: async request => request.sessionId === config.binding.sessionId ? config : undefined,
+    readCheckpoint: candidate?.phase === 'resume' ? candidate.readCheckpoint : async () => undefined });
+  const root = options.root;
+  const workspace = join(root, 'workspace');
+  const environment = { HOME: join(root, 'home'), CODEX_HOME: join(root, 'codex-home'),
+    TMPDIR: join(root, 'tmp'), XDG_CONFIG_HOME: join(root, 'config'),
+    XDG_DATA_HOME: join(root, 'data'), XDG_CACHE_HOME: join(root, 'cache'),
+    PATH: '/usr/bin:/bin', SHELL: '/bin/sh', TEST_CODEX_FIXTURE_KEY: 'TEST-LOCALHOST-ONLY',
+    TEST_TEAM_MCP_TOKEN: options.endpoint.bearerToken };
+  // Native provider and shell configuration from the retained 0.162.0 P1 oracle.
+  // The private endpoint bearer is environment-only, not serialized to this file.
+  const model = candidate && candidate.phase !== 'catalog' ? candidate.model : 'mock-model';
+  if (candidate && candidate.phase !== 'catalog')
+    assert.ok(model.length > 0 && model.length <= 2048 && !/[\0\r\n]/.test(model));
+  const configPath = join(root, 'codex-home/config.toml');
+  const configText = `${candidate?.phase === 'catalog' ? '' : 'model = ' + JSON.stringify(model) + '\n'}model_provider = "TEST_fixture"
+approval_policy = "${candidate ? 'on-request' : 'never'}"
+sandbox_mode = "workspace-write"
+web_search = "disabled"
+check_for_update_on_startup = false
+cli_auth_credentials_store = "file"
+project_doc_max_bytes = 0
+[analytics]
+enabled = false
+[otel]
+exporter = "none"
+metrics_exporter = "none"
+[features]
+code_mode = false
+apps = false
+plugins = false
+remote_models = false
+shell_snapshot = false
+skip_host_skill_discovery = true
+enable_request_compression = false
+multi_agent = false
+[shell_environment_policy]
+inherit = "none"
+set = { HOME = ${JSON.stringify(environment.HOME)}, TMPDIR = ${JSON.stringify(environment.TMPDIR)}, PATH = "/usr/bin:/bin" }
+[model_providers.TEST_fixture]
+name = "TEST local fixture"
+base_url = ${JSON.stringify(options.modelUrl + '/v1')}
+env_key = "TEST_CODEX_FIXTURE_KEY"
+wire_api = "responses"
+requires_openai_auth = false
+supports_websockets = false
+request_max_retries = 0
+stream_max_retries = 0
+[mcp_servers.team]
+url = ${JSON.stringify(options.endpoint.url)}
+bearer_token_env_var = "TEST_TEAM_MCP_TOKEN"
+startup_timeout_sec = 15
+tool_timeout_sec = 15
+enabled_tools = ${JSON.stringify(REQUIRED_TOOLS)}
+${REQUIRED_TOOLS.map(name => `[mcp_servers.team.tools.${name}]\napproval_mode = "approve"`).join('\n')}
+`;
+  if (candidate && candidate.phase !== 'catalog')
+    assert.equal(digest(await readFile(configPath, 'utf8')), candidate.previousConfigSha256);
+  if (candidate?.phase === 'resume')
+    assert.equal(digest(configText), candidate.previousConfigSha256, 'cold C2 retains original config bytes');
+  else await writeFile(configPath, configText, { mode: 0o600, ...(candidate?.phase === 'catalog' ? { flag: 'wx' } : {}) });
+  remaining();
+  const child = spawn(options.binary, ['app-server', '--listen', 'stdio://'], {
+    cwd: workspace, env: environment, stdio: ['pipe', 'pipe', 'pipe'] });
+  options.onCapturedChild(child);
+  let diagnostic = '';
+  child.once('error', () => { diagnostic = 'Captured Codex child process failed'; });
+  child.stderr.on('data', (chunk: Buffer) => { diagnostic = (diagnostic + chunk.toString('utf8')).slice(-6000); });
+  const alive = () => child.pid !== undefined && child.exitCode === null && child.signalCode === null;
+  const facts = { contextSent: false, threadAccepted: false, threadId: '', mcpReady: false,
+    mcpTools: [] as string[], errors: [] as { method: string; code: unknown }[],
+    sentMethods: [] as string[], openFailure: '' };
+  const candidateWire = { turns: [] as string[], approvals: [] as {
+    kind: 'command' | 'other'; providerRequestId: string; threadId: string; turnId: string;
+    itemId: string; command: string; cwd: string;
+  }[] };
+  const pendingFacts = new Map<string, { method: string; threadId?: string }>();
+  let pendingBytes = '';
+  const inspect = (frame: Record<string, unknown>) => {
+    if (candidate && typeof frame.method === 'string' && frame.id !== undefined) {
+      assert.ok(candidateWire.approvals.length < 4, 'bounded original server requests');
+      const params = record(frame.params);
+      const field = (name: string) => {
+        const value = params[name];
+        assert.ok(value === undefined || value === null || (typeof value === 'string' && value.length <= 8192));
+        return typeof value === 'string' ? value : '';
+      };
+      const command = frame.method === 'item/commandExecution/requestApproval';
+      candidateWire.approvals.push({ kind: command ? 'command' : 'other',
+        providerRequestId: command ? 'codex:' + frame.method + ':' +
+          (field('approvalId') || field('callId') || field('itemId') || String(frame.id)) : '',
+        threadId: field('threadId'), turnId: field('turnId'), itemId: field('itemId'),
+        command: field('command'), cwd: field('cwd') });
+    }
+    if (frame.method || frame.id === undefined) return;
+    const request = pendingFacts.get(String(frame.id));
+    if (!request) return;
+    pendingFacts.delete(String(frame.id));
+    if (frame.error) { facts.errors.push({ method: request.method, code: record(frame.error).code }); return; }
+    const result = record(frame.result);
+    if (request.method === 'thread/start' || (candidate && request.method === 'thread/resume')) {
+      const thread = record(result.thread);
+      facts.threadAccepted = typeof thread.id === 'string' && result.cwd === workspace;
+      facts.threadId = typeof thread.id === 'string' ? thread.id : '';
+    }
+    if (candidate && request.method === 'turn/start') {
+      const turnId = record(result.turn).id;
+      assert.ok(typeof turnId === 'string' && turnId.length > 0 && turnId.length <= 4096);
+      assert.ok(candidateWire.turns.length < 2);
+      candidateWire.turns.push(turnId);
+    }
+    if (request.method === 'mcpServerStatus/list' && request.threadId === facts.threadId) {
+      const servers = Array.isArray(result.data) ? result.data.map(record) : [];
+      const team = servers.find(server => server.name === 'team');
+      if (team) {
+        facts.mcpTools = Object.keys(record(team.tools));
+        facts.mcpReady = team.runtimeStatus === 'connected' && !team.toolsError &&
+          REQUIRED_TOOLS.every(name => facts.mcpTools.includes(name));
+      }
+    }
+  };
+  const transport: CodexAppServerTransport = {
+    async *read(signal) {
+      const abort = () => { child.stdin.end(); child.stdout.destroy(); };
+      signal.addEventListener('abort', abort, { once: true });
+      try {
+        for await (const raw of child.stdout) {
+          const chunk = Buffer.from(raw as Uint8Array);
+          pendingBytes += chunk.toString('utf8');
+          if (Buffer.byteLength(pendingBytes) > 1024 * 1024) throw new Error('TEST native observation frame budget');
+          let newline = pendingBytes.indexOf('\n');
+          while (newline >= 0) {
+            const line = pendingBytes.slice(0, newline); pendingBytes = pendingBytes.slice(newline + 1);
+            inspect(record(JSON.parse(line) as unknown));
+            newline = pendingBytes.indexOf('\n');
+          }
+          yield chunk;
+        }
+      } finally { signal.removeEventListener('abort', abort); }
+    },
+    write(frame, signal) {
+      if (signal.aborted) throw new Error('TEST write aborted');
+      const value = record(JSON.parse(frame) as unknown);
+      if (typeof value.method === 'string') {
+        assert.ok(facts.sentMethods.length < 128, 'finite native method observation budget');
+        facts.sentMethods.push(value.method);
+      }
+      if (value.method === 'thread/start' || (candidate && value.method === 'thread/resume')) {
+        facts.contextSent = record(value.params).developerInstructions ===
+          `${CONTEXT_MARKER}. You are bob in test-codex-team; work only in ${workspace}.`;
+      }
+      if (value.id !== undefined && typeof value.method === 'string') {
+        assert.ok(pendingFacts.size < 64, 'bounded read-only request fact correlation');
+        const threadId = record(value.params).threadId;
+        pendingFacts.set(String(value.id), { method: value.method,
+          ...(typeof threadId === 'string' ? { threadId } : {}) });
+      }
+      return new Promise<void>((resolve, reject) => {
+        child.stdin.write(frame, error => error ? reject(error) : resolve());
+      });
+    },
+  };
+  const confirmStopped = async () => {
+    child.stdin.end();
+    const deadline = Date.now() + 5000;
+    while (Date.now() < deadline && alive()) await tick();
+    return !alive();
+  };
+  let rpcOwner: 'none' | 'metadata' | 'session' = 'none';
+  let metadataObservation: MetadataObservation | undefined;
+  const readCandidateCatalog = async () => {
+    assert.equal(candidate?.phase, 'catalog');
+    assert.equal(rpcOwner, 'none', 'one original stdio RPC owner');
+    rpcOwner = 'metadata';
+    let unexpected = 0, failed = false;
+    const observation: MetadataObservation = { stage: 'initialize', count: 0, overflow: false, invalid: false,
+      completed: { initialize: false, modelList: false, configRead: false }, events: [] };
+    metadataObservation = observation;
+    const client = new CodexAppServerClient({ transport,
+      limits: { requestTimeoutMs: remaining() }, maxThreads: 1, maxQueuedTurns: 1,
+      onEvent: original => {
+        unexpected += 1;
+        try {
+          observation.count = Math.min(9, observation.count + 1);
+          observation.overflow = observation.count === 9;
+          if (observation.events.length >= 8) return;
+          const event = metadataOwn(original, 'event'), type = metadataOwn(event, 'type');
+          const thread = metadataOwn(original, 'threadId'), turn = metadataOwn(original, 'turnId');
+          observation.events.push(Object.freeze({ stage: observation.stage,
+            type: metadataLiteral(type, metadataTypes, 'other'),
+            method: type === 'unsupported_raw_event'
+              ? metadataLiteral(metadataOwn(event, 'rawType'), metadataMethods, 'other') : 'not-exposed',
+            thread: typeof thread === 'string' && thread.length > 0,
+            turn: typeof turn === 'string' && turn.length > 0 }));
+        } catch { observation.invalid = true; }
+      },
+      requestApproval: async () => { throw new Error('TEST metadata must not request permission'); } });
+    try {
+      await client.initialize(config.initialize);
+      observation.completed.initialize = true; observation.stage = 'model-list';
+      const page = await client.listModels({ limit: 100, includeHidden: false }, AbortSignal.timeout(remaining()));
+      observation.completed.modelList = true; observation.stage = 'config-read';
+      const selection = await client.readModelConfiguration({ cwd: workspace }, AbortSignal.timeout(remaining()));
+      observation.completed.configRead = true; observation.stage = 'assertions';
+      remaining();
+      assert.equal(unexpected, 0);
+      assert.equal(candidateWire.approvals.length, 0);
+      assert.deepEqual(facts.sentMethods, ['initialize', 'initialized', 'model/list', 'config/read']);
+      assert.equal(selection.modelProvider, 'TEST_fixture');
+      return { page, selection };
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      observation.stage = 'closing';
+      client.close();
+      const stopped = await confirmStopped();
+      observation.stage = 'closed';
+      if (!failed) assert.equal(stopped, true, 'original metadata child exit before C1');
+    }
+  };
+  const config: CodexDriverConfig = {
+    binding: { tenantId: 'TEST-tenant', projectId: 'TEST-project',
+      sessionId: `TEST-codex-${basename(root)}`, generation: candidate?.phase === 'resume' ? 2 : 1 },
+    configRevision: candidate ? 'TEST-codex-0.169.0-config' : 'TEST-codex-config-1', protocolRevision: candidate?.version ?? '0.162.0',
+    trustedBinding: `TEST-bob-${basename(root)}`, accountBinding: 'TEST-dummy-codex-account',
+    ...(options.promptSuggestions ? { promptSuggestions: options.promptSuggestions } : {}),
+    transport, initialize: { clientInfo: { name: 'TEST-native-team', version: '1' }, capabilities: { experimentalApi: true } },
+    threadParams: { cwd: workspace, model, approvalPolicy: candidate ? 'on-request' : 'never', sandbox: 'workspace-write',
+      developerInstructions: `${CONTEXT_MARKER}. You are bob in test-codex-team; work only in ${workspace}.` },
+    requiredMcpTools: { team: REQUIRED_TOOLS },
+    limits: { queuedInputs: 2, inputBytes: 8192, outputEvents: 1500,
+      outputBytes: 1_000_000, pendingInteractions: 4, timeoutMs: remaining() },
+    probe: async () => alive() && options.currentBinding() && facts.contextSent && facts.threadAccepted,
+    confirmStopped,
+  };
+  const events: Event[] = []; const submitted: Input[] = [];
+  let ready = false;
+  const factory: DriverFactory = { async open(request) {
+    if (candidate) {
+      assert.notEqual(candidate.phase, 'catalog');
+      assert.equal(rpcOwner, 'none', 'one original stdio RPC owner');
+      rpcOwner = 'session';
+      remaining();
+    }
+    const opened = await native.open(request).catch((error: unknown) => {
+      const code = record(error).code;
+      const message = error instanceof Error ? error.message : '';
+      const safe = typeof code === 'string' ? code : message;
+      facts.openFailure = /^codex\.[a-zA-Z0-9.-]{1,160}$/.test(safe) ? safe : 'unclassified-open-failure';
+      throw error;
+    });
+    const source = opened.driver;
+    const driver: Session = {
+      sessionRef: source.sessionRef,
+      submit: input => { submitted.push(structuredClone(input)); return source.submit(input); },
+      async *observe() { for await (const event of source.observe()) { events.push(event); yield event; } },
+      respondToInteraction: (ref, reply) => source.respondToInteraction(ref, reply),
+      interrupt: operation => source.interrupt(operation),
+      checkReadiness: async () => {
+        const proof = await source.checkReadiness();
+        ready = proof.ok && facts.mcpReady && facts.contextSent && facts.threadAccepted && options.currentBinding();
+        return proof;
+      }, checkpoint: () => source.checkpoint(), close: () => source.close(),
+    };
+    return { driver, capabilities: opened.capabilities };
+  } };
+  return { factory, config, facts, events, submitted, candidateWire, readCandidateCatalog,
+    metadataObservation: () => projectCodexMetadataObservation(metadataObservation),
+    configSha256: digest(configText),
+    canDispatch: () => ready && alive() && options.currentBinding(),
+    childFacts: () => [{ pid: child.pid, exitCode: child.exitCode, signalCode: child.signalCode }],
+    safeDiagnostic: () => diagnostic.replaceAll(options.endpoint.bearerToken, '[TEST capability redacted]')
+      .replaceAll(options.endpoint.url, '[private TEST MCP endpoint]')
+      .replaceAll(environment.TEST_CODEX_FIXTURE_KEY, '[TEST dummy key redacted]'),
+    cleanup: () => cleanupCapturedCodexChild(child),
+  };
+}

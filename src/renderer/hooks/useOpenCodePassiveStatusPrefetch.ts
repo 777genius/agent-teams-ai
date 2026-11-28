@@ -1,5 +1,9 @@
 import { useEffect, useReducer, useRef } from 'react';
 
+import {
+  useRetainedLegacyLaunch,
+  useRetainedLegacyRuntimeStatus,
+} from '@features/agent-backend/renderer';
 import { useStore } from '@renderer/store';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { isTeamProviderModelCatalogFresh } from '@renderer/utils/teamModelAvailability';
@@ -15,6 +19,9 @@ export function useOpenCodePassiveStatusPrefetch({
   projectPath: string | null | undefined;
   catalogRecovery?: { projectPath: string | null; freshUntil: string | null } | null;
 }): void {
+  const retained = useRetainedLegacyLaunch();
+  useRetainedLegacyRuntimeStatus(projectPath, enabled);
+  enabled = enabled && !retained;
   const normalizedProjectPath = projectPath?.trim() || '';
   const recoveryProjectPath = catalogRecovery?.projectPath?.trim() || '';
   const recoveryFreshUntil = catalogRecovery?.freshUntil;

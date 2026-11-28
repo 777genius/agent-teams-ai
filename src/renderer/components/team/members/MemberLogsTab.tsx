@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import {
   DetailReadCoordinator,
@@ -34,74 +35,22 @@ import {
   MessageSquare,
 } from 'lucide-react';
 
+import { HostMemberActivityLog, useHostLogViewport } from './HostMemberActivityLog';
+import { filterChunksByWorkIntervals, getWorkIntervalWindow } from './memberLogWorkIntervals';
+
+import type { HostLogViewOptions } from './HostMemberActivityLog';
+
+export { filterChunksByWorkIntervals } from './memberLogWorkIntervals';
+
 import type { EnhancedChunk } from '@renderer/types/data';
 import type { MemberLogSummary } from '@shared/types';
-
-// ---------------------------------------------------------------------------
-// Chunk filtering by task work intervals
-// ---------------------------------------------------------------------------
-
-const CHUNK_GRACE_BEFORE_MS = 30_000; // 30s before startedAt
-const CHUNK_GRACE_AFTER_MS = 10_000; // 10s after completedAt
-
-function getWorkIntervalWindow(
-  interval: { startedAt: string; completedAt?: string },
-  options: {
-    graceBeforeMs: number;
-    graceAfterMs: number;
-    nowMs: number;
-  }
-): { startMs: number; endMs: number } | null {
-  const startMs = Date.parse(interval.startedAt);
-  if (!Number.isFinite(startMs)) return null;
-  if (interval.completedAt === undefined) {
-    return {
-      startMs: startMs - options.graceBeforeMs,
-      endMs: options.nowMs + options.graceAfterMs,
-    };
-  }
-  const completedAtMs = Date.parse(interval.completedAt);
-  const endMs = Number.isFinite(completedAtMs) ? Math.max(completedAtMs, startMs) : startMs;
-  return {
-    startMs: startMs - options.graceBeforeMs,
-    endMs: endMs + options.graceAfterMs,
-  };
-}
-
-export function filterChunksByWorkIntervals(
-  chunks: EnhancedChunk[] | null,
-  intervals: { startedAt: string; completedAt?: string }[] | undefined
-): EnhancedChunk[] | null {
-  if (!chunks) return null;
-  if (!intervals || intervals.length === 0) return chunks;
-
-  const nowMs = Date.now();
-  const parsed = intervals
-    .map((interval) =>
-      getWorkIntervalWindow(interval, {
-        graceBeforeMs: CHUNK_GRACE_BEFORE_MS,
-        graceAfterMs: CHUNK_GRACE_AFTER_MS,
-        nowMs,
-      })
-    )
-    .filter((v): v is { startMs: number; endMs: number } => v !== null);
-
-  if (parsed.length === 0) return chunks;
-
-  const filtered = chunks.filter((chunk) => {
-    const cs = chunk.startTime.getTime();
-    const ce = chunk.endTime.getTime();
-    if (!Number.isFinite(cs) || !Number.isFinite(ce)) return true;
-    return parsed.some((i) => cs <= i.endMs && ce >= i.startMs);
-  });
-  return filtered;
-}
 
 interface MemberLogsTabProps {
   teamName: string;
   memberName?: string;
   taskId?: string;
   enabled?: boolean;
+  hostView?: HostLogViewOptions;
   /** When viewing task logs: include owner's sessions when task is in_progress */
   taskOwner?: string;
   taskStatus?: string;
@@ -132,6 +81,7 @@ export const MemberLogsTab = ({
   memberName,
   taskId,
   enabled = true,
+  hostView,
   taskOwner,
   taskStatus,
   taskWorkIntervals,
@@ -148,6 +98,7 @@ export const MemberLogsTab = ({
   const isTabActive = tabId ? activeTabId === tabId : true; // default true when no tab context (e.g. standalone dialog)
 
   const scope = useMemberLogReadScope();
+  const isHostTeam = isHostTeamSelectionKey(teamName);
   const active = enabled && isTabActive;
   const intervalsKey = JSON.stringify(taskWorkIntervals ?? null);
   const summaryKey = JSON.stringify([
@@ -178,7 +129,7 @@ export const MemberLogsTab = ({
     presentationKey: summaryPresentationKey,
     showBackgroundErrors: true,
     active,
-    poll: taskId != null && taskStatus === 'in_progress',
+    poll: (taskId == null && isHostTeam) || (taskId != null && taskStatus === 'in_progress'),
     beginRefreshing,
     read: async () => {
       const result =
@@ -194,6 +145,11 @@ export const MemberLogsTab = ({
     },
   });
   const logs = summary.value ?? EMPTY_LOGS;
+  const viewport = useHostLogViewport(
+    hostView,
+    logs,
+    JSON.stringify([scope.key, summaryPresentationKey])
+  );
   const [initialNow] = useState(() => Date.now());
   const summaryNow = summary.settledAt ?? initialNow;
   const loading = summary.loading;
@@ -205,6 +161,7 @@ export const MemberLogsTab = ({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [previewVisibleCount, setPreviewVisibleCount] = useState(PREVIEW_PAGE_SIZE);
   const getRowId = useCallback((log: MemberLogSummary): string => {
+    if (log.kind === 'host_activity') return log.sessionId;
     if (log.kind === 'subagent') {
       return `subagent:${log.sessionId}:${log.subagentId}`;
     }
@@ -217,6 +174,7 @@ export const MemberLogsTab = ({
   const sortedLogs = useMemo(() => {
     const nowMs = summaryNow;
     const getLastActivityMs = (log: MemberLogSummary): number => {
+      if (log.kind === 'host_activity') return Number.NaN;
       const startMs = new Date(log.startTime).getTime();
       if (!Number.isFinite(startMs)) return Number.NaN;
       const durationMs = Number.isFinite(log.durationMs) ? Math.max(0, log.durationMs) : 0;
@@ -227,6 +185,7 @@ export const MemberLogsTab = ({
     // When viewing a task with workIntervals, sort by overlap (most relevant first).
     // Fallback to endMs (most recent activity) when no intervals available.
     const getOverlapMs = (log: MemberLogSummary): number => {
+      if (log.kind === 'host_activity') return 0;
       if (!taskWorkIntervals || taskWorkIntervals.length === 0) return 0;
       const logStartMs = new Date(log.startTime).getTime();
       if (!Number.isFinite(logStartMs)) return 0;
@@ -273,7 +232,7 @@ export const MemberLogsTab = ({
     return taskId != null && (showSubagentPreview || showLeadPreview);
   }, [showLeadPreview, showSubagentPreview, taskId]);
 
-  const previewLog = useMemo((): MemberLogSummary | null => {
+  const previewLog = useMemo((): Exclude<MemberLogSummary, { kind: 'host_activity' }> | null => {
     if (!shouldShowPreview) return null;
 
     if (showSubagentPreview) {
@@ -302,7 +261,7 @@ export const MemberLogsTab = ({
   }, [shouldShowPreview, showLeadPreview, showSubagentPreview, sortedLogs, taskOwner]);
 
   const detailKey = (log: MemberLogSummary | null): string | null =>
-    log
+    log && log.kind !== 'host_activity'
       ? JSON.stringify([
           log.kind === 'subagent' ? 'subagent' : 'session',
           log.projectId,
@@ -517,7 +476,7 @@ export const MemberLogsTab = ({
     );
   }
 
-  if (error) {
+  if (error && (logs.length === 0 || !isHostTeam)) {
     return (
       <div className="flex items-center justify-center gap-2 py-8 text-xs text-red-400">
         <AlertCircle size={14} />
@@ -543,7 +502,17 @@ export const MemberLogsTab = ({
   }
 
   return (
-    <div className="w-full min-w-0 space-y-1.5">
+    <div
+      ref={viewport.ref}
+      onScroll={viewport.onScroll}
+      className={'w-full min-w-0 space-y-1.5' + (hostView ? ' min-h-0 flex-1 overflow-auto' : '')}
+      style={hostView ? { maxHeight: hostView.maxHeight } : undefined}
+    >
+      {error && (
+        <p role="status" className="p-2 text-xs text-red-400">
+          {error}
+        </p>
+      )}
       {shouldShowPreview && previewLog && previewMessages.length > 0 ? (
         <SubagentRecentMessagesPreview
           messages={previewMessages}
@@ -560,6 +529,7 @@ export const MemberLogsTab = ({
           detailChunks={expandedId === getRowId(log) ? detailChunks : null}
           detailLoading={expandedId === getRowId(log) && detailLoading}
           onToggle={() => handleExpand(log)}
+          hostView={hostView}
         />
       ))}
     </div>
@@ -572,6 +542,7 @@ interface LogCardProps {
   detailChunks: EnhancedChunk[] | null;
   detailLoading: boolean;
   onToggle: () => void;
+  hostView?: HostLogViewOptions;
 }
 
 const LogCard = ({
@@ -580,14 +551,16 @@ const LogCard = ({
   detailChunks,
   detailLoading,
   onToggle,
+  hostView,
 }: LogCardProps): React.JSX.Element => {
   const { t } = useAppTranslation('team');
-  const createdAgo = formatRelativeTime(log.startTime);
+  const createdAgo = log.kind === 'host_activity' ? '' : formatRelativeTime(log.startTime);
   const lastActivityTime = useMemo(() => {
+    if (log.kind === 'host_activity') return null;
     const startMs = new Date(log.startTime).getTime();
     if (!Number.isFinite(startMs) || log.durationMs <= 0) return null;
     return new Date(startMs + log.durationMs).toISOString();
-  }, [log.startTime, log.durationMs]);
+  }, [log.kind, log.startTime, log.durationMs]);
   const updatedAgo = lastActivityTime ? formatRelativeTime(lastActivityTime) : null;
 
   const memberColorCss = useMemo(() => {
@@ -595,6 +568,11 @@ const LogCard = ({
     const colorName = getMemberColorByName(log.memberName);
     return getTeamColorSet(colorName).text;
   }, [log.memberName]);
+
+  if (log.kind === 'host_activity')
+    return (
+      <HostMemberActivityLog log={log} expanded={expanded} onToggle={onToggle} view={hostView} />
+    );
 
   return (
     <div className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)]">

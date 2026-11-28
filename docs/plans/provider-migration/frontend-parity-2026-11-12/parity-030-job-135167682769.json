@@ -1,0 +1,117 @@
+{
+  "schema": "current-head-original-ui-job-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682769,
+    "name": "Offline Host Desktop (linux-x64, claude-lifecycle)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:19:31Z",
+    "completed_at": "2026-11-18T23:23:54Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682769",
+    "runner_name": "GitHub Actions 1000395380"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682769,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-18 23:25:00 UTC",
+    "bytes": 298544,
+    "sha256": "0bbec6d655a8c2c8ead44dda35c842de6d4ff0c5b9bc6d097b9e1399b19a99e4",
+    "computedGitBlobSha": "4cc0c542cbb686c1959d41586008d94b4a7e534a",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682769-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "4cc0c542cbb686c1959d41586008d94b4a7e534a",
+    "exactReadback": true
+  },
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:19:59Z",
+      "completed_at": "2026-11-18T23:19:59Z"
+    },
+    {
+      "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 21,
+      "started_at": "2026-11-18T23:21:44Z",
+      "completed_at": "2026-11-18T23:23:48Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-18T23:23:48Z",
+      "completed_at": "2026-11-18T23:23:49Z"
+    }
+  ],
+  "jobLogEndpointRetired": true,
+  "lane": "claude-lifecycle",
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 30751.675322",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 170.129743",
+    "ℹ tests 13",
+    "ℹ pass 13",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 10016.326491"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-hyDCzG/desktop-backend-receipt.json"
+    }
+  ],
+  "originalEmulatedGuardAndCleanupVerifierLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14480494109,
+    "bytes": 4025306,
+    "sha256": "e1048051a9dc403abd50cf501c583563dd1df47b7342d009a1ccf7d2f0edac6c",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Selected original emulated Claude lifecycle UI through pinned TEST peers; no real Claude executable/vendor authentication or full mixed-native qualification is claimed.",
+  "verificationLimit": "Original console PASS and source/receipt/cleanup verifier SUCCESS; full artifact receipt not separately downloaded.503+7 common unit tests repeat across jobs;13lane-specific tests passed."
+}

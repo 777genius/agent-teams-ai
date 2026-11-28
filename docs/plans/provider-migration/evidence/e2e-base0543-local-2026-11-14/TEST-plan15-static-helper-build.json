@@ -1,0 +1,84 @@
+{
+  "command": [
+    "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+    "--linux-child-exec",
+    "/workspace/scratch/391e21b06e24/TEST-ui-launch-inputs-zs8gamc6/linux-child-exec",
+    "/usr/bin/cc",
+    "/usr/bin/readelf"
+  ],
+  "exitCode": 0,
+  "seconds": 0.969,
+  "head": "2335b403b7d015ef871e9dd8609803fb4630a6cb",
+  "selectedRoot": "/workspace/scratch/391e21b06e24/TEST-ui-launch-inputs-zs8gamc6",
+  "sourceSha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+  "builderSha256": "08b8d63f4b9fcbb2ce93b0703240c9b34fa91141b84d808543bb11ab221b019f",
+  "selection": {
+    "manifestPath": "/workspace/scratch/391e21b06e24/TEST-ui-launch-inputs-zs8gamc6/linux-child-exec/manifest.json",
+    "manifestSha256": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187",
+    "binarySha256": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0"
+  },
+  "manifest": {
+    "schemaVersion": 1,
+    "platform": "linux",
+    "architecture": "x64",
+    "protocol": "linux-child-exec-v1",
+    "kernelCapability": "close-range-v1",
+    "binary": "linux-child-exec",
+    "binarySha256": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0",
+    "sourceSha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+    "compilerSha256": "a23ecab8ff08f09ad8c80602c2c5df7f49e09c25905cb8975902e101bf72635f",
+    "inspectorSha256": "4a387d80a70e6e97ef940a666fab59d5c38e7cf19ff907192fa983cb8505a7de",
+    "buildKernelRelease": "6.18.57",
+    "linkInputs": [
+      {
+        "file": "/usr/bin/x86_64-linux-gnu-as",
+        "sha256": "07dd8551ea0aa065975e4dddb8e1bb7dc308d12d54eca22c3858db79467c7cb9"
+      },
+      {
+        "file": "/usr/bin/x86_64-linux-gnu-ld.bfd",
+        "sha256": "d2766988b6a1b1d1518cdc09242e726d1f24e151e16410ada3092b11ffd9081b"
+      },
+      {
+        "file": "/usr/lib/gcc/x86_64-linux-gnu/14/crtbeginT.o",
+        "sha256": "d4c928492dd7f652f72fa706bd59b0e77eb3d842863d2287a9059e37b4bf5ba2"
+      },
+      {
+        "file": "/usr/lib/gcc/x86_64-linux-gnu/14/crtend.o",
+        "sha256": "8981687575c10a2e2146947bce387769cbd118f5b8c5dda489f514dc7d2ed4c7"
+      },
+      {
+        "file": "/usr/lib/gcc/x86_64-linux-gnu/14/libgcc.a",
+        "sha256": "c53c33f587ceaf0fc9a4b6bb5c5437082068f64ac70eb3b7a0d899e7ac5ffd3d"
+      },
+      {
+        "file": "/usr/lib/gcc/x86_64-linux-gnu/14/libgcc_eh.a",
+        "sha256": "4622efa3af50eaea4fbb4bc520ada4c88008c5343e0ad306633821fd2432102d"
+      },
+      {
+        "file": "/usr/lib/x86_64-linux-gnu/crt1.o",
+        "sha256": "8cd1a50edd44a4ded5856bf2254dc106401b37c285dcc55a594475438cd6ec1a"
+      },
+      {
+        "file": "/usr/lib/x86_64-linux-gnu/crti.o",
+        "sha256": "78acef26a7007f5320c98633376f2903e33895e694fbc2b91d189b38addbca8a"
+      },
+      {
+        "file": "/usr/lib/x86_64-linux-gnu/crtn.o",
+        "sha256": "121f2a5f12b13471dd8c7dabe3ff334df08540c270564d1a2b3c47ecbd8d3101"
+      },
+      {
+        "file": "/usr/lib/x86_64-linux-gnu/libc.a",
+        "sha256": "679612af043ab6a3eb9af24136b8d0c9ba1e10114f047271386ee7fa37031326"
+      },
+      {
+        "file": "/usr/libexec/gcc/x86_64-linux-gnu/14/cc1",
+        "sha256": "02675980109a4a5496cddf67d5286de57942759edc830deaa525e36f9a2a0291"
+      },
+      {
+        "file": "/usr/libexec/gcc/x86_64-linux-gnu/14/collect2",
+        "sha256": "ea31a4cebd9df1b6428c463428d461ccecfe66c897936409d5b2cde0b3af9e27"
+      }
+    ]
+  }
+}

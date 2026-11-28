@@ -53,6 +53,8 @@ const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'setLaunchAdmissionGuard',
   'setRuntimeRecoveryFailureObserver',
   'setTeamChangeEmitter',
+  // Existing Stop entrypoint forwards the captured WorkSync owner through the normal Stop chain.
+  'stopTeam',
 ] as const;
 const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'answerOpenCodeRuntimePermission',
@@ -98,6 +100,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'hasLiveOpenCodeMcpConsumers',
   'hasProvisioningRun',
   'hasTeamOperationInProgress',
+  'hasTrackedRuntimeObligations',
   'initializeToolApprovalSettingsForLaunch',
   'isOpenCodeRuntimeRecipient',
   'isProvisioningLaunchActive',
@@ -114,6 +117,11 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'recordOpenCodeRuntimeBootstrapCheckin',
   'recordOpenCodeRuntimeHeartbeat',
   'recordOpenCodeRuntimeTaskEvent',
+  // Existing old-owner import reads/fence and shutdown obligation admission.
+  'readStoppedTeamImportDeliveryFacts',
+  'readStoppedTeamImportLifecycleFacts',
+  'readStoppedTeamImportRuntimeFacts',
+  'readStoppedTeamImportStopFacts',
   'recoverOpenCodeRuntimeDeliveryJournal',
   'registerPendingCrossTeamReplyExpectation',
   'relayInboxFileToLiveRecipient',
@@ -153,6 +161,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'updateToolApprovalSettings',
   'validateAgentTeamsMcpRuntime',
   'warmup',
+  'withStoppedTeamImportFence',
 ] as const;
 const PUBLIC_SURFACE_TYPE_ALIAS_NAME = 'TeamProvisioningServicePublicSurface';
 const PUBLIC_SURFACE_VIRTUAL_FILE_PATH = resolve(
@@ -273,6 +282,13 @@ const CONSTRUCTOR_DEPENDENCIES = [
     name: 'budgetAdmission',
     readonly: true,
     type: '(teamName: string) => Promise<void>',
+  },
+  {
+    accessibility: 'private',
+    defaultNew: null,
+    name: 'captureNativeStopSourceFence',
+    readonly: true,
+    type: 'CaptureLegacyNativeStopSourceFence',
   },
 ] as const;
 

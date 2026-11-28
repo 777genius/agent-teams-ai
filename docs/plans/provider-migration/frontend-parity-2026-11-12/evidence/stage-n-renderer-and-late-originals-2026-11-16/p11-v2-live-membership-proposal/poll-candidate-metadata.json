@@ -1,0 +1,52 @@
+{
+  "status": "PROPOSAL_ONLY_NOT_EXECUTED",
+  "head": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "tree": "e70ccffc6d55ad42c2249518bf142e2ed32ddf91",
+  "changes": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+      "preimage": {
+        "bytes": 103573,
+        "lines": 1766,
+        "gitBlob": "c4f6f16a7f7c193e9fa5ef9fbb965652e2513fd4",
+        "sha256": "8afb2636812fb08df79599c59f6729498b7dfa2735999a895bffe014dbeaf921"
+      },
+      "candidate": {
+        "bytes": 107837,
+        "lines": 1828,
+        "gitBlob": "a6c8df59b6fabc013b3570762d6b19a396e32c9e",
+        "sha256": "d8bfcea3677773bb7d9fd800f958728719f292c7e01a9e4a0ead4fd746276cf9"
+      },
+      "patch": "poll-red-test.patch"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts",
+      "preimage": {
+        "bytes": 45707,
+        "lines": 570,
+        "gitBlob": "bd8bc728808eda00a45b300fd328d49e4e919bc2",
+        "sha256": "d8ee4090606876194393463e96411f89ed54a53bd3095df333a5d47c5c7fd159"
+      },
+      "candidate": {
+        "bytes": 45795,
+        "lines": 572,
+        "gitBlob": "5026f0ec6165bb092717ddc989043848a25081dc",
+        "sha256": "2c5931f5c7fa1dc8bb7858201c1b8afdbae9683faf4a2ad9fce067f116f3f94b"
+      },
+      "patch": "conditional-poll-green.patch"
+    }
+  ],
+  "staging": "Only the complete test candidate may be staged first after an exact published R1 and independent R2. The original P11 poll remains byte-identical for actual semantic RED. The two post-read assertions are an excluded conditional preview, not selected or applied before actual RED and review.",
+  "predictedNewCasesOnly": {
+    "red": {
+      "pass": 1,
+      "fail": 3
+    },
+    "green": {
+      "pass": 4,
+      "fail": 0
+    }
+  },
+  "predictionLimits": "No command has run. Aggregate old-file counts remain to be observed; assertions after the failed rejects in the three prospective RED cases are unreachable and not claimed PASS.",
+  "testClosure": "Only the original actual inline TypeScript poll is stripped and evaluated by the future test; finite shadow clock/observer/currentness callbacks, no driver/native/app execution or global clock mutation. All existing test bytes are an exact prefix."
+}

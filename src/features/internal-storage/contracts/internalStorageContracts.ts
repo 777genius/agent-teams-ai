@@ -141,6 +141,11 @@ export type MemberWorkSyncOutboxEnsureRecordResult =
       requestedPayloadHash: string;
     };
 
+/** Import binding is minted by validated preparation; only lifecycle purge may reset it. */
+export type MemberWorkSyncPrimaryImport =
+  | { incarnation: string; resetPrimaryIncarnation?: never }
+  | { resetPrimaryIncarnation: true; incarnation?: never };
+
 export interface MemberWorkSyncTeamSnapshotRecords {
   statuses: MemberWorkSyncStatusRecord[];
   reportIntents: MemberWorkSyncReportIntentRecord[];

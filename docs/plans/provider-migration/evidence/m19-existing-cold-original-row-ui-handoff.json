@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "scope": "Stage 1 existing cold original registered-process row and public detached original-generation Runtime read; read-only UI scope only",
+  "status": "SCOPED_M19_COLD_READ_ONLY_PASS_RETAINED",
+  "fullM19Qualified": false,
+  "stage2Included": false,
+  "actualJob": {
+    "jobId": "3de1d7349df4ecc51d56c2be60fae6c6",
+    "attemptId": "RO0002",
+    "mode": "native-process-ui",
+    "action": "observe",
+    "result": {
+      "exit_code": 0,
+      "signal": null,
+      "duration_ms": 67363
+    },
+    "logsDrained": true,
+    "retainedJobState": {
+      "path": "/Volumes/Transcend/dev/TEST-m19-ro0002-url-prep-j_4dx36w/retained-3de1d7349df4ecc51d56c2be60fae6c6/raw/current-job/state.json",
+      "sha256": "deb559b4a81a2282d686d8c6f97265e9df72e29468b899cd94c7aa1830d04504"
+    }
+  },
+  "retention": {
+    "directory": "/Volumes/Transcend/dev/TEST-m19-ro0002-url-prep-j_4dx36w/retained-3de1d7349df4ecc51d56c2be60fae6c6",
+    "manifestPath": "/Volumes/Transcend/dev/TEST-m19-ro0002-url-prep-j_4dx36w/retained-3de1d7349df4ecc51d56c2be60fae6c6/manifest.json",
+    "manifestSha256": "a778040ef769b9aec6aea56ab6a3880d1dc944cbd70af73bd978bcc8a7b50673",
+    "retainedFiles": 2580,
+    "copiedBytes": 33265902,
+    "collectionErrors": [],
+    "qualificationErrors": [],
+    "collectorSource": {
+      "path": "/Volumes/Transcend/dev/TEST-m19-ro0002-url-prep-j_4dx36w/retained-3de1d7349df4ecc51d56c2be60fae6c6/collection-source/retain-m19-cold-readback.ts",
+      "sha256": "5121942b9eb864b6c41da19b204e43208241815410d3281e5aca267bd34bddce"
+    }
+  },
+  "rawReceipt": {
+    "path": "/Volumes/Transcend/dev/TEST-m19-ro0002-url-prep-j_4dx36w/retained-3de1d7349df4ecc51d56c2be60fae6c6/raw/fixture/desktop-readback-receipt-RO0002.json",
+    "sha256": "9209c01a0e6223b554c4991a4e3bbdb54a3cf9a55116250fbb16e8752cf184e6",
+    "status": "PASS",
+    "proofStatus": "PASS"
+  },
+  "original911": {
+    "jobId": "911fe6c78626b3f36b881133bd45bddc",
+    "status": "INCOMPLETE",
+    "runtimeCustody": "HOLD",
+    "nativeCleanupClaim": false,
+    "retentionComplete": true,
+    "workflowQualified": false,
+    "originalReceiptSha256": "8ae969880dfc553ee63c5a6a81112de66e43bbf8b301e484f5854391e03e375a",
+    "historicalRetentionSha256": "1ef15a4131d3e8d6454065132619707e2add75450232f1567f13c08a7c1c0545",
+    "kernelOracleNow": "NOT_PERFORMED",
+    "interpretation": "Original pre-app SDK-root failure remains INCOMPLETE/HOLD. Current registered-target absent observation does not prove original SDK root released."
+  },
+  "preservedRO0001": {
+    "jobId": "f649a5061b440696d5f2195f3388a7ae",
+    "attemptId": "RO0001",
+    "rawStatus": "INCOMPLETE",
+    "rawFailure": "TypeError: Failed to fetch dynamically imported module: http://localhost:5173/src/renderer/api/index.ts",
+    "rawReceiptSha256": "075ff7bda7db479da83772a3735f325d50ea469614fb0297827d61eb592c9e01",
+    "retentionStatus": "RAW_RETAINED_UNQUALIFIED",
+    "manifestSha256": "bda00c7606c066045d1ceff0f66abc37ef68c2f2b9b711af50de40e240412e44",
+    "collectionErrors": [],
+    "qualificationErrorCount": 1,
+    "fix": {
+      "file": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "change": "One TEST dynamic-import URL: '/src/renderer/api/index.ts' \u2192 '/api/index.ts'. Electron Vite renderer root is src/renderer; the actual unified API file already existed. Same renderer-owned API and original owner-qualified Team; no preload bypass/monkeypatch.",
+      "retainedCorrectedSourceSha256": "fed891710ab03de70ffa682dc03f31d98ef702fec23432cf144828f28d8e17b3"
+    }
+  },
+  "registeredTarget": {
+    "selection": "host-team:TEST-desktop-handle-TEST-desktop-backend-6ZNw8J",
+    "originalIdentity": {
+      "id": "00582875-85f3-4a03-9633-44ebe983317b",
+      "processRef": "p1:00582875-85f3-4a03-9633-44ebe983317b:9ac667f6168133c36b6181024289c57f2bd67526911618e319007befb1669097",
+      "pid": 45522,
+      "label": "TEST native-owned primary service"
+    },
+    "coldOwnerProps": {
+      "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-6ZNw8J",
+      "process": {
+        "id": "00582875-85f3-4a03-9633-44ebe983317b",
+        "pid": 45522,
+        "label": "TEST native-owned primary service",
+        "registeredAt": "2026-10-25T08:45:12.468Z",
+        "processRef": "p1:00582875-85f3-4a03-9633-44ebe983317b:9ac667f6168133c36b6181024289c57f2bd67526911618e319007befb1669097",
+        "canTerminate": false,
+        "observation": "absent",
+        "registeredBy": "alice",
+        "url": "http://127.0.0.1:59955/TEST-c6913209-d6d1-40da-970a-d0f69509af1d",
+        "command": "TEST finite original native-owned service",
+        "port": 59955
+      },
+      "isTeamAlive": null
+    },
+    "rendered": {
+      "label": "TEST native-owned primary service",
+      "pidText": "PID45522",
+      "geometry": {
+        "x": 356,
+        "y": 687,
+        "width": 660,
+        "height": 34
+      },
+      "killCount": 0
+    },
+    "unifiedApiReadMatchesOriginal": true,
+    "observation": "absent",
+    "canTerminate": false,
+    "stopQualification": "NOT_ATTEMPTED_READ_ONLY_SCOPE",
+    "stopAttempted": false,
+    "reconciliation": "ORIGINAL_CAPTURE_OBSERVED_WITHOUT_STOP",
+    "interpretation": "Exact original registered target was observed absent by the cold owner, so the existing UI showed its label/PID and no Kill button. This is distinct from unresolved provider SDK-root custody."
+  },
+  "runtime": {
+    "publicRead": {
+      "memberId": "alice-id",
+      "generation": "1",
+      "phase": "held",
+      "sealed": true,
+      "custody": "unknown",
+      "nativeReady": false,
+      "attached": false,
+      "inputs": [
+        {
+          "inputId": "873c5f81-dabc-569b-acc8-8695fcd5567a",
+          "phase": "terminal",
+          "terminal": "succeeded"
+        }
+      ],
+      "interactions": []
+    },
+    "existingInputCount": 1,
+    "newInputs": 0,
+    "freshNativeAllocations": 0,
+    "observedHostChildren": [],
+    "inputReplay": false,
+    "bootstrapReplay": false,
+    "modelServer": false,
+    "issuedNativeAllocation": false,
+    "attachmentCapabilitiesPresent": false,
+    "predecessorStateSha256": "0666d40aa483b2efcbce47152a0d72766406d9c785d81e9353e46073b013fd5e",
+    "preAppSnapshotEqualsRetainedHeldPredecessor": true,
+    "immutableRecordFieldsPreserved": [
+      "binding",
+      "profileId",
+      "config",
+      "openFingerprint",
+      "hostIncarnation",
+      "sessionRef",
+      "inputs"
+    ],
+    "noProcessTerminateReceipts": true,
+    "registrationBytesUnchanged": true,
+    "ordinaryShutdownMaySealDetachedRuntime": true,
+    "custodyClaim": "HOLD; public phase held/custody unknown/sealed true/attached false/nativeReady false. No SDK root released claim."
+  },
+  "currentAppCleanup": {
+    "quitRequested": true,
+    "cleanup": {
+      "processGroup": 13804,
+      "remaining": [],
+      "appExitCode": null,
+      "appSignalCode": "SIGTERM",
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "cold Host app shutdown only; intentionally crashed original Host/SDK native custody remains separate HOLD, no cleanup claim"
+    },
+    "scope": "Only current captured cold app/Host shutdown; original intentionally crashed Host/SDK native custody remains separate HOLD."
+  },
+  "sourceEpoch": {
+    "selectedSourceCount": 1289,
+    "beforeAfterRosterIdentical": true,
+    "retainedSourceMatchCount": 1289,
+    "harnessMapSha256": "ff6f545181d265a3462899957142a55939e1d457965c19172536173c2b480160",
+    "harnessPins": [
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-readback.ts",
+        "sha256": "6959c14289bb228a948f35d2907b76a0fa18829fde6a1cc521e368669b1526d9"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-mode.ts",
+        "sha256": "34b42b1c2053a26440d3f3833fa74f8e8685a42d068e52ab81c66ba09c56bea5"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-fixture.ts",
+        "sha256": "74f169585a3ad5220cea5031ebfc8100a78fab8f73ecda45a26b3a7df8a8e61d"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-readback-fixture.ts",
+        "sha256": "cc3fa9f550be4d5d6616fb4b6f269b75474efc189ace2820deb115908b48ec5d"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+        "sha256": "4a9df80b2007fb9313390b4c859bf65c4e39febc923a5075ece3a8dc13ec9447"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+        "sha256": "fed891710ab03de70ffa682dc03f31d98ef702fec23432cf144828f28d8e17b3"
+      },
+      {
+        "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+        "sha256": "774486cb7e47adc5697c7565b54d4b331cd074eda2cd2e0ed633d1b586dfa75e"
+      }
+    ],
+    "issuerSha256": "c3e19c982ef7b0383ee17ace5cf8c115663c5835911c7dfc7363104d468cc9a2",
+    "standardIssuerSha256": "6159f4776a37a24a7960a16ab760be8a55bcd81bff9e8b8caf41d4df905b27b4",
+    "runtimeAndArchivePins": {
+      "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "corepackPackageSha256": "1aff4cc6115c15ce4c51c5a3b8d20912c525e295cb09e1a70c4a27998db43fa2",
+      "corepackLibrarySha256": "89cc83cf02dafbb768017901147933023eb43d6ce6373f9698b8b2f29210a9fd",
+      "pnpmStubSha256": "aca1f0ffde27bd6ee1069a19884b622503187f359d4160e511dcb894935f8c29",
+      "profileSha256": "d45891004f9f42de2bd1f5c69ea6f6b21b19d7bf9f657b19a96f9e74dd9d91c8",
+      "descriptorSha256": "955255b901433e69ed87e2033c495d3bcb8873cc991cd1e9a276ae6734d43106",
+      "sentinelSha256": "89075965e204a0a89b5fd01c3056acd052ca4c0bd51ae37121accb36ed7a0ead",
+      "shellProbeSha256": "acc855ac1d7fa06e2920cdc84c93cda24ab38744a71666324251cd448cb18691",
+      "providerArchiveSha256": "dad39edf2f02a23ae68768722b5bba2e7beddf2125ae79d0bacb4e8b303d1dce",
+      "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "electronSha256": "113960c9bbaeb4c45e9d7080b2f94135a4b3c2cc285de312fb337fb834e3c34c",
+      "smokeSourceSha256": "4a9df80b2007fb9313390b4c859bf65c4e39febc923a5075ece3a8dc13ec9447",
+      "fixtureSourceSha256": "f8a47eed302687d3e4bdd6147967eb9c4ff7ff2aff800eed96869d9d4fe82877",
+      "uiSourceSha256": "297c49e7cc7eb6f447440193a23ed8efa33f56c58a616f631fd554d78301110e"
+    },
+    "originalNativeSourceOracle": [
+      {
+        "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/scripts/legacy-agent-host/desktop-native-process-host.ts",
+        "sha256": "b2a69e6fb88bdf2103d89d02b9812c17c4e5f4a3b0cc8f26cc031e9e27ab0fc8"
+      },
+      {
+        "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/packages/legacy-agent-host/src/process/DarwinRegisteredProcess.ts",
+        "sha256": "043cde7cb232b1f25fdac8011fad7d9e68a85044d10a7ae672625cf3ad8b9ee4"
+      },
+      {
+        "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/packages/legacy-agent-host/dist/process/DarwinRegisteredProcess.js",
+        "sha256": "d8f77da72de01fd49de3197d2dbac9190f61d93e3da4b7bb697792604afbfb91"
+      },
+      {
+        "path": "/Users/belief/.codex/worktrees/provider-migration-two-stage-plan/old-agent-teams-frontend/packages/legacy-agent-host/dist/composition/processCustody.js",
+        "sha256": "e80c7501074f79ef6f972dfa97bca2957f25c0e05ce24068ac0bbb2654b6e918"
+      },
+      {
+        "path": "/Volumes/Transcend/dev/TEST-m19-cold-reboot-prep-xqpztswh/native-artifact/manifest.json",
+        "sha256": "17cc2429f59a5261dfd65c2af414ed307f669bc271a2bb5f51c131be05cd2278"
+      },
+      {
+        "path": "/Volumes/Transcend/dev/TEST-m19-cold-reboot-prep-xqpztswh/native-artifact/registered-process.node",
+        "sha256": "94527432929c60a6c3cd30cad7a9e737ed0830ead35e6a579769152995ffeb47"
+      },
+      {
+        "path": "/Volumes/Transcend/dev/TEST-m19-cold-reboot-prep-xqpztswh/native-artifact/registered-process-darwin.c",
+        "sha256": "310161c5d404d45e4f149b15b88c3805bfeddc4cc4c424460cddee3e845a284b"
+      }
+    ],
+    "startupBundles": [
+      {
+        "path": "main/chunks/index-BqRYAQw0.cjs",
+        "sha256": "1a007e6504622a6b7695a8b6049859a0bd54820e3848f26c30d658d95dcfb4dd"
+      },
+      {
+        "path": "main/chunks/index-Qep_ymXs.cjs",
+        "sha256": "fe92845be266690772f08a24e561132cc56a0e1a7bd6bb99d3d2d4ddf1a33012"
+      },
+      {
+        "path": "main/chunks/memberWorkSyncTeamIdentity-Cbq1a0pt.cjs",
+        "sha256": "4063ba46351e5ada715d6407a359938084e3b677241027e7bf3a2625963aabd2"
+      },
+      {
+        "path": "main/chunks/TaskBoundaryParser-Nei1wnwb.cjs",
+        "sha256": "ec1fb3d42217a5199d3d951348ac0eb6b16e638d72858b156156e10c3abee5ff"
+      },
+      {
+        "path": "main/chunks/taskChangeState-CMAL9XKb.cjs",
+        "sha256": "176bdddb0fae126dcedc663f425dab5844afd511c73fee12967aadae3f156318"
+      },
+      {
+        "path": "main/chunks/taskHistory-CABp3cyl.cjs",
+        "sha256": "47695a2d285edda72a406b1322edd6534f181ba5e32f053957ed35a60b38338e"
+      },
+      {
+        "path": "main/chunks/TeamDataService-BkNtz4Dx.cjs",
+        "sha256": "f75ed98ba6ec366dc1d1173244c763c9cbe22985092b7de8aeab0b59576f23ee"
+      },
+      {
+        "path": "main/chunks/teamTaskSnapshotCompaction-CfjIiGp0.cjs",
+        "sha256": "08f5ccb346d871b4fe352fc9f3884e686bba9d7a4ea61af073903e6b0291a77d"
+      },
+      {
+        "path": "main/index.cjs",
+        "sha256": "180155efa172250c9e3d5c12e500c2cf06ebc17161e23430f5e9e93cb539fd3a"
+      },
+      {
+        "path": "main/internal-storage-worker.cjs",
+        "sha256": "2f560dc9aa581eb2600f559662790fb956a98c66858c0dd1311582aa7eff11b4"
+      },
+      {
+        "path": "main/task-change-worker.cjs",
+        "sha256": "1a2950717a7ce33596ee6ca67a50a17e15f43b5f7121e5672c945e44b8789b0d"
+      },
+      {
+        "path": "main/team-data-worker.cjs",
+        "sha256": "809aa7b365e79ef77d4c3b6a8eab9452bd1741b333a2b602ae765495d809b3a7"
+      },
+      {
+        "path": "main/team-fs-worker.cjs",
+        "sha256": "84babbe21cbb9ca2caafa41718afbaa34c8db48f76dfa0c27cff8d569fb64390"
+      },
+      {
+        "path": "preload/index.js",
+        "sha256": "d563cae15acace266df9fde90d2f907230120efcff128bf28d8fcf02a96705a8"
+      }
+    ]
+  },
+  "screenshot": {
+    "retainedPath": "/Volumes/Transcend/dev/TEST-m19-ro0002-url-prep-j_4dx36w/retained-3de1d7349df4ecc51d56c2be60fae6c6/raw/fixture/ui-original-native-process-before-stop-RO0002.png",
+    "sha256": "54cc7bf4c9ceb6398147506f5800ad35e2fcf6b4daad8cf2902c29720adec1d5"
+  },
+  "excluded": [
+    "live original-target Stop qualification",
+    "original provider SDK-root cleanup/release",
+    "whole process-tree cleanup",
+    "full M19/P8/Stage1 completion",
+    "Stage2",
+    "merge/release"
+  ],
+  "summaryMethod": {
+    "source": "Retained bytes only; selected files verified against the retained manifest. No live current source/process/kernel/API/UI/network queries.",
+    "newNativeCalls": 0,
+    "newSignals": 0,
+    "newUiActions": 0,
+    "worktreeWrites": 0
+  }
+}

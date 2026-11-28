@@ -1,0 +1,66 @@
+{
+  "kind": "Independent published Stage J API/Git/source R2 before the sole recorded local diff command",
+  "verdict": "APPROVE",
+  "recordedAtUTC": "2026-11-15T22:36:36.881579+00:00",
+  "head": "9df2adf381b5965315634f68f2f105fa7fb6fb6e",
+  "tree": "7e3d627c23816db232cf6dbdc3497954f5f0ab85",
+  "orderedParents": [
+    "6f74d7e8ecaa7f046826b6421ad105ab35eb09fa",
+    "462845722260dfd91111c37cb66fc54a01a3ecb7"
+  ],
+  "apiCommitTupleIndependentlyRead": true,
+  "fullGitLeafCount": 9889,
+  "changedPaths": [
+    "tools/owned-process-broker/nativeFixture.cpp"
+  ],
+  "unchangedLeavesAndModes": 9888,
+  "sourceBefore": {
+    "bytes": 17237,
+    "blob": "579a7aadf70a284cb44f7ec3690dab32c4d76e92",
+    "sha256": "5891d489d3587218900ae8864c64c29c4fbc594022b95132c0292074e3ce865c"
+  },
+  "sourceAfter": {
+    "bytes": 17444,
+    "blob": "ca0ded66441b8818bdf5726ee7d8ffa95abb8518",
+    "sha256": "dc3cfdb3e8a7398d91dd2d0651bc31c11d2e6c357aaa03e83dba21c3b81adeb5"
+  },
+  "fullIndexPatch": {
+    "bytes": 1540,
+    "blob": "46164e2e119683ef9439283dbf979f188252da6c",
+    "sha256": "126c7ec6277ef315ceb15c8ac9543dcbf90ac0e60f28ce7d237d7af649b6825f"
+  },
+  "insertions": 7,
+  "deletions": 5,
+  "selectedSourceGitAndWorktreeFiles": 76,
+  "selectedSourceGitAndWorktreeBytes": 1679330,
+  "hostSourceGitAndWorktreeFiles": 615,
+  "hostSourceGitAndWorktreeBytes": 4084414,
+  "hostSourceClosureUnchanged": true,
+  "priorIProofFilesRehashed": 33,
+  "manifest": {
+    "bytes": 32984,
+    "blob": "784dc90ea7ba0f8761c25365eb985784d56515d7",
+    "sha256": "89533177f3dd2c8b2da41c89e09aa28aa3c1a33372f0c593c6dbb6a417d05064"
+  },
+  "plan29": {
+    "bytes": 1126080,
+    "blob": "ee173c2f6610efd71ace3c907508d9e8ceec3397",
+    "sha256": "775a030bd5c4c27e45157335abc9d548758fbc482dae562e34fb394810b68765"
+  },
+  "plan30Unchanged": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/30-windows-same-main-retry-integration-2026-11-15.md",
+    "blob": "eb68d2643eb11527594d546d8a5088f48f8e2865"
+  },
+  "incomingPlans32And33Exact": true,
+  "incomingAndPriorIAncestryPreserved": true,
+  "cleanJWorktreeObservedBeforeExecution": true,
+  "projectExecutionByReviewer": false,
+  "nodeOrNativeInvocationByReviewer": false,
+  "refOrSourceMutationByReviewer": false,
+  "qualificationLimits": [
+    "This is published source/history/byte verification only, not Windows compile/runtime evidence.",
+    "The sole planned J git diff check has not been executed by this reviewer and is not a native test.",
+    "Earlier I commands remain I observations; no rerun or new Host/ledger build is claimed.",
+    "No implementation of Plans32/33 or resulting-source native/P08/P09 completion is inferred."
+  ]
+}

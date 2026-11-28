@@ -102,8 +102,16 @@ function buildEditableExtensions(
     ...(reduced ? [] : [syntaxHighlighting(oneDarkHighlightStyle)]),
     EditorState.readOnly.of(readOnly),
     EditorView.editable.of(!readOnly),
-    EditorView.clipboardInputFilter.of((text, state) => text.replace(/\r\n|\r|\n/g, state.lineBreak)),
-    ...(readOnly ? [EditorState.transactionFilter.of((transaction) => transaction.docChanged ? [] : transaction)] : []),
+    EditorView.clipboardInputFilter.of((text, state) =>
+      text.replace(/\r\n|\r|\n/g, state.lineBreak)
+    ),
+    ...(readOnly
+      ? [
+          EditorState.transactionFilter.of((transaction) =>
+            transaction.docChanged ? [] : transaction
+          ),
+        ]
+      : []),
 
     // UI
     lineNumbers(),
@@ -357,25 +365,43 @@ export const CodeMirrorEditor = ({
     );
 
     // Line wrap (dynamically reconfigurable via Compartment)
-    extensions.push(lineWrapCompartment.of(!reduced && lineWrapRef.current ? EditorView.lineWrapping : []));
+    extensions.push(
+      lineWrapCompartment.of(!reduced && lineWrapRef.current ? EditorView.lineWrapping : [])
+    );
 
     // Check for cached state or draft recovery
-    editorBridge.prepareState(filePath, mtimeMs, readOnly, !!useStore.getState().editorModifiedFiles[filePath] || !!useStore.getState().editorSaving[filePath]);
+    editorBridge.prepareState(
+      filePath,
+      mtimeMs,
+      readOnly,
+      !!useStore.getState().editorModifiedFiles[filePath] ||
+        !!useStore.getState().editorSaving[filePath]
+    );
     let initialState = stateCacheRef.current.get(filePath);
-    if (initialState) initialState = initialState.update({ effects: StateEffect.reconfigure.of([extensions, EditorState.lineSeparator.of(initialState.lineBreak)]) }).state;
+    if (initialState)
+      initialState = initialState.update({
+        effects: StateEffect.reconfigure.of([
+          extensions,
+          EditorState.lineSeparator.of(initialState.lineBreak),
+        ]),
+      }).state;
     if (!initialState) {
       let initialContent = content;
       let draftRecovered = false;
 
       // Draft recovery: compare draft.timestamp with file mtimeMs
       try {
-        const draftJson = !readOnly && !reduced ? localStorage.getItem(`editor-draft:${filePath}`) : null;
+        const draftJson =
+          !readOnly && !reduced ? localStorage.getItem(`editor-draft:${filePath}`) : null;
         if (draftJson) {
           const draft = JSON.parse(draftJson) as { content: string; timestamp: number };
           const fileMtime = mtimeMs ?? 0;
 
-          if (typeof draft.content === 'string' && draft.content.length <= MAX_DRAFT_SIZE &&
-              (fileMtime === 0 || draft.timestamp > fileMtime)) {
+          if (
+            typeof draft.content === 'string' &&
+            draft.content.length <= MAX_DRAFT_SIZE &&
+            (fileMtime === 0 || draft.timestamp > fileMtime)
+          ) {
             // Draft is newer than file (or file is new) — recover draft
             initialContent = draft.content;
             draftRecovered = true;
@@ -388,8 +414,11 @@ export const CodeMirrorEditor = ({
         // ignore
       }
 
-      const lineSeparator = content.includes('\r\n') ? '\r\n'
-        : content.includes('\r') && !content.includes('\n') ? '\r' : '\n';
+      const lineSeparator = content.includes('\r\n')
+        ? '\r\n'
+        : content.includes('\r') && !content.includes('\n')
+          ? '\r'
+          : '\n';
       initialState = EditorState.create({
         // Parse every input newline independently of the uniform serialization separator.
         doc: Text.of(initialContent.split(/\r\n|\r|\n/)),
@@ -406,7 +435,10 @@ export const CodeMirrorEditor = ({
     }
 
     const sessionState = useStore.getState();
-    editorBridge.touchState(filePath, { ...sessionState.editorModifiedFiles, ...sessionState.editorSaving });
+    editorBridge.touchState(filePath, {
+      ...sessionState.editorModifiedFiles,
+      ...sessionState.editorSaving,
+    });
 
     const view = new EditorView({
       state: initialState,
@@ -493,5 +525,7 @@ export const CodeMirrorEditor = ({
     setPendingGoToLine(null);
   }, [pendingGoToLine, setPendingGoToLine, filePath]);
 
-  return <div ref={containerRef} data-editor-file={filePath} className="size-full overflow-hidden" />;
+  return (
+    <div ref={containerRef} data-editor-file={filePath} className="size-full overflow-hidden" />
+  );
 };

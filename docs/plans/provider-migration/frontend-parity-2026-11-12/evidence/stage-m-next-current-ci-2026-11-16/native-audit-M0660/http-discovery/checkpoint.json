@@ -1,0 +1,72 @@
+{
+  "kind": "Frozen original M HTTP discovery incremental checkpoint; earlier completed M bundle unchanged",
+  "createdAtUtc": "2026-11-16T01:39:34.128999+00:00",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997620,
+  "jobId": 133017914800,
+  "artifactId": 14190093443,
+  "payloads": [
+    {
+      "path": "archive.zip",
+      "bytes": 876,
+      "blob": "f0e285a8c7613b1ac3942033f2c3839ab80e18fa",
+      "sha256": "9ca0176f4424c0a6e789880c1d6bfa9d7a2e707c2e80105316ed4353cce4a817"
+    },
+    {
+      "path": "job.log",
+      "bytes": 73673,
+      "blob": "d8576d4b843246614861e11ec7fbd1f898896b62",
+      "sha256": "b5e0139701d601066bda1e79546544ce6b75a9287d29c7a64feba1375869ffda"
+    },
+    {
+      "path": "job-api.json",
+      "bytes": 6004,
+      "blob": "228ec7130d88d9f08151368f36ff7ecf1d9322c2",
+      "sha256": "086793dbc4d89f11fb12198571a61427da9d0ac9f0e4d033413e8b234d67a353"
+    },
+    {
+      "path": "artifact-api.json",
+      "bytes": 783,
+      "blob": "0611fa106edd597ee4880cfbcb766d61b70e03ac",
+      "sha256": "b166b560a72bc6bc10c528cf518ca15b30a1218354f11428296d3ba8364f5538"
+    },
+    {
+      "path": "extracted/opencode-v2-http-persist.json",
+      "bytes": 1851,
+      "blob": "c4521fbb28a6b8e7b94707b5cd5b2bae0869ef4d",
+      "sha256": "91e3c1cbdc462a130fffd399e521b99acffb5b6c6479c9c0f5a80d593cfbc6aa"
+    },
+    {
+      "path": "source-audit.json",
+      "bytes": 5017,
+      "blob": "c353dc8c5938635be9e2eff0912ebf27905504d3",
+      "sha256": "4887273fa7350ca1fabd870454fa4ba5e6507375570037b46bcd659f0140419b"
+    },
+    {
+      "path": "audit.json",
+      "bytes": 11815,
+      "blob": "19a1e4176e1fa54b4800431474d84fea973d0f05",
+      "sha256": "178c1748d874b0d6f94c7e9b891dfe6c98d572327fb447567cc5ca2c62580c93"
+    },
+    {
+      "path": "Plan29-http-discovery-appendix.md",
+      "bytes": 3604,
+      "blob": "3d8451f4091ccc820a5c8990a7775d30f1cfa1aa",
+      "sha256": "957dda02790336b0d1227b3dc0ad1c09b88912d93f9e1df82e9e02e21f736141"
+    }
+  ],
+  "signedDownloadUrlsRetained": false,
+  "fullAudit": {
+    "path": "audit.json",
+    "bytes": 11815,
+    "blob": "19a1e4176e1fa54b4800431474d84fea973d0f05",
+    "sha256": "178c1748d874b0d6f94c7e9b891dfe6c98d572327fb447567cc5ca2c62580c93"
+  },
+  "appendix": {
+    "path": "Plan29-http-discovery-appendix.md",
+    "bytes": 3604,
+    "blob": "3d8451f4091ccc820a5c8990a7775d30f1cfa1aa",
+    "sha256": "957dda02790336b0d1227b3dc0ad1c09b88912d93f9e1df82e9e02e21f736141"
+  },
+  "qualification": "Scope-limited publishedHTTP original SUCCESS; four broad qualification flags remain false; no source or CI changes."
+}

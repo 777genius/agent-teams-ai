@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-final22-source-composition-review",
+  "reviewer": "composition_review_030",
+  "reviewedAt": "2026-11-19T00:35:03.042345+00:00",
+  "verdict": "PASS_SOURCE_COMPOSITION_PENDING_FINAL_DOCS_AND_GIT_TREE",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "sourceTree": "292b3cc975b5c927233fb85b73aed1411753efd1",
+  "method": "Read immutable547 git tree, apply exact030 delta, validate canonical full-tree hashes; validate22 local candidate rows and independent component manifests; compare additive fixed source roster amendment and complete counted-production records. No product tests, builds, native/apps, CI queries or external Git/worktree mutations.",
+  "inputPins": [
+    {
+      "path": "publication-followup-030/source-rows-draft.json",
+      "gitBlob": "93465b1d8125a6fc369aab980463db6c11421021",
+      "sha256": "4b56ba3028f86ce4bcfe10b3d6eed786e194043a5ccadeb12d3b71ff8e726c3d",
+      "bytes": 6528
+    },
+    {
+      "path": "publication-followup-030/source-rows-final.json",
+      "gitBlob": "2471707a5c319573cabf9a64b6f5e86dff2030e7",
+      "sha256": "da3cc981eed4e8bd28a5ff9cd75ccad2e4fac7d856b5b7d39964f541864a1588",
+      "bytes": 12461
+    },
+    {
+      "path": "publication-followup-030/delta547to030.json",
+      "gitBlob": "1c901ac60800dd48f600b3bc7e554610b77e9b87",
+      "sha256": "f869f380914a7a4528827a68cf0d5b3a1dbc222ce32923fddc1d1d3c2cac4a5f",
+      "bytes": 7561
+    },
+    {
+      "path": "publication-followup-030/source-freeze-amendment.json",
+      "gitBlob": "59ce18d92221aaa767e48f3b7e10d5c871c1b001",
+      "sha256": "391cca3b5c1f82c94679c1f4d3f7f069530d27ea6579c0e82c6642d6573cb70d",
+      "bytes": 1220
+    },
+    {
+      "path": "publication-followup-030/source-freeze-final-amendment.json",
+      "gitBlob": "522366c3091b5ed7791f65d7ae9a5621269d60a9",
+      "sha256": "6989648b629cdbc32f6d1eff2b1cd613946a4599f5e7b969aad8fef8d20cb7ef",
+      "bytes": 1261
+    },
+    {
+      "path": "publication-followup-030/parity-followup-source-size-20261118.json",
+      "gitBlob": "28208674065ab731a53ebbab5965dbae90d06229",
+      "sha256": "6f3e6ddf5e269af000dd12352dbbc5ffc2ef50649744a6012f501d893821faec",
+      "bytes": 17950
+    },
+    {
+      "path": "publication-followup-030/parity-followup-source-size-20261119.json",
+      "gitBlob": "26375ac230bea01301cad94104b6c60d7d0eda01",
+      "sha256": "c580ea87df7e063d4e9e67a6dacd2cafb2fc632b905db85368319b597ccd8d84",
+      "bytes": 21169
+    },
+    {
+      "path": "publication-followup-030/counted-production-records-final.json",
+      "gitBlob": "8afddcc35ea59f834fd351ed135e3dfe04edf610",
+      "sha256": "a6d6c7287b43a3aacf89c3d1e7623f8798aa777fc9133f3448852640d860349d",
+      "bytes": 1369730
+    },
+    {
+      "path": "publication-followup-030/evaluate-composition-size-final.mjs",
+      "gitBlob": "72126ec1f868cc38106d695248b92d25494bb64d",
+      "sha256": "ccc8d7ce2317ae852214867753922f96e7e61326d3a8ec82cd8f03480208e84c",
+      "bytes": 5200
+    }
+  ],
+  "componentReviewPins": [
+    {
+      "path": "publication-followup-030/integration-source-review.json",
+      "gitBlob": "5e25653130afdc78c816a213149fbcf3bb9a0c6d",
+      "sha256": "56ca464185a03b4631b1e6154a8e0d53be41b94c48056d1140aa4defd1e03781",
+      "bytes": 18973
+    },
+    {
+      "path": "credential-diagnostics-030-candidate/r2-source-review.json",
+      "gitBlob": "e72c6f51e0bf174ec39aa775303828564bbd6993",
+      "sha256": "db831b0901998a318c28184b7ec7e70111985bccfb4952e703bb164771846a3f",
+      "bytes": 6215
+    },
+    {
+      "path": "solo-publication-030-candidate/r2-source-review.json",
+      "gitBlob": "5f0d4b57daf12a0d9979e67ffcdc5b72b99f264c",
+      "sha256": "5d18c5eeb3f1a0fdf2702409b30f41c1d22f62a2d275a268d44deaafcc78372a",
+      "bytes": 17429
+    }
+  ],
+  "composition": {
+    "totalSourcePaths": 22,
+    "historicalSourcePaths": 12,
+    "unchangedHistoricalPostimages": 11,
+    "historicalPathAmendments": 1,
+    "diagnosticNewPaths": 2,
+    "soloNewPaths": 8,
+    "componentSourceOverlap": 0,
+    "productionPathsChanged": 10,
+    "nonProductionPathsChanged": 12,
+    "deletions": 0,
+    "duplicatePaths": 0,
+    "preimagesMatchImmutable030": true,
+    "allLocalBytesMatchFinalManifest": true,
+    "newSourceLeaves": 3,
+    "sourceOnlyTree": "b5f51d2b436f23fabdfb12d464961fd38983dbca",
+    "sourceOnlyTreeMeaning": "Immutable030 plus22 reviewed source rows only; not the eventual evidence/docs publication tree."
+  },
+  "sourceFreeze": {
+    "supplementary": {
+      "priorBlob": "741dbdc6f296a7a67a8639b7a928e6664886cab2",
+      "finalBlob": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+      "priorLines": 396,
+      "finalLines": 397,
+      "exactOnlyAddition": "'packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts',",
+      "position": "Immediately after native-host.ts; all historical literals and executable bodies byte-preserved."
+    },
+    "integrated": {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "lines": 603,
+      "literalAdditions": [
+        "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+        "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+        "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts"
+      ],
+      "position": "Immediately after already-pinned TeamLaunchStateStore.ts.",
+      "otherBytesPreserved": true
+    },
+    "observerScope": "The helper pin only freezes native-fixture observer bytes. Desktop/Main activation is not added.",
+    "workflowOrRuntimeGateChange": false
+  },
+  "sizeGuard": {
+    "actualParentReportVerified": true,
+    "guardAndPolicyUnchanged": true,
+    "records": 5162,
+    "legacyFiles": 141,
+    "maxLines": 800,
+    "violations": [],
+    "reviewerReranEvaluator": false,
+    "recordBinding": "Both complete record hashes match their original reports; final path set is identical. Only six production records differ from historical12, precisely the five Solo production paths and supplementary one-line amendment. All22 source tuples and10 production overlays bind exact bytes/line counts.",
+    "changedProductionRecordsSinceHistorical12": [
+      "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+      "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+      "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+      "src/main/services/team/TeamLaunchStateStore.ts"
+    ],
+    "schedulerLines": 836,
+    "schedulerLegacyCap": 847,
+    "finalCountedRecordsSha256": "13205ce891dfab1aef2686ca799940e29aa66347e1f1c4efd03179124351d394",
+    "finalProductionTuplesSha256": "7f66e4b3dbe6d38fd1835ca7ee737f05b7a1fdcb0bbde8d29885db19fcadd16f"
+  },
+  "finalSourceRows": [
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "025a124b317917cdceb5d6072977bd2d24508cdd",
+      "sha256": "a7a3fb47fa680bb9c6193657437b860c58526a2fb87f6e5d2327a865c90f10fb",
+      "bytes": 20176,
+      "lines": 465,
+      "preimage": "7e1c3760f572d1648768a721b590cb343d015b01",
+      "scope": "packaged-030-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "3022c10041dd8bceabdd9e9982ab78a305e9c167",
+      "sha256": "89bddd71c36ae06f8d6d398571175a6f31112039fed2b63f2bd51a031b676f4d",
+      "bytes": 44790,
+      "lines": 690,
+      "preimage": "e2b14e9e1118948e4f0159c25aa0f4d34dd138b5",
+      "scope": "credential-diagnostics-030-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1e4522ba6e600545535c116e59a53a95f6120b37",
+      "sha256": "be61f648fec4c3b73a2c98eeb9f3428708007dc3abccb421ad6e35ecb3be8708",
+      "bytes": 52804,
+      "lines": 744,
+      "preimage": "6e914e68cbbe229ed99d232aab7cb6c7adc330ec",
+      "scope": "packaged-030-candidate"
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/passive-driver-close-diagnostics.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4dbce7ddf863f4b1513bdb018c67b29ec31eac71",
+      "sha256": "16f2216fbf96eced2addb983dc83d4a00f4116d3cb432511d70bb8143a5a4009",
+      "bytes": 11220,
+      "lines": 182,
+      "preimage": null,
+      "scope": "credential-diagnostics-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4765acd5e153d6fd601e2cd9645ab6966e042400",
+      "sha256": "62358a4efb31ae20948c1e81571780742121304d4b302ecb513efa3c58801dc6",
+      "bytes": 2173,
+      "lines": 47,
+      "preimage": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "scope": "quit-active-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-command-snapshot.test.mjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7733ec9dd14269c6ba4d8c276fbb0bf64849019e",
+      "sha256": "56fbdd59fbb15dc7e9bf2543b9ae92011e46fd7ba671381f7eae6ab6e4df3614",
+      "bytes": 9836,
+      "lines": 182,
+      "preimage": null,
+      "scope": "quit-active-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-quit-ui-smoke.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "05b5b1f8d17396c2c690d6e0c7b0c896abad1d7a",
+      "sha256": "3f750eef4be35d55fbffa81640e27f97f22f5504ed6adaeb3f6490fa66b99a3e",
+      "bytes": 22749,
+      "lines": 510,
+      "preimage": "cce4088737ff0eb4174746bf6fff49a22aded264",
+      "scope": "quit-active-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-integrated-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "de7adc5a25d63b84888460dc08a518de426946e7",
+      "sha256": "8de1ca5ecbfbfe9823478dd370f861234c05c74e3bf67f35a7fb95fc5ecbf798",
+      "bytes": 44827,
+      "lines": 603,
+      "preimage": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "4d6636e83415012b511f22273dc8068d1e3e9c5f",
+      "sha256": "120bccf5b98f8f596c4a69c7a780f8048187bf274b550a52f1c45770edb02d10",
+      "bytes": 25735,
+      "lines": 397,
+      "preimage": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+      "scope": "quit+schedule+passive-diagnostic-source-freeze",
+      "quitIntermediateBlob": "c60111361cf3dba3bf395081ec751ec8d3bb8681"
+    },
+    {
+      "path": "src/main/services/schedule/JsonScheduleRepository.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7a77c040eea4d316cd2f0fec5596bbebc31210ca",
+      "sha256": "765d969d6956679e0559017507d5f7289859ba81abd988a8f85fc97ed657bdc2",
+      "bytes": 8604,
+      "lines": 236,
+      "preimage": "2f0ef6e8a4d6506ecb20322af5626bb193db3f31",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "src/main/services/schedule/ScheduleRepository.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "052e724d9ddc699b24c96aaf563cf874d475720a",
+      "sha256": "ff0b29ebbbf8936c01d94916798889185d3336081000d1327f428f885cfb883f",
+      "bytes": 1307,
+      "lines": 26,
+      "preimage": "9ccc8524d62b5de7c2f4d1b377c2ce93426276dc",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "src/main/services/schedule/SchedulerService.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7e80ea7cb896ec3c802f130afff36f32f48b1483",
+      "sha256": "a42eeacd8e4ad2dda44b9941a18d9c4b8023a2a3711f625d81142e63065a5235",
+      "bytes": 32983,
+      "lines": 836,
+      "preimage": "b85244125521fce56e3cf2f320a07ae1d4ca0469",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/TeamLaunchStateStore.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1aa8fe6afded73ad22b41784e94ce42b18142a4",
+      "sha256": "f44abe9b34f83a2738342ba84f0cf99ed134b357eb36b9e51844b94249604c41",
+      "bytes": 23353,
+      "lines": 596,
+      "preimage": "b376015ab1f2ebb2dd17e72f95616e9ef38afa6c",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLaunchStateStoreBoundary.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f8e2479b4b5c3a555f94bb283e4a1cdd65ccfa59",
+      "sha256": "7465b7a62856f0cc6d654df57033cec3b48e63b1b4ee763ec920a949c143fb97",
+      "bytes": 19156,
+      "lines": 491,
+      "preimage": "9bb0d8ba6f4f9b97cd85060f17dfa56d28bbb58f",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "2f61a31f00a759a68091b0fd9c90df1c7259713e",
+      "sha256": "dce03e1761ad9886296e930422b8242f7330c183a8254f2c477e587e4e96c161",
+      "bytes": 10081,
+      "lines": 256,
+      "preimage": "d1f772de3f883e6f420d1261a0fbeff5ee3cd034",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/TeamProvisioningPersistenceReconcileFacade.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1af3316624c7d46629ca275638f38707259ae0d1",
+      "sha256": "e3f57dcb97331a166751395bdccddc41538b686061cd7574a05e855eb3486bdc",
+      "bytes": 12871,
+      "lines": 309,
+      "preimage": "0ee8c0fe11176e181d9c2a1f5df87ad2a5eb99b5",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningLiveLaunchSnapshotBoundaryFactory.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ff077d66c2f1b027d8fc42bd4e517090b4df1316",
+      "sha256": "7b154e6a055f067315f4d414f9241356696ca680376b2ed67feeeb28a0ff47cd",
+      "bytes": 11223,
+      "lines": 299,
+      "preimage": "2ff65bb7cb7ff8f79d5d43b59e47b965660e3812",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "src/main/services/team/provisioning/__tests__/TeamProvisioningPersistenceReconcileFacade.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "7ca326f89632042a98c5bc459250df221980bdd4",
+      "sha256": "529f8a1252abc5c71f8363ff6771dc34c073758fe7dbb0172c8e5dcfc78df335",
+      "bytes": 28169,
+      "lines": 684,
+      "preimage": "1e16d14d9b5daf96c102d4df2d90e80a981dd14f",
+      "scope": "solo-publication-030-candidate"
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerMetadataConcurrency.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "fa4fc950036305a7f5f2de09e1508f652ff655c1",
+      "sha256": "4d8459485db324be9989ad837b1bfe475006cc141915fddeec9bf0c1a9060caa",
+      "bytes": 9242,
+      "lines": 220,
+      "preimage": null,
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "test/main/services/schedule/SchedulerService.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "f04861c30e17c66e13f433a997a121e42d4150ac",
+      "sha256": "0e3882d1cd88571759a59fc29c5352b5baf9298283d9685c8fd7026134d27a22",
+      "bytes": 41784,
+      "lines": 1219,
+      "preimage": "35073d552b8928f969490f7d68028fa11f3ead34",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "test/main/services/schedule/SmartSchedules.safe-e2e.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "434b4689a4e9ca01243e7f2da5af21d803252094",
+      "sha256": "4d0dadaeda026ec8836539ca34212bc98a1c0a05b6788ef3f41d396f794b86aa",
+      "bytes": 21111,
+      "lines": 496,
+      "preimage": "214670d5f0780307de13b14c86d19b885f10fc0e",
+      "scope": "schedule-030-candidate"
+    },
+    {
+      "path": "test/main/services/team/TeamLaunchStateStore.test.ts",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "ebc6e322cc41d83fd8ecb07b5d4bdc7dab927c6e",
+      "sha256": "f198cafb5532b7028d7c50537592f2ceda7afdcc73735e0c2ce29fa56c916843",
+      "bytes": 33407,
+      "lines": 892,
+      "preimage": "d310431a7424065600ff28668f32184d80e2dc3a",
+      "scope": "solo-publication-030-candidate"
+    }
+  ],
+  "limits": [
+    "Historical component reviews and runtime failures remain exact to their own source pins; this manifest does not upgrade them to successor E2E PASS.",
+    "Final STATUS/index/evidence rows were still being assembled and are outside this source-only review.",
+    "Final full Git tree equality, live job leases, remote head/base/PR state and commit/push remain separate parent gates."
+  ]
+}

@@ -514,6 +514,7 @@ export function packagedOrphanObservation(history, snapshot) {
         observationOnly: true,
         signalAuthorized: false,
         historicalParents: parents.map((p) => ({ pid: p.pid, birth: p.birth })),
+        currentParent: currentParent ?? null,
         relation:
           parents.length !== 1 || (currentParent && currentParent.birth !== parents[0].birth)
             ? 'ambiguous-parent-identity'
@@ -585,7 +586,8 @@ export async function closePackagedBrowser({
         if (finished) return;
         finished = true;
         clearTimeout(timer);
-        error ? reject(error) : resolve(outcome);
+        if (error) reject(error);
+        else resolve(outcome);
       };
       ws.once('error', (error) => {
         if (receipt) receipt.socketError = true;

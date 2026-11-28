@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "/root/restore_scope",
+  "reviewedAt": "2026-11-21T16:42:34.817956+00:00",
+  "verdict": "PASS_FOR_EXACT_ARCHIVE_INTEGRITY_AND_DECLARED_EVIDENCE_SCOPE",
+  "findings": [],
+  "blockingFindings": [],
+  "mode": "Independent R2 read-only verification of archive, source bindings and saved receipts. Only this sibling review JSON was written.",
+  "baselineSha": "4ec8e74b9a6430143287baa5298a11ade98a5794",
+  "scope": "Exact continuation archive and outer index; no new E2E, product, provider or whole-workspace qualification.",
+  "archive": {
+    "path": "continuation-4ec8-20261121.tar.gz",
+    "bytes": 6284617,
+    "sha256": "831a9e9425ec5d72bab03ebb3730ce6fcddee5445a38b2f8c99b5757f322cc07"
+  },
+  "outerIndex": {
+    "path": "continuation-4ec8-20261121.json",
+    "bytes": 10497,
+    "sha256": "bf51a6d2de7510e4467788571fe32d587c63cda3dcaec88edc0c5073fc3d5bdd"
+  },
+  "integrity": {
+    "gzipCrcAndUncompressedSizeVerified": true,
+    "gzipMtime": 0,
+    "entries": 573,
+    "allRegularFiles": true,
+    "safeNormalizedRelativePaths": true,
+    "duplicatePaths": 0,
+    "sortedPaths": true,
+    "tarMetadata": {
+      "uid": 0,
+      "gid": 0,
+      "uname": "",
+      "gname": "",
+      "mtime": 0,
+      "mode": "0644"
+    },
+    "allPayloadsDecodeUtf8": true,
+    "textBytes": 44659848,
+    "innerInventory": {
+      "path": "inventory.json",
+      "sha256": "4f0bb63f7aa207b633fcdf323dc2efe6771428bcafbd4fa6ee86609907ff9fe5",
+      "listedEntries": 572,
+      "allHashesAndSizesMatch": true,
+      "selfExcludedExplicitly": true,
+      "entrySetEqualsAllOtherArchiveMembers": true
+    },
+    "directEvidenceCopiesComparedToWorkspace": 517,
+    "directEvidenceCopyMismatches": 0,
+    "explicitOmissions": 193,
+    "omissionListDisjointFromIncludedPaths": true,
+    "omittedOriginalSizesAndHashesLocallyCompared": 193,
+    "omittedOriginalMismatches": 0
+  },
+  "sourceBindings": {
+    "candidateSourcePins": 26,
+    "allCandidateBytesEqualCurrentWorktreeAndOuterPins": true,
+    "preimagesComparedToGitBaseline": 21,
+    "allPreimageBytesMatch": true,
+    "newFilesWithoutPreimage": [
+      "patches/croner@10.0.1.patch",
+      "test/features/agent-backend/catalogRequestDiagnostics.test.ts",
+      "test/main/services/schedule/CronerSchedulerHistory.test.ts",
+      "test/main/services/schedule/CronerTestClock.ts",
+      "test/main/services/schedule/CronerTiming.test.ts"
+    ],
+    "status": {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+      "bytes": 185097,
+      "sha256": "127a435a633079ec98b961e8063a24267bdb669c4b65e73809737028264181ca",
+      "archivePath": "STATUS.md",
+      "archiveAndCurrentBytesMatch": true
+    },
+    "rootReviewSourcePinsEqualOuterPins": true,
+    "finalManifest": {
+      "path": "ci-4ec8/next-source-manifest-final.json",
+      "sha256": "131ec12d2024724f66185d28d1d61200fad86a413ad9cff604ec4c54dfe5f2ae",
+      "paths": 1981,
+      "currentWorktreeMatches": 1981,
+      "missing": 0,
+      "drift": 0,
+      "relevantChanged": 26
+    },
+    "compiledCatalog": {
+      "count": 3,
+      "archiveBytesMatchR2PinsAndCurrentDist": true,
+      "pins": [
+        {
+          "path": "packages/legacy-agent-host/dist/composition/ProviderManagementCoordinator.js",
+          "sha256": "caf4dc7d68c77c8ad8930dd5dceff3e6bba8076f9a9d6274e3790ac3a81d747f"
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/composition/createProviderManagementMethods.js",
+          "sha256": "ede68e85fb5ca4db55b9ff6cb4c5bb06b84da57b2fcdca9eb5e1450b1578e53d"
+        },
+        {
+          "path": "packages/legacy-agent-host/dist/adapters/providers/createClaudeCloseDiagnostic.js",
+          "sha256": "0c3899d181d452d7a8078e2674f1adea68a335368fd374f4a1462f62777cb9c8"
+        }
+      ]
+    }
+  },
+  "evidenceBindings": {
+    "allSevenPriorR2ReceiptHashesMatch": true,
+    "sixOuterQualifiedArtifactReadbackHashesMatch": true,
+    "retainedExternalOriginalLog": {
+      "path": "ci-audit/job-136713156817.log",
+      "bytes": 266480,
+      "sha256": "bc1dc05dbf1db4e3addb960b2610a079805475b9006253780a60444bb33aa499",
+      "matchesRetainedCorrection": true
+    },
+    "originalSixRuns": {
+      "sourceHead": "4ec8e74b9a6430143287baa5298a11ade98a5794",
+      "attempt": 1,
+      "allTerminal": true,
+      "allMetadataAndArtifactListingPinsMatch": true,
+      "allJobRowsBoundToOriginalRunHeadAndAttempt": true,
+      "allJobsCountsComplete": true,
+      "totalsRecomputed": {
+        "runs": 6,
+        "successRuns": 4,
+        "failureRuns": 2,
+        "jobs": 69,
+        "success": 50,
+        "failure": 8,
+        "skipped": 11,
+        "cancelled": 0,
+        "queued": 0,
+        "inProgress": 0
+      },
+      "declaredFailureClassification": {
+        "primary": 6,
+        "derivedAggregate": 2
+      },
+      "families": [
+        {
+          "family": "Host",
+          "runId": 44912818143,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "jobs": 30,
+          "success": 24,
+          "failure": 6,
+          "skipped": 0
+        },
+        {
+          "family": "Source",
+          "runId": 44912818166,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "failure",
+          "jobs": 15,
+          "success": 2,
+          "failure": 2,
+          "skipped": 11
+        },
+        {
+          "family": "Packaged",
+          "runId": 44912818208,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": 7,
+          "success": 7,
+          "failure": 0,
+          "skipped": 0
+        },
+        {
+          "family": "Process",
+          "runId": 44912818003,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": 5,
+          "success": 5,
+          "failure": 0,
+          "skipped": 0
+        },
+        {
+          "family": "Teams",
+          "runId": 44912818150,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": 3,
+          "success": 3,
+          "failure": 0,
+          "skipped": 0
+        },
+        {
+          "family": "Native V2",
+          "runId": 44912817963,
+          "attempt": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "jobs": 9,
+          "success": 9,
+          "failure": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "packagedFive": {
+      "path": "ci-4ec8/packaged-five-platforms-qualification-index.json",
+      "sha256": "dd9c5edc511fecab15aa74235dc29d9c571770d180a952be7580180c8f1fa71a",
+      "sourceHead": "4ec8e74b9a6430143287baa5298a11ade98a5794",
+      "runId": 44912818208,
+      "attempt": 1,
+      "platforms": [
+        "linux-x64",
+        "darwin-x64",
+        "darwin-arm64",
+        "win32-x64",
+        "win32-arm64"
+      ],
+      "allFiveJobIdsAndArtifactIdsNamesSizesDigestsMatchFinalSavedListing": true,
+      "qualificationHashesMatch": true,
+      "terminalAndFinalListingReferencesMatch": true,
+      "linuxHistoricalPendingFlagSupersededByFinalBinding": true
+    },
+    "finalScopedTS7": {
+      "receipt": "ci-4ec8/next-final-main-scoped-typecheck-readback.json",
+      "compiler": "7.0.2",
+      "exitCode": 0,
+      "all13RootPinsAndConfigAndLogHashMatch": true,
+      "scope": "Listed Main/TEST roots and dependency graph only"
+    },
+    "canonicalWholeWorkspaceTypecheck": {
+      "exitCode": 137,
+      "result": "NOT PASS"
+    },
+    "rootReportedEmptyLogExitsRemainAttributedToOwner": true,
+    "overlappingLocalTestCountsExplicitlyDisclosed": true
+  },
+  "supersessions": [
+    {
+      "kind": "test style",
+      "oldPins": 4,
+      "oldIndexes": [
+        "cron-integration-evidence/index.json",
+        "retained-selection-evidence/index.json"
+      ],
+      "authoritative": "test-style-evidence/index.json",
+      "review": "ci-4ec8/test-style-r2-ci-audit.json",
+      "finalPinsMatchCurrent": true
+    },
+    {
+      "kind": "shared graph diagnostic files",
+      "oldPins": 2,
+      "original": "ci-4ec8/graph-next-r2-ci-audit.json",
+      "preimage": "resume-correlation/preimage.json",
+      "final": "resume-correlation/verification.json",
+      "review": "resume-correlation-r2-review.json",
+      "oldGraphPinsEqualCatalogPreimageAndFinalPinsMatchCurrent": true
+    },
+    {
+      "kind": "source manifest",
+      "original": "ci-4ec8/next-source-manifest-preflight.json",
+      "rawMismatchReadback": "ci-4ec8/next-source-manifest-final-readback.json",
+      "authoritative": "ci-4ec8/next-source-manifest-final.json",
+      "changesExactlyFourFinalStylePins": true
+    }
+  ],
+  "limitationsPreserved": [
+    "The six original runs qualify only source head 4ec8 in each declared TEST scope. Their six primary failures remain failures; this next source has no new original CI result yet.",
+    "Whole-workspace canonical typecheck exited 137 and is NOT PASS. The explicit final TypeScript 7.0.2 scoped receipt covers only its listed roots and dependency graph. The earlier empty log with truncated/consumed tool exit is not counted as PASS.",
+    "The initial expanded typed-lint attempt remains 63 errors: seven new Croner test errors were corrected and independently reviewed, while 56 previous test-file errors outside canonical src scope remain recorded. Final changed Main production had zero errors.",
+    "Croner public-path RED/GREEN proves a conditional clock defect, not the precise original CI clock interleave or historical introduction. Offline install/metadata resolution attempts are INCOMPLETE; actual pnpm patch installation must be verified by new original CI.",
+    "Darwin catalog and graph changes are passive diagnostics. Their timing causes and original pre-RPC capture boundary remain unproved. Main admission, Host return and diagnostic release are not renderer acknowledgement or physical custody proof.",
+    "Retained original ZIP lacks saved team meta/config and does not identify the mismatched key. Missing runtimeSelectionVersion is supported by source trace and actual persisted-store regression, not a direct read of absent artifact bytes.",
+    "Raw ZIP, binary and screenshot bytes are omitted. The archive cannot independently recompute their recorded digests, visually recheck omitted screenshots, or requalify original executables; original listings, extracted text, digest inventories and readback receipts are retained.",
+    "All receipts preserve their native/ownership/currentness/cleanup/negative limits, including Darwin successorNativeCustody=false and naturalExitQualified=false where stated. Skips are not passes.",
+    "The shared original dependency store had automatic install bookkeeping changed once; six workspace links were restored and source/dist stayed unchanged. It is not claimed byte-frozen. Next dependency directories/task-state were isolated without weakening install policy.",
+    "No genuine Claude/Codex execution, version probes, rerun, dispatch, cancellation, default Host, Stage2, release or app-main merge is qualified or performed by this source batch.",
+    "Archive paths retain original scratch and runner paths in raw evidence. Use matching relative paths inside this archive; original absolute paths are historical provenance, not portable executable locations."
+  ],
+  "additionalReviewBoundaries": [
+    "This review independently checked archive integrity and saved cross-bindings; it did not rerun any test, original verifier, build, typecheck, provider or native scenario.",
+    "Native and packaged semantic qualification is retained from the named original readback receipts. This review does not enlarge their custody, natural-exit, executable-byte or release scope.",
+    "All 193 omitted originals were available and hash-compared locally during this review; their bytes are still absent from the delivered archive and cannot be reconstructed or rehashed from it alone.",
+    "Root owner-reported zero exits for empty build/typecheck logs remain attributed reports. The final scoped TS7 check has a separate explicit exit/config/source receipt; the earlier consumed-exit log is not counted as PASS.",
+    "Raw historic paths remain provenance references. This archive is not a self-contained installed dependency/runtime bundle, and no reproduction command was executed.",
+    "The root sensitive-pattern scan claim was retained; this review is not a separate exhaustive secrets audit."
+  ],
+  "reviewActions": {
+    "archiveReadAndHash": true,
+    "safeInMemoryTarReadNoExtraction": true,
+    "savedJsonCrossBindingRead": true,
+    "readOnlyGitBaselineBlobComparison": true,
+    "localSourceAndOmittedBytesRead": true,
+    "testsOrCompilersExecuted": false,
+    "genuineProviderOrNativeExecuted": false,
+    "githubReadsOrMutations": false,
+    "sourceDependencyArchiveOrOuterIndexEdited": false,
+    "writtenFiles": [
+      "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/continuation-4ec8-20261121-review.json"
+    ]
+  }
+}

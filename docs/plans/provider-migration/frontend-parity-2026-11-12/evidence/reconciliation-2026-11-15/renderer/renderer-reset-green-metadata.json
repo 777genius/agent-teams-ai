@@ -1,0 +1,30 @@
+{
+  "stage": "renderer-production-GREEN-attempt",
+  "sourceHead": "b8a9d3d16db8cf50b3c3a43fa495fe08fc3dd978",
+  "sourceTree": "331f6e4f64cdea8a4827f2c48df45a6d94255636",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "node_modules/vitest/vitest.mjs",
+    "run",
+    "--maxWorkers=1",
+    "test/features/agent-backend/hostMemberSpawnStatuses.test.ts",
+    "test/features/agent-backend/hostProvisioningProgress.test.ts",
+    "test/features/agent-backend/hostTeamChanges.test.ts",
+    "test/renderer/store/teamSlice.test.ts",
+    "test/renderer/store/teamRuntimeRunAdoption.test.ts",
+    "test/renderer/store/teamProvisioningStateRules.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T17:37:45.328503+00:00",
+  "preflightMetadataSHA256": "f859183eb9741560687b477201bc0576df2166b8e60af14e363486ee5fcc2f01",
+  "sameDevelopmentBuildFingerprintsAsRed": true,
+  "exitCode": 0,
+  "elapsedSeconds": 9.971466709001106,
+  "finishedAtUTC": "2026-11-15T17:37:55.300107+00:00",
+  "logBytes": 697,
+  "logSHA256": "a13a858c720c5f869ddbfcf0da73a02f24bad1f793284ee4cd0e62047c299b9e",
+  "sourceHeadAfter": "b8a9d3d16db8cf50b3c3a43fa495fe08fc3dd978",
+  "statusAfter": ""
+}

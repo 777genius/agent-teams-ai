@@ -1,0 +1,35 @@
+{
+  "archive": "/workspace/scratch/82d3f9ba6b85/native-audit-N608efb/v2-win32-arm64/artifact-14195560533.zip",
+  "bytes": 13475,
+  "sha256": "0c9ef1def19153c46fea68fab390a139cc4af9d2a805cb7ac5ddddae6404f7e7",
+  "CRC": true,
+  "safeNames": true,
+  "uniqueNames": true,
+  "noSymlinks": true,
+  "members": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "bytes": 782,
+      "blob": "ae9c06daf756add62143ab5200f4e8ed3347e73c",
+      "sha256": "25ea544b09674d3e3e731898ca49c99eca17807c4f67ab3606f1262036c40f15"
+    },
+    {
+      "name": "opencode-v2-windows-custody.json",
+      "bytes": 909,
+      "blob": "7365beda080188c1a0b8c814fc3d87c6b3eca96c",
+      "sha256": "fd4d4a66bfbd409bc58f47b355a72d6ad683f13eb65feba23e36abebf3425979"
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "bytes": 95134,
+      "blob": "1144ad78b8324ee4b482e662190c47a86d4df79e",
+      "sha256": "ce4df9013461ce7a6107ddc767b261ac7aaafa5af6d0b1fe8050ccea22c61950"
+    },
+    {
+      "name": "opencode-v2-embedded-host-auto.json",
+      "bytes": 94956,
+      "blob": "d963aeffadbf31df32bcf69d03ea0441a4e54b00",
+      "sha256": "0d04f5163421d760dd434cd474ffd04405f7425c55b80b5f587c3425044197b5"
+    }
+  ]
+}

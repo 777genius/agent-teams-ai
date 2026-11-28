@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "bundle": {
+    "relativeFile": "parity-host-test-types-raw-20261119.json.gz",
+    "sha": "9a42bb4126e17def50a46dfd27e451069e855e4b",
+    "sha256": "67a9388126267da4c2f919a47466bad4692f4042e7bf838551569c8d2882fc98",
+    "bytes": 30834
+  },
+  "uncompressed": {
+    "sha": "2d0b98931fe1dc00ad583727989c73f0eb776cfc",
+    "sha256": "0b0c1516a15701032f1b6e580a45f0e7c979a32d401ed6d15c239130128d923c",
+    "bytes": 143017
+  },
+  "members": [
+    {
+      "path": "ci-current-42a4/job-135261468433-terminal.log",
+      "sha": "2abdaefbafbefdc86d9fb78dc2be1ebfe1d0bd9d",
+      "sha256": "bee500849f8eaf557716b2475fe00e56dd40a50f6f406bd3c5271ccb58ad7182",
+      "bytes": 78426
+    },
+    {
+      "path": "ci-current-42a4/job-135261468917-terminal.log",
+      "sha": "c1caea0604b241ce2e79ee27af0ff0d9d90ce8c0",
+      "sha256": "189a84e85b429240b5a0e3b5c557a66813a96e61530076b77480477e44d2a69e",
+      "bytes": 51287
+    },
+    {
+      "path": "native-host-types-42a4-candidate/typecheck-before.log",
+      "sha": "af607b43f703ca18b91f698423fd1df498af51c8",
+      "sha256": "733ab4fd7cb0fe20c229f0ffdecbc5e87eab10c3418aab1f8030c7113412699d",
+      "bytes": 211
+    },
+    {
+      "path": "native-host-types-42a4-candidate/typecheck-after.log",
+      "sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "native-host-types-42a4-candidate/typecheck-results.json",
+      "sha": "de274effb82d2b264405fc20e7a49b4b1ea26ade",
+      "sha256": "c9ccab88d5fefb9d7df5953cafce77e79baf5e45bd22e02cf4dc39e82e16577d",
+      "bytes": 2201
+    },
+    {
+      "path": "native-host-types-42a4-candidate/runtime-erasure-result.json",
+      "sha": "d4a5d97c9793a6991adab8e4e06eb36e6c96b657",
+      "sha256": "218ff86f5d4378e4648781098cb6db95668a253dfb8ba2fbcc81c594bc5dac90",
+      "bytes": 491
+    },
+    {
+      "path": "native-host-types-42a4-candidate/finite-runtime-after.log",
+      "sha": "22c9ca765cffc2543faa269ecc354a78a4c820ca",
+      "sha256": "c15e2d53b22709fd97e55e18301c72d6fa1bc54451ad2f72fd0bba69eaef28db",
+      "bytes": 539
+    },
+    {
+      "path": "native-host-types-42a4-candidate/finite-runtime-result.json",
+      "sha": "d184bc9864349b82c3198bbd830c85ac1b4c51a9",
+      "sha256": "177b8995bdc53eb1d464923984f10923dca5b4e7a7e1946e585bfd60612eaed3",
+      "bytes": 1456
+    },
+    {
+      "path": "native-host-types-42a4-candidate/verify-before/packages/legacy-agent-host/tsconfig.focused.json",
+      "sha": "f56d7d47ded3c3963a206caaa00b33b5eb7b42f7",
+      "sha256": "b0ff4f425499c558b69c8e67510ae3a0d44580342e4aeb68a02d293b82a96508",
+      "bytes": 552
+    },
+    {
+      "path": "native-host-types-42a4-candidate/verify-after/packages/legacy-agent-host/tsconfig.focused.json",
+      "sha": "f56d7d47ded3c3963a206caaa00b33b5eb7b42f7",
+      "sha256": "b0ff4f425499c558b69c8e67510ae3a0d44580342e4aeb68a02d293b82a96508",
+      "bytes": 552
+    }
+  ],
+  "scope": "Original completed Host winARM/DarwinARM compiler failures and focused local type/finite receipts; no native runtime acceptance"
+}

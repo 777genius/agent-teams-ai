@@ -20,7 +20,7 @@ export function createTeamMemberRestartAction<TScope>(options: {
 }): AppState['restartMember'] {
   const { get, set } = options;
   const invocationByTeam = new Map<string, number>();
-  return async (teamName, memberName, expectedSecondary) => {
+  return async (teamName, memberName, expectedSecondary, captured) => {
     const invocation = (invocationByTeam.get(teamName) ?? 0) + 1;
     invocationByTeam.set(teamName, invocation);
     const requestScope = options.captureScope(teamName);
@@ -44,7 +44,12 @@ export function createTeamMemberRestartAction<TScope>(options: {
 
     try {
       const result = await unwrapIpc('team:restartMember', () =>
-        options.restart(teamName, memberName, expectedSecondary)
+        options.restart(
+          teamName,
+          memberName,
+          expectedSecondary,
+          ...(captured === undefined ? [] : [captured])
+        )
       );
       const restartFailure = result.status === 'restarted' ? null : result;
       const correlated =

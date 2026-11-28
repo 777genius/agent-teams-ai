@@ -1,0 +1,25 @@
+✖ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (226.475548ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1578.987998
+
+✖ failing tests:
+
+test at packages/legacy-agent-host/tests/runtime-team-host.test.ts:35:1
+✖ ordinary lead replies replace their original signed conversation row without inbox writes or product feed churn (226.475548ms)
+  AssertionError [ERR_ASSERTION]: ordinary paired Runtime text must reach the original conversation page
+      at TestContext.<anonymous> (file:///workspace/scratch/391e21b06e24/reconcile-base0543/packages/legacy-agent-host/tests/runtime-team-host.test.ts:55:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

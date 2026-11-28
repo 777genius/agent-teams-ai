@@ -1,0 +1,468 @@
+{
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "files": [
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "blob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db",
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0",
+      "lines": 392
+    },
+    {
+      "path": "agent-teams-controller/scripts/build.mjs",
+      "bytes": 990,
+      "blob": "bf2ce41041a9aee92261319e86cf802d82004739",
+      "sha256": "a7afb7428749efcd15c45acf9b4da03ce4d529ff663b57af876a55b373b97399",
+      "lines": 31
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "lines": 580
+    },
+    {
+      "path": "packages/legacy-agent-host/native/linux-child-exec.c",
+      "bytes": 1674,
+      "blob": "5f094bf61ae831f4b84339eaabb29d6f46c06a2e",
+      "sha256": "29f122efc95f3b8f4946e624d6d0afd70959f3759499cee4d23bae269c805337",
+      "lines": 42
+    },
+    {
+      "path": "packages/legacy-agent-host/native/registered-process-linux.c",
+      "bytes": 23627,
+      "blob": "841cda775caf1f7618dea59e89267d85c888d158",
+      "sha256": "f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667",
+      "lines": 429
+    },
+    {
+      "path": "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+      "bytes": 11402,
+      "blob": "ee69300d2d6e5a33e34efcce78937bc36d5fefd4",
+      "sha256": "08b8d63f4b9fcbb2ce93b0703240c9b34fa91141b84d808543bb11ab221b019f",
+      "lines": 181
+    },
+    {
+      "path": "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+      "bytes": 4671,
+      "blob": "c4cd9df0a6ffb3bda9173bb90fae298e9160da89",
+      "sha256": "2b8dca84ed5b7411b0c11820af8c40f3f184e7599cd39a60ccc4a79150dbbf7c",
+      "lines": 62
+    },
+    {
+      "path": "packages/legacy-agent-host/src/composition/processCustody.ts",
+      "bytes": 1995,
+      "blob": "7e537486aaa681c9e11cdd517f1e48e9291c3c64",
+      "sha256": "89865559d4ed06d9f47d010f03b6dd098cb7589db8cad01baa9ad33ed972fd7b",
+      "lines": 39
+    },
+    {
+      "path": "packages/legacy-agent-host/src/process/LinuxRegisteredProcess.ts",
+      "bytes": 10169,
+      "blob": "e6ba065fa5ca2de79f4d6d1fe7aa03df68c2d899",
+      "sha256": "755f7f7e04914f130b72c0a8fdbc5f51560ebed39e805bd27196f568cfff24bd",
+      "lines": 175
+    },
+    {
+      "path": "packages/legacy-agent-host/src/process/LinuxWarmProcess.ts",
+      "bytes": 9022,
+      "blob": "2e05306067e97f644d68c21c7cada8bc4cda1d1a",
+      "sha256": "5a1d5392725b299691aef7540c9fcc59a778016d5a07cc262a799cdd39b50f44",
+      "lines": 179
+    },
+    {
+      "path": "packages/legacy-agent-host/src/process/loadProcessNativeArtifact.ts",
+      "bytes": 1239,
+      "blob": "c1ef9543c9950014059d45573f4c3283c521af86",
+      "sha256": "9e2c784c728d032cea5b6fe403664dbdf6705774183c036346a549e5ade6f9a5",
+      "lines": 25
+    },
+    {
+      "path": "packages/legacy-agent-host/src/process/readPackagedProcessArtifact.ts",
+      "bytes": 3413,
+      "blob": "926327a2f072814f41e9c08cee03e48985404175",
+      "sha256": "a59deccd3ac1d7f24609494568046c15bd968015136c5aa52e9e745e91e3a79a",
+      "lines": 70
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/captured-claude-process.test.ts",
+      "bytes": 17005,
+      "blob": "d2b952c9e6ac2281a14a00665cf4689d9c7d4b5c",
+      "sha256": "12be8f565712c09537d99ba75b63aa6e01774708ad1967c7ee2fdd964d747712",
+      "lines": 366
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/claude-management-host.test.ts",
+      "bytes": 13620,
+      "blob": "7f7ee01121e64f0ab55c127f62c796bf20b3fc70",
+      "sha256": "0c90e1992310021a746897425e4440dff4116dcb8a7a19651def8a47563925be",
+      "lines": 223
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/registered-process-actor.c",
+      "bytes": 2466,
+      "blob": "b2df27d949168d2d2a3242eb10b93c3b70ff9e41",
+      "sha256": "54cdd83e491803abaff29e1ec0f953535592960033b17a3373ea594cd9c98bb7",
+      "lines": 57
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/registered-process-parent.ts",
+      "bytes": 1215,
+      "blob": "e39a4a27879953cd81564992b102c57a6e823825",
+      "sha256": "2b056e84f9dd470aabb899889699ed47ff3e9c386e14c2a4bde9c6820d0aca8b",
+      "lines": 19
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/lifecycle-process-release.test.ts",
+      "bytes": 11844,
+      "blob": "6e620f1fdc12a4752b19e8ec2a8757ee2ad0d368",
+      "sha256": "d635cffd30e479172d6febdfa1de71d2c518c310a72aadfd6cd0f63c9e2deca1",
+      "lines": 169
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-command-store.test.ts",
+      "bytes": 6631,
+      "blob": "b5788fd14518fde0dff0c58071cf8f9722d87e72",
+      "sha256": "c49a82c5f6626f17228c929077d849f74bf53f8837c6b11d6ed759e7280f3b60",
+      "lines": 120
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/management-model-probe.test.ts",
+      "bytes": 47440,
+      "blob": "d13aa0c846dbf97aff99786e1165aa214aab93c7",
+      "sha256": "5a1e781f3d910b97cb3e4bfdc8592897bce69861b6200421355ed9f047f85f89",
+      "lines": 850
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+      "bytes": 9208,
+      "blob": "1a202377edc9f57c62eb757e9fcdc8718479e3d1",
+      "sha256": "ee1ba17e9fd9f52dc825c067a17038a5de36af4541ede3201621e62007614dec",
+      "lines": 164
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-build-selection.test.ts",
+      "bytes": 15547,
+      "blob": "d88797a15f80482027c990a1fdd75ff42264aa41",
+      "sha256": "26dd3e24a21b33fbe50067f2f73a925db82d3ae7e907cd93b2a9f0bd8fe08322",
+      "lines": 258
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-capture-records.test.ts",
+      "bytes": 4201,
+      "blob": "c7e75d4252407448804d52f80de69e64014645af",
+      "sha256": "c25580f9eac0ecfaf67d0319e75db263b3f06126a1891ffb23697594f711ec16",
+      "lines": 57
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-commands.test.ts",
+      "bytes": 48150,
+      "blob": "5fedca0326ab0bc92a124af9c39d1df1e4bb90cd",
+      "sha256": "052e701e1f0942215caeae3e6d2a92e900a03dcede46a3707682cf651122e68f",
+      "lines": 844
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-linux-warm-lifetime.test.ts",
+      "bytes": 18173,
+      "blob": "06472ff88775f547e4b49fd1521109623d2d220f",
+      "sha256": "98050d0259dd0ab0b061f23e8d8e313811dc21ba59e0238e67a3269269b00c3e",
+      "lines": 290
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-linux.native.mjs",
+      "bytes": 19288,
+      "blob": "f5959483a2441a5b53570c55df8b855f39003a94",
+      "sha256": "69e4235a7d3243cec40f0a68d356b32189c559e844367fa39323b4fa7f1dc28e",
+      "lines": 284
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/registered-process-owner.test.ts",
+      "bytes": 12404,
+      "blob": "f1737e1a21a0447d43b84d3d839a5ffa6f385e2b",
+      "sha256": "44641e49e37d6c7bc9106aa18c98b399f9697128b7fdc4b341185c0835a8c0ef",
+      "lines": 314
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-native-identity.test.ts",
+      "bytes": 42655,
+      "blob": "eaf21d42dc203d22778cfec4f02eb9bc6d62c0fa",
+      "sha256": "3cb9951ac6c712fb5911ebf83598d1c81d62a6fa6aa9bd03dc6c2df745e3a420",
+      "lines": 994
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-probe-origins.test.ts",
+      "bytes": 12854,
+      "blob": "e757868741c2f4dd63f811a76232f95d6c7d6ba1",
+      "sha256": "33987a7fadfa6254175e64d9a743931c34684192e787a236a5b43dc247d82011",
+      "lines": 212
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/runtime-source-process-selections.test.ts",
+      "bytes": 21765,
+      "blob": "126e66a45224121719b7b33c333692ee147b664d",
+      "sha256": "21ba6dea161737fee65834714cc9c4fb252e148f3d778f52d5e004fcfd18b757",
+      "lines": 294
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "bytes": 87973,
+      "blob": "bc0913e775d3e076518009c4fe7b5ee45f8c7e7b",
+      "sha256": "a5c97e6dc5ce77215a0fb8e6d86d62606ded0d62cc1cea0475299519ff35cd1a",
+      "lines": 1646
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/scheduled-run-host.test.ts",
+      "bytes": 41863,
+      "blob": "dbbd17b11db24a9dc3fb989e0266101847f0a778",
+      "sha256": "f3f9147184700663c24d85a2a81ff6ab54724b7883a9e6fcc9bf9c324f473ab5",
+      "lines": 598
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-finite-process-routing.test.ts",
+      "bytes": 10746,
+      "blob": "00eaa6c453a9d53c31dfc29f0dc0d83a610f5b85",
+      "sha256": "194703f2e57d73a0a4db026b41e9c64071bdc956d08dcdf9cb4ef2c238d8462b",
+      "lines": 165
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-job-custody.test.ts",
+      "bytes": 19542,
+      "blob": "1ca246fe30e71394783be13dc49ccc1d9b864dbb",
+      "sha256": "1ff30c2a0b092456040fe2779a2f71325d261cccc71fd81d527722105dced469",
+      "lines": 349
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-launcher-recipe.test.ts",
+      "bytes": 22044,
+      "blob": "af3b9078b2fa9ee565ccc406a50852ccb600b4bb",
+      "sha256": "7a7dfa5edfa12536d692aa1d5db0df4db992092a33094c965918ce8fbbc0e0af",
+      "lines": 357
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/windows-provider-routing.test.ts",
+      "bytes": 5368,
+      "blob": "7ec8646c9dd6f375f77c999fb33d1963a259298e",
+      "sha256": "d3ea92a25c8f1b837f7f08a8196a1ce6eb02dd6de51601a382906601b8f14596",
+      "lines": 92
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.json",
+      "bytes": 456,
+      "blob": "9fad9f8a73e1cfffd382c0ba76f2945e5c361531",
+      "sha256": "54be9b6021660d54c06c14fd25cc5c4484b7615f01d9eb033fc52edfded095ab",
+      "lines": 19
+    },
+    {
+      "path": "packages/legacy-agent-host/tsconfig.test.json",
+      "bytes": 174,
+      "blob": "65edbd94041b7d9a986480badd6802b1dd0a8837",
+      "sha256": "5f1f3e6842c4087e0f834895fbde59769240c68a98ff15c24ac1677d0e5b9356",
+      "lines": 9
+    },
+    {
+      "path": "packages/task-change-ledger/tsconfig.json",
+      "bytes": 378,
+      "blob": "ff7683dc99c69dbf8c884ba138382468c9c86314",
+      "sha256": "03d503904b76cc07fc4765a30493d288b99a2dbcf1325f3dda243592a407cb6c",
+      "lines": 17
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "lines": 26665
+    },
+    {
+      "path": "scripts/build/buildLinuxNodeExec.mjs",
+      "bytes": 4125,
+      "blob": "f0ed24053ad252e8e348090c535b0818100a5a80",
+      "sha256": "fc7e6f68bd899b1109df035d0c903d0df50d9613b5a6c7f1543b763727d8b927",
+      "lines": 82
+    },
+    {
+      "path": "scripts/build/linuxNodeExec.native.test.mjs",
+      "bytes": 9565,
+      "blob": "05e0abb5adad9cecc93f202c913de42168846c2a",
+      "sha256": "3f6ac3e61f98ff41b3fe6531488aede1b1b3faf5e980700613cc4c634345e05c",
+      "lines": 178
+    },
+    {
+      "path": "scripts/ci/enforce-pnpm-install.mjs",
+      "bytes": 312,
+      "blob": "fb33357b9d8b38c2d133593791153aa2fe0bdcf0",
+      "sha256": "79b147e33807a5d236bda58f6fd4c401c54015b09684e66b054497d08a4f9bed",
+      "lines": 13
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "bytes": 5259,
+      "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e",
+      "lines": 128
+    },
+    {
+      "path": "scripts/ensure-electron-install.cjs",
+      "bytes": 4585,
+      "blob": "6e82478a6347cde01cbc5d52ae71ef79cb38f290",
+      "sha256": "9bd7bd4a400eeb7ef4987189ffc9d64774677576a9198e417839989401bf4edb",
+      "lines": 158
+    },
+    {
+      "path": "src/main/utils/linuxChildLaunch.ts",
+      "bytes": 15382,
+      "blob": "6cadc2595d46e954bc6258245c6b82d9133a1a09",
+      "sha256": "e5cd7de9c86f4e0fcab043404c24561dfb71926e839ad79feecd3839d6068814",
+      "lines": 294
+    },
+    {
+      "path": "src/main/utils/linuxChildLaunchSelection.ts",
+      "bytes": 13318,
+      "blob": "72c4e47c0a396c8168e3c064e21e7e96104cf181",
+      "sha256": "c3a5eedb723e112ec3bc9ee0458b9570d462dc39f9ee7e610b02a2d84850b848",
+      "lines": 255
+    },
+    {
+      "path": "src/main/utils/linuxNodeExecArtifact.ts",
+      "bytes": 6181,
+      "blob": "f7d2ac8cb75afdd5649facc4f5b6ad605236ae4c",
+      "sha256": "5f83c0db30747a7cc762ea5b40634b315029088f68dcdeaf6274591e1c1462c1",
+      "lines": 127
+    },
+    {
+      "path": "test/features/agent-backend/capturedHostClient.test.ts",
+      "bytes": 51981,
+      "blob": "d285d22cd1ad69e43b3997ea58d90ea5d0f4600b",
+      "sha256": "d9e5f76a6e156f6526d9553307126f4a4a03798950baf097d9ad6e58e8d5715f",
+      "lines": 1040
+    },
+    {
+      "path": "test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts",
+      "bytes": 4592,
+      "blob": "4a7801a5260ad0c25a07485003d4e99ac5b4633f",
+      "sha256": "a979a7e7a32e952067237fc3d04f3b4b19a97328dacf55db65c606dae4211287",
+      "lines": 67
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSelection.test.ts",
+      "bytes": 10861,
+      "blob": "e6379e4ace2cc874f660c6bb1377592bba52ebb9",
+      "sha256": "3f972d99f44c514d3f06875a7c8a094b63998aa5daf17abf68db13a7b4cc9025",
+      "lines": 186
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourceHistory.test.ts",
+      "bytes": 12515,
+      "blob": "b6ce74003e2dc27a8e4527bd07298fc2bff2a586",
+      "sha256": "0c411315405fd6a572dddb385e3735ca43b78141d729f932a27087adf48480c7",
+      "lines": 166
+    },
+    {
+      "path": "test/features/agent-backend/capturedWindowsSourcePending.test.ts",
+      "bytes": 6457,
+      "blob": "1ff48096cf52cde91cd82ac55eddf99f4458896e",
+      "sha256": "b18822ad82a51a00100184148043032822fcfa2df80c47e1d38a4dbdc6e71e56",
+      "lines": 86
+    },
+    {
+      "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+      "bytes": 56748,
+      "blob": "1bd21c24852ebfade85b23b425342e6665f447e7",
+      "sha256": "a6540bd6c68165b7b0d782768cc7303d00cb609083df4baacdaad81d51e3f810",
+      "lines": 1121
+    },
+    {
+      "path": "test/features/agent-backend/fileTeamModelProbeIntents.test.ts",
+      "bytes": 10028,
+      "blob": "a596613b900598a51d446d7c959b1ea7c1c95b64",
+      "sha256": "0fd030d5cdfb4473b32991b6b62befa9ecd888236423419df9a48f9e599cc119",
+      "lines": 194
+    },
+    {
+      "path": "test/features/agent-backend/hostOpenCodeV2ModelProbeLifecycle.test.ts",
+      "bytes": 15667,
+      "blob": "bc0820f51820e4cf66f37404395fee4c536b5311",
+      "sha256": "1f20a7ab1e2f8e35abd2123a962884054f00b0a48deb7bf2617502bc8d960b46",
+      "lines": 294
+    },
+    {
+      "path": "test/main/build/electronBuilderAfterPack.test.ts",
+      "bytes": 47049,
+      "blob": "b89cebb11cbf08b1293d92eac48cfb243e9337de",
+      "sha256": "f8090556fb7689243f0ab75c58aa910d01b3de939b282a2e409c3c588c86c743",
+      "lines": 1177
+    },
+    {
+      "path": "test/setup.ts",
+      "bytes": 5297,
+      "blob": "e24e03f9e2b9f7b9bdc3720212713c4106c64a1c",
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b",
+      "lines": 168
+    },
+    {
+      "path": "tools/linux-node-exec/close-fds-exec.c",
+      "bytes": 1932,
+      "blob": "34eb3d68815cd4a2c79fbb972934332d79c449b6",
+      "sha256": "4a6e27406a7c1125cadcef66fc54cf10160b82d920a9b7d516f01ca467426dd3",
+      "lines": 69
+    },
+    {
+      "path": "tools/linux-node-exec/inherited-fds-fixture.c",
+      "bytes": 2263,
+      "blob": "1c04e7e782c1101a77e5851e6e68f59315a9ac5e",
+      "sha256": "09784caf4d8aea5992db365f1b2c15c6724648af5f37a9e7ec19090cd4f86608",
+      "lines": 60
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.json",
+      "bytes": 557,
+      "blob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef",
+      "lines": 6
+    },
+    {
+      "path": "tools/owned-process-broker/tsconfig.retained-host.json",
+      "bytes": 393,
+      "blob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7",
+      "lines": 6
+    },
+    {
+      "path": "tools/owned-process-broker/vitest.config.ts",
+      "bytes": 342,
+      "blob": "cd03a73404a7b2548c15234743c24c1093b554af",
+      "sha256": "d7af296db40661045f6402af15eeb6072781919fd8c8145e554dada03e0de88e",
+      "lines": 13
+    },
+    {
+      "path": "vitest.config.ts",
+      "bytes": 1187,
+      "blob": "c57faa53a1bb869b4379bf888194806ef7e228e3",
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc",
+      "lines": 34
+    }
+  ],
+  "count": 63,
+  "compiledSourcePinsMatch": true,
+  "frozenCurrentHost619Inventory": {
+    "path": "native-audit-N608efb/host-source-N608efb-git-audit.json",
+    "bytes": 163123,
+    "blob": "9c8472f84db2ee0615314b9fd05df207e2c7d112",
+    "sha256": "30dbbf806666206c905b346f15e475646c2840d0c29f326a953fb3202d595ea0"
+  },
+  "freshHost619Recheck": {
+    "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "freshFileCount": 619,
+    "freshBytes": 4111602,
+    "LF": "4a97065f4e44d4dd380638100abb11769cf1290d61eaac64a9e3bf6e956041d9",
+    "CRLF": "c78da4032309d11e82c24bde6143d738a31a863701f55d7bf9b769500f11945f",
+    "receiptSourceFreezeCensusNotClaimed": true
+  },
+  "limits": [
+    "Selected immutable Git bytes are independently hashed; no project or native command was executed by this reviewer.",
+    "The current619 Host Git bytes were re-read against the frozen same-source inventory; no local rebuild or full installed/output census is claimed.",
+    "External runner compiler, inspector, NAPI headers and static link input hashes are retained manifest claims; their tool binaries are not in this archive and were not independently rebuilt or executed."
+  ]
+}

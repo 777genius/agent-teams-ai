@@ -64,20 +64,18 @@ describe('review flow store', () => {
     expect(store.getState()).toMatchObject({ status: 'ready', defaults: human, error: null });
   });
 
-  it('keeps showing good data when a background refresh fails', async () => {
+  it('keeps previous data but blocks stale editing after a failed refresh until retry succeeds', async () => {
     const getOverview = vi
       .fn<ReviewFlowElectronApi['getOverview']>()
-      .mockResolvedValueOnce({
-        defaults: human,
-        overrides: {},
-        unreadableTeams: [],
-        projectTeams: {},
-      })
-      .mockRejectedValueOnce(new Error('boom'));
+      .mockResolvedValueOnce({ defaults: human, overrides: {}, unreadableTeams: [], projectTeams: {} })
+      .mockRejectedValueOnce(new Error('owner unavailable'))
+      .mockResolvedValueOnce({ defaults: agent, overrides: {}, unreadableTeams: [], projectTeams: {} });
     const store = createReviewFlowStore({ getApi: () => createApi({ getOverview }) });
     await store.getState().load();
     await store.getState().load({ force: true });
-    expect(store.getState()).toMatchObject({ status: 'ready', defaults: human });
+    expect(store.getState()).toMatchObject({ status: 'error', defaults: human, error: 'owner unavailable' });
+    await store.getState().load();
+    expect(store.getState()).toMatchObject({ status: 'ready', defaults: agent, error: null });
   });
 
   it('applies saved team overrides and removals, and tells the app which team changed', async () => {

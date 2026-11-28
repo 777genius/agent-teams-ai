@@ -1,0 +1,157 @@
+{
+  "kind": "INDEPENDENT_ACTUAL_PUBLISHED_CLEANUP1_SOURCE_R2",
+  "verdict": "APPROVE exact published source and whole-tree preservation; source-only, unexecuted",
+  "reviewer": "native_failures",
+  "actualSourceReadback": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-published-source-46569-readback.json",
+    "gitBlob": "e7c7aa9efb35107780c2e5ebb3c5d3798c9b7620",
+    "bytes": 141556,
+    "sha256": "2fed4f23b0df6c8fbf5b2e5f704ba108d54f1604b1b5b7b93995b3743c0d2935"
+  },
+  "approvedParentSelection": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-source-parent-209-selection.json",
+    "gitBlob": "ffc17149f8fb4f31221719ed1b8ddbb301e0cf68",
+    "bytes": 3411329,
+    "sha256": "c424e0afa698ab5d4fa792a2242d97de2dbb04e7462abfe5fd45a499e9e76db2"
+  },
+  "actualPublishedR1Readback": {
+    "path": "/tmp/migration-evidence-20261116/root/cleanup1-published-docs-03242-readback.json",
+    "gitBlob": "16267dfb22aa4e5c4aef75d7255bc0190738cca6",
+    "bytes": 686771,
+    "sha256": "127697867614fd19606f060fbadb87d231bed6137916e65a1c7bb69405b3ca92"
+  },
+  "priorIndependentReviews": {
+    "sourceSemantics": {
+      "path": "/tmp/migration-evidence-20261116/native/3be1-cleanup-order-independent-r2.json",
+      "gitBlob": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0",
+      "bytes": 11351,
+      "sha256": "e8ac254399f42a61f3cf12997427d795ea1c68a28972e6d7b5277cc5aadb78bf"
+    },
+    "publishedR1": {
+      "path": "/tmp/migration-evidence-20261116/native/cleanup1-published-r1-03242-independent-r2.json",
+      "gitBlob": "a200378a94ac226cef50fe04f750d8c2e43cbd83",
+      "bytes": 8741,
+      "sha256": "211ba7334fe40e0195c9a252d0b2cc8a7cdf356ea9fbc6a125afd8e007d7a12e"
+    },
+    "209ParentPreservation": {
+      "path": "/tmp/migration-evidence-20261116/native/cleanup1-source-parent-209-independent-r2.json",
+      "gitBlob": "d60228d38f0bc77991b84b1616a8c47cae8fa117",
+      "bytes": 4002,
+      "sha256": "03ed04d6bd34d51a76f3f1ef043323201ac08a682d8cdc75c7a03fc1b938bf19"
+    }
+  },
+  "actualCommit": {
+    "sha": "46569f056198eea85d850833039fea52337d91ba",
+    "soleParent": "209aab743e0da2a8bce68b708281ebcb826c2570",
+    "tree": "fcbfc84bc852f0c782938f2a6f4332afd0462e45",
+    "originalRawCommitEqualsStoredObject": true,
+    "originalRawSourceEqualsStoredAndReviewedBytes": true,
+    "singleModifiedPath": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "actualDiffAdditions": 3,
+    "actualDiffDeletions": 3
+  },
+  "source": {
+    "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "before": {
+      "gitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "bytes": 59419,
+      "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+    },
+    "after": {
+      "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "bytes": 59461,
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436"
+    },
+    "beforeAndAfterPhysicalLines": 800,
+    "fullActualPatchForwardExact": true,
+    "fullActualPatchInverseExact": true,
+    "allBytesOutsideReviewedFourLineWindowPreserved": true
+  },
+  "wholeTreeProof": {
+    "parentTree": "571b36c6aecb0873117bec5bdeca2a5cb48e00d6",
+    "actualSourceTree": "fcbfc84bc852f0c782938f2a6f4332afd0462e45",
+    "leafCount": 11107,
+    "modifiedLeaves": 1,
+    "unchangedLeaves": 11106,
+    "addedLeaves": 0,
+    "removedLeaves": 0,
+    "incomingPlan55WorkflowPreserved": {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "gitBlob": "3774658a0ab266686930fbe7e28ecb9e26711ebf"
+    },
+    "actualR1Documents": [
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+        "gitBlob": "4e05d188a4ada8cf5aae78dfb475a7c96f8cb34a",
+        "bytes": 176961,
+        "sha256": "6128f2425612023def7c3eb1ba71bdf93583f115a04aff8ef3f8bef2146cda8a"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/prospective-r1.md",
+        "gitBlob": "3cc579c3e62d1bcea45a75c0f312bb13d0d22ed5",
+        "bytes": 11372,
+        "sha256": "366f86ae5e86be5dc6093aecce8e472e634e28a09a583551673f8c73799b4e46"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/manifest.json",
+        "gitBlob": "94040726094cbfe74388d7aa21d294d46b4d36b0",
+        "bytes": 5455,
+        "sha256": "52945167f7c723059d0bd5dc8cfb998c00c43e470f736a2b7607bcd26ff86cbe"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/candidate.patch",
+        "gitBlob": "96da4bd5b4277e58629f2116be867ba801b8a296",
+        "bytes": 1166,
+        "sha256": "533e3ff2b76b4754b232218c1d2dd9ebf2fb3676887449ee48a1cfcdea5c8425"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/audit.json",
+        "gitBlob": "828c841c6df604871a97cbd96861112a04cb762c",
+        "bytes": 15308,
+        "sha256": "57166c5e1d70d5a6046961e639e94922ff206246abc9ed69d7f4439e44c0b8e3"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/preservation-proof.json",
+        "gitBlob": "13f7263c3fa8dc6b957bffb61c041d0ea4a386d3",
+        "bytes": 1132,
+        "sha256": "a276262b8c4aa1e9f56e9b5763f99310bb3c61d2070df6cee1e37b1255aa30d6"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/source-r2.json",
+        "gitBlob": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0",
+        "bytes": 11351,
+        "sha256": "e8ac254399f42a61f3cf12997427d795ea1c68a28972e6d7b5277cc5aadb78bf"
+      },
+      {
+        "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/root-selection.json",
+        "gitBlob": "5f55381c10c0e01ce702dcbc2189c5386a2b8a48",
+        "bytes": 4511,
+        "sha256": "11d06cd573522928ad61c53877bdcd07c3df44e1dce095da720774314a3da523"
+      }
+    ],
+    "actualR1DocumentCount": 8,
+    "actualR1DocumentBytes": 227256,
+    "P10PrefixAndSection36PreservedFromReviewedPublishedR1": true
+  },
+  "semanticsReusedWithoutBroadening": {
+    "preWaitCustodyPredicate": "The same original composite is evaluated before the wait and its result is retained. Later changes during await cannot turn a false captured predicate into accepted custody.",
+    "wait": "The existing optional captured witness wait must resolve exactly 0 before handleAbsent=true; absent witness, rejection or nonzero return does not qualify absence.",
+    "refusal": "The unchanged custody message/assertion still refuses an unresumed original job after successful absence observation. This does not make original readiness pass.",
+    "costAndErrorOrder": "The selected failure path now reaches the existing HANDLE wait before reporting the captured custody refusal. This real cost and secondary error-order change remain disclosed in the already-reviewed R1.",
+    "budgets": "No deadline, original15s readiness rule, source cap, actor, helper, test, workflow or native action is changed by this one-source commit."
+  },
+  "publicationBoundary": {
+    "documentsCommit": "03242bf1063cc7fdbaf9e1ee633ce607debf9fdc",
+    "interveningPreservedWorkflowCommit": "209aab743e0da2a8bce68b708281ebcb826c2570",
+    "sourceCommit": "46569f056198eea85d850833039fea52337d91ba",
+    "actualCommitAndFullBodyObservedInSavedAPIResponses": true,
+    "liveRefOrCASNotIndependentlyQueried": "Root reports ordinary expected-parent CAS success; this bounded review verifies the actual returned commit, parent, tree and bytes, not a new live ref observation.",
+    "Plan55Semantics": "Separate pending review; this result proves its exact source leaf is preserved, not its runtime qualification."
+  },
+  "limits": [
+    "No tests, compiler, lint, project imports, native commands, GUI, providers or Actions were run.",
+    "No API, original log, ZIP or cohort status retrieval occurred in this review.",
+    "No prior failed slot is retrospectively assigned physical absence; original15s and other native acceptance remain source-bound to their actual receipts.",
+    "No canonical source, index, ref or publication was changed by this reviewer."
+  ]
+}

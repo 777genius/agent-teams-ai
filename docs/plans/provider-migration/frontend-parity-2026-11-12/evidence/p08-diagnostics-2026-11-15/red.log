@@ -1,0 +1,52 @@
+✔ post-Stop observer continues past stale original and pending alternate to fresh stopped props (2.178916ms)
+✔ initial original-ref observation remains exact and cannot select a replacement ref (1.612021ms)
+✔ background acceptance waits for atomic service publication without masking corrupt readiness (136.202296ms)
+﹣ captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime (0.260839ms) # requires the isolated Processes lane original native artifact capture
+✖ original same-Main Retry retains a bounded first UI refusal without changing the read or its error (105.1155ms)
+✖ original first failure retains one bounded stdout prefix before the unchanged cleanup boundary (2.089933ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 3
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 1510.290932
+
+✖ failing tests:
+
+test at scripts/legacy-agent-host/desktop-native-process-ui.test.ts:169:1
+✖ original same-Main Retry retains a bounded first UI refusal without changing the read or its error (105.1155ms)
+  AssertionError [ERR_ASSERTION]: retain the first original UI refusal
+  + actual - expected
+  
+  + undefined
+  - 'retry-present'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-native-process-ui.test.ts:247:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'retry-present',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/legacy-agent-host/desktop-native-process-ui.test.ts:280:1
+✖ original first failure retains one bounded stdout prefix before the unchanged cleanup boundary (2.089933ms)
+  AssertionError [ERR_ASSERTION]: retain the already formatted first failure before cleanup
+  
+  0 !== 1
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/82d3f9ba6b85/agent-teams-e2e/scripts/legacy-agent-host/desktop-native-process-ui.test.ts:309:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

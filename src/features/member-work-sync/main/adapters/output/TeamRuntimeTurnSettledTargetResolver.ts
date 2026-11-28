@@ -10,6 +10,7 @@ import { isReservedMemberName, normalizeMemberName } from '../../../core/domain'
 import { mergeTeamMembers } from './mergeTeamMembers';
 
 import type {
+  RuntimeTurnSettledSourceExecution,
   RuntimeTurnSettledTargetResolution,
   RuntimeTurnSettledTargetResolverPort,
 } from '../../../core/application';
@@ -40,6 +41,7 @@ export interface TeamRuntimeTurnSettledTargetResolverDeps {
   isManagedByThisProfile(teamName: string): Promise<boolean>;
   memberLogsFinder?: AttributedMemberFileSource;
   maxTeamsToScan?: number;
+  captureSourceExecution?(teamName: string): RuntimeTurnSettledSourceExecution | null | undefined;
 }
 
 /** Each ownership check reads one small marker file. */
@@ -110,12 +112,16 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       memberName: string;
       exactPath: boolean;
       mtimeMs: number;
+      sourceExecution?: RuntimeTurnSettledSourceExecution;
     }[] = [];
 
     for (const team of teams) {
-      const attributedFiles = await this.memberLogsFinder
-        .listAttributedMemberFiles(team.teamName)
-        .catch(() => []);
+      const sourceExecution = this.deps.captureSourceExecution?.(team.teamName);
+      if (sourceExecution === null) continue;
+      const read = () =>
+        this.memberLogsFinder.listAttributedMemberFiles(team.teamName).catch(() => []);
+      const attributedFiles = await (sourceExecution ? sourceExecution.run(read) : read());
+      sourceExecution?.assertCurrent();
       for (const file of attributedFiles) {
         const exactPath = transcriptPath ? normalizePath(file.filePath) === transcriptPath : false;
         const sessionMatch = sessionId ? file.sessionId === sessionId : false;
@@ -127,6 +133,7 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
           memberName: file.memberName,
           exactPath,
           mtimeMs: file.mtimeMs,
+          ...(sourceExecution ? { sourceExecution } : {}),
         });
       }
     }
@@ -142,7 +149,11 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       return { ok: false, reason: 'no_matching_member_session' };
     }
 
-    const member = await this.resolveActiveMember(candidate.teamName, candidate.memberName);
+    const member = await this.resolveActiveMember(
+      candidate.teamName,
+      candidate.memberName,
+      candidate.sourceExecution
+    );
     if (!member) {
       return { ok: false, reason: 'member_not_active' };
     }
@@ -159,6 +170,7 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       ok: true,
       teamName: candidate.teamName,
       memberName: normalizeMemberName(member.name),
+      ...(candidate.sourceExecution ? { sourceExecution: candidate.sourceExecution } : {}),
     };
   }
 
@@ -202,7 +214,9 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       return { ok: false, reason: 'missing_team_member_identity' };
     }
 
-    const member = await this.resolveActiveMember(teamName, memberName);
+    const sourceExecution = this.deps.captureSourceExecution?.(teamName);
+    if (sourceExecution === null) return { ok: false, reason: 'source_read_only' };
+    const member = await this.resolveActiveMember(teamName, memberName, sourceExecution);
     if (!member) {
       return { ok: false, reason: 'member_not_active' };
     }
@@ -219,17 +233,23 @@ export class TeamRuntimeTurnSettledTargetResolver implements RuntimeTurnSettledT
       ok: true,
       teamName,
       memberName: normalizeMemberName(member.name),
+      ...(sourceExecution ? { sourceExecution } : {}),
     };
   }
 
   private async resolveActiveMember(
     teamName: string,
-    memberName: string
+    memberName: string,
+    sourceExecution?: RuntimeTurnSettledSourceExecution
   ): Promise<TeamMember | null> {
-    const [config, metaMembers] = await Promise.all([
-      this.deps.teamSource.getConfig(teamName),
-      this.deps.membersMetaStore.getMembers(teamName).catch(() => []),
-    ]);
+    sourceExecution?.assertCurrent();
+    const read = () =>
+      Promise.all([
+        this.deps.teamSource.getConfig(teamName),
+        this.deps.membersMetaStore.getMembers(teamName).catch(() => []),
+      ]);
+    const [config, metaMembers] = await (sourceExecution ? sourceExecution.run(read) : read());
+    sourceExecution?.assertCurrent();
     if (!config || config.deletedAt) {
       return null;
     }

@@ -165,6 +165,14 @@ export async function seedStartupCleanup(root) {
       httpServer: { ...config.httpServer, enabled: true, port: 3456 },
     })
   );
+  // A proven-empty legacy profile now deliberately skips native startup cleanup.
+  // Seed only an inert, TEST-owned census marker so this scenario exercises the
+  // existing cleanup/retry boundary without creating teams or runnable hosts.
+  const legacyRegistry = path.join(
+    root, 'home/AppData/Local/claude-multimodel-nodejs/Data/opencode/host-registry.json'
+  );
+  await mkdir(path.dirname(legacyRegistry), { recursive: true });
+  await writeFile(legacyRegistry, '{"hosts":[]}\n', { flag: 'wx' });
 }
 
 export async function verifyStartupCleanup({ root, evaluate, send }) {

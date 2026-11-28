@@ -1,0 +1,31 @@
+{
+  "previousFreeze": "TEST-plan13-host-r4-types-final-freeze.json",
+  "previousFreezeSha256": "5a9300266e3e650b855c28494f11f532aa8d2bfc3746043073b1c4fdfabc723a",
+  "changes": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/readTeamConversation.ts",
+      "beforeSha256": "4a2a6f2dd050c11451eb6063451e9ea4f3a1fb2fdaa5bed53c8af3213c180c5a",
+      "afterSha256": "40536d69ed938947f3f5fe320008321b893810f6530af17c86ebd605b17e0c74",
+      "kind": "remove exactly one terminal empty line"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/runtime/runtimeConversation.ts",
+      "beforeSha256": "dcfb693873b07ce23009980458b8dcd1f2e2aa879ac7a94858b9c7d0e8530a40",
+      "afterSha256": "1c112719175f3f09621f8448c1365633e61a253617a1d90c7b4f48dc48f319fe",
+      "kind": "remove exactly one terminal empty line"
+    },
+    {
+      "path": "packages/legacy-agent-host/src/team/ownerMessageReads.ts",
+      "beforeSha256": "23027e89299641e4da080feee0309775716f70a154b24396308ec186b70f8b32",
+      "afterSha256": "d497120b2d51a5faae4b6415f883cef20b8165fb51b1bf9828bd515194ab23d3",
+      "kind": "remove exactly one terminal empty line"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/13-lead-conversation-parity-2026-11-14.md",
+      "beforeSha256": "a1ecc64e907171c38a2eb1e8ee6aff257a526248f06688f659f886414c8fceb0",
+      "afterSha256": "18f7f7a78a15de253540e1d3228e2a45d802f166f0b5f05cb20fc8280dd64179",
+      "kind": "preceding written whitespace plan"
+    }
+  ],
+  "qualification": "No new test execution; three terminal empty lines only. Production statements and assertions unchanged."
+}

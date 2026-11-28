@@ -1,0 +1,114 @@
+{
+  "kind": "ROOT_P08_EXACT_SOURCE_AND_ORIGINAL_EVIDENCE_AUDIT",
+  "parent": "fc0abec30ff37770c2d6b88cd29878600c6a7ee6",
+  "tree": "ab2fa12c51ebc58de813913c35ee88a8fc1d7413",
+  "originalSource": "72e6ec04444969d343d73834c70bc4e261100fc9",
+  "sourcePath": "tools/owned-process-broker/nativeWindowsAppFixture.ts",
+  "before": {
+    "size": 31223,
+    "sha": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+    "sha256": "4c037ffe4be03b64ef9e5d9172246a9744f3fc1cf55b48af630811a4c580eaa2"
+  },
+  "after": {
+    "size": 31554,
+    "sha": "78486e24742278c6f803607e02e1601329e505a0",
+    "sha256": "68d94bb45e702746612b72f7f47151e5d2d24659bcf99b443fa499a7b2d21981"
+  },
+  "patch": {
+    "size": 1262,
+    "sha": "f0364dbbcb078fc647cc51e421721207ad871395",
+    "sha256": "b1a213df359c7c88ada852fa9f97b5ab6f0ab4beefd7ef7c81c49844d500b573"
+  },
+  "oneHunk": {
+    "addedLines": 8,
+    "removedLines": 2,
+    "oldLineCount": 485,
+    "newLineCount": 491,
+    "uniqueAnchor": true,
+    "prefixBytes": 27208,
+    "prefixSha256": "210be5e2b4b945b915ded93d4f675291c1f7c221ad60263ff5575bdad52b3f11",
+    "suffixBytes": 3737,
+    "suffixSha256": "7b4aa79919955981fa5dafddc1e65ece360b91bee3a56803e3a48fb7e4db637a",
+    "exactReverseRestoresWholePreimage": true
+  },
+  "sourcePins": {
+    "fixture": "0b1bbc3ef47cd55ac3e23c13890fce281de01c98",
+    "gate": "034d2253e0649bdeb5db0b12244656446150c31c",
+    "writer": "b41629b7ed483f1ab9f42e2e234933999647e7bd",
+    "contract": "83caa9c3f1a2f57eca67b329dd5e8ec7065a1f79",
+    "validator": "dd1a705e054e5fe7df4addf97aa48bf4d0638444",
+    "sizeGuard": "65775f7889470056ef7cd91ad6c56d9351e6cdfc",
+    "sizePolicy": "e827bccf455235b1ff7871e7b93450cdaa53eb54"
+  },
+  "causalFinding": "Original read exits at the first valid completed/observed-absent journal state. Current writer durably records this before separate settlement preparation and confirmation. The existing optional settlement contract intentionally permits the intermediate. First original x64 assertion establishes missing validated settle intent at that accepted instant; later settlement outcome is not retained.",
+  "positiveOutcome": "Existing nativeSettlementConfirmed true is persisted only for same-capture actual settled outcome under original current authority/fence and live deadline. The candidate waits for this same positive fact, preserving original success requirements and all later assertions.",
+  "pendingAndFailureBehavior": {
+    "preparedOrHeld": "original pending assertion and poll",
+    "completedAbsenceWithoutIntent": "same original poll and cutoff",
+    "completedAbsenceWithUnconfirmedIntent": "same original poll and cutoff",
+    "definitiveNotDispatched": "immediate assertion failure",
+    "otherTerminalOrMalformed": "original assertion or unchanged strict validator failure",
+    "confirmedOriginalSettlement": "accept then all original post-loop assertions"
+  },
+  "preserved": [
+    "All prefix/suffix outside one replacement",
+    "Same stop.deadline and original remaining() checks",
+    "Same at-most25ms read-only delay",
+    "Every original UI/native action and source/capture/currentness assertion",
+    "Original distinct operationRef and no-dispatch checks",
+    "Two original physical UI Stops and three HANDLE witnesses",
+    "Neighbor preservation, peer exit-code, Runtime no-replay and final cleanup",
+    "All workflows, dependencies, source-size policy and production code"
+  ],
+  "currentSizePolicy": {
+    "maxLines": 800,
+    "legacyOverride": null,
+    "pathIncluded": true,
+    "sourceInspectionOnly": true
+  },
+  "originalX64": {
+    "rawLog": {
+      "size": 337373,
+      "sha": "6df3de41248ff9b95acc293823b3347ddd5acc6c",
+      "sha256": "e9e066ef14aba98d8408f40980dad300863159c45dfffb637bf0051c66d33bdb"
+    },
+    "archiveId": 14214853300,
+    "archiveBytes": 692899,
+    "archiveSha256": "0ff7a64a45fc9b0ae6a638ba7c56efb772718151c9276cbab7faf9c435ae5c93",
+    "completeArchiveAndReceiptInspectedBeforeExecutorOutage": true,
+    "safeUniqueMembers": 9,
+    "crcVerified": true,
+    "receiptBytes": 755159,
+    "receiptSha256": "4dc3b75b455740cf9f5901804cf1cae3320932f316e28fafb7c5f71f1a78a29a",
+    "fixtureWindowsSourcePin": "9be5af55b58539523c03194b62ebb68f5b1b5363c8c3994deee833d91fed7499",
+    "gateWindowsSourcePin": "eb4f7debc190c7840dcd562649c7df153dbb1a9744d6312483ab5c0639f21a75",
+    "failedStopSnapshotRetained": false,
+    "laterSettlementProven": false,
+    "uiStops": 1,
+    "stopsRetained": 0,
+    "status": "INCOMPLETE",
+    "cleanup": false
+  },
+  "originalArm": {
+    "rawLog": {
+      "size": 313007,
+      "sha": "3b22c9a12da1caa741f9f9d53f6892963989debc",
+      "sha256": "afb2976413f640a9d1a5b4b0fe4322207234a4e84183a5494575795aff593ec0"
+    },
+    "failurePhase": "one-original-business-input-and-UI",
+    "error": "No unexplained child of any original retained ancestor",
+    "retainedFailurePrefixCharacters": 128,
+    "offendingProcessIdentified": false,
+    "artifactContentsInspected": false,
+    "repairClaim": false
+  },
+  "execution": {
+    "localProject": false,
+    "compiler": false,
+    "tests": false,
+    "nativeOrUI": false,
+    "sourceApplied": false,
+    "runtimeGreen": false
+  },
+  "requiredQualification": "Original automatic CI static/full-types/typed lint and both original Windows packaged same-Main journeys. No extra suite or relaxed outcome."
+}

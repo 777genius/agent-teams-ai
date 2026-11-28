@@ -1,29 +1,14 @@
+import {
+  MEMBER_ACTIVITY_META_WINDOW_LIMIT,
+  projectMemberActivityFacts,
+} from '@shared/utils/memberActivityMeta';
+
 import type { TeamMessageFeedService } from './TeamMessageFeedService';
-import type { InboxMessage, MemberActivityMetaEntry, TeamMemberActivityMeta } from '@shared/types';
+import type { MemberActivityMetaEntry, TeamMemberActivityMeta } from '@shared/types';
 
 interface MemberActivityMetaCacheEntry {
   feedRevision: string;
   meta: TeamMemberActivityMeta;
-}
-
-const MEMBER_ACTIVITY_META_WINDOW_LIMIT = 200;
-
-function messageSignalsTermination(message: InboxMessage | null | undefined): boolean {
-  if (!message) return false;
-  try {
-    const parsed = JSON.parse(message.text) as {
-      type?: string;
-      approve?: boolean;
-      approved?: boolean;
-    };
-    return (
-      (parsed.type === 'shutdown_response' &&
-        (parsed.approve === true || parsed.approved === true)) ||
-      parsed.type === 'shutdown_approved'
-    );
-  } catch {
-    return false;
-  }
 }
 
 function areMemberActivityEntriesEqual(
@@ -86,37 +71,7 @@ export class MemberActivityMetaService {
       return cached.meta;
     }
 
-    const latestByMember = new Map<string, InboxMessage>();
-    const countsByMember = new Map<string, number>();
-
-    for (const message of page.messages) {
-      const memberName = typeof message.from === 'string' ? message.from.trim() : '';
-      if (!memberName || memberName === 'user' || memberName === 'system') {
-        continue;
-      }
-
-      countsByMember.set(memberName, (countsByMember.get(memberName) ?? 0) + 1);
-      if (!latestByMember.has(memberName)) {
-        latestByMember.set(memberName, message);
-      }
-    }
-
-    const nextMembers = Object.fromEntries(
-      Array.from(new Set([...countsByMember.keys(), ...latestByMember.keys()]))
-        .sort((left, right) => left.localeCompare(right))
-        .map((memberName) => {
-          const latestMessage = latestByMember.get(memberName) ?? null;
-          return [
-            memberName,
-            {
-              memberName,
-              lastAuthoredMessageAt: latestMessage?.timestamp ?? null,
-              messageCountExact: countsByMember.get(memberName) ?? 0,
-              latestAuthoredMessageSignalsTermination: messageSignalsTermination(latestMessage),
-            },
-          ] as const;
-        })
-    );
+    const nextMembers = projectMemberActivityFacts(page.messages);
     const members = structurallyShareMemberFacts(cached?.meta.members, nextMembers);
 
     const meta: TeamMemberActivityMeta = {

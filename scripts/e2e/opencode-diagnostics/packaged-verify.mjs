@@ -934,9 +934,10 @@ export async function verifyPackaged({
         ? await verifyV2SupportRepair(data, data.run === 'support-repair-restart')
         : await v2SupportSnapshot(data);
       if (data.run === 'cold') {
-        assert.equal(version.version, evidence.freshDefaultInstall.qualifiedV2Version,
-          'Explicit V2 install did not select the actual qualified V2 release');
+        assert.equal(evidence.v2Support.engineVersion, evidence.freshDefaultInstall.qualifiedV2Version,
+          'Explicit V2 install changed the qualified execution engine');
         evidence.freshDefaultInstall.observedVersion = version.version;
+        evidence.freshDefaultInstall.observedEngineVersion = evidence.v2Support.engineVersion;
       }
       assert.equal(version.version, evidence.v2Support.native.version);
       assert.equal(version.binaryPath.toLowerCase(), evidence.v2Support.native.binaryPath.toLowerCase());

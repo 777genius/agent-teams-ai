@@ -1,3 +1,6 @@
+import { join } from 'node:path';
+
+import { createApplicationCommandLedgerFeature } from '@features/application-command-ledger/main';
 /**
  * Standalone (non-Electron) entry point for Agent Teams AI.
  *
@@ -11,16 +14,13 @@
  * - CLAUDE_ROOT: Path to .claude directory (default ~/.claude)
  * - CORS_ORIGIN: CORS origin policy (default '*')
  */
-
 // Note: Sentry is NOT imported here. @sentry/electron/main requires Electron
 // runtime which is unavailable in standalone (pure Node.js) mode. Standalone
 // error tracking can be added later with @sentry/node if needed.
-
-import { join } from 'node:path';
-
 import {
   createCustomTeamTemplatesFeature,
   type CustomTeamTemplatesFeature,
+  OwnerRoutedTeamConfigurationSnapshotAdapter,
 } from '@features/custom-team-templates/main';
 import { createInternalStorageFeature } from '@features/internal-storage/main';
 import { createNotificationChannelsFeature } from '@features/notification-channels/main';
@@ -48,6 +48,8 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { SshConnectionManager } from './services/infrastructure/SshConnectionManager';
 import type { UpdaterService } from './services/infrastructure/UpdaterService';
+import type { DesktopBackendFeature } from '@features/agent-backend/main';
+import type { InternalStorageFeature } from '@features/internal-storage/main';
 
 const logger = createLogger('Standalone');
 
@@ -105,6 +107,9 @@ const sshConnectionManagerStub = {
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
+let agentBackend: DesktopBackendFeature | undefined;
+let backendStorage: InternalStorageFeature | undefined;
+let backendCurrent = true;
 let internalStorageFeature: ReturnType<typeof createInternalStorageFeature> | undefined;
 let customTeamTemplatesFeature: CustomTeamTemplatesFeature | undefined;
 
@@ -126,14 +131,21 @@ async function start(): Promise<void> {
     logger.info(`Using APP_DATA_DIR: ${APP_DATA_DIR}`);
   }
 
-  // Import services after applying CLAUDE_ROOT so ConfigManager picks up the correct base path.
-  const [{ HttpServer }, { NotificationManager }, { ServiceContext }, { ConfigManager }] =
-    await Promise.all([
-      import('./services/infrastructure/HttpServer'),
-      import('./services/infrastructure/NotificationManager'),
-      import('./services/infrastructure/ServiceContext'),
-      import('./services/infrastructure/ConfigManager'),
-    ]);
+  // The backend entrypoint also loads legacy services with ConfigManager singletons.
+  // Import every such service after applying the standalone profile overrides.
+  const [
+    { captureHostTeamReads, DesktopBackendFeature },
+    { HttpServer },
+    { NotificationManager },
+    { ServiceContext },
+    { ConfigManager },
+  ] = await Promise.all([
+    import('@features/agent-backend/main'),
+    import('./services/infrastructure/HttpServer'),
+    import('./services/infrastructure/NotificationManager'),
+    import('./services/infrastructure/ServiceContext'),
+    import('./services/infrastructure/ConfigManager'),
+  ]);
 
   const projectsDir = getProjectsBasePath();
   const todosDir = getTodosBasePath();
@@ -170,6 +182,13 @@ async function start(): Promise<void> {
   await internalStorageFeature.probeBackend();
   customTeamTemplatesFeature = createCustomTeamTemplatesFeature({
     backend: internalStorageFeature.customTeamTemplatesBackend,
+    snapshotReader: new OwnerRoutedTeamConfigurationSnapshotAdapter(() =>
+      captureHostTeamReads(
+        agentBackend
+          ? { feature: agentBackend, contextId: localContext.id, isCurrent: () => backendCurrent }
+          : undefined
+      )
+    ),
   });
 
   // Create HTTP server
@@ -204,8 +223,35 @@ async function start(): Promise<void> {
     httpServer.broadcast('notification:clicked', data);
   });
 
+  const descriptorPath = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_PATH;
+  const descriptorHash = process.env.AGENT_TEAMS_BACKEND_DESCRIPTOR_SHA256;
+  backendStorage =
+    descriptorPath || descriptorHash
+      ? createInternalStorageFeature({
+          userDataPath: join(getClaudeBasePath(), 'agent-backend', 'http-state'),
+        })
+      : undefined;
+  const ledgerBackend = backendStorage?.applicationCommandLedgerBackend;
+  const commandRunner = ledgerBackend
+    ? createApplicationCommandLedgerFeature({ storageGateway: ledgerBackend.gateway }).runner
+    : null;
+  agentBackend = new DesktopBackendFeature({
+    descriptor:
+      descriptorPath || descriptorHash
+        ? { path: descriptorPath ?? '', sha256: descriptorHash ?? '' }
+        : null,
+    bindingDirectory: join(getClaudeBasePath(), 'agent-backend', 'http-bindings'),
+    reviewFlowDefaultsDirectory: getClaudeBasePath(),
+    commandRunner: () => commandRunner,
+  });
+
   // Build services for HTTP routes
   const services: HttpServices = {
+    agentBackend: {
+      feature: agentBackend,
+      contextId: localContext.id,
+      isCurrent: () => backendCurrent,
+    },
     projectScanner: localContext.projectScanner,
     sessionParser: localContext.sessionParser,
     subagentResolver: localContext.subagentResolver,
@@ -234,11 +280,15 @@ async function start(): Promise<void> {
 
 async function shutdown(): Promise<void> {
   logger.info('Shutting down...');
+  backendCurrent = false;
+  const backendDrain = agentBackend?.shutdown();
 
   if (httpServer?.isRunning()) {
     await httpServer.stop();
   }
 
+  await backendDrain;
+  await backendStorage?.dispose();
   customTeamTemplatesFeature?.dispose();
   await internalStorageFeature?.dispose();
 

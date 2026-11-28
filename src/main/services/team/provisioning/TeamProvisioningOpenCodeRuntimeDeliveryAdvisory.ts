@@ -204,6 +204,13 @@ export class TeamProvisioningOpenCodeRuntimeDeliveryAdvisory {
 
   constructor(private readonly ports: OpenCodeRuntimeDeliveryAdvisoryPorts) {}
 
+  readStoppedTeamImportFacts(teamName: string): Readonly<Record<string, number>> {
+    return {
+      timers: [...this.advisoryReviewTimers.keys()].filter((key) => key.startsWith(`${teamName}:`))
+        .length,
+    };
+  }
+
   logPromptDeliveryEvent(
     event: string,
     record: OpenCodePromptDeliveryLedgerRecord,

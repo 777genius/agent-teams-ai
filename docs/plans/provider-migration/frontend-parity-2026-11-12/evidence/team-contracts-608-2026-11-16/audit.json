@@ -1,0 +1,338 @@
+{
+  "status": "Original terminal job FAILURE; privacy/full-ten and types subgates PASS; typed renderer lint FAIL; later GUI/cleanup not run",
+  "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "sourceTree": "87e104735545a0860ec2bbcd9bf1ef2318dbbebb",
+  "run": 43795234483,
+  "attempt": 1,
+  "job": 133062441494,
+  "platform": "linux-x64",
+  "rawLog": {
+    "bytes": 2205340,
+    "blob": "c5446ac9cf26e5515cf8c2b2c9f0df55f8e43795",
+    "sha256": "52b2fd9b7d2f66475e7e1818b91d3b3ca0f90636e8dee0fb1527279f68021fdd",
+    "hasUtf8Bom": true,
+    "lines": 13296,
+    "finalLf": true,
+    "source": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "run": 43795234483,
+    "attempt": 1,
+    "job": 133062441494,
+    "retrievals": 1
+  },
+  "sourceBinding": {
+    "blob": "021a8acf821c45aac851be660b57c776a3ab5c5d",
+    "bytes": 4312,
+    "sha256": "0048c708b6d87ea3c8ff9f41b8172725680a9567cd0b86076f7deaa8e8fcb050"
+  },
+  "additionalSourcePins": [
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "bytes": 8708,
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954"
+    },
+    {
+      "path": "scripts/ci/install-dependencies-with-retry.mjs",
+      "blob": "cbf2463eb47d22c3d87d9eec001edad26dd68ff0",
+      "bytes": 5259,
+      "sha256": "c8dc0b63fc490fd5a9a1b4abf0631b66c30e1ccda2199094c86e49a6e250d01e"
+    },
+    {
+      "path": "package.json",
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "test/features/agent-backend/tsconfig.json",
+      "blob": "de2814ddc27524ac335f9f6c174aace1c7b1387c",
+      "bytes": 379,
+      "sha256": "4b6372a0f31b366a07f02aa7e70d106dcc98d3cacdbad9c57bb4856a88b74f79"
+    }
+  ],
+  "expectedOriginalFullTenCommand": "node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts",
+  "fullTenActual": {
+    "tests": 177,
+    "suites": 0,
+    "pass": 177,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 62694.474306
+  },
+  "all24PrivacyCases": [
+    {
+      "name": "original stderr captures startup and tail while redacting selected values across UTF-8 chunks",
+      "logLine": 881,
+      "result": "PASS",
+      "line": "✔ original stderr captures startup and tail while redacting selected values across UTF-8 chunks (7.402829ms)"
+    },
+    {
+      "name": "standalone stderr uses selected private values without a Team endpoint",
+      "logLine": 882,
+      "result": "PASS",
+      "line": "✔ standalone stderr uses selected private values without a Team endpoint (0.983118ms)"
+    },
+    {
+      "name": "invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence",
+      "logLine": 883,
+      "result": "PASS",
+      "line": "✔ invalid UTF-8 and NUL are readable diagnostics, including a final incomplete sequence (0.607285ms)"
+    },
+    {
+      "name": "decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit",
+      "logLine": 884,
+      "result": "PASS",
+      "line": "✔ decoded UTF-8 and NUL expansion cannot exceed the retained text byte limit (2.622165ms)"
+    },
+    {
+      "name": "oversized lines discard their complete suffix and preserve a multiline dump opener",
+      "logLine": 885,
+      "result": "PASS",
+      "line": "✔ oversized lines discard their complete suffix and preserve a multiline dump opener (0.951567ms)"
+    },
+    {
+      "name": "dump continuations stay suppressed through ordinary newlines and oversized fragments",
+      "logLine": 886,
+      "result": "PASS",
+      "line": "✔ dump continuations stay suppressed through ordinary newlines and oversized fragments (0.704003ms)"
+    },
+    {
+      "name": "observer errors and reentrant close cannot change stream outcomes or duplicate a tail",
+      "logLine": 887,
+      "result": "PASS",
+      "line": "✔ observer errors and reentrant close cannot change stream outcomes or duplicate a tail (0.849394ms)"
+    },
+    {
+      "name": "a bounded escape-heavy line remains subject to the existing serialized journal limit",
+      "logLine": 888,
+      "result": "PASS",
+      "line": "✔ a bounded escape-heavy line remains subject to the existing serialized journal limit (1.193865ms)"
+    },
+    {
+      "name": "held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes",
+      "logLine": 889,
+      "result": "PASS",
+      "line": "✔ held escaped, URI and whitespace-normalized values and quoted assignments cannot leave secret suffixes (1.189103ms)"
+    },
+    {
+      "name": "dump detection continues through already discarded oversized fragments",
+      "logLine": 894,
+      "result": "PASS",
+      "line": "✔ dump detection continues through already discarded oversized fragments (0.85661ms)"
+    },
+    {
+      "name": "syntax redaction cannot expose fragments of a transformed held value",
+      "logLine": 898,
+      "result": "PASS",
+      "line": "✔ syntax redaction cannot expose fragments of a transformed held value (0.927028ms)"
+    },
+    {
+      "name": "safe diagnostics and unambiguous held-value context remain readable",
+      "logLine": 904,
+      "result": "PASS",
+      "line": "✔ safe diagnostics and unambiguous held-value context remain readable (0.668479ms)"
+    },
+    {
+      "name": "overlapping held values are masked in one pass: ABABAB",
+      "logLine": 890,
+      "result": "PASS",
+      "line": "✔ overlapping held values are masked in one pass: ABABAB (0.710084ms)"
+    },
+    {
+      "name": "overlapping held values are masked in one pass: a",
+      "logLine": 891,
+      "result": "PASS",
+      "line": "✔ overlapping held values are masked in one pass: a (0.516101ms)"
+    },
+    {
+      "name": "long split ANSI does not lose a dump opener before flush",
+      "logLine": 892,
+      "result": "PASS",
+      "line": "✔ long split ANSI does not lose a dump opener before flush (0.871969ms)"
+    },
+    {
+      "name": "long split ANSI does not lose a dump opener before discard",
+      "logLine": 893,
+      "result": "PASS",
+      "line": "✔ long split ANSI does not lose a dump opener before discard (1.201476ms)"
+    },
+    {
+      "name": "a short held value cannot destroy sensitive syntax before classification: s",
+      "logLine": 895,
+      "result": "PASS",
+      "line": "✔ a short held value cannot destroy sensitive syntax before classification: s (0.682074ms)"
+    },
+    {
+      "name": "a short held value cannot destroy sensitive syntax before classification: a",
+      "logLine": 896,
+      "result": "PASS",
+      "line": "✔ a short held value cannot destroy sensitive syntax before classification: a (0.413198ms)"
+    },
+    {
+      "name": "a short held value cannot destroy sensitive syntax before classification: h",
+      "logLine": 897,
+      "result": "PASS",
+      "line": "✔ a short held value cannot destroy sensitive syntax before classification: h (0.43113ms)"
+    },
+    {
+      "name": "an ANSI prefix larger than the line budget remains fail-closed (false)",
+      "logLine": 899,
+      "result": "PASS",
+      "line": "✔ an ANSI prefix larger than the line budget remains fail-closed (false) (1.253206ms)"
+    },
+    {
+      "name": "an ANSI prefix larger than the line budget remains fail-closed (true)",
+      "logLine": 900,
+      "result": "PASS",
+      "line": "✔ an ANSI prefix larger than the line budget remains fail-closed (true) (0.7822ms)"
+    },
+    {
+      "name": "held whitespace values cannot leak after contextual syntax redaction (space)",
+      "logLine": 901,
+      "result": "PASS",
+      "line": "✔ held whitespace values cannot leak after contextual syntax redaction (space) (0.53159ms)"
+    },
+    {
+      "name": "held whitespace values cannot leak after contextual syntax redaction (tab)",
+      "logLine": 902,
+      "result": "PASS",
+      "line": "✔ held whitespace values cannot leak after contextual syntax redaction (tab) (0.366114ms)"
+    },
+    {
+      "name": "held whitespace values cannot leak after contextual syntax redaction (mixed)",
+      "logLine": 903,
+      "result": "PASS",
+      "line": "✔ held whitespace values cannot leak after contextual syntax redaction (mixed) (0.621435ms)"
+    }
+  ],
+  "prerequisiteSuites": [
+    {
+      "tests": 115,
+      "pass": 115,
+      "fail": 0,
+      "skip": 0
+    },
+    {
+      "tests": 7,
+      "pass": 7,
+      "fail": 0,
+      "skip": 0
+    }
+  ],
+  "toolchain": {
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "typescriptNative": "7.0.2",
+    "electron": "44.10.1"
+  },
+  "prerequisites": {
+    "exactCheckoutAndSourcePlatformAssert": true,
+    "originalFrozenInstallHelper": true,
+    "electronStrictVersionAndBetterSqliteRebuild": true,
+    "originalLinuxNodeExecHostLedgerControllerMcpBuildSequenceCompleted": true,
+    "installedByteCensusClaimed": false
+  },
+  "step10": {
+    "fastLint93Paths": {
+      "result": "PASS",
+      "errors": 0,
+      "warnings": 5
+    },
+    "workspaceTypecheck": {
+      "result": "PASS",
+      "basis": "set -e shell reached subsequent commands after the full pnpm typecheck:workspace chain"
+    },
+    "extraBackendTestTypecheck": {
+      "result": "PASS",
+      "command": "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json",
+      "basis": "same set -e shell reached typed main lint"
+    },
+    "typedMainLint": {
+      "result": "PASS",
+      "errors": 0,
+      "warnings": 3338
+    },
+    "typedRendererLint": {
+      "result": "FAIL",
+      "errors": 1,
+      "warnings": 1416,
+      "file": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "line": 201,
+      "column": 12,
+      "rule": "@typescript-eslint/no-unnecessary-type-assertion",
+      "sourceExpression": "[previousRunId!]: teamName,",
+      "sourceBlob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sameBlobInMergedC5f56": true
+    },
+    "typedFeaturesLint": "NOT RUN",
+    "mcpLint": "NOT RUN"
+  },
+  "downstream": {
+    "actualTeamElectronJourney": "NOT RUN",
+    "teamUiSourceFreezeAndScreenshots": "NOT RUN",
+    "scenarioQuitAndCustodyCleanup": "NOT RUN / UNQUALIFIED",
+    "artifactUpload": "No matching files found in this job; no UI artifact receipt claimed",
+    "genericRunnerCleanupIsNotScenarioCleanup": true
+  },
+  "sourceScope": "608 helper0b/test072 only; not mergedc5f56/ce5c/current15s qualification",
+  "lineReferences": {
+    "checkoutLogLines": [
+      38,
+      109,
+      120,
+      141
+    ],
+    "sourcePlatformCheckLines": [
+      234,
+      246
+    ],
+    "nodePnpmLines": [
+      193,
+      203,
+      221,
+      649
+    ],
+    "typescriptNativeVersionLine": 597,
+    "dependencyAndElectronLines": [
+      286,
+      300,
+      649,
+      653
+    ],
+    "freshBuildLines": [
+      654,
+      685
+    ],
+    "prerequisite115Summary": [
+      803,
+      810
+    ],
+    "prerequisite7Summary": [
+      818,
+      825
+    ],
+    "fullTenCommandLine": 828,
+    "fullTenResultLines": [
+      1028,
+      1035
+    ],
+    "fastLintActualCommandLine": 1147,
+    "workspaceTypesActualLines": [
+      1162,
+      1171
+    ],
+    "typedMainActualCommandLine": 1172,
+    "typedMainSummaryLine": 8414,
+    "typedRendererActualCommandLine": 8417,
+    "typedRendererErrorLine": 13040,
+    "typedRendererSummaryLine": 13150,
+    "shellFailureLine": 13154,
+    "emptyArtifactWarningLine": 13226
+  },
+  "retrievalCount": 1,
+  "localProjectExecution": false,
+  "sourceMutation": false,
+  "auditTimeUtc": "2026-11-16T04:02:05.268183+00:00"
+}

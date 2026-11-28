@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
+import { isHostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@renderer/components/ui/dialog';
@@ -12,7 +13,7 @@ import { isLeadMember } from '@shared/utils/leadDetection';
 import { Brain, Expand, MessageSquare, PanelLeftClose, Terminal, Wrench } from 'lucide-react';
 
 import { MemberLogStreamWithLegacyFallback } from './members/MemberLogStreamWithLegacyFallback';
-import { ClaudeLogsPanel } from './ClaudeLogsPanel';
+import { ClaudeLogsPanel, ClaudeLogsToolbar } from './ClaudeLogsPanel';
 import {
   CollapsibleTeamSection,
   type CollapsibleTeamSectionVariant,
@@ -30,7 +31,7 @@ import {
 import { useClaudeLogsController } from './useClaudeLogsController';
 
 import type { TeamLogSourceKey } from './teamLogSources';
-import type { LastLogPreview } from './useClaudeLogsController';
+import type { ClaudeLogsController, LastLogPreview } from './useClaudeLogsController';
 import type { ResolvedTeamMember } from '@shared/types';
 
 // =============================================================================
@@ -112,7 +113,7 @@ const TeamLogsSourceSelector = ({
   className,
   triggerVariant = 'default',
 }: {
-  leadMember: ResolvedTeamMember;
+  leadMember: ResolvedTeamMember | null;
   members: readonly ResolvedTeamMember[];
   selectedKey: TeamLogSourceKey;
   onChange: (key: TeamLogSourceKey) => void;
@@ -120,13 +121,16 @@ const TeamLogsSourceSelector = ({
   triggerVariant?: 'default' | 'avatar';
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
-  const sourceMembers = useMemo(() => [leadMember, ...members], [leadMember, members]);
+  const sourceMembers = useMemo(
+    () => (leadMember ? [leadMember, ...members] : [...members]),
+    [leadMember, members]
+  );
   const selectedMemberName =
     selectedKey === LEAD_LOG_SOURCE_KEY
-      ? leadMember.name
+      ? (leadMember?.name ?? null)
       : getMemberNameFromLogSourceKey(selectedKey);
 
-  if (sourceMembers.length <= 1) return null;
+  if (sourceMembers.length === 0 || (leadMember && sourceMembers.length === 1)) return null;
 
   return (
     <div className={cn('min-w-0 pb-2', className)}>
@@ -162,26 +166,58 @@ const TeamLogsSourceSelector = ({
   );
 };
 
+type HostLogPresentation = Pick<
+  ClaudeLogsController,
+  | 'searchQuery'
+  | 'setSearchQuery'
+  | 'filter'
+  | 'setFilter'
+  | 'filterOpen'
+  | 'setFilterOpen'
+  | 'viewerState'
+  | 'onViewerStateChange'
+>;
+
 const MemberLogsSourcePanel = ({
   teamName,
   member,
   enabled,
   maxHeight,
+  presentation,
+  toolbarAccessory,
+  toolbarControlsStart,
 }: {
   teamName: string;
   member: ResolvedTeamMember;
   enabled: boolean;
   maxHeight?: number;
+  presentation?: HostLogPresentation;
+  toolbarAccessory?: React.ReactNode;
+  toolbarControlsStart?: React.ReactNode;
 }): React.JSX.Element => {
+  if (presentation)
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <ClaudeLogsToolbar
+          {...presentation}
+          compactMetaInTooltip={maxHeight !== undefined}
+          toolbarAccessory={toolbarAccessory}
+          toolbarControlsStart={toolbarControlsStart}
+        />
+        <MemberLogStreamWithLegacyFallback
+          teamName={teamName}
+          member={member}
+          enabled={enabled}
+          hostView={{ ...presentation, maxHeight }}
+        />
+      </div>
+    );
   const content = (
     <MemberLogStreamWithLegacyFallback teamName={teamName} member={member} enabled={enabled} />
   );
-
-  if (maxHeight === undefined) {
-    return content;
-  }
-
-  return (
+  return maxHeight === undefined ? (
+    content
+  ) : (
     <div className="min-h-0 overflow-auto pr-1" style={{ maxHeight }}>
       {content}
     </div>
@@ -199,17 +235,19 @@ const TeamLogsDialog = ({
   showingLeadLogs,
   ctrl,
   selectedMember,
+  presentation,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   teamName: string;
-  leadMember: ResolvedTeamMember;
+  leadMember: ResolvedTeamMember | null;
   members: readonly ResolvedTeamMember[];
   selectedKey: TeamLogSourceKey;
   onSourceChange: (key: TeamLogSourceKey) => void;
   showingLeadLogs: boolean;
   ctrl: ReturnType<typeof useClaudeLogsController>;
   selectedMember: ResolvedTeamMember | null;
+  presentation?: HostLogPresentation;
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const sourceSelector =
@@ -247,7 +285,10 @@ const TeamLogsDialog = ({
         </DialogHeader>
 
         <div
-          className={cn('min-h-0 flex-1', showingLeadLogs ? 'overflow-hidden' : 'overflow-auto')}
+          className={cn(
+            'min-h-0 flex-1',
+            showingLeadLogs || presentation ? 'overflow-hidden' : 'overflow-auto'
+          )}
         >
           {showingLeadLogs ? (
             <ClaudeLogsPanel
@@ -258,17 +299,20 @@ const TeamLogsDialog = ({
             />
           ) : selectedMember ? (
             <>
-              {sourceSelector ? (
+              {!presentation && sourceSelector ? (
                 <div className="mb-3 flex justify-end">{sourceSelector}</div>
               ) : null}
               <MemberLogsSourcePanel
                 teamName={teamName}
                 member={selectedMember}
-                enabled={open && selectedKey === memberLogSourceKey(selectedMember.name)}
+                enabled={open}
+                presentation={presentation}
+                toolbarControlsStart={sourceSelector}
               />
             </>
           ) : (
             <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
+              {sourceSelector}
               {t('claudeLogs.sourceSelect.selectSourceEmpty')}
             </div>
           )}
@@ -304,7 +348,12 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
     },
     [teamName]
   );
-  const leadMember = useMemo(() => resolveLeadLogMember(teamMembers), [teamMembers]);
+  const isHostTeam = isHostTeamSelectionKey(teamName);
+  const leadMember = useMemo(() => {
+    if (!isHostTeam) return resolveLeadLogMember(teamMembers);
+    const leads = teamMembers.filter(isLeadMember);
+    return leads.find((member) => !member.removedAt) ?? leads[0] ?? null;
+  }, [isHostTeam, teamMembers]);
   const selectableMembers = useMemo(() => buildSelectableLogMembers(teamMembers), [teamMembers]);
   const selectedMemberName = getMemberNameFromLogSourceKey(selectedSourceKey);
   const selectedMemberSourceName = selectedMemberName
@@ -325,8 +374,22 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
       : selectedMember
         ? memberLogSourceKey(selectedMember.name)
         : LEAD_LOG_SOURCE_KEY;
-  const showingLeadLogs = effectiveSelectedSourceKey === LEAD_LOG_SOURCE_KEY;
+  const showingLeadLogs = !isHostTeam && effectiveSelectedSourceKey === LEAD_LOG_SOURCE_KEY;
+  const displayedMember =
+    isHostTeam && effectiveSelectedSourceKey === LEAD_LOG_SOURCE_KEY ? leadMember : selectedMember;
   const ctrl = useClaudeLogsController(teamName, { enabled: showingLeadLogs });
+  const presentation: HostLogPresentation | undefined = isHostTeam
+    ? {
+        searchQuery: ctrl.searchQuery,
+        setSearchQuery: ctrl.setSearchQuery,
+        filter: ctrl.filter,
+        setFilter: ctrl.setFilter,
+        filterOpen: ctrl.filterOpen,
+        setFilterOpen: ctrl.setFilterOpen,
+        viewerState: ctrl.viewerState,
+        onViewerStateChange: ctrl.onViewerStateChange,
+      }
+    : undefined;
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const isSidebar = position === 'sidebar';
@@ -382,7 +445,7 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
     );
   }, [ctrl.online, ctrl.lastLogPreview, showingLeadLogs, showHeaderSkeleton]);
 
-  const canOpenFullscreen = showingLeadLogs ? ctrl.data.total > 0 : selectedMember !== null;
+  const canOpenFullscreen = showingLeadLogs ? ctrl.data.total > 0 : displayedMember !== null;
 
   const compactSourceSelector =
     selectableMembers.length > 0 ? (
@@ -485,18 +548,21 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
             compactMetaInTooltip={isSidebar}
             toolbarAccessory={compactSourceSelector}
           />
-        ) : selectedMember ? (
+        ) : displayedMember ? (
           <>
-            <div className="flex justify-end pb-2">{compactSourceSelector}</div>
+            {!presentation && <div className="flex justify-end pb-2">{compactSourceSelector}</div>}
             <MemberLogsSourcePanel
               teamName={teamName}
-              member={selectedMember}
-              enabled={effectiveSelectedSourceKey === memberLogSourceKey(selectedMember.name)}
-              maxHeight={isSidebar ? sidebarViewerMaxHeight : undefined}
+              member={displayedMember}
+              enabled
+              maxHeight={isSidebar ? sidebarViewerMaxHeight : presentation ? 213 : undefined}
+              presentation={presentation}
+              toolbarAccessory={compactSourceSelector}
             />
           </>
         ) : (
           <div className="py-4 text-center text-xs text-[var(--color-text-muted)]">
+            {compactSourceSelector}
             {t('claudeLogs.sourceSelect.selectSourceEmpty')}
           </div>
         )}
@@ -512,7 +578,8 @@ export const ClaudeLogsSection = memo(function ClaudeLogsSection({
         onSourceChange={setSelectedSourceKey}
         showingLeadLogs={showingLeadLogs}
         ctrl={ctrl}
-        selectedMember={selectedMember}
+        selectedMember={displayedMember}
+        presentation={presentation}
       />
     </>
   );

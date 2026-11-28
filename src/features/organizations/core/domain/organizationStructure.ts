@@ -1,4 +1,9 @@
-import { getOrgUnitNodeId, getRelationId, normalizeOrganizationId } from './organizationIds';
+import {
+  getOrgUnitNodeId,
+  getRelationId,
+  normalizeOrganizationId,
+  organizationTeamIdentity,
+} from './organizationIds';
 
 import type {
   OrgRelationDefinitionModel,
@@ -104,7 +109,7 @@ function getRootUnitId(organizationId: string): string {
 }
 
 function getTeamUnitId(teamName: string): string {
-  return `team:${slugify(teamName, 'team')}`;
+  return `team:${organizationTeamIdentity(teamName, 'team')}`;
 }
 
 function getContainerUnitId(organizationId: string, label: string): string {

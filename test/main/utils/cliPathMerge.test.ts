@@ -50,6 +50,7 @@ describe('buildMergedCliPath', () => {
 
   it('on darwin/linux with cold shell cache prepends standard user bin dirs before process PATH', () => {
     Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+    process.env.PATH = '/TEST-codex-install/bin:/usr/bin';
     const p = buildMergedCliPath(null);
     expect(p.split(':')).toEqual(
       expect.arrayContaining([
@@ -75,6 +76,7 @@ describe('buildMergedCliPath', () => {
       ])
     );
     expect(p.startsWith('/home/testuser/.claude/local/node_modules/.bin')).toBe(true);
+    expect(p.split(':').indexOf('/home/testuser/.claude/local/node_modules/.bin')).toBeLessThan(p.split(':').indexOf('/TEST-codex-install/bin'));
     expect(p.split(':').filter((part) => part === '/usr/bin')).toHaveLength(1);
   });
 

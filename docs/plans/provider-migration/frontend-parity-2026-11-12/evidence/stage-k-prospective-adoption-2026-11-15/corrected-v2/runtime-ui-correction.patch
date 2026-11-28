@@ -1,0 +1,44 @@
+--- a/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
++++ b/scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts
+@@ -142,7 +142,7 @@
+       'default actual Lead uses the typed Host log route');
+   };
+   const logFactSelector = (scope: string, event: Row) => `${scope} [data-host-log-event-id=${literal(event.eventId)}]`;
+-  const visibleLogFact = async (scope: string, event: Row) => {
++  const visibleLogFact = async (scope: string, event: Row, sourceTitle?: string) => {
+     const selector = logFactSelector(scope, event), text = String(record(event.data).text);
+     assert.ok(['text', 'process-output'].includes(String(record(event.data).kind)));
+     await ui.waitRead(`(()=>{const rows=[...document.querySelectorAll(${literal(selector)})];return rows.length===1&&
+@@ -157,7 +157,11 @@
+       if(!e)return null;
+       const bodies=[...e.querySelectorAll('[data-host-log-content] p')].filter(p=>p.textContent.trim()===${literal(text)});
+       if(bodies.length!==1||!bodies[0].getClientRects().length)return null;
+-      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()}})()`,
++      ${sourceTitle === undefined ? '' : `const sources=[...document.querySelectorAll(${literal(scope + ' button[aria-expanded="true"]')})]
++        .filter(node=>node.textContent.trim()===${literal(sourceTitle)});
++      if(sources.length!==1)return null;
++      const source=sources[0].textContent.trim();`}
++      return {eventId:e.dataset.hostLogEventId,sequence:Number(e.dataset.hostLogSequence),text:bodies[0].textContent.trim()${sourceTitle === undefined ? '' : ',source'}}})()`,
+       'actual retained output is visible inside Logs'));
+   };
+   const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', runtimeDigest(record((await session()).binding)) + '.json');
+@@ -617,18 +621,7 @@
+     assert.ok(typeof title === 'string');
+     await ui.scrollTo(`${panel} button[aria-expanded="false"]`, 'original ' + tab + ' disclosure', title);
+     await ui.click(`${panel} button[aria-expanded="false"]`, 'open original ' + tab + ' facts', title);
+-    let rendered: unknown;
+-    if (tab === 'Task Log Stream') rendered = await visibleLogFact(panel, completion);
+-    else {
+-      await ui.scrollTo(`${panel} pre`, 'original retained completion in ' + tab,
+-        String(record(completion.data).text), 12, { requireCenterHit: true });
+-      rendered = await ui.waitRead(`(()=>{const panel=document.querySelector(${literal(panel)});if(!panel)return null;
+-        const facts=[...panel.querySelectorAll('pre')].filter(e=>e.textContent===${literal(record(completion.data).text)}&&
+-          e.parentElement.querySelector('span')?.textContent.trim()===${literal('#' + completion.sequence + ' text')});
+-        if(facts.length!==1||!facts[0].getClientRects().length)return null;
+-        return {sequence:${literal(completion.sequence)},text:facts[0].textContent,
+-          source:panel.querySelector('button[aria-expanded="true"]')?.textContent.trim()}})()`, 'exact original retained event in ' + tab);
+-    }
++    const rendered = await visibleLogFact(panel, completion, title);
+     assert.equal(await cdp.evaluate(`document.querySelector(${literal(panel)})?.textContent.includes(${literal(stderrText)})`), false,
+       'unattributed member stderr cannot enter exact Task logs');
+     activityViews.push({ tab, rendered, screenshot: await screenshot(tab === 'Task Activity' ? 'task-activity' : 'task-log-stream') });

@@ -1,0 +1,236 @@
+{
+  "artifact": {
+    "id": 14176674211,
+    "name": "teams-create-page-macos-latest-9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+    "size_in_bytes": 2295421,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14176674211",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14176674211/zip",
+    "expired": false,
+    "created_at": "2026-11-15T19:29:47Z",
+    "expires_at": "2026-11-29T19:29:45Z",
+    "updated_at": "2026-11-15T19:29:47Z",
+    "digest": "sha256:619d82a6ed6c9310413c2d05bb4d42cb1d6ef5d396c7b57c16d969173c391555",
+    "workflow_run": {
+      "id": 43751070710,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "9a34bb28de0a0deee2eecc42099fd9500563eb1b"
+    }
+  },
+  "zip": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/9a34-creation-macos.zip",
+  "bytes": 2295421,
+  "sha256": "619d82a6ed6c9310413c2d05bb4d42cb1d6ef5d396c7b57c16d969173c391555",
+  "crc": "pass",
+  "uniquePaths": true,
+  "safePaths": true,
+  "symlinks": false,
+  "extraction": "/workspace/scratch/82d3f9ba6b85/native-audit-9a34/creation_macos",
+  "files": [
+    {
+      "path": "teams-create-config-only-created.png",
+      "bytes": 32397,
+      "sha256": "b5ea624ec4579727b7bbe7d534dd239062d1e8a13203224e1b018aea98500e60"
+    },
+    {
+      "path": "teams-create-copy-resumed-edits.png",
+      "bytes": 62090,
+      "sha256": "3bc7f3b20dfad0e5bf9eb73d1a624e09a5d903bf58026b82a48ea98a51475ca2"
+    },
+    {
+      "path": "teams-create-css-zoom-200.png",
+      "bytes": 52329,
+      "sha256": "84dc7a845306272bf179223628fe3ab7595c835a7095aec20e50139ec2e9b0c0"
+    },
+    {
+      "path": "teams-create-edited.png",
+      "bytes": 62193,
+      "sha256": "7d365b93accc0d56ee25b788fe538bc0e270f133eae7f19756d5118661dc4d08"
+    },
+    {
+      "path": "teams-create-launch-controls-loaded.png",
+      "bytes": 75305,
+      "sha256": "1b504000ad7c6b382a4ed538a0586ec50e09d09b2954de38e411c60030c78fd1"
+    },
+    {
+      "path": "teams-create-launch-still-modal.png",
+      "bytes": 75273,
+      "sha256": "ccb3adc3905518ccb0fbe846ba8139f31511540d52cadfd62616ff7f2538d38a"
+    },
+    {
+      "path": "teams-create-missing-cli-value-validated.png",
+      "bytes": 70689,
+      "sha256": "f7bbf86c5a97ca895b5a7636d06e6249af50f07ec511cf2fe631a46b2828311b"
+    },
+    {
+      "path": "teams-create-native-electron-zoom-200.png",
+      "bytes": 53115,
+      "sha256": "820700837d26465c94c53727a175d02b3c52615f99766c0e24879d0e2d4e0a6b"
+    },
+    {
+      "path": "teams-create-opened.png",
+      "bytes": 57034,
+      "sha256": "e449a41a15f77cf792528052430e43a8f5be6b5fe3e0e6780cb52110879d8db1"
+    },
+    {
+      "path": "teams-create-organization-created.png",
+      "bytes": 36455,
+      "sha256": "683cb2d54a530abb0bb7eb9ba888c444ff454b6a319bfac83bd61ba75fef9390"
+    },
+    {
+      "path": "teams-create-organization-entry.png",
+      "bytes": 64349,
+      "sha256": "8758f0e9388c590e014cfb6ee7dd49682880e256af3088a67dc6f474ccc231d3"
+    },
+    {
+      "path": "teams-create-page-result.json",
+      "bytes": 2259,
+      "sha256": "fb7d74dbe39f2a7970608a0bf7514e872fc9aecfcc2c65b73188424586389533"
+    },
+    {
+      "path": "teams-create-provider-refreshed.png",
+      "bytes": 59696,
+      "sha256": "fa0f7ac37e1dc684e44ef9bb194b8c2ebd1ee126b58ebe729f3519d16cf0e483"
+    },
+    {
+      "path": "teams-create-restarted.png",
+      "bytes": 58619,
+      "sha256": "d47b9cb70d82f12c1ad1374c8f12b4434c940f812f8aee5738ecf22f55c19c97"
+    },
+    {
+      "path": "teams-create-resumed.png",
+      "bytes": 79182,
+      "sha256": "26d67efc29273dbb03419cb8fcce9cea7bf8ddbf682531c05b1dd5a7939701a1"
+    },
+    {
+      "path": "teams-create-save-rejected.png",
+      "bytes": 48565,
+      "sha256": "023a1da808394b9f7327cc8c3ef5ce06b63df7d040ccac6f732b9ef313194635"
+    },
+    {
+      "path": "teams-create-schedules-delete-confirm.png",
+      "bytes": 55642,
+      "sha256": "549911a44b99961d9dc80022e50f45841ea862f27a2c59b5f1d45c4ccae57ba5"
+    },
+    {
+      "path": "teams-create-schedules-deleted.png",
+      "bytes": 40769,
+      "sha256": "ba8c53de62f967a922338692c1263dc449d1456556d587316ad60664e3a2ac0f"
+    },
+    {
+      "path": "teams-create-schedules-edit.png",
+      "bytes": 81884,
+      "sha256": "83acb07249f2b045cf19954db00880869ec8223ea29b22f3c458adf55ef7679e"
+    },
+    {
+      "path": "teams-create-schedules-editor-opened.png",
+      "bytes": 61460,
+      "sha256": "e86a73f77109809a9a4116ae135ef5a9acf3debed7ba57de04024c2a1948c09f"
+    },
+    {
+      "path": "teams-create-schedules-invalid-cron.png",
+      "bytes": 72900,
+      "sha256": "3f925ebc26c267d8f8d213700107f9b36540839323c53831cc9f0cc483933f52"
+    },
+    {
+      "path": "teams-create-schedules-list-dark.png",
+      "bytes": 42155,
+      "sha256": "0e2f8352d84bdf65d77504c572192cc1b79c6f3c759a113c2a94d855b8aa3360"
+    },
+    {
+      "path": "teams-create-schedules-list-light.png",
+      "bytes": 42965,
+      "sha256": "5ab820eaa5ef11e83e80241e7b4ed6d49cbbf65431c1b8468adf571663f9f064"
+    },
+    {
+      "path": "teams-create-schedules-list-narrow-700.png",
+      "bytes": 37996,
+      "sha256": "012fd424e89f7fd7f88f977d48b3ca744ea0497848427f8f61c08694b0007a63"
+    },
+    {
+      "path": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "bytes": 55290,
+      "sha256": "3e2a231bc0cba1a485907d96c7b8cf9e13fcd92e9f9df892da5c9ac4e18bff6b"
+    },
+    {
+      "path": "teams-create-schedules-old-prompt-review.png",
+      "bytes": 68958,
+      "sha256": "9649faa37fe1f2a59cf6a49286b06afe3f5ba2a108fb9df5ad3982c7b1048437"
+    },
+    {
+      "path": "teams-create-schedules-paused.png",
+      "bytes": 42999,
+      "sha256": "b9bc70aae1231cf0c4476ccff97c814d3ba1cb13332854057b93d4a313a09711"
+    },
+    {
+      "path": "teams-create-schedules-pristine-submit-validation.png",
+      "bytes": 56462,
+      "sha256": "feab67b1b6a6f31b53902efde541387737894f41de796e621ae361414d487b5f"
+    },
+    {
+      "path": "teams-create-schedules-ready-to-create.png",
+      "bytes": 61359,
+      "sha256": "9915db36d8c0a059014e652498b93491a18ceb32b4668dbc06d9bd8de28e21dd"
+    },
+    {
+      "path": "teams-create-schedules-resumed.png",
+      "bytes": 44041,
+      "sha256": "eee813b1185f15d46795784624f9fe7dbe5e85d19109188a23241098e76de497"
+    },
+    {
+      "path": "teams-create-schedules-run-history.png",
+      "bytes": 48760,
+      "sha256": "a6d86683056846d68fa56fc24e79b291992a712c7253df7e1e62239913dc5769"
+    },
+    {
+      "path": "teams-create-schedules-run-log.png",
+      "bytes": 54180,
+      "sha256": "3de0ac3fe5346abbdb2d35578494f0baab8c23060ebb1d55c46a98c1171dc967"
+    },
+    {
+      "path": "teams-create-split-pane.png",
+      "bytes": 97879,
+      "sha256": "c7114c0f3b3309f447bc116e9bf5e387afe72b30aec32fa18cf059057c1dfc01"
+    },
+    {
+      "path": "teams-create-teammate-mode-override.png",
+      "bytes": 71152,
+      "sha256": "45bdd408e38545c279376e43d480b06e1353d95e71fd22be36cd388e8404e7c1"
+    },
+    {
+      "path": "teams-create-teammate-mode-validated.png",
+      "bytes": 72390,
+      "sha256": "6e0621a608632bbb23b19a2e5ec205abd672809fe2ee5dd4be13fc329d297b59"
+    },
+    {
+      "path": "teams-create-template-confirmed.png",
+      "bytes": 74555,
+      "sha256": "36280ea3f078abf722c1c859e111d66d67350a133acc56fbe9668a540821ddff"
+    },
+    {
+      "path": "teams-create-theme-dark.png",
+      "bytes": 63956,
+      "sha256": "6e174ded2f5cfe649598d81a91b4b3f61077c656d0da3276cc229d027ef01eb3"
+    },
+    {
+      "path": "teams-create-theme-light.png",
+      "bytes": 62555,
+      "sha256": "07cf671a806dcbfa3d64768d028c9e300976556e2ba9f6a5c72d626e4e6e0ada"
+    },
+    {
+      "path": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "bytes": 88601,
+      "sha256": "056e5b80992941da43ef875a53eccbc867c92ea46aa3ec98e1d177963bfe76e4"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-dialog.png",
+      "bytes": 60040,
+      "sha256": "987bd50514a4bcb2b8bf059f12918eef888b9ee64acf75a7812327c7d3d972af"
+    },
+    {
+      "path": "teams-create-zh-tw-task-detail-tab.png",
+      "bytes": 52692,
+      "sha256": "2ec19ed63eddedd3823fc4b434cdd296d56c7563c72a183b31d9975f317232e5"
+    }
+  ]
+}

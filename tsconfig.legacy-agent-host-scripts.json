@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "scripts/legacy-agent-host/**/*.ts",
+    "scripts/e2e/native-prompt-suggestions-real/*.ts",
+    "scripts/legacy-agent-host/verify-native-suggestions-adopted-pin.mts",
+    "scripts/ci/prefill-legacy-host-macos-node.mts",
+    "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+    "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+    "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts",
+    "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts"
+  ]
+}

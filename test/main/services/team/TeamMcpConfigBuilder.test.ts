@@ -21,6 +21,7 @@ type ExecCliMock = (
 type ResolveInteractiveShellEnvMock = (options?: unknown) => Promise<NodeJS.ProcessEnv>;
 
 const hoisted = vi.hoisted(() => ({
+  mandatoryElectronReads: [] as string[],
   electronState: {
     isPackaged: false,
     version: '9.9.9-test',
@@ -42,6 +43,33 @@ let mockHomeDir = '';
 type ModuleLoad = (request: string, parent: NodeModule | undefined, isMain: boolean) => unknown;
 const moduleInternal = Module as unknown as { _load: ModuleLoad };
 const originalModuleLoad = moduleInternal._load;
+const electronRuntimeDescriptors = [
+  { object: process, property: 'type' },
+  { object: process.versions, property: 'electron' },
+].map(({ object, property }) => ({
+  object,
+  property,
+  descriptor: Object.getOwnPropertyDescriptor(object, property),
+}));
+
+// The external-agent barrel imports mandatory Electron APIs before beforeEach.
+// Keep that import Node-only; the per-test CJS app fixture below stays separate.
+vi.mock('electron', () => {
+  const unavailable = (api: string) =>
+    new Proxy(Object.freeze({}), {
+      get(_target, property) {
+        const name = `${api}.${String(property)}`;
+        hoisted.mandatoryElectronReads.push(name);
+        throw new Error(`Unexpected Electron API in MCP Node tests: ${name}`);
+      },
+    });
+  return {
+    app: unavailable('app'),
+    webContents: unavailable('webContents'),
+    safeStorage: unavailable('safeStorage'),
+    shell: unavailable('shell'),
+  };
+});
 
 vi.mock('@main/services/team/WorkspaceMcpBundle', () => ({
   resolveWorkspaceMcpBundle: hoisted.resolveWorkspaceMcpBundleMock,
@@ -94,6 +122,14 @@ describe('TeamMcpConfigBuilder', () => {
   function setPackagedMode(isPackaged: boolean, version = '9.9.9-test'): void {
     hoisted.electronState.isPackaged = isPackaged;
     hoisted.electronState.version = version;
+    // Packaged cases model Main; the standalone MCP launch keeps its Node role.
+    if (isPackaged) {
+      Object.defineProperty(process, 'type', { configurable: true, value: 'browser' });
+      Object.defineProperty(process.versions, 'electron', { configurable: true, value: 'TEST' });
+    } else {
+      Reflect.deleteProperty(process, 'type');
+      Reflect.deleteProperty(process.versions, 'electron');
+    }
   }
 
   function setResourcesPath(resourcesPath: string | undefined): void {
@@ -220,6 +256,10 @@ describe('TeamMcpConfigBuilder', () => {
       process.env.CLAUDE_TEAM_CONTROL_URL = originalControlUrl;
     }
     moduleInternal._load = originalModuleLoad;
+    for (const { object, property, descriptor } of electronRuntimeDescriptors) {
+      if (descriptor) Object.defineProperty(object, property, descriptor);
+      else Reflect.deleteProperty(object, property);
+    }
     vi.restoreAllMocks();
     for (const filePath of createdPaths.splice(0)) {
       try {
@@ -236,6 +276,7 @@ describe('TeamMcpConfigBuilder', () => {
       }
     }
     mockHomeDir = '';
+    expect(hoisted.mandatoryElectronReads.splice(0)).toEqual([]);
   });
 
   // ── Config storage ──

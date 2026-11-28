@@ -1,0 +1,117 @@
+{
+  "kind": "ROOT_PROSPECTIVE_PLAN68_R1",
+  "verdict": "GO_FOR_INDEPENDENT_PROSPECTIVE_REVIEW_ONLY",
+  "baseCommit": "d4259ace0f265f5b2b060e485d291b8aaf426e9f",
+  "baseTree": "39e8ed2f35b657e3318a8c91e9e81c6ad9f0405e",
+  "closedActualPlan65R2": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan65-desktop-single-click-settling/actual-source/independent-actual-source-r2.json",
+    "bytes": 10139,
+    "physicalLines": 191,
+    "gitBlob": "4e9f6111ac8f31db3355235d180c42d445ad076b",
+    "sha256": "ba1643391dd80a57cbe526fafc5fd8df284e95b33473c469d5dbc4126bb9c367"
+  },
+  "plan": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/plan.md",
+    "bytes": 10832,
+    "physicalLines": 61,
+    "gitBlob": "37031fed3759250351e17ed3be27c4c95a6efb92",
+    "sha256": "bb8e9ee5245cc4a1fdaa081cff484a6bcf85acc4f740a0e29d1e9f669b347f7e"
+  },
+  "repositoryPlanPath": "docs/plans/provider-migration/frontend-parity-2026-11-12/68-provider-activity-source-clock-2026-11-16.md",
+  "bindings": [
+    {
+      "path": "src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/src/renderer/hooks/useEffectiveCliProviderStatus.ts",
+      "writable": true,
+      "bytes": 9697,
+      "physicalLines": 286,
+      "gitBlob": "4a4c5150cc13bc59a914d34f29033890a2541697",
+      "sha256": "d7db83f4787e51b205fae22b5399d6b19cfe478bda586efb86bfc39ed38be1f1"
+    },
+    {
+      "path": "src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/src/renderer/components/common/ProviderActivityStatusStrip.tsx",
+      "writable": true,
+      "bytes": 13822,
+      "physicalLines": 396,
+      "gitBlob": "c1d31ee945c28cfe1f1339d914d0d1be7fc5e928",
+      "sha256": "b0f3a9ede1f0bb08f75f11c2742d0fdb14b281b1ea63da5509e50b38d9d98cac"
+    },
+    {
+      "path": "src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/src/renderer/utils/teamProviderRuntimeStatusLoading.ts",
+      "writable": true,
+      "bytes": 4395,
+      "physicalLines": 119,
+      "gitBlob": "305aea0b97d3b2b59dd897e06e39cc2c82406ee9",
+      "sha256": "623fb0291c50dd43016d08b54635d5ec4b4cbb582fd1a7768efba904980d175c"
+    },
+    {
+      "path": "test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/test/renderer/components/common/ProviderActivityStatusStrip.test.ts",
+      "writable": true,
+      "bytes": 28286,
+      "physicalLines": 844,
+      "gitBlob": "c1ab11f043ea5bcfb5325cb8fb6f147541076f38",
+      "sha256": "375ab28dfb1aaf9506b0c852fc97dc48ae612d38edf5fad3099dcf9e420de286"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "writable": true,
+      "bytes": 22506,
+      "physicalLines": 346,
+      "gitBlob": "86374c20f8597210a3331e9730a582df35105c92",
+      "sha256": "505a91105e972b98e8ab2f50ccc88f3bed6e442013d36a6f922f97ba18ff2d97"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/before/.github/workflows/host-emulated-acceptance.yml",
+      "writable": true,
+      "bytes": 141880,
+      "physicalLines": 1768,
+      "gitBlob": "af1abdb8c2309b4122d50ba9bdfa745a896344de",
+      "sha256": "7e2add679b6b13ed9cc08cc57575e835c3a93a62f52ede4a352571f614ca2134"
+    },
+    {
+      "path": "src/renderer/utils/providerReadiness.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/reference/src/renderer/utils/providerReadiness.ts",
+      "writable": false,
+      "bytes": 2022,
+      "physicalLines": 45,
+      "gitBlob": "b912faca5caef24aebf1ce4105556e2dc8b3bdaf",
+      "sha256": "4c68a3835384f0358b884930965719286d40ded7cce4a0f47ba63ad50937d297"
+    },
+    {
+      "path": "src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/reference/src/renderer/components/team/dialogs/useCapturedTeamLaunchReadiness.ts",
+      "writable": false,
+      "bytes": 5710,
+      "physicalLines": 149,
+      "gitBlob": "e8f5137ea0b7b69f4c098203d797780be99a5c01",
+      "sha256": "7327fb6ed0504e412dcdafe4989c91625c2ef0712edf0705c767c5bfc52775af"
+    },
+    {
+      "path": "test/renderer/utils/teamProviderRuntimeStatusLoading.test.ts",
+      "localPath": "/tmp/e2e-original-artifacts/reviews/plan68-provider-activity-clock/reference/test/renderer/utils/teamProviderRuntimeStatusLoading.test.ts",
+      "writable": false,
+      "bytes": 2223,
+      "physicalLines": 58,
+      "gitBlob": "0656dbf92ba876cc3d9465f9c19fc54ce0d1ffaa",
+      "sha256": "0b210a2c8b36b284b6c5a97634d6d425522c756eda1615a794194f2d79685e9f"
+    },
+    {
+      "path": "src/renderer/hooks/useConservativeNow.ts",
+      "writable": true,
+      "gitBlob": null,
+      "before": "ABSENT_AT_ACTUAL_D425"
+    }
+  ],
+  "selection": "7paths:4 existing behavior files + literal sharedclock file +2existing validationowners. Addexact3commonrosterstrings/3lintoperands133->136. No newtimer/currentness/launchauthority/Host changes.",
+  "rootRead": "Full Strip396L, existingstatusclockowner286L, loadingutility119L, Striptest844L, referencedreadiness149L/providerReadiness45L/utilitytest58L and commonroster346L; exact workflow105-285 including original133operandcommand; full currentTeam11207Bfailureboundary/sourcefinding12439B/addendum9183B; closedPlan65actualsourceR2 FULLROOTREAD.",
+  "clockPolicy": "Literal oldinterface+hookmove, existing2consumersunchanged; stablecallback carries all9originaldeps; fourStripgatecalls explicitlyuseoneprovidedtime; loadingfifthnow?:number forwardsundefined toexistingnestedDate.nowdefault preserving oldearlyreturns.",
+  "testPolicy": "Keep old9prooftransitions+existingScopedReadycase. Addstablepredicate/changedsourceexactexpiry and explicitOpenCodebefore/equal/nonfinite boundary with Date.nowtrap restoredbeforeReactrender. No newutilitytestfile/framework.",
+  "sourceAfterimages": 0,
+  "projectExecution": 0,
+  "nextGate": "IndependentprospectiveR2 then actualdocumentarypublication/readbackR2 before sourceafterimages."
+}

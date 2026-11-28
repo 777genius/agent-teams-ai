@@ -3,6 +3,7 @@ import React from 'react';
 import { useAppTranslation } from '@features/localization/renderer';
 import { useStore } from '@renderer/store';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { createProviderLaunchAuthorityMarker } from '@shared/utils/providerLaunchAuthorityMarker';
 import { AlertTriangle, LoaderCircle } from 'lucide-react';
 
 import {
@@ -56,10 +57,16 @@ export const ProviderLaunchAuthorityNotice = ({
     backendSummary: getProvisioningProviderBackendSummary(blocker.providerStatus),
     details: [blocker.detail],
   }));
+  const authorityMarker = createProviderLaunchAuthorityMarker(
+    blockers,
+    checks,
+    activeProviderLoading
+  );
   if (checks.every((check) => check.status === 'checking'))
     return (
       <p
         id={id}
+        data-provider-launch-authority={authorityMarker}
         role="status"
         className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]"
       >
@@ -69,7 +76,13 @@ export const ProviderLaunchAuthorityNotice = ({
     );
 
   return (
-    <div id={id} role="alert" aria-live="polite" className="text-xs">
+    <div
+      id={id}
+      data-provider-launch-authority={authorityMarker}
+      role="alert"
+      aria-live="polite"
+      className="text-xs"
+    >
       <div className="flex items-start gap-2 text-red-700 dark:text-red-300">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" />
         <div className="min-w-0">

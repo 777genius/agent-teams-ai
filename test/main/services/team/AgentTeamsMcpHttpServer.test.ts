@@ -8,11 +8,14 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { configureDesktopMcpEnvironment } from '@features/external-agent-connection/main';
+import * as linuxLaunch from '@main/utils/linuxChildLaunch';
+import { linuxChildLaunchFailure } from '@main/utils/linuxChildLaunchSelection';
 import { getClaudeBasePath, getMcpServerBasePath } from '@main/utils/pathDecoder';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   killProcessTreeMock: vi.fn(),
+  killProcessTreeAndWaitMock: vi.fn(),
   spawnCliMock: vi.fn(),
   untrackCliProcessMock: vi.fn(),
 }));
@@ -22,6 +25,7 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
   return {
     ...actual,
     killProcessTree: (...args: unknown[]) => hoisted.killProcessTreeMock(...args),
+    killProcessTreeAndWait: (...args: unknown[]) => hoisted.killProcessTreeAndWaitMock(...args),
     spawnCli: (...args: unknown[]) => hoisted.spawnCliMock(...args),
     untrackCliProcess: (...args: unknown[]) => hoisted.untrackCliProcessMock(...args),
   };
@@ -127,6 +131,7 @@ async function flushAsyncCleanup(): Promise<void> {
 describe('AgentTeamsMcpHttpServer', () => {
   beforeEach(() => {
     hoisted.killProcessTreeMock.mockReset();
+    hoisted.killProcessTreeAndWaitMock.mockReset();
     hoisted.spawnCliMock.mockReset();
     hoisted.untrackCliProcessMock.mockReset();
   });
@@ -222,6 +227,35 @@ describe('AgentTeamsMcpHttpServer', () => {
     await reopened.stop({ preventRestart: true });
     expect(vi.mocked(console.warn).mock.calls).toHaveLength(4);
     vi.mocked(console.warn).mockClear();
+
+    // Synthetic private handoff refusal is separate from the original HTTP readiness.
+    let refuse: ((error: Error) => void) | undefined, completeCleanup: (() => void) | undefined;
+    const held = new FakeChildProcess(43124);
+    const observer = vi.spyOn(linuxLaunch, 'observeLinuxChildLaunchFailure').mockImplementation((original, listener) => {
+      expect(original).toBe(held); refuse = listener; return () => {};
+    });
+    hoisted.killProcessTreeAndWaitMock.mockImplementation(() => new Promise<void>(resolve => { completeCleanup = resolve; }));
+    let readyLate: (() => void) | undefined;
+    const selected = new AgentTeamsMcpHttpServer({
+      statePath: null, resolveLaunchSpec: async () => ({ command: 'node', args: ['/sandbox/mcp.js'] }),
+      allocatePort: async () => 41005, spawnProcess: () => held as unknown as ChildProcess,
+      waitForPort: () => new Promise<void>(resolve => { readyLate = resolve; }),
+    });
+    try {
+      let settled = false;
+      const opening = selected.ensureStarted();
+      const rejected = expect(opening).rejects.toMatchObject({ allocated: true, code: 'ENOENT' });
+      void opening.then(() => { settled = true; }, () => { settled = true; });
+      await vi.waitFor(() => expect(refuse).toBeTypeOf('function'));
+      refuse!(linuxChildLaunchFailure('exec', true, 2));
+      await vi.waitFor(() => expect(completeCleanup).toBeTypeOf('function'));
+      expect(hoisted.killProcessTreeAndWaitMock).toHaveBeenCalledExactlyOnceWith(held, 'SIGKILL');
+      expect(selected.getCurrentHandle()).toBeNull(); expect(settled).toBe(false);
+      readyLate!(); await Promise.resolve(); expect(selected.getCurrentHandle()).toBeNull();
+      held.emit('exit', 111, null); held.emit('close', 111, null); completeCleanup!();
+      await rejected;
+      expect(vi.mocked(console.warn)).not.toHaveBeenCalled();
+    } finally { observer.mockRestore(); }
   });
 
   it('starts the MCP server over HTTP with hidden app-owned process env', async () => {

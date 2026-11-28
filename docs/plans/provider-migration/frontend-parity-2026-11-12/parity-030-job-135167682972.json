@@ -1,0 +1,117 @@
+{
+  "schema": "current-head-original-selected-ui-lane-success-v1",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runAttempt": 1,
+  "runId": 44407826474,
+  "job": {
+    "id": 135167682972,
+    "name": "Offline Host Desktop (linux-x64, processes)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-19T00:08:26Z",
+    "completed_at": "2026-11-19T00:12:41Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682972",
+    "runner_name": "GitHub Actions 1000395583"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682972,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 00:19:31 UTC",
+    "bytes": 316672,
+    "sha256": "0e3aaddd1cc0a6d19d3068c5817ff09ac7261a8bdd70c537e39272653785c687",
+    "computedGitBlobSha": "cebdbc3b74ca2d121e42cc40ef1ff5515e191a7d",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682972-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "cebdbc3b74ca2d121e42cc40ef1ff5515e191a7d",
+    "exactReadback": true
+  },
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 33858.144682",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 238.077613",
+    "ℹ tests 8",
+    "ℹ pass 8",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 4733.154959"
+  ],
+  "originalConsolePass": [
+    {
+      "status": "PASS",
+      "receipt": "/home/runner/work/_temp/TEST-desktop-backend-eFiOZM/desktop-backend-receipt.json"
+    }
+  ],
+  "originalScenarioAndVerificationSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-19T00:08:56Z",
+      "completed_at": "2026-11-19T00:08:57Z"
+    },
+    {
+      "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 26,
+      "started_at": "2026-11-19T00:11:09Z",
+      "completed_at": "2026-11-19T00:12:37Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-19T00:12:37Z",
+      "completed_at": "2026-11-19T00:12:37Z"
+    }
+  ],
+  "originalSafetyAndCleanupVerifierLines": [
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_PROOF_MODE: process-cold-ui",
+    "assert.equal(inputs.nativeProviders, 'forbidden');",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true);",
+    "    assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "    assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);",
+    "    assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);",
+    "  nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1",
+    "  LEGACY_DESKTOP_EMULATED_ONLY: 1"
+  ],
+  "artifactFromOriginalUploadLog": {
+    "artifactId": 14484966956,
+    "bytes": 742368,
+    "sha256": "3ea5cf1349757d9ccef81430572898efc5620c3ba6146a100c285d823bf1dad1",
+    "downloaded": false,
+    "visualInspection": false
+  },
+  "scope": "Original finite TEST processes frontend/Host scenario and original source/receipt/cleanup verification; real Claude and Codex were forbidden.",
+  "verificationLimit": "Original scenario PASS plus original source/receipt/cleanup verifier SUCCESS; full artifact receipt not separately downloaded. Common source unit tests repeat across jobs and are not summed as unique tests.",
+  "jobLogEndpointRetired": true
+}

@@ -10,10 +10,12 @@ const leadRowMockState = vi.hoisted(() => ({
     showAnthropicContextLimit?: boolean;
     disableAnthropicContextLimit?: boolean;
     layoutVariant?: 'default' | 'flat';
+    preserveSelectedModel?: boolean;
   } | null,
   lastMembersEditorProps: null as {
     layoutVariant?: 'default' | 'flat';
     toolbarLeading?: React.ReactNode;
+    preserveSelectedModel?: boolean;
   } | null,
 }));
 
@@ -52,6 +54,7 @@ function renderTeamRosterEditorSection(overrides: {
   syncModelsWithTeammates?: boolean;
   forceInheritedModelSettings?: boolean;
   hideMembersContent?: boolean;
+  preserveSelectedModel?: boolean;
 }): { host: HTMLDivElement; root: ReturnType<typeof createRoot> } {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -75,6 +78,7 @@ function renderTeamRosterEditorSection(overrides: {
         onSyncModelsWithTeammatesChange: () => undefined,
         forceInheritedModelSettings: overrides.forceInheritedModelSettings,
         hideMembersContent: overrides.hideMembersContent,
+        preserveSelectedModel: overrides.preserveSelectedModel,
       })
     );
   });
@@ -125,6 +129,22 @@ describe('TeamRosterEditorSection', () => {
       root.unmount();
     });
   });
+
+  it.each([undefined, true])(
+    'preserves explicit lead and teammate models only when requested (%s)',
+    (preserveSelectedModel) => {
+      const { root } = renderTeamRosterEditorSection({ preserveSelectedModel });
+      expect(leadRowMockState.lastLeadProps?.preserveSelectedModel).toBe(
+        preserveSelectedModel ?? false
+      );
+      expect(leadRowMockState.lastMembersEditorProps?.preserveSelectedModel).toBe(
+        preserveSelectedModel ?? false
+      );
+      act(() => {
+        root.unmount();
+      });
+    }
+  );
 
   it('hides the Anthropic context control when teammates are synced to a non-Anthropic lead', () => {
     const { root } = renderTeamRosterEditorSection({

@@ -1,0 +1,80 @@
+{
+  "kind": "PLAN53_LINEAGE_COMPATIBILITY_ORIGINAL_CI_VALIDATION",
+  "execution": false,
+  "separateCiCycle": false,
+  "originalFullEightCommand": "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+  "commandUnchanged": true,
+  "existingVenue": "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+  "caseNamesBefore": [
+    "retained c226 original rejected-key receipt joins its published seed and exact observed native probe",
+    "V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable",
+    "V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable",
+    "V2 source history accounts for every publication and the exact retained current chain",
+    "original Host rejects old other-project cwd and accepts only its separate exact private-account seed",
+    "archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal",
+    "original V2 default intent joins its selected saving row within the same receipt deadline"
+  ],
+  "caseNamesAfter": [
+    "retained c226 original rejected-key receipt joins its published seed and exact observed native probe",
+    "V2 receipt binding rejects foreign revisions, scope, seed owner, engine and executable",
+    "V2 publication rejects an internally rehashed foreign descriptor grant or replacement executable",
+    "V2 source history accounts for every publication and the exact retained current chain",
+    "original Host rejects old other-project cwd and accepts only its separate exact private-account seed",
+    "archived V2 tuple isolation restores the real runner and preserves foreign-platform refusal",
+    "original V2 default intent joins its selected saving row within the same receipt deadline",
+    "metadata read failures cannot acquire or retire an original native lifecycle",
+    "metadata observation separation still refuses malformed diagnostics and unknown lifecycle rows"
+  ],
+  "semanticPrediction": {
+    "newValidObservationCase": "Fails against original31160 at exact seven-key assertion after a valid initial baseline capture; predicted, not run.",
+    "newMalformedPreservationCase": "Should preserve refusal against both versions; predicted, not run.",
+    "allOldCases": "Whole original bodies retained; no actual new-head result is claimed."
+  },
+  "sameOriginalPrerequisites": "Original checkout/install/toolchain and fresh Host/ledger build in current Host workflow; no new project import/runner/setup command.",
+  "strictCommands": [
+    "pnpm typecheck:workspace",
+    "node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json"
+  ],
+  "strictScriptsConfig": {
+    "gitBlob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+    "bytes": 646,
+    "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306",
+    "include": [
+      "scripts/legacy-agent-host/**/*.ts",
+      "scripts/ci/prefill-legacy-host-macos-node.mts",
+      "packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts",
+      "packages/legacy-agent-host/scripts/qualifyLinuxProcessNative.ts",
+      "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbi.ts",
+      "packages/legacy-agent-host/scripts/qualifyLinuxProcessAbiHost.ts"
+    ],
+    "rootPackageScript": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json"
+  },
+  "fastLintShell": "pnpm lint:fast:files -- \\\n  packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts \\\n  packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts \\\n  packages/legacy-agent-host/tests/saved-team-model-probe.test.ts \\\n  tools/owned-process-broker/nativeEmulatedSourceProfile.ts \\\n  tools/owned-process-broker/nativeEmulatedSourceScenario.ts \\\n  tools/owned-process-broker/nativeEmulatedSourceReadiness.ts \\\n  packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \\\n  scripts/e2e/opencode-diagnostics/platform.mjs \\\n  scripts/e2e/opencode-diagnostics/platform.test.mjs \\\n  scripts/legacy-agent-host/desktop-backend-fixture.ts \\\n  scripts/legacy-agent-host/desktop-backend-observations.test.ts \\\n  scripts/legacy-agent-host/desktop-captured-app.ts \\\n  scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \\\n  scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts \\\n  scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts \\\n  scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts \\\n  scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \\\n  scripts/legacy-agent-host/desktop-emulated-boot-chat.ts \\\n  scripts/legacy-agent-host/desktop-native-process-ui.test.ts \\\n  scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \\\n  scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \\\n  scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts \\\n  scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \\\n  scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts \\\n  scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \\\n  scripts/legacy-agent-host/desktop-task-comment-input-target.ts \\\n  scripts/legacy-agent-host/desktop-team-ui-smoke.ts \\\n  scripts/legacy-agent-host/desktop-ui-controls.ts \\\n  scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \\\n  scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \\\n  scripts/legacy-agent-host/qualify-linux-process-sdk.ts \\\n  scripts/legacy-agent-host/run-packaged-opencode-v2.ts \\\n  src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts \\\n  src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts \\\n  src/features/agent-backend/renderer/createHostTeamChanges.ts \\\n  src/features/agent-backend/renderer/createHostTeamProvisioning.ts \\\n  src/features/agent-backend/renderer/index.ts \\\n  src/renderer/components/common/ProviderActivityStatusStrip.tsx \\\n  src/renderer/components/team/dialogs/LaunchTeamDialog.tsx \\\n  test/renderer/components/common/ProviderActivityStatusStrip.test.ts \\\n  src/renderer/store/slices/teamSlice.ts \\\n  src/renderer/store/team/teamRuntimeRunAdoption.ts \\\n  test/features/agent-backend/capturedWindowsSelection.test.ts \\\n  test/features/agent-backend/capturedRuntimeSourceNativeAdmission.test.ts \\\n  test/features/agent-backend/hostMemberSpawnStatuses.test.ts \\\n  test/features/agent-backend/runtimeActivityFacade.test.ts \\\n  test/renderer/store/teamRuntimeRunAdoption.test.ts \\\n  test/renderer/store/teamSlice.test.ts \\\n  tools/owned-process-broker/nativeWindowsAppGate.mjs \\\n  packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts \\\n  packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts \\\n  packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts \\\n  packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts \\\n  packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts \\\n  packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts \\\n  packages/legacy-agent-host/src/composition/HostScheduledRuns.ts \\\n  packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts \\\n  packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts \\\n  packages/legacy-agent-host/src/composition/readTeamActivity.ts \\\n  packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts \\\n  packages/legacy-agent-host/src/composition/scheduledRunProjection.ts \\\n  packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts \\\n  packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts \\\n  packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts \\\n  packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts \\\n  packages/legacy-agent-host/src/runtime/RuntimeOwner.ts \\\n  packages/legacy-agent-host/src/runtime/activityContracts.ts \\\n  packages/legacy-agent-host/src/runtime/normalizeActivity.ts \\\n  packages/legacy-agent-host/src/runtime/providerActivityContracts.ts \\\n  packages/legacy-agent-host/tests/captured-claude-process.test.ts \\\n  packages/legacy-agent-host/tests/codex-member-provider.test.ts \\\n  packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts \\\n  packages/legacy-agent-host/tests/management-model-probe.test.ts \\\n  packages/legacy-agent-host/tests/member-process-stderr.test.ts \\\n  packages/legacy-agent-host/tests/member-provider-authority.test.ts \\\n  packages/legacy-agent-host/tests/native-claude-host.native.ts \\\n  packages/legacy-agent-host/tests/native-codex-team.native.ts \\\n  packages/legacy-agent-host/tests/owned-process-facade.test.ts \\\n  packages/legacy-agent-host/tests/runtime-activity.test.ts \\\n  packages/legacy-agent-host/tests/runtime-team-host.test.ts \\\n  packages/legacy-agent-host/tests/scheduled-run-host.test.ts \\\n  packages/legacy-agent-host/tests/team-activity-read.test.ts \\\n  scripts/legacy-agent-host/desktop-activity-ui-smoke.ts \\\n  src/features/agent-backend/contracts/operations.ts \\\n  src/features/agent-backend/main/adapters/output/projectBackendResult.ts \\\n  src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts \\\n  src/features/agent-backend/renderer/createHostTaskActivityApi.ts \\\n  src/renderer/components/team/ClaudeLogsPanel.tsx \\\n  src/renderer/components/team/ClaudeLogsSection.tsx \\\n  src/renderer/components/team/members/HostMemberActivityLog.tsx \\\n  src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx \\\n  src/renderer/components/team/members/MemberLogsTab.tsx \\\n  src/shared/types/teamActivity.ts \\\n  src/shared/utils/diagnosticsRedaction.ts \\\n  src/shared/utils/redactDiagnosticAssignments.ts \\\n  src/shared/utils/runtimeDiagnosticText.ts \\\n  test/features/agent-backend/hostTaskActivity.test.ts \\\n  test/renderer/components/team/ClaudeLogsSection.test.ts \\\n  test/renderer/components/team/members/MemberLogsPolling.test.ts \\\n  test/renderer/components/team/members/hostLogStatsTabs.test.tsx \\\n  test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx \\\n  tools/owned-process-broker/fixtures/claudeProviderPeer.mjs \\\n  tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \\\n  tools/owned-process-broker/nativeDebugServiceScenario.ts \\\n  scripts/e2e/teams-create-page-desktop.mjs \\\n  tools/owned-process-broker/nativeWindowsAppFixture.ts \\\n  test/renderer/features/runtime-provider-management/useRuntimeProviderManagement.test.ts \\\n  scripts/legacy-agent-host/desktop-backend-smoke.ts \\\n  scripts/legacy-agent-host/desktop-live-membership-controlled.ts \\\n  scripts/legacy-agent-host/desktop-live-membership-ui-smoke.ts \\\n  scripts/legacy-agent-host/desktop-mixed-native-fixture.ts \\\n  scripts/legacy-agent-host/verify-desktop-v2-live-membership.ts \\\n  scripts/legacy-agent-host/desktop-task-review-cycle-ui-smoke.ts \\\n  tools/owned-process-broker/nativeGate.ts \\\n  tools/owned-process-broker/nativeGateDiagnostics.ts \\\n  tools/owned-process-broker/nativeGateEvents.test.ts \\\n  packages/legacy-agent-host/src/adapters/providers/nativeLaunchEnvironment.ts \\\n  packages/legacy-agent-host/src/adapters/providers/OpenCodeMemberProvider.ts \\\n  packages/legacy-agent-host/src/adapters/providers/OpenCodeManagementHost.ts \\\n  packages/legacy-agent-host/src/owned-process/index.ts \\\n  test/features/agent-backend/capturedWindowsSourceHistory.test.ts \\\n  tools/owned-process-broker/fixtures/providerPeer.mjs \\\n  test/renderer/hooks/useMentionDetection.test.ts \\\n  src/renderer/components/team/useTeamProvisioningPresentation.ts \\\n  test/renderer/components/team/TeamProvisioningBanner.test.ts \\\n  test/features/runtime-provider-management/capturedManagementClient.test.ts \\\n  scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts \\\n  packages/legacy-agent-host/src/adapters/providers/OpenCodeV2ManagementHost.ts \\\n  packages/legacy-agent-host/src/adapters/providers/createClaudeCloseDiagnostic.ts \\\n  test/features/agent-backend/claudeCloseDiagnostics.test.ts \\\n  scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+  "fastLintOperandsBefore": 130,
+  "fastLintOperandsAfter": 131,
+  "singleAddedLintOperand": "scripts/legacy-agent-host/desktop-opencode-metadata-lineage.ts",
+  "existingTestLintCovered": true,
+  "unchangedDownstreamScopes": [
+    "pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main",
+    "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer",
+    "pnpm lint:ci:files src/features --cache-location .eslintcache-features",
+    "pnpm lint:mcp"
+  ],
+  "sourceFreeze": {
+    "primaryRoster": {
+      "gitBlob": "a8be2617b2c765091cecce789f028ef2bf67af60",
+      "bytes": 52632,
+      "sha256": "5b6ae1e33b7567b7e72d0862f0253ca25875a696e653a86c61580a492601d69a"
+    },
+    "integratedRoster": {
+      "gitBlob": "083522612dd93e77dbb0e79c966103b03a71fe87",
+      "bytes": 44561,
+      "sha256": "555a309f762015659a3b7a0d44522785fa7ea171aedf77392020c25dc5d70e33"
+    },
+    "helperAlreadyPresentExactlyOnce": true,
+    "test": "Already selected by the exact full8 command and scoped lint; no test/source roster expansion required to exercise the parser regression.",
+    "rosterChange": false
+  },
+  "fixtureBoundary": "New tests use real temporary app-errors.ndjson files and actual captureDesktopSourceMetadataLineage/assertDesktopMetadataLineageReleased. Process facts are constructed oracle inputs, no process spawn/native provider call/clock override/environment replacement. Existing imports of Host dist remain original; new helper imports only node assert/crypto/fs/path and an erased ProcessFact type.",
+  "nativeLimit": "Original Desktop/native custody/cleanup acceptance still required. These parser tests cannot qualify a real metadata process or diagnose a historical timeout."
+}

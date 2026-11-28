@@ -1,0 +1,688 @@
+{
+  "schemaVersion": 1,
+  "kind": "original030-full-cross-team-reviewflow-and-three-cold-owner-epochs",
+  "sourceHead": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+  "event": "pull_request",
+  "runId": 44407826474,
+  "runAttempt": 1,
+  "job": {
+    "id": 135167682430,
+    "name": "Offline Host Desktop (linux-x64, cross-team)",
+    "head_sha": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "run_id": 44407826474,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-11-18T23:50:14Z",
+    "completed_at": "2026-11-19T00:00:52Z",
+    "html_url": "https://github.com/777genius/agent-teams-ai/actions/runs/44407826474/job/135167682430"
+  },
+  "rawLog": {
+    "phase": "permanently-retired",
+    "jobId": 135167682430,
+    "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+    "runId": 44407826474,
+    "runAttempt": 1,
+    "conclusion": "success",
+    "requestedAt": "2026-11-19 00:03:09 UTC",
+    "bytes": 294448,
+    "sha256": "313e6b01bbebccb0cc41fa3f3eaaab526687dec1894175110ed0aacd1846fed9",
+    "computedGitBlobSha": "ee62ee9f28154c6daf22d733ebf898d1cc4cdf11",
+    "rawLogLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682430-terminal.log",
+    "endpointRetired": true,
+    "publishedBlobSha": "ee62ee9f28154c6daf22d733ebf898d1cc4cdf11",
+    "exactReadback": true
+  },
+  "originalSuccessfulSteps": [
+    {
+      "name": "Verify original checkout and runner tuple",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 5,
+      "started_at": "2026-11-18T23:50:43Z",
+      "completed_at": "2026-11-18T23:50:43Z"
+    },
+    {
+      "name": "Exercise original Skills and cross-Team controls",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 17,
+      "started_at": "2026-11-18T23:52:33Z",
+      "completed_at": "2026-11-19T00:00:46Z"
+    },
+    {
+      "name": "Verify exact source, original screenshots, receipts and cleanup",
+      "status": "completed",
+      "conclusion": "success",
+      "number": 38,
+      "started_at": "2026-11-19T00:00:46Z",
+      "completed_at": "2026-11-19T00:00:47Z"
+    }
+  ],
+  "originalUnitSummaryLines": [
+    "ℹ tests 503",
+    "ℹ pass 503",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 31194.328019",
+    "ℹ tests 7",
+    "ℹ pass 7",
+    "ℹ fail 0",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 207.942708"
+  ],
+  "artifact": {
+    "artifactId": 14484121917,
+    "phase": "GitHub-download-endpoint-permanently-retired",
+    "fileId": "file_00000000f01481f49cedd68f6cfd522d",
+    "downloadResponseRecorded": true,
+    "bytes": 2935121,
+    "sha256": "67bfc1b40bdecd9b71f25e836186d342e4aa5a5ee327c059eb249846d62db249",
+    "digestMatchesOriginalUploadLog": true,
+    "zipLocal": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/030-cross-team-linux-x64-14484121917.zip",
+    "materializedAt": "2026-11-19T00:04:00.260582+00:00"
+  },
+  "finalReceipt": {
+    "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682430-final-receipt.json",
+    "bytes": 21382647,
+    "sha256": "ed994cbd73c010eb4050785a58ddf230d02d4215a755522453d85860b9d88674",
+    "source": {
+      "head": "030b21f0765d1a6e6572f46d262c672d63e69eb7",
+      "dirty": false
+    },
+    "status": "PASS",
+    "mode": "task-board-cross-team-ui",
+    "compressedExactBytes": {
+      "path": "/workspace/scratch/c714f5bce554/lint-review-ui-ci-030/job-135167682430-final-receipt.json.gz",
+      "bytes": 507578,
+      "sha256": "4c78095a0abc9c87c49c4c2749ac560b7c92ccc4cbfe838054c3b2218755c083",
+      "gitBlob": "ef69498f23dc3ab697ce3ddd3d39cfe823d23c93",
+      "encoding": "gzip of exact original receipt bytes, mtime0",
+      "contentAddressedUploadVerified": true,
+      "originalReceiptBytes": 21382647,
+      "originalReceiptSha256": "ed994cbd73c010eb4050785a58ddf230d02d4215a755522453d85860b9d88674"
+    }
+  },
+  "F1": {
+    "status": "PASS_ORIGINAL030_SCOPED",
+    "reviewFlow": {
+      "status": "PASS",
+      "scope": "TEST app defaults, captured Host override/inherit, human acceptance and renderer reopen through existing controls",
+      "taskId": "20293087-86e4-50ff-a5b7-508fb4a00c61",
+      "sourcePath": "scripts/legacy-agent-host/desktop-review-flow-ui-smoke.ts",
+      "sourceSha256": "108c17af79eeb3381d4adb6aeea1f36cb7c84fbb25f3a6e348e0d9d7baf9c6c8",
+      "sourceAssertions": [
+        {
+          "line": 80,
+          "text": "assert.equal(added.length, 1, 'one original Host command for one UI action');"
+        },
+        {
+          "line": 122,
+          "text": "assert.equal(await readFile(taskPath, 'utf8'), originalTaskBytes, 'settings never mutate the original Task');"
+        },
+        {
+          "line": 136,
+          "text": "assert.deepEqual(await commands(), priorCommands, 'global defaults retain their Main owner');"
+        },
+        {
+          "line": 160,
+          "text": "assert.equal(await readFile(defaultsPath, 'utf8'), humanDefaults, 'Host override never copies or changes app defaults');"
+        },
+        {
+          "line": 193,
+          "text": "assert.deepEqual(accepted.historyEvents.slice(0, -1), original.historyEvents);"
+        },
+        {
+          "line": 195,
+          "text": "assert.equal(humanEvent.type, 'human_approved');"
+        },
+        {
+          "line": 196,
+          "text": "assert.equal(humanEvent.actor, 'user');"
+        },
+        {
+          "line": 211,
+          "text": "assert.deepEqual(await commands(), priorCommands, 'reopen never repeats acceptance or settings writes');"
+        },
+        {
+          "line": 222,
+          "text": "assert.equal(priorCommands.length - initialCommands.length, 3);"
+        }
+      ],
+      "originalCommands": [
+        {
+          "boundary": "override",
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-Cc2nPE",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend"
+          },
+          "commandId": "1d64471c-4ce0-4460-b530-8b968569009c",
+          "principalId": "TEST-human",
+          "command": {
+            "operation": "task.board.review-flow",
+            "payload": {
+              "settings": {
+                "reviewFlow": "lead_then_human",
+                "reviewFlowPrompt": ""
+              }
+            },
+            "commandId": "1d64471c-4ce0-4460-b530-8b968569009c"
+          },
+          "phase": "completed",
+          "authorityRevision": 1,
+          "taskPlanVersion": 1,
+          "taskPreimage": "4f12e2affce1db75b90544c8fdf1ba55862c049da39aae2c868300fe1a7a0a31",
+          "taskHash": "79740645761d8216b4873718a07a1d12cb7007375a0ac7ac4f65a494cc14f067",
+          "resultReview": {
+            "reviewFlow": "lead_then_human"
+          }
+        },
+        {
+          "boundary": "inherit",
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-Cc2nPE",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend"
+          },
+          "commandId": "d2934934-b957-4ec6-b40e-b67027b00da7",
+          "principalId": "TEST-human",
+          "command": {
+            "operation": "task.board.review-flow",
+            "payload": {
+              "settings": null
+            },
+            "commandId": "d2934934-b957-4ec6-b40e-b67027b00da7"
+          },
+          "phase": "completed",
+          "authorityRevision": 1,
+          "taskPlanVersion": 1,
+          "taskPreimage": "a561726fce0590ed75d30399a210c4c2d276e453599cf49f45ea6003210cea75",
+          "taskHash": "d53352dd7192adef7bf3af66df35cb059e4adc1ccd0232e7e34759c27aa1fd4a",
+          "resultReview": {}
+        },
+        {
+          "boundary": "approval",
+          "binding": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-Cc2nPE",
+            "teamId": "TEST-desktop-team",
+            "teamName": "test-desktop-backend"
+          },
+          "commandId": "66bc8f7c-c3f3-4320-8b21-0c467c68575c",
+          "principalId": "TEST-human",
+          "command": {
+            "operation": "task.review",
+            "payload": {
+              "taskId": "20293087-86e4-50ff-a5b7-508fb4a00c61",
+              "action": "approve",
+              "notifyOwner": true,
+              "suppressTaskComment": true
+            },
+            "commandId": "66bc8f7c-c3f3-4320-8b21-0c467c68575c"
+          },
+          "phase": "completed",
+          "authorityRevision": 1,
+          "taskPlanVersion": 1,
+          "taskPreimage": "4f12e2affce1db75b90544c8fdf1ba55862c049da39aae2c868300fe1a7a0a31",
+          "taskHash": "10186e3be61d8e8df55798dad3085f960bcf3d8239f9ab9a9b5330b2f4f6c836",
+          "resultReview": {
+            "reviewState": "approved"
+          }
+        }
+      ],
+      "humanEvent": {
+        "id": "093604e1-7d8d-45b9-94d5-099e8831b1c9",
+        "timestamp": "2026-11-18T23:55:56.346Z",
+        "type": "human_approved",
+        "from": "none",
+        "to": "approved",
+        "actor": "user"
+      },
+      "inheritedAfterReload": true,
+      "restoredDefault": "agent_approval",
+      "actionCounts": {
+        "mouseMoved": 22,
+        "mouseClick": 22,
+        "mouseWheel": 6,
+        "observation": 2
+      },
+      "clickAndWheelTrace": [
+        {
+          "action": "mouseClick",
+          "label": "open original team Review flow",
+          "selector": "[data-testid=\"kanban-approved-settings\"]"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "reveal open existing default settings link",
+          "selector": "[data-testid=\"kanban-review-flow-open-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing default settings link",
+          "selector": "[data-testid=\"kanban-review-flow-open-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "select TEST app human_approval",
+          "selector": "[data-testid=\"review-flow-settings-human_approval\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "save TEST app review default",
+          "selector": "[data-testid=\"review-flow-settings-save\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "close original Settings tab",
+          "selector": "[role=\"tab\"][aria-selected=\"true\"] button[aria-label=\"Close tab\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original team Review flow",
+          "selector": "[data-testid=\"kanban-approved-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "switch original team to its own review policy",
+          "selector": "[data-testid=\"kanban-review-flow-use-default\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "select original Lead sign-off flow",
+          "selector": "[data-testid=\"kanban-review-flow-lead_then_human\"]"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "reveal save one original team review policy",
+          "selector": "[data-testid=\"kanban-review-flow-save\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "save one original team review policy",
+          "selector": "[data-testid=\"kanban-review-flow-save\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original team Review flow",
+          "selector": "[data-testid=\"kanban-approved-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "return original team to app defaults",
+          "selector": "[data-testid=\"kanban-review-flow-use-default\"]"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "reveal save one original team review policy",
+          "selector": "[data-testid=\"kanban-review-flow-save\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "save one original team review policy",
+          "selector": "[data-testid=\"kanban-review-flow-save\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original team Review flow",
+          "selector": "[data-testid=\"kanban-approved-settings\"]"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "reveal close inherited team policy",
+          "selector": "[data-testid=\"kanban-review-flow-panel\"] button"
+        },
+        {
+          "action": "mouseClick",
+          "label": "close inherited team policy",
+          "selector": "[data-testid=\"kanban-review-flow-panel\"] button"
+        },
+        {
+          "action": "mouseClick",
+          "label": "original human Approve once"
+        },
+        {
+          "action": "mouseClick",
+          "label": "sidebar task"
+        },
+        {
+          "action": "mouseClick",
+          "label": "Open team",
+          "selector": "[role=\"dialog\"] button"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "original Approved settings",
+          "selector": "[data-testid=\"kanban-approved-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open original team Review flow",
+          "selector": "[data-testid=\"kanban-approved-settings\"]"
+        },
+        {
+          "action": "mouseWheel",
+          "label": "reveal open existing default settings link",
+          "selector": "[data-testid=\"kanban-review-flow-open-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "open existing default settings link",
+          "selector": "[data-testid=\"kanban-review-flow-open-settings\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "select TEST app agent_approval",
+          "selector": "[data-testid=\"review-flow-settings-agent_approval\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "save TEST app review default",
+          "selector": "[data-testid=\"review-flow-settings-save\"]"
+        },
+        {
+          "action": "mouseClick",
+          "label": "close original Settings tab",
+          "selector": "[role=\"tab\"][aria-selected=\"true\"] button[aria-label=\"Close tab\"]"
+        }
+      ],
+      "screenshot": {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/ui-review-flow-human-approval.png",
+        "sha256": "dde52c0be21ab9888f846bdbcbd7ed2099cc01eae0e989e1a4cf1ed76b4c1a86"
+      }
+    },
+    "originalRootCleanup": {
+      "processGroup": 4392,
+      "remaining": [],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "capturedHostObserved": true,
+      "capturedHostAbsent": true,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "ownerDefaultRouting": {
+      "status": "PASS",
+      "scope": "Original A epoch, clean default/creation B configuration, original A Task Create and unbound save-only B Create, original A handle refusal with its real profile path unavailable, clean rollback preserving both published handles",
+      "selectionBoundary": "Cold trusted descriptor changes both defaultOwner and explicit creation.owner; neither an in-process switch nor a claim that defaultOwner alone chooses unbound creation. The original model Default control is separate.",
+      "budgetMs": 720000,
+      "budgetScope": "nonrenewable continuation bound within the unchanged 45-minute existing job; original cold startup/action bounds are not increased",
+      "excluded": [
+        "in-process preference setter",
+        "native allocation or inference",
+        "provider authentication",
+        "original UNKNOWN debt release",
+        "full F08/M18/Stage1"
+      ],
+      "epochs": [
+        {
+          "phase": "default-b",
+          "status": "PASS",
+          "startedAtMs": 1795046251588,
+          "originalApp": {
+            "pid": 14153,
+            "processGroup": 14153,
+            "identity": "Wed Nov 18 23:57:30 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-zGCGsC/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox"
+          },
+          "descriptor": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/owner-routing/default-b-descriptor.json",
+            "sha256": "6f6158748693358fa792d7244b5855a8dbdcb973565083eb5431b1586e217372"
+          },
+          "aProfile": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/host-profile.json",
+            "present": true,
+            "sha256": "8018c702be6893af381c5343e9392b5df686606e8a986910ba0fddf7ad82ce61"
+          },
+          "bProfile": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-xRjc70/host-profile.json",
+            "sha256": "2b3a7b886016310f074bfc5023801237f01c58cc510ef0b006312dc403e8bcc3"
+          },
+          "cleanup": {
+            "remaining": [],
+            "hosts": [
+              {
+                "pid": 14432,
+                "ppid": 14273,
+                "pgid": 14153
+              },
+              {
+                "pid": 14443,
+                "ppid": 14273,
+                "pgid": 14153
+              }
+            ],
+            "hostsAbsent": true,
+            "appExitCode": 0,
+            "appSignalCode": null,
+            "quitAttempted": true,
+            "signalAttempted": false,
+            "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+          },
+          "preservation": [
+            {
+              "boundary": "aPreservedThroughBCreate",
+              "before": "before",
+              "after": "after",
+              "manifestSha256": "12d7c65076de684a79e5358c44cc9dc3feac02b48545eb5065d8955b167e55e1",
+              "sameFiles": true,
+              "fileCount": 143,
+              "capturePathsDiffer": true
+            },
+            {
+              "boundary": "aPreservedThroughBTask",
+              "before": "before",
+              "after": "after",
+              "manifestSha256": "12d7c65076de684a79e5358c44cc9dc3feac02b48545eb5065d8955b167e55e1",
+              "sameFiles": true,
+              "fileCount": 143,
+              "capturePathsDiffer": true
+            }
+          ],
+          "unavailableRefusal": null,
+          "sentinelUnchangedThroughQuit": true,
+          "sourceBoundProductCensus": {
+            "aSha256": "12d7c65076de684a79e5358c44cc9dc3feac02b48545eb5065d8955b167e55e1",
+            "bSha256": "317e37c55ce0fcef6ed5104492a062b10b49f4282e7e5ab06bda5b38d6162ed3"
+          }
+        },
+        {
+          "phase": "unavailable-a",
+          "status": "PASS",
+          "startedAtMs": 1795046318805,
+          "originalApp": {
+            "pid": 15749,
+            "processGroup": 15749,
+            "identity": "Wed Nov 18 23:58:38 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-zGCGsC/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox"
+          },
+          "descriptor": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/owner-routing/unavailable-a-descriptor.json",
+            "sha256": "6f6158748693358fa792d7244b5855a8dbdcb973565083eb5431b1586e217372"
+          },
+          "aProfile": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/host-profile.json",
+            "present": false,
+            "withheldPath": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/owner-routing/owner-a-withheld-profile.json",
+            "withheldSha256": "8018c702be6893af381c5343e9392b5df686606e8a986910ba0fddf7ad82ce61"
+          },
+          "bProfile": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-xRjc70/host-profile.json",
+            "sha256": "2b3a7b886016310f074bfc5023801237f01c58cc510ef0b006312dc403e8bcc3"
+          },
+          "cleanup": {
+            "remaining": [],
+            "hosts": [
+              {
+                "pid": 16020,
+                "ppid": 15867,
+                "pgid": 15749
+              }
+            ],
+            "hostsAbsent": true,
+            "appExitCode": 0,
+            "appSignalCode": null,
+            "quitAttempted": true,
+            "signalAttempted": false,
+            "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+          },
+          "preservation": [
+            {
+              "boundary": "originalHandleRefusal",
+              "before": "beforeA",
+              "after": "afterA",
+              "manifestSha256": "20fb6877fd0ab510d57d251303ff5f06dfa014406e0e094aa88351af6a5f30f5",
+              "sameFiles": true,
+              "fileCount": 144,
+              "capturePathsDiffer": true
+            },
+            {
+              "boundary": "originalHandleRefusal",
+              "before": "beforeB",
+              "after": "afterB",
+              "manifestSha256": "48e2888d1630c69cb18a244599118dba5f96dd5d0f8ebd70c78012eeef9521ab",
+              "sameFiles": true,
+              "fileCount": 11,
+              "capturePathsDiffer": true
+            },
+            {
+              "boundary": "availabilityProductReadOnly",
+              "before": "beforeA",
+              "after": "afterA",
+              "manifestSha256": "20fb6877fd0ab510d57d251303ff5f06dfa014406e0e094aa88351af6a5f30f5",
+              "sameFiles": true,
+              "fileCount": 144,
+              "capturePathsDiffer": true
+            },
+            {
+              "boundary": "availabilityProductReadOnly",
+              "before": "beforeB",
+              "after": "afterB",
+              "manifestSha256": "48e2888d1630c69cb18a244599118dba5f96dd5d0f8ebd70c78012eeef9521ab",
+              "sameFiles": true,
+              "fileCount": 11,
+              "capturePathsDiffer": true
+            }
+          ],
+          "unavailableRefusal": {
+            "result": {
+              "ok": false,
+              "code": "unavailable",
+              "outcome": "not-dispatched"
+            },
+            "noRetry": true
+          },
+          "sentinelUnchangedThroughQuit": true,
+          "sourceBoundProductCensus": {
+            "aSha256": "20fb6877fd0ab510d57d251303ff5f06dfa014406e0e094aa88351af6a5f30f5",
+            "bSha256": "48e2888d1630c69cb18a244599118dba5f96dd5d0f8ebd70c78012eeef9521ab"
+          }
+        },
+        {
+          "phase": "rollback-a",
+          "status": "PASS",
+          "startedAtMs": 1795046392417,
+          "originalApp": {
+            "pid": 18451,
+            "processGroup": 18451,
+            "identity": "Wed Nov 18 23:59:51 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-zGCGsC/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox"
+          },
+          "descriptor": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/owner-routing/rollback-a-descriptor.json",
+            "sha256": "fc0da12d89fed8bad13a7b80bace427981d9a82ef228d7a1728b02f8ba435b87"
+          },
+          "aProfile": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-Cc2nPE/host-profile.json",
+            "present": true,
+            "sha256": "8018c702be6893af381c5343e9392b5df686606e8a986910ba0fddf7ad82ce61"
+          },
+          "bProfile": {
+            "path": "/home/runner/work/_temp/TEST-desktop-backend-xRjc70/host-profile.json",
+            "sha256": "2b3a7b886016310f074bfc5023801237f01c58cc510ef0b006312dc403e8bcc3"
+          },
+          "cleanup": {
+            "remaining": [],
+            "hosts": [
+              {
+                "pid": 18750,
+                "ppid": 18598,
+                "pgid": 18451
+              },
+              {
+                "pid": 18761,
+                "ppid": 18598,
+                "pgid": 18451
+              }
+            ],
+            "hostsAbsent": true,
+            "appExitCode": null,
+            "appSignalCode": "SIGTERM",
+            "quitAttempted": true,
+            "signalAttempted": true,
+            "scope": "Guarded original app close and established exact-identity wrapper cleanup; no universal natural-exit qualification"
+          },
+          "preservation": [
+            {
+              "boundary": "otherOwnerPreserved",
+              "before": "aBefore",
+              "after": "aAfter",
+              "manifestSha256": "64c3ca5ad669162714aafbc37dd2e74c520b4fd5a0a5937194b4b208c1277105",
+              "sameFiles": true,
+              "fileCount": 148,
+              "capturePathsDiffer": true
+            },
+            {
+              "boundary": "otherOwnerPreserved",
+              "before": "bBefore",
+              "after": "bAfter",
+              "manifestSha256": "2ec9c30921da6b8aae594fb51fe9bccb18caf25579ec09823bdd60750cda180a",
+              "sameFiles": true,
+              "fileCount": 11,
+              "capturePathsDiffer": true
+            }
+          ],
+          "unavailableRefusal": null,
+          "sentinelUnchangedThroughQuit": true,
+          "sourceBoundProductCensus": {
+            "aSha256": "64c3ca5ad669162714aafbc37dd2e74c520b4fd5a0a5937194b4b208c1277105",
+            "bSha256": "e13299a4106a25c64aef29d56f9e2b5c7830e00aee311382a0044ca9d18adc10"
+          }
+        }
+      ]
+    },
+    "sourceFreeze": {
+      "beforeAndAfterEqual": true,
+      "sourceCount": 1883,
+      "canonicalSourceListSha256": "9d4446ab7132898e323208935831358635a78c0459d7449e35ac9ec8f8b2b927",
+      "digestMethod": "SHA256 of sort_keys JSON with separators comma and colon; complete original source list retained in compressed final receipt",
+      "dirty": false
+    }
+  },
+  "emulation": {
+    "only": true,
+    "runtimeConfigured": false,
+    "managementConfigured": false,
+    "noNativeHostChildrenBeforeUi": true,
+    "noNativeHostChildren": true
+  },
+  "sourceScope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+  "excluded": [
+    "provider sessions",
+    "vendor authentication",
+    "native model execution",
+    "full Stage1/release/default activation"
+  ],
+  "limits": [
+    "Only original030 is qualified; candidate/new-head source acceptance is not inferred.",
+    "ReviewFlow lead_then_human was saved as policy; no claim that this GUI proof executed a native lead handoff.",
+    "Original root and first two cold epochs exited app0. Rollback-a required the existing guarded SIGTERM fallback, then all captured Hosts were absent and remaining was empty. This is not universal natural-exit qualification.",
+    "No app/native/browser was rerun locally; original completed logs and artifact were captured once and their endpoints retired.",
+    "No full native/vendor credentials, Stage1, release or default activation qualification.",
+    "Common503+7 test results repeat across UI jobs and are not added as unique coverage.",
+    "Original screenshot bytes are pinned; no independent pixel/visual audit has yet been performed."
+  ],
+  "capturedAt": "2026-11-19T00:09:59.834473+00:00",
+  "jobLogEndpointRetired": true,
+  "artifactDownloadEndpointRetired": true
+}

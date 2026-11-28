@@ -8,7 +8,9 @@ import type { StateCreator } from 'zustand';
 
 const log = createLogger('EditorSaveActions');
 const without = <T>(record: Record<string, T>, key: string): Record<string, T> => {
-  const next = { ...record }; delete next[key]; return next;
+  const next = { ...record };
+  delete next[key];
+  return next;
 };
 
 /** A save acknowledges one document identity, never subsequent edits or a new session. */
@@ -29,8 +31,11 @@ export function createEditorSaveActions(
       ...(force ? { editorConflictFile: null } : {}),
     }));
     try {
-      const result = await api.editor.writeFile(filePath, snapshot.content,
-        force ? undefined : get().editorFileMtimes[filePath]);
+      const result = await api.editor.writeFile(
+        filePath,
+        snapshot.content,
+        force ? undefined : get().editorFileMtimes[filePath]
+      );
       if (!editorBridge.matchesSaveTarget(filePath, snapshot)) return;
       onSaved(filePath);
       editorBridge.updateBaseline(filePath, result.mtimeMs);
@@ -42,7 +47,11 @@ export function createEditorSaveActions(
         ...(unchanged ? { editorModifiedFiles: without(state.editorModifiedFiles, filePath) } : {}),
       }));
       if (unchanged) {
-        try { localStorage.removeItem(`editor-draft:${filePath}`); } catch { /* unavailable storage */ }
+        try {
+          localStorage.removeItem(`editor-draft:${filePath}`);
+        } catch {
+          /* unavailable storage */
+        }
       }
     } catch (error) {
       if (!editorBridge.matchesSaveTarget(filePath, snapshot)) return;
@@ -50,7 +59,8 @@ export function createEditorSaveActions(
       log.error('Failed to save file:', filePath, message);
       set((state) => ({
         editorSaving: without(state.editorSaving, filePath),
-        ...(message.includes('CONFLICT') ? { editorConflictFile: filePath }
+        ...(message.includes('CONFLICT')
+          ? { editorConflictFile: filePath }
           : { editorSaveError: { ...state.editorSaveError, [filePath]: message } }),
       }));
     } finally {

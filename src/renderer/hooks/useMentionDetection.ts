@@ -1,4 +1,11 @@
-import { type Dispatch, type SetStateAction, useCallback, useRef, useState } from 'react';
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import {
@@ -49,6 +56,13 @@ interface MentionTrigger {
   triggerIndex: number;
   triggerChar: string;
   query: string;
+}
+
+interface PendingInputObservation {
+  element: HTMLTextAreaElement;
+  text: string;
+  selectionStart: number;
+  selectionEnd: number;
 }
 
 /**
@@ -191,8 +205,14 @@ export function useMentionDetection({
   // Track current query in a ref so detectTrigger can avoid resetting selectedIndex
   // on redundant selectionchange events (e.g. after ArrowDown/Up keyboard navigation)
   const queryRef = useRef('');
+  const pendingInputRef = useRef<PendingInputObservation | null>(null);
+  const enabledTriggerSignature = JSON.stringify(
+    [...new Set(triggerChars)].filter((char) => isTriggerEnabled?.(char) ?? true).sort()
+  );
+  const previousEnabledTriggerSignatureRef = useRef(enabledTriggerSignature);
 
   const dismiss = useCallback(() => {
+    pendingInputRef.current = null;
     setIsOpen(false);
     setActiveTriggerChar(null);
     setQuery('');
@@ -246,80 +266,108 @@ export function useMentionDetection({
     [value, onValueChange, textareaRef, dismiss]
   );
 
-  /**
-   * Detects whether cursor is inside a trigger region and opens/dismisses the dropdown.
-   *
-   * Called from handleSelect (selectionchange) — must NOT reset selectedIndex when
-   * the trigger is already active with the same query, otherwise ArrowDown/Up navigation
-   * gets immediately undone by the selectionchange event that follows keydown.
-   */
+  const activateTrigger = useCallback(
+    (trigger: MentionTrigger, text: string, resetSelection: boolean) => {
+      const sameQuery =
+        triggerIndexRef.current === trigger.triggerIndex &&
+        activeTriggerCharRef.current === trigger.triggerChar &&
+        queryRef.current === trigger.query;
+      pendingInputRef.current = null;
+      triggerIndexRef.current = trigger.triggerIndex;
+      activeTriggerCharRef.current = trigger.triggerChar;
+      queryRef.current = trigger.query;
+      setActiveTriggerChar(trigger.triggerChar);
+      setQuery(trigger.query);
+      setIsOpen(true);
+      // A repeated select must not undo ArrowDown/Up; text changes reset the index.
+      if (resetSelection || !sameQuery) setSelectedIndex(0);
+      computeDropdownPosition(trigger.triggerIndex, text);
+    },
+    [computeDropdownPosition]
+  );
+
   const detectTrigger = useCallback(
-    (cursorPos: number) => {
-      const trigger = findMentionTrigger(value, cursorPos, triggerChars);
+    (textarea: HTMLTextAreaElement, text: string, resetSelection: boolean) => {
+      const trigger = findMentionTrigger(text, textarea.selectionStart, triggerChars);
       const isEnabled = trigger ? (isTriggerEnabled?.(trigger.triggerChar) ?? true) : false;
-      const isValid = trigger ? (isTriggerMatchValid?.(trigger, value) ?? true) : false;
+      const isValid = trigger ? (isTriggerMatchValid?.(trigger, text) ?? true) : false;
       if (trigger && isEnabled && isValid) {
-        const sameQuery =
-          triggerIndexRef.current === trigger.triggerIndex &&
-          activeTriggerCharRef.current === trigger.triggerChar &&
-          queryRef.current === trigger.query;
-        triggerIndexRef.current = trigger.triggerIndex;
-        activeTriggerCharRef.current = trigger.triggerChar;
-        queryRef.current = trigger.query;
-        setActiveTriggerChar(trigger.triggerChar);
-        setQuery(trigger.query);
-        setIsOpen(true);
-        // Only reset selection when trigger/query actually changed —
-        // preserves keyboard navigation index across redundant selectionchange events
-        if (!sameQuery) {
-          setSelectedIndex(0);
-        }
-        computeDropdownPosition(trigger.triggerIndex, value);
+        activateTrigger(trigger, text, resetSelection);
       } else {
         dismiss();
+        if (
+          textarea === textareaRef.current &&
+          textarea.isConnected &&
+          document.activeElement === textarea &&
+          !textarea.disabled &&
+          !textarea.readOnly &&
+          textarea.selectionStart === textarea.selectionEnd
+        ) {
+          // This is only an observed input; current rules must admit a trigger later.
+          pendingInputRef.current = {
+            element: textarea,
+            text,
+            selectionStart: textarea.selectionStart,
+            selectionEnd: textarea.selectionEnd,
+          };
+        }
       }
     },
-    [value, triggerChars, isTriggerEnabled, isTriggerMatchValid, dismiss, computeDropdownPosition]
+    [triggerChars, isTriggerEnabled, isTriggerMatchValid, dismiss, activateTrigger, textareaRef]
   );
+
+  useEffect(() => {
+    if (previousEnabledTriggerSignatureRef.current === enabledTriggerSignature) return;
+    previousEnabledTriggerSignatureRef.current = enabledTriggerSignature;
+    const pending = pendingInputRef.current;
+    if (!pending) return;
+    const textarea = textareaRef.current;
+    if (
+      !textarea ||
+      textarea !== pending.element ||
+      !textarea.isConnected ||
+      document.activeElement !== textarea ||
+      textarea.disabled ||
+      textarea.readOnly ||
+      textarea.value !== pending.text ||
+      textarea.selectionStart !== pending.selectionStart ||
+      textarea.selectionEnd !== pending.selectionEnd ||
+      textarea.selectionStart !== textarea.selectionEnd
+    ) {
+      pendingInputRef.current = null;
+      return;
+    }
+    const trigger = findMentionTrigger(pending.text, textarea.selectionStart, triggerChars);
+    if (
+      trigger &&
+      (isTriggerEnabled?.(trigger.triggerChar) ?? true) &&
+      (isTriggerMatchValid?.(trigger, pending.text) ?? true)
+    ) {
+      activateTrigger(trigger, pending.text, false);
+    }
+  }, [
+    enabledTriggerSignature,
+    triggerChars,
+    isTriggerEnabled,
+    isTriggerMatchValid,
+    activateTrigger,
+    textareaRef,
+  ]);
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = e.target.value;
+      const textarea = e.currentTarget;
+      const newValue = textarea.value;
       onValueChange(newValue);
-
-      // Detect trigger based on cursor position after the change
-      const cursorPos = e.target.selectionStart;
-      const trigger = findMentionTrigger(newValue, cursorPos, triggerChars);
-      const isEnabled = trigger ? (isTriggerEnabled?.(trigger.triggerChar) ?? true) : false;
-      const isValid = trigger ? (isTriggerMatchValid?.(trigger, newValue) ?? true) : false;
-      if (trigger && isEnabled && isValid) {
-        triggerIndexRef.current = trigger.triggerIndex;
-        activeTriggerCharRef.current = trigger.triggerChar;
-        queryRef.current = trigger.query;
-        setActiveTriggerChar(trigger.triggerChar);
-        setQuery(trigger.query);
-        setIsOpen(true);
-        // Text changed — always reset selection to first item
-        setSelectedIndex(0);
-        computeDropdownPosition(trigger.triggerIndex, newValue);
-      } else {
-        dismiss();
-      }
+      detectTrigger(textarea, newValue, true);
     },
-    [
-      onValueChange,
-      triggerChars,
-      isTriggerEnabled,
-      isTriggerMatchValid,
-      dismiss,
-      computeDropdownPosition,
-    ]
+    [onValueChange, detectTrigger]
   );
 
   const handleSelect = useCallback(
     (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-      const target = e.target as HTMLTextAreaElement;
-      detectTrigger(target.selectionStart);
+      const textarea = e.currentTarget;
+      detectTrigger(textarea, textarea.value, false);
     },
     [detectTrigger]
   );
@@ -330,10 +378,11 @@ export function useMentionDetection({
       suggestionCount: number,
       onSelectSuggestion: (index: number) => void
     ) => {
-      if (!isOpen || suggestionCount === 0) return;
       // Don't navigate/select while an IME composition is active — Enter/Arrow
       // keys belong to the input method's candidate selection at that point.
       if (isImeComposing(e)) return;
+      if (e.key === 'Escape') pendingInputRef.current = null;
+      if (!isOpen || suggestionCount === 0) return;
 
       switch (e.key) {
         case 'ArrowDown':

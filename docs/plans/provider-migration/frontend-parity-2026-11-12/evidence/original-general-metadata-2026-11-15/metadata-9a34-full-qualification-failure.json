@@ -1,0 +1,28 @@
+{
+  "kind": "original-9a34-metadata-policy-failure",
+  "runId": 43751142771,
+  "jobId": 132938451952,
+  "sourceHead": "9a34bb28de0a0deee2eecc42099fd9500563eb1b",
+  "checkoutMerge": "5f0ba710241db0975e2d5868cb5feae530cbd6cc",
+  "nodeVersion": "26.12.1",
+  "command": [
+    "node",
+    "scripts/ci/ci-feedback.mts",
+    "metadata-gate"
+  ],
+  "result": "failure",
+  "failure": "Only a ready PR title/body edit can carry existing qualification",
+  "failureUTC": "2026-11-15T20:23:37.4593701Z",
+  "log": {
+    "path": "job-132938451952.log",
+    "bytes": 16586,
+    "blob": "4723ef251dc9f75819e433f63040340f79b00deb",
+    "sha256": "e0fac9d5baf441113862b4908b929dc01944cff8fa59e013abdeb5feeb32fa66"
+  },
+  "limits": [
+    "Actual unchanged metadata policy failure on a Draft PR; not a newly executed application/native test failure.",
+    "The user requires retaining Draft; this record does not authorize Ready or changing the policy gate.",
+    "No status transfers to source 2cb or a later source.",
+    "No CI rerun, cancellation, dispatch or metadata mutation by this observer."
+  ]
+}

@@ -193,6 +193,23 @@ function liveRuntimeEntry(overrides: Partial<TeamAgentRuntimeEntry> = {}): TeamA
 }
 
 describe('MemberList spawn-status memoization', () => {
+  it('refreshes an otherwise equal member when only captured Host ownership changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => root.render(React.createElement(MemberList, { members: [member] })));
+    const before = memberCardRenderSpy.mock.calls.length;
+    await act(async () =>
+      root.render(
+        React.createElement(MemberList, { members: [{ ...member, runtimeOwner: 'captured-host' }] })
+      )
+    );
+    expect(memberCardRenderSpy.mock.calls.length).toBeGreaterThan(before);
+    expect(memberCardRenderSpy.mock.calls.at(-1)?.[0].member.runtimeOwner).toBe('captured-host');
+    await act(async () => root.unmount());
+  });
+
   beforeEach(() => {
     memberCardRenderSpy.mockClear();
     vi.stubGlobal(

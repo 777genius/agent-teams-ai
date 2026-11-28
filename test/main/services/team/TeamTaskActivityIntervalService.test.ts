@@ -112,6 +112,20 @@ describe('TeamTaskActivityIntervalService', () => {
     ]);
   });
 
+  it('does not recreate a legacy review timer after explicit Disapprove', async () => {
+    await writeTask('alpha', {
+      id: 'disapproved-task', subject: 'Done', owner: 'bob', status: 'completed', reviewState: 'none',
+      historyEvents: [
+        { id: 'started', type: 'review_started', timestamp: '2026-05-08T10:00:00.000Z', actor: 'alice' },
+        { id: 'removed', type: 'review_disapproved', from: 'approved', to: 'none', timestamp: '2026-05-08T10:05:00.000Z', actor: 'user' },
+      ],
+    });
+    const before = await readTask('alpha', 'disapproved-task');
+    const result = new TeamTaskActivityIntervalService().pauseActiveIntervalsForTeam('alpha', '2026-05-08T10:10:00.000Z');
+    expect(result.changedTasks).toBe(0);
+    expect(await readTask('alpha', 'disapproved-task')).toEqual(before);
+  });
+
   it('materializes closed intervals for legacy active history timers on pause', async () => {
     await writeTask('alpha', {
       id: 'work-task',

@@ -28,7 +28,7 @@ interface UseOrganizationCreateTeamDialogResult {
   createTeam: (
     request: TeamCreateRequest,
     placement?: OrganizationPlacementSelection
-  ) => Promise<void>;
+  ) => Promise<string>;
   openTeam: (teamName: string, projectPath?: string) => void;
   openCreationPage: (placement: OrganizationPlacementSelection) => Promise<void>;
 }
@@ -86,45 +86,49 @@ export function useOrganizationCreateTeamDialog(): UseOrganizationCreateTeamDial
     async (
       request: TeamCreateRequest,
       placement?: OrganizationPlacementSelection
-    ): Promise<void> => {
-      await createTeam(request);
-      if (!placement) {
-        return;
+    ): Promise<string> => {
+      const created = await createTeam(request);
+      const teamName = created.teamName ?? request.teamName;
+      if (placement) {
+        try {
+          await api.organizations.assignTeamToUnit({
+            ...placement,
+            teamName,
+            label: request.displayName || request.teamName,
+          });
+        } catch (error) {
+          console.warn('[Organizations] Failed to place created team in organization', error);
+        }
       }
-      try {
-        await api.organizations.assignTeamToUnit({
-          ...placement,
-          teamName: request.teamName,
-          label: request.displayName || request.teamName,
-        });
-      } catch (error) {
-        console.warn('[Organizations] Failed to place created team in organization', error);
-      }
+      return teamName;
     },
     [createTeam]
   );
 
-  const openCreationPage = useCallback(async (placement: OrganizationPlacementSelection) => {
-    const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
-    const hasOpenEditor = useStore
-      .getState()
-      .getAllPaneTabs()
-      .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
-    if (hasOpenEditor || hasSavedDraft) {
-      const accepted = await confirm({
-        title: t('create.title.create'),
-        message: t('create.draft.replaceConfirmation', {
-          defaultValue: 'Creating this team will replace your unfinished draft. Continue?',
-        }),
-        confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
-        variant: 'danger',
-      });
-      if (!accepted) return;
-    }
-    const originTabId = useStore.getState().getActiveTab()?.id;
-    await resetCreateTeamDraft();
-    openTeamsCreationPage({ placement, originTabId }, true);
-  }, [openTeamsCreationPage, t]);
+  const openCreationPage = useCallback(
+    async (placement: OrganizationPlacementSelection) => {
+      const hasSavedDraft = await hasUnfinishedCreateTeamDraft();
+      const hasOpenEditor = useStore
+        .getState()
+        .getAllPaneTabs()
+        .some((tab) => tab.type === 'teams' && tab.teamsCreationPage);
+      if (hasOpenEditor || hasSavedDraft) {
+        const accepted = await confirm({
+          title: t('create.title.create'),
+          message: t('create.draft.replaceConfirmation', {
+            defaultValue: 'Creating this team will replace your unfinished draft. Continue?',
+          }),
+          confirmLabel: t('create.draft.replace', { defaultValue: 'Replace draft' }),
+          variant: 'danger',
+        });
+        if (!accepted) return;
+      }
+      const originTabId = useStore.getState().getActiveTab()?.id;
+      await resetCreateTeamDraft();
+      openTeamsCreationPage({ placement, originTabId }, true);
+    },
+    [openTeamsCreationPage, t]
+  );
 
   return {
     canCreate,

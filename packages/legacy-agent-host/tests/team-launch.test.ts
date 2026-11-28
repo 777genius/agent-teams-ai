@@ -1,0 +1,991 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, realpath, rm, readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { test } from 'node:test';
+import { TeamLaunchOwner } from '../dist/team-launch/TeamLaunchOwner.js';
+import { TeamLaunchError } from '../dist/team-launch/contracts.js';
+import { initialContextDigest } from '../dist/team-launch/context.js';
+import { TeamOwnerStore } from '../dist/adapters/team/TeamOwnerStore.js';
+import { FileRuntimeStore } from '../dist/adapters/runtime/FileRuntimeStore.js';
+import { RuntimeOwner } from '../dist/runtime/RuntimeOwner.js';
+import { runtimeDigest } from '../dist/runtime/identity.js';
+import { launchPreparationFingerprint } from '../dist/team-launch/launchPreparation.js';
+import { executeTeamLaunch } from '../dist/composition/executeTeamLaunch.js';
+import type { TeamLaunchDefinition, TeamLaunchRecord, NativeContextEvidence } from '../dist/team-launch/contracts.js';
+import type { RuntimeBinding } from '../dist/runtime/contracts.js';
+import type { Event, Input, Session } from '@agent-teams/provider-session-contracts';
+
+const tick = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+const binding = (memberId: string): RuntimeBinding => ({
+  backendId: 'TEST-backend',
+  teamId: 'TEST-team',
+  runId: 'TEST-run',
+  memberId,
+  generation: 'generation-1',
+});
+const instructions = (id: string): string => `TEST role ${id}; team TEST-team; workspace TEST-only`;
+class ControlledSession implements Session {
+  readonly sessionRef: string;
+  readonly submits: Input[] = [];
+  readonly installedInstructions: string;
+  private queue: Event[] = [];
+  private waiter: ((result: IteratorResult<Event>) => void) | undefined;
+  private ended = false;
+  constructor(id: string) {
+    this.sessionRef = `native-${id}`;
+    this.installedInstructions = instructions(id);
+  }
+  emit(event: Event): void {
+    if (this.waiter) {
+      const waiter = this.waiter;
+      this.waiter = undefined;
+      waiter({ done: false, value: event });
+    } else this.queue.push(event);
+  }
+  submit: Session['submit'] = async (input) => {
+    this.submits.push(input);
+    return {
+      ok: true,
+      value: {
+        inputId: input.inputId,
+        operationRef: input.operationRef,
+        delivery: 'client-consumed',
+        providerAcceptance: 'unknown',
+      },
+    };
+  };
+  observe = (): AsyncIterable<Event> => ({
+    [Symbol.asyncIterator]: () => ({
+      next: () => {
+        const event = this.queue.shift();
+        if (event) return Promise.resolve({ done: false, value: event });
+        if (this.ended) return Promise.resolve({ done: true, value: undefined });
+        return new Promise((resolve) => {
+          this.waiter = resolve;
+        });
+      },
+    }),
+  });
+  respondToInteraction: Session['respondToInteraction'] = async () => ({
+    ok: true,
+    value: undefined,
+  });
+  interrupt: Session['interrupt'] = async () => ({
+    ok: true,
+    value: { requested: true, terminal: 'unconfirmed' },
+  });
+  checkReadiness: Session['checkReadiness'] = async () => ({ ok: true, value: undefined });
+  checkpoint: Session['checkpoint'] = () => ({ ok: false, code: 'unsupported' });
+  close: Session['close'] = async () => {
+    this.end();
+    return { logicallyClosed: true, cleanup: 'confirmed' };
+  };
+  end(): void {
+    this.ended = true;
+    this.waiter?.({ done: true, value: undefined });
+    this.waiter = undefined;
+  }
+}
+async function setup(t: { after(fn: () => Promise<void>): void }, members = ['A', 'B', 'C']) {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'TEST-team-launch-'))),
+    store = new TeamOwnerStore(root, 'TEST-team'),
+    runtimeStore = new FileRuntimeStore(root),
+    sessions = new Map<string, ControlledSession>(),
+    opens = new Map<string, number>(),
+    openAttempts = new Map<string, number>(),
+    observationReads = new Map<string, number>();
+  const configured = new Set(members),
+    observationFailure = new Set<string>(),
+    failBeforeRuntime = new Set<string>(),
+    ready = new Set(members),
+    contextAccepted = new Set(members),
+    proofOverride = new Map<string, NativeContextEvidence>(),
+    heldFactories = new Map<string, Promise<void>>(),
+    failedFactories = new Set<string>();
+  let now = Date.now(),
+    authorized = true;
+  const definition: TeamLaunchDefinition = {
+    launchId: 'TEST-run',
+    rosterRevision: 'TEST-roster-1',
+    members: members.map((id) => ({
+      memberId: id,
+      binding: binding(id),
+      configurationDigest: `config-${id}`,
+      contextDigest: initialContextDigest(instructions(id)),
+      configRevision: 'config-1',
+      skipped: false,
+      timeoutMs: 30_000,
+    })),
+  };
+  const make = (hostIncarnation = 'host-1') => {
+    const runtime = new RuntimeOwner({
+      store: runtimeStore,
+      profileId: 'TEST-profile',
+      hostIncarnation,
+      authorize: () => true,
+      canDispatch: () => true,
+      driverFactory: {
+        open: async (request) => {
+          opens.set(request.sessionId, (opens.get(request.sessionId) ?? 0) + 1);
+          const held = heldFactories.get(request.sessionId);
+          if (held) await held;
+          if (failedFactories.has(request.sessionId)) throw new Error('TEST factory failed after opening');
+          const session = new ControlledSession(request.sessionId);
+          sessions.set(request.sessionId, session);
+          return { driver: session, capabilities: ['tools'] };
+        },
+      },
+    });
+    const evidence = (id: string): NativeContextEvidence | undefined => {
+      if (proofOverride.has(id)) return proofOverride.get(id);
+      const session = sessions.get(id);
+      return session && contextAccepted.has(id) && ready.has(id)
+        ? {
+            kind: 'native-configuration',
+            contextDigest: initialContextDigest(session.installedInstructions),
+            generation: binding(id).generation,
+            configRevision: 'config-1',
+          }
+        : undefined;
+    };
+    const launch = new TeamLaunchOwner({
+      definition,
+      hostIncarnation,
+      store,
+      now: () => now,
+      authorized: (_action, callback) =>
+        store.fenced(() => {
+          if (!authorized) throw new TeamLaunchError('forbidden', 'grant');
+          return callback();
+        }),
+      runtime: {
+        read: (id) => {
+          observationReads.set(id, (observationReads.get(id) ?? 0) + 1);
+          if (observationFailure.has(id)) throw new Error('TEST observation unavailable');
+          const current = runtime.readSession(binding(id)),
+            proof = evidence(id);
+          return {
+            ...(current.record ? { record: current.record } : {}),
+            attached: current.attached,
+            nativeReady: ready.has(id),
+            ...(proof ? { context: proof } : {}),
+          };
+        },
+        open: async (id) => {
+          openAttempts.set(id, (openAttempts.get(id) ?? 0) + 1);
+          if (!configured.has(id) || failBeforeRuntime.has(id))
+            throw new Error('TEST preallocation unavailable');
+          await runtime.openSession({
+            binding: binding(id),
+            config: {
+              tenantId: 'TEST-tenant',
+              projectId: 'TEST-project',
+              sessionId: id,
+              generation: 1,
+              configRevision: 'config-1',
+              requiredCapabilities: ['tools'],
+            },
+          });
+        },
+      },
+    });
+    return { launch, runtime, evidence };
+  };
+  t.after(async () => {
+    for (const session of sessions.values()) session.end();
+    await tick();
+    await rm(root, { recursive: true, force: true });
+  });
+  return {
+    root,
+    store,
+    runtimeStore,
+    sessions,
+    opens,
+    openAttempts,
+    observationReads,
+    configured,
+    observationFailure,
+    failBeforeRuntime,
+    ready,
+    contextAccepted,
+    proofOverride,
+    failedFactories,
+    holdFactory: (id: string): (() => void) => {
+      let release!: () => void;
+      heldFactories.set(id, new Promise<void>((resolve) => { release = resolve; }));
+      return release;
+    },
+    definition,
+    make,
+    advance: (ms: number) => {
+      now += ms;
+    },
+    revoke: () => {
+      authorized = false;
+    },
+  };
+}
+async function settle(launch: TeamLaunchOwner): Promise<void> {
+  for (let count = 0; count < 4; count++) await tick();
+  launch.refresh();
+}
+
+test('current in-flight Runtime opening stays pending until the same native factory completes', async (t) => {
+  const f = await setup(t, ['A']);
+  const release = f.holdFactory('A');
+  const { launch, runtime, evidence } = f.make();
+  launch.start('TEST-delayed-open');
+  try {
+    await tick();
+    const source = runtime.readSession(binding('A'));
+    assert.equal(source.record?.phase, 'opening', 'actual Runtime persists intent before the held factory');
+    assert.equal(source.record?.custody, 'unknown');
+    assert.equal(source.attached, false);
+    const pending = launch.read();
+    const attempt = pending.members[0]!.attempt;
+    assert.equal(pending.status, 'pending');
+    assert.equal(attempt.status, 'pending-bootstrap');
+    assert.equal(attempt.reason, 'opening');
+    assert.equal(attempt.nativeReady, false);
+    assert.equal(attempt.usable, false);
+    assert.equal(attempt.controlAvailable, false);
+    assert.equal(attempt.noAllocation, false);
+    assert.equal(launch.canWork('A', evidence('A')), false);
+    launch.start('TEST-delayed-open');
+    assert.equal(f.opens.get('A'), 1, 'same original launch cannot reopen the pending factory');
+    assert.equal(runtime.readSession(binding('A')).record?.custody, 'unknown');
+    release();
+    await settle(launch);
+    const ready = launch.read();
+    assert.equal(ready.status, 'ready');
+    assert.equal(ready.members[0]!.attempt.attemptId, attempt.attemptId);
+    assert.equal(ready.members[0]!.attempt.contextApplied, true);
+    assert.equal(ready.members[0]!.attempt.usable, true);
+    assert.equal(f.opens.get('A'), 1);
+    assert.equal(f.sessions.get('A')!.submits.length, 0, 'bootstrap adds no hidden native input');
+  } finally {
+    release();
+    await settle(launch);
+    launch.seal();
+  }
+});
+
+test('opening without a current live original continuation retains UNKNOWN and authority fences', async (t) => {
+  for (const scenario of ['cold-same-host', 'replacement-host', 'source-owner-lost', 'deadline', 'unavailable', 'completed-failure', 'authority-revoked'] as const) {
+    await t.test(scenario, async (t) => {
+      const f = await setup(t, ['A']);
+      const release = f.holdFactory('A');
+      const original = f.make();
+      original.launch.start('TEST-delayed-open');
+      try {
+        await tick();
+        assert.equal(original.runtime.readSession(binding('A')).record?.phase, 'opening');
+        let launch = original.launch;
+        if (scenario === 'cold-same-host' || scenario === 'replacement-host') {
+          launch = f.make(scenario === 'cold-same-host' ? 'host-1' : 'host-2').launch;
+          launch.start('TEST-delayed-open');
+        } else if (scenario === 'source-owner-lost') {
+          f.runtimeStore.fenced(binding('A'), (tx) => {
+            const record = tx.get()!;
+            record.hostIncarnation = 'other-host';
+            tx.put(record, 'growth');
+          });
+        } else if (scenario === 'deadline') f.advance(30_000);
+        else if (scenario === 'unavailable') f.observationFailure.add('A');
+        else if (scenario === 'completed-failure') {
+          f.failedFactories.add('A');
+          release();
+          await settle(launch);
+          assert.equal(original.runtime.readSession(binding('A')).record?.phase, 'held');
+        } else f.revoke();
+        if (scenario === 'authority-revoked') {
+          assert.throws(() => launch.read(), (error) => error instanceof TeamLaunchError && error.code === 'forbidden');
+        } else {
+          const state = launch.read();
+          const attempt = state.members[0]!.attempt;
+          assert.equal(state.ready, 0);
+          assert.equal(attempt.status, 'unknown');
+          assert.equal(attempt.nativeReady, false);
+          assert.equal(attempt.usable, false);
+          assert.equal(attempt.controlAvailable, false);
+          assert.equal(attempt.noAllocation, false);
+          launch.seal();
+        }
+        assert.equal(f.opens.get('A'), 1, 'uncertain allocation never opens a replacement');
+      } finally {
+        release();
+        await tick();
+        original.launch.seal();
+      }
+    });
+  }
+});
+
+test('source launch times retain original admission across read/replay/reconstruction', async (t) => {
+  const f = await setup(t, ['A']);
+  const { launch } = f.make();
+  assert.equal(launch.read().startedAtMs, null);
+  const admitted = launch.start('TEST-original');
+  assert.ok(admitted.startedAtMs !== null);
+  assert.equal(admitted.observedAtMs, admitted.startedAtMs);
+  await settle(launch);
+  f.advance(5000);
+  const replay = launch.start('TEST-original');
+  assert.equal(replay.startedAtMs, admitted.startedAtMs);
+  assert.equal(replay.observedAtMs, admitted.observedAtMs + 5000);
+  launch.seal();
+  assert.equal(f.make('next-host').launch.read().startedAtMs, admitted.startedAtMs);
+});
+
+test('initial prompt belongs to the original launch intent across a lost reply and restart', async (t) => {
+  for (const prompt of [undefined, null, 'TEST scheduled instructions']) {
+    await t.test(String(prompt), async (t) => {
+      const f = await setup(t, ['A']);
+      const original = f.make();
+      let callbacks = 0;
+      if (prompt === 'TEST scheduled instructions') {
+        const path = `launches/${runtimeDigest(f.definition.launchId)}.json`;
+        const before = f.store.read(path);
+        assert.throws(() => original.launch.start('TEST-schedule-start', undefined,
+          () => { callbacks++; }, 'TEST invalid\0prompt'),
+        error => error instanceof TeamLaunchError && error.code === 'invalid');
+        assert.deepEqual(f.store.read(path), before, 'invalid prompt cannot persist a start intent');
+        assert.equal(callbacks, 0);
+        assert.equal(f.opens.size, 0);
+      }
+      assert.throws(() => original.launch.start('TEST-schedule-start', undefined, () => {
+        callbacks++;
+        throw new Error('TEST lost reply before native allocation');
+      }, prompt), /TEST lost reply/);
+      assert.equal(f.opens.size, 0);
+      original.launch.seal();
+      const recovered = f.make('TEST-next-host');
+      const changed = prompt === null ? 'TEST changed task' : null;
+      assert.throws(() => recovered.launch.start('TEST-schedule-start', undefined,
+        () => { callbacks++; }, changed), /conflict/);
+      assert.equal(callbacks, 1, 'conflicting prompt cannot reach the task/native effect');
+      recovered.launch.start('TEST-schedule-start', undefined, () => { callbacks++; }, prompt);
+      await settle(recovered.launch);
+      assert.equal(callbacks, 2);
+      assert.equal(f.opens.get('A'), 1);
+      recovered.launch.seal();
+    });
+  }
+});
+
+test('ready launch retains policy-skipped members without waiting for their native allocation', async (t) => {
+  const f = await setup(t, ['A', 'skipped']);
+  f.definition.members[1]!.skipped = true;
+  const { launch } = f.make();
+  launch.start('TEST-skip');
+  await settle(launch);
+  const summary = launch.read();
+  assert.equal(summary.status, 'ready');
+  assert.equal(summary.expected, 2);
+  assert.equal(summary.ready, 1);
+  assert.equal(summary.members[1]!.attempt.status, 'skipped');
+  assert.deepEqual([...f.opens.keys()], ['A']);
+});
+
+test('empty or entirely skipped roster never invents a ready native Team', async (t) => {
+  for (const ids of [[], ['skipped']]) {
+    const f = await setup(t, ids);
+    for (const member of f.definition.members) member.skipped = true;
+    const { launch } = f.make();
+    assert.notEqual(launch.start('TEST-no-runnable').status, 'ready');
+    assert.equal(f.opens.size, 0);
+  }
+});
+
+test('ambiguous preparation publication allocates nothing and the original intent can continue after reconstruction', async (t) => {
+  const f = await setup(t, ['A']);
+  f.definition.members[0]!.baseConfigurationDigest = 'a'.repeat(64);
+  f.definition.members[0]!.runtimeGeneration = 1;
+  const first = f.make();
+  const input = {
+    commandId: 'TEST-preparation-original',
+    sourceRosterRevision: first.launch.read().rosterRevision,
+    members: [{ memberId: 'A', configuration: { model: 'TEST-selected' }, configurationDigest: 'b'.repeat(64), baseConfigurationDigest: 'a'.repeat(64), configRevision: 'TEST-selected-revision' }],
+  };
+  const write = f.store.write.bind(f.store);
+  f.store.write = (name, value) => {
+    write(name, value);
+    if ((value as TeamLaunchRecord).preparation) throw new Error('TEST-fsync-observation-lost');
+  };
+  try {
+    assert.throws(() => first.launch.prepare(input), /TEST-fsync-observation-lost/);
+  } finally {
+    f.store.write = write;
+  }
+  assert.equal(f.opens.size, 0, 'no factory effect follows uncertain configuration publication');
+  const held = (error: unknown): boolean => error instanceof TeamLaunchError && error.code === 'hold';
+  const recordName = `launches/${runtimeDigest('TEST-run')}.json`;
+  const ambiguousBytes = await readFile(join(f.store.directory, recordName), 'utf8');
+  assert.throws(() => first.launch.read(), held, 'ordinary read cannot adopt an unacknowledged selection');
+  assert.throws(() => first.launch.prepare(input), held, 'ordinary replay cannot replace the pending witness');
+  assert.throws(() => first.launch.start(input.commandId, launchPreparationFingerprint(input)), held);
+  assert.equal(f.opens.size, 0);
+  assert.equal(await readFile(join(f.store.directory, recordName), 'utf8'), ambiguousBytes);
+  first.launch.seal();
+  assert.equal(await readFile(join(f.store.directory, recordName), 'utf8'), ambiguousBytes,
+    'sealing the original no-readiness record does not repair or republish it');
+  assert.throws(() => first.launch.read(), held, 'cleanup does not adopt the selection for ordinary reads');
+  assert.throws(() => first.launch.start(input.commandId, launchPreparationFingerprint(input)), held);
+  const record = f.store.read<TeamLaunchRecord>(`launches/${runtimeDigest('TEST-run')}.json`)!;
+  Object.assign(f.definition, record.definition);
+  const recovered = f.make('host-after-publication');
+  assert.equal(recovered.launch.prepare(input), false, 'original preparation is read, not republished');
+  assert.throws(() => recovered.launch.start(input.commandId), /conflict/, 'dropping the prepared payload is not the same intent');
+  recovered.launch.start(input.commandId, launchPreparationFingerprint(input));
+  await settle(recovered.launch);
+  assert.equal(f.opens.get('A'), 1);
+  f.revoke();
+  assert.throws(() => recovered.launch.prepare(input), /forbidden/, 'replay still requires current authority');
+  recovered.launch.seal();
+  await recovered.runtime.stopCapturedSession(binding('A'));
+
+  for (const boundary of ['before-write', 'foreign-definition', 'malformed-record'] as const) {
+    const scoped = await setup(t, ['A']);
+    scoped.definition.members[0]!.baseConfigurationDigest = 'a'.repeat(64);
+    scoped.definition.members[0]!.runtimeGeneration = 1;
+    const original = scoped.make();
+    const request = { ...input, sourceRosterRevision: original.launch.read().rosterRevision };
+    const path = join(scoped.store.directory, recordName);
+    const beforeBytes = await readFile(path, 'utf8');
+    const originalWrite = scoped.store.write.bind(scoped.store);
+    let publicationAttempts = 0;
+    scoped.store.write = (name, value) => {
+      const preparing = !!(value as TeamLaunchRecord).preparation;
+      if (preparing) publicationAttempts++;
+      if (preparing && boundary === 'before-write') throw new Error('TEST-before-write');
+      originalWrite(name, value);
+      if (preparing) throw new Error('TEST-fsync-observation-lost');
+    };
+    try {
+      assert.throws(() => original.launch.prepare(request),
+        boundary === 'before-write' ? /TEST-before-write/ : /TEST-fsync-observation-lost/);
+      if (boundary === 'before-write') {
+        assert.equal(original.launch.read().expected, 1, 'the unchanged original record remains readable');
+        assert.throws(() => original.launch.prepare(request), /TEST-before-write/,
+          'the original ordinary retry still reaches its original write boundary');
+        assert.equal(publicationAttempts, 2);
+      }
+    } finally {
+      scoped.store.write = originalWrite;
+    }
+    assert.equal(scoped.opens.size, 0);
+    if (boundary === 'before-write') {
+      assert.equal(await readFile(path, 'utf8'), beforeBytes);
+      original.launch.seal();
+      assert.equal(await readFile(path, 'utf8'), beforeBytes, 'sealing prefers the unchanged original tuple');
+      assert.throws(() => original.launch.start(request.commandId), held);
+      continue;
+    }
+    const changed = scoped.store.read<TeamLaunchRecord>(recordName)!;
+    if (boundary === 'foreign-definition') {
+      const member = changed.definition.members[0]!;
+      assert.ok(member.binding);
+      member.binding = { ...member.binding, teamId: 'TEST-foreign-team' };
+      changed.definition.rosterRevision = runtimeDigest({
+        scope: changed.definition.rosterScope ?? changed.definition.launchId,
+        members: changed.definition.members,
+      });
+      changed.fingerprint = runtimeDigest(changed.definition);
+    } else {
+      changed.members[0]!.attempts = [];
+    }
+    originalWrite(recordName, changed);
+    const invalidBytes = await readFile(path, 'utf8');
+    assert.throws(() => original.launch.seal(), held, 'only a fully validated original expected tuple may retire');
+    assert.equal(await readFile(path, 'utf8'), invalidBytes, 'a refused record is never repaired');
+    assert.throws(() => original.launch.start(request.commandId), held, 'ingress remains sealed after refusal');
+    assert.equal(scoped.opens.size, 0);
+  }
+});
+
+test('whole expected roster persists before allocation; partial launch and scoped no-allocation retry preserve healthy/pending members', async (t) => {
+  const f = await setup(t);
+  f.failBeforeRuntime.add('C');
+  const { launch, runtime, evidence } = f.make();
+  const before = launch.read();
+  assert.equal(before.expected, 3);
+  assert.equal(before.ready, 0);
+  assert.equal(f.opens.size, 0);
+  launch.start('launch-command');
+  await settle(launch);
+  assert.equal(launch.read().ready, 2);
+  assert.equal(
+    launch.read().members.find((item) => item.memberId === 'C')?.attempt.status,
+    'failed'
+  );
+  const b = f.sessions.get('B')!;
+  const delivery = {
+    binding: binding('B'),
+    deliveryId: 'B-bootstrap-control',
+    inputId: 'B-bootstrap-control',
+    messageId: 'B-message',
+    content: 'TEST work after confirmed configuration',
+  };
+  await runtime.admitDelivery(delivery);
+  await runtime.dispatchNext(binding('B'));
+  const input = b.submits[0]!;
+  b.emit({
+    kind: 'interaction',
+    sessionRef: b.sessionRef,
+    inputId: input.inputId,
+    operationRef: input.operationRef,
+    interactionRef: 'permission-B',
+    request: { kind: 'permission', tool: 'TEST-tool', input: {} },
+  });
+  await tick();
+  launch.refresh();
+  const pending = launch.read();
+  assert.equal(pending.status, 'partial');
+  assert.equal(
+    pending.members.find((item) => item.memberId === 'B')?.attempt.status,
+    'pending-human'
+  );
+  assert.equal(launch.canWork('A', evidence('A')), true);
+  assert.equal(launch.canWork('B', evidence('B')), false);
+  const bAttempt = pending.members.find((item) => item.memberId === 'B')!.attempt.attemptId;
+  f.advance(60_000);
+  launch.refresh();
+  assert.equal(
+    launch.read().members.find((item) => item.memberId === 'B')?.attempt.status,
+    'pending-human'
+  );
+  f.failBeforeRuntime.delete('C');
+  launch.retry({
+    launchId: f.definition.launchId,
+    rosterRevision: f.definition.rosterRevision,
+    commandId: 'retry-C-command',
+    attemptId: 'retry-C-attempt',
+    memberIds: ['C'],
+  });
+  await settle(launch);
+  assert.deepEqual([...f.opens.entries()].sort(), [
+    ['A', 1],
+    ['B', 1],
+    ['C', 1],
+  ]);
+  assert.equal(
+    launch.read().members.find((item) => item.memberId === 'B')?.attempt.attemptId,
+    bAttempt
+  );
+  assert.equal(b.submits.length, 1);
+  launch.retry({
+    launchId: f.definition.launchId,
+    rosterRevision: f.definition.rosterRevision,
+    commandId: 'retry-C-command',
+    attemptId: 'retry-C-attempt',
+    memberIds: ['C'],
+  });
+  await settle(launch);
+  assert.equal(f.opens.get('C'), 1);
+  launch.start('launch-command');
+  await settle(launch);
+  assert.equal(f.opens.get('A'), 1);
+  assert.equal(f.opens.get('B'), 1);
+  assert.equal(f.opens.get('C'), 1);
+  launch.seal();
+});
+
+test('captured failed retry atomically refuses a replaced no-allocation attempt and replays the original receipt', async (t) => {
+  const f = await setup(t, ['A']);
+  f.failBeforeRuntime.add('A');
+  const { launch } = f.make();
+  launch.start('TEST-initial-failure');
+  await settle(launch);
+  const failedA = launch.read().members[0]!.attempt;
+  assert.equal(failedA.status, 'failed');
+  assert.equal(failedA.noAllocation, true);
+  const retryB = {
+    launchId: f.definition.launchId,
+    rosterRevision: f.definition.rosterRevision,
+    commandId: 'TEST-retry-B',
+    attemptId: 'TEST-attempt-B',
+    memberIds: ['A'],
+    expectedAttemptId: failedA.attemptId,
+  };
+  const { commandId, ...payload } = retryB;
+  const capturedRetry = (changes: Partial<typeof payload> = {}, originalCommandId = commandId) =>
+    executeTeamLaunch({ launch, entries: [], operation: 'retry', members: [],
+      commandId: originalCommandId, payload: { ...payload, ...changes } });
+  // Retain the original composition's field order for a command admitted before
+  // the optional-field normalization; replay must recognize those exact bytes.
+  launch.retry({
+    launchId: retryB.launchId,
+    rosterRevision: retryB.rosterRevision,
+    attemptId: retryB.attemptId,
+    memberIds: retryB.memberIds,
+    expectedAttemptId: retryB.expectedAttemptId,
+    commandId,
+  });
+  await settle(launch);
+  const failedB = launch.read().members[0]!.attempt;
+  assert.equal(failedB.attemptId, retryB.attemptId);
+  assert.equal(failedB.status, 'failed');
+  assert.equal(failedB.noAllocation, true);
+  const path = `launches/${runtimeDigest(f.definition.launchId)}.json`;
+  const before = JSON.stringify(f.store.read(path));
+  const starts = f.openAttempts.get('A');
+  assert.throws(() => capturedRetry({ attemptId: 'TEST-attempt-C' }, 'TEST-stale-retry-C'),
+    (error) => error instanceof TeamLaunchError && error.code === 'conflict' && error.reason === 'retry-attempt');
+  await settle(launch);
+  assert.equal(JSON.stringify(f.store.read(path)), before, 'stale A cannot journal C against failed B');
+  assert.equal(f.openAttempts.get('A'), starts, 'stale A cannot start another runtime attempt');
+  capturedRetry(); // Its original expected A is obsolete, but this is the same retained intent.
+  await settle(launch);
+  assert.equal(JSON.stringify(f.store.read(path)), before, 'original receipt bytes remain intact');
+  assert.equal(f.openAttempts.get('A'), starts, 'replay never starts again');
+  assert.throws(() => capturedRetry({ expectedAttemptId: retryB.attemptId }),
+    (error) => error instanceof TeamLaunchError && error.code === 'conflict');
+  const legacyRetry = {
+    launchId: f.definition.launchId,
+    rosterRevision: f.definition.rosterRevision,
+    attemptId: 'TEST-legacy-attempt',
+    memberIds: ['A'],
+    commandId: 'TEST-legacy-retry',
+  };
+  launch.retry(legacyRetry);
+  await settle(launch);
+  const record = f.store.read<TeamLaunchRecord>(path)!;
+  assert.equal(record.retries.find((retry) => retry.commandId === legacyRetry.commandId)!.fingerprint,
+    runtimeDigest({ ...legacyRetry, memberIds: [...legacyRetry.memberIds].sort() }),
+    'omission preserves the existing fingerprint bytes');
+  const { commandId: legacyCommandId, ...legacyPayload } = legacyRetry;
+  executeTeamLaunch({ launch, entries: [], operation: 'retry', members: [],
+    commandId: legacyCommandId, payload: legacyPayload });
+  await settle(launch);
+  assert.deepEqual(f.store.read(path), record, 'an original unguarded receipt also replays unchanged');
+  assert.throws(() => launch.retry({ ...retryB, commandId: 'TEST-many', attemptId: 'TEST-many', memberIds: ['A', 'B'] }),
+    (error) => error instanceof TeamLaunchError && error.code === 'conflict');
+  launch.seal();
+});
+
+test('native readiness without exact same-generation initial context is not usable, and scoped retry cannot erase custody debt', async (t) => {
+  const f = await setup(t, ['A']);
+  f.contextAccepted.delete('A');
+  const { launch } = f.make();
+  launch.start('launch-command');
+  await settle(launch);
+  let state = launch.read().members[0]!.attempt;
+  assert.equal(state.nativeReady, true);
+  assert.equal(state.contextApplied, false);
+  assert.equal(state.usable, false);
+  assert.equal(f.sessions.get('A')?.submits.length, 0);
+  f.proofOverride.set('A', {
+    kind: 'native-configuration',
+    contextDigest: initialContextDigest(instructions('A')),
+    generation: 'old-generation',
+    configRevision: 'config-1',
+  });
+  launch.refresh();
+  assert.equal(launch.read().ready, 0);
+  f.advance(31_000);
+  launch.refresh();
+  state = launch.read().members[0]!.attempt;
+  assert.equal(state.status, 'failed');
+  assert.equal(state.reason, 'bootstrap-timeout');
+  assert.throws(
+    () =>
+      launch.retry({
+        launchId: f.definition.launchId,
+        rosterRevision: f.definition.rosterRevision,
+        commandId: 'retry',
+        attemptId: 'attempt',
+        memberIds: ['A'],
+      }),
+    (error) =>
+      error instanceof TeamLaunchError && error.reason === 'generation-replacement-required'
+  );
+  assert.equal(f.opens.get('A'), 1);
+  launch.seal();
+});
+
+test('readiness loss and recovery keep the same generation and confirmed context without replaying or reopening', async (t) => {
+  const f = await setup(t, ['A']);
+  const { launch, evidence } = f.make();
+  launch.start('launch-command');
+  await settle(launch);
+  assert.equal(launch.read().status, 'ready');
+  const attempt = launch.read().members[0]!.attempt.attemptId;
+  f.ready.delete('A');
+  f.advance(60_000);
+  launch.refresh();
+  const lost = launch.read().members[0]!.attempt;
+  assert.equal(lost.status, 'pending-bootstrap');
+  assert.equal(lost.contextApplied, true);
+  assert.equal(lost.usable, false);
+  assert.equal(launch.canWork('A', evidence('A')), false);
+  f.ready.add('A');
+  launch.refresh();
+  assert.equal(launch.read().status, 'ready');
+  assert.equal(launch.read().members[0]!.attempt.attemptId, attempt);
+  assert.equal(f.opens.get('A'), 1);
+  launch.seal();
+});
+
+test('restart retains roster/attempts/permission obligations without replay, fresh usability or restored callbacks', async (t) => {
+  const f = await setup(t, ['A', 'B']);
+  const original = f.make();
+  original.launch.start('launch-command');
+  await settle(original.launch);
+  const b = f.sessions.get('B')!,
+    delivery = {
+      binding: binding('B'),
+      deliveryId: 'permission-input',
+      inputId: 'permission-input',
+      messageId: 'permission-message',
+      content: 'TEST work',
+    };
+  await original.runtime.admitDelivery(delivery);
+  await original.runtime.dispatchNext(binding('B'));
+  const input = b.submits[0]!;
+  b.emit({
+    kind: 'interaction',
+    sessionRef: b.sessionRef,
+    inputId: input.inputId,
+    operationRef: input.operationRef,
+    interactionRef: 'retained-permission',
+    request: { kind: 'permission', tool: 'TEST-tool', input: {} },
+  });
+  await tick();
+  original.launch.refresh();
+  original.launch.seal();
+  const restarted = f.make('host-2');
+  restarted.launch.start('launch-command');
+  await settle(restarted.launch);
+  const state = restarted.launch.read();
+  assert.equal(state.expected, 2);
+  assert.equal(state.ready, 0);
+  assert.ok(
+    state.members.every(
+      (item) => item.attempt.status === 'unknown' && !item.attempt.controlAvailable
+    )
+  );
+  assert.equal(
+    state.members.find((item) => item.memberId === 'B')?.attempt.reason,
+    'retained-interaction-unavailable'
+  );
+  await assert.rejects(
+    restarted.runtime.respondToInteraction(binding('B'), input.inputId, 'retained-permission', {
+      kind: 'permission',
+      decision: 'allow',
+    })
+  );
+  assert.deepEqual([...f.opens.values()], [1, 1]);
+  assert.equal(b.submits.length, 1);
+  restarted.launch.seal();
+});
+
+test('missing/skipped members remain in the persisted expected roster; changed descriptor and intent identities cannot replace it', async (t) => {
+  const f = await setup(t, ['A', 'missing', 'skipped']);
+  f.definition.members[1]!.configurationDigest = null;
+  f.definition.members[2]!.skipped = true;
+  const { launch } = f.make();
+  launch.start('launch-command');
+  await settle(launch);
+  const state = launch.read();
+  assert.equal(state.expected, 3);
+  assert.equal(state.status, 'partial');
+  assert.equal(state.members[1]?.attempt.reason, 'runtime-unconfigured');
+  assert.equal(state.members[2]?.attempt.status, 'skipped');
+  assert.deepEqual([...f.opens.keys()], ['A']);
+  assert.throws(() => launch.start('different-command'), TeamLaunchError);
+  assert.throws(
+    () =>
+      launch.retry({
+        launchId: 'wrong-launch',
+        rosterRevision: f.definition.rosterRevision,
+        commandId: 'retry',
+        attemptId: 'retry',
+        memberIds: ['A'],
+      }),
+    TeamLaunchError
+  );
+  const changed = structuredClone(f.definition);
+  changed.members[0]!.contextDigest = '0'.repeat(64);
+  assert.throws(
+    () =>
+      new TeamLaunchOwner({
+        definition: changed,
+        hostIncarnation: 'new-host',
+        store: f.store,
+        authorized: (_action, callback) => callback(),
+        runtime: {
+          read: () => ({ attached: false, nativeReady: false }),
+          open: async () => {
+            assert.fail('must not allocate');
+          },
+        },
+      }),
+    TeamLaunchError
+  );
+  launch.seal();
+});
+
+test('current authorization gates read/retry and corrupt expected roster is HOLD instead of a smaller launch', async (t) => {
+  const f = await setup(t, ['A', 'B']);
+  const { launch } = f.make();
+  launch.start('launch-command');
+  await settle(launch);
+  const path = join(f.store.directory, 'launches', `${runtimeDigest(f.definition.launchId)}.json`),
+    originalBytes = await readFile(path, 'utf8');
+  const original = launch.read();
+  const selection = {
+    launchId: original.launchId,
+    rosterRevision: original.rosterRevision,
+    memberIds: original.members.map(({ memberId }) => memberId),
+  };
+  f.observationFailure.add('A');
+  f.observationReads.clear();
+  assert.deepEqual(launch.readModelProbeSelection('control'), selection);
+  assert.deepEqual(launch.readModelProbeSelection('read'), selection);
+  assert.equal(f.observationReads.size, 0, 'model selection does not inspect native observations');
+  const observed = launch.read();
+  assert.equal(observed.members.find((member) => member.memberId === 'A')?.attempt.status, 'unknown');
+  assert.equal(observed.members.find((member) => member.memberId === 'B')?.attempt.status, 'ready');
+  assert.deepEqual(
+    [...f.observationReads.keys()],
+    ['A', 'B'],
+    'public read still observes both originals'
+  );
+  assert.deepEqual(
+    {
+      launchId: observed.launchId,
+      rosterRevision: observed.rosterRevision,
+      memberIds: observed.members.map(({ memberId }) => memberId),
+    },
+    selection
+  );
+  assert.equal(await readFile(path, 'utf8'), originalBytes, 'inspection leaves the original launch bytes');
+  assert.equal(f.opens.get('A'), 1);
+  assert.equal(f.opens.get('B'), 1);
+  assert.ok([...f.sessions.values()].every((session) => session.submits.length === 0));
+
+  const record = JSON.parse(originalBytes) as { members: unknown[] };
+  record.members = [];
+  await writeFile(path, JSON.stringify(record));
+  assert.throws(
+    () => launch.readModelProbeSelection('read'),
+    (error) => error instanceof TeamLaunchError && error.code === 'hold'
+  );
+  assert.throws(
+    () => launch.refresh(),
+    (error) => error instanceof TeamLaunchError && error.code === 'hold'
+  );
+  await writeFile(path, originalBytes);
+  f.revoke();
+  f.observationReads.clear();
+  assert.throws(
+    () => launch.readModelProbeSelection('control'),
+    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
+  );
+  assert.throws(
+    () => launch.read(),
+    (error) => error instanceof TeamLaunchError && error.code === 'forbidden'
+  );
+  assert.equal(f.observationReads.size, 0, 'revocation refuses before any Runtime observation');
+  assert.equal(await readFile(path, 'utf8'), originalBytes);
+  launch.seal();
+});
+
+test('failed observation clears current readiness/control while retaining historical context facts and never reopens', async (t) => {
+  const f = await setup(t, ['A']);
+  const { launch, runtime } = f.make();
+  launch.start('launch-command');
+  await settle(launch);
+  assert.equal(launch.read().members[0]?.attempt.controlAvailable, true);
+  f.observationFailure.add('A');
+  launch.refresh();
+  let state = launch.read().members[0]!.attempt;
+  assert.equal(state.status, 'unknown');
+  assert.equal(state.nativeReady, false);
+  assert.equal(state.controlAvailable, false);
+  assert.equal(state.contextApplied, true);
+  assert.equal(state.everReady, true);
+  assert.equal(state.usable, false);
+  f.observationFailure.delete('A');
+  const session = f.sessions.get('A')!;
+  await runtime.admitDelivery({
+    binding: binding('A'),
+    deliveryId: 'control',
+    inputId: 'control',
+    messageId: 'control-message',
+    content: 'TEST permission',
+  });
+  await runtime.dispatchNext(binding('A'));
+  const input = session.submits[0]!;
+  session.emit({
+    kind: 'interaction',
+    sessionRef: session.sessionRef,
+    inputId: input.inputId,
+    operationRef: input.operationRef,
+    interactionRef: 'pending',
+    request: { kind: 'permission', tool: 'TEST-tool', input: {} },
+  });
+  await tick();
+  launch.refresh();
+  assert.equal(launch.read().members[0]?.attempt.status, 'pending-human');
+  f.observationFailure.add('A');
+  launch.refresh();
+  state = launch.read().members[0]!.attempt;
+  assert.equal(state.status, 'unknown');
+  assert.equal(state.nativeReady, false);
+  assert.equal(state.controlAvailable, false);
+  assert.equal(f.opens.get('A'), 1);
+  assert.equal(session.submits.length, 1);
+  launch.seal();
+});
+
+
+test('cold startup refresh keeps historical ready launch bytes while reads project closed Runtime truth', async (t) => {
+  const f = await setup(t, ['A']), original = f.make('host-1');
+  original.launch.start('TEST-original-ready');
+  await settle(original.launch);
+  assert.equal(original.launch.read().status, 'ready');
+  await original.runtime.admitDelivery({ binding: binding('A'), deliveryId: 'TEST-unknown', inputId: 'TEST-unknown', messageId: 'TEST-message', content: 'TEST interrupted original' });
+  await original.runtime.dispatchNext(binding('A'));
+  const closed = await original.runtime.stopCapturedSession(binding('A'));
+  await tick();
+  assert.equal(closed.phase, 'closed');
+  assert.equal(closed.custody, 'released');
+  assert.equal(closed.inputs[0]?.phase, 'unknown');
+  const launchPath = join(f.root, 'teams/TEST-team/.host-owner/launches', runtimeDigest(f.definition.launchId) + '.json');
+  const before = await readFile(launchPath);
+  assert.equal((JSON.parse(before.toString()) as TeamLaunchRecord).members[0]!.attempts[0]!.status, 'ready');
+  const runtimeBefore = JSON.stringify(f.runtimeStore.fenced(binding('A'), tx => tx.get()));
+  const cold = f.make('host-2');
+  for (let count = 0; count < 2; count++) {
+    const summary = cold.launch.read();
+    assert.equal(summary.status, 'failed');
+    assert.equal(summary.members[0]!.attempt.reason, 'stopped');
+    assert.equal(summary.members[0]!.attempt.usable, false);
+    cold.launch.refresh(); // Exact method called by metadata Host startup kick.
+  }
+  assert.deepEqual(await readFile(launchPath), before, 'foreign historical attempt is not a new native observation');
+  assert.equal(JSON.stringify(f.runtimeStore.fenced(binding('A'), tx => tx.get())), runtimeBefore);
+  assert.equal(f.opens.get('A'), 1);
+});
+
+test('current owner refresh still persists actual stopped readiness transition', async (t) => {
+  const f = await setup(t, ['A']), current = f.make('host-1');
+  current.launch.start('TEST-current-ready');
+  await settle(current.launch);
+  assert.equal(current.launch.read().status, 'ready');
+  const path = join(f.root, 'teams/TEST-team/.host-owner/launches', runtimeDigest(f.definition.launchId) + '.json');
+  const before = await readFile(path);
+  await current.runtime.stopCapturedSession(binding('A'));
+  await tick();
+  current.launch.refresh();
+  const after = await readFile(path), attempt = (JSON.parse(after.toString()) as TeamLaunchRecord).members[0]!.attempts[0]!;
+  assert.notDeepEqual(after, before);
+  assert.equal(attempt.reason, 'stopped');
+  assert.equal(attempt.status, 'failed');
+  assert.equal(attempt.usable, false);
+  assert.equal(attempt.nativeReady, false);
+  assert.equal(attempt.controlAvailable, false);
+});

@@ -1,0 +1,100 @@
+{
+  "kind": "ROOT_BOUND_ORIGINAL_HANDLE_CLEANUP_R1_SELECTION",
+  "parent": {
+    "sha": "769078797e96df86ceadd0c3bdf563abc265932f",
+    "tree": "312e2de89c71fbd15363b6e3f9b8671209e0636c",
+    "leaves": 11100
+  },
+  "source": {
+    "path": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "before": {
+      "sha": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+      "bytes": 59419,
+      "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+    },
+    "after": {
+      "sha": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+      "bytes": 59461,
+      "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436"
+    },
+    "lines": 800
+  },
+  "plan": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+    "before": {
+      "sha": "1b017131e186f67ccaf62c4215de4bdb0f58af74",
+      "bytes": 174960,
+      "sha256": "0910ded3d5fc864d9b05a4dea4a7ddd4849e730aab5de22341d45f8d52801e03"
+    },
+    "after": {
+      "sha": "4e05d188a4ada8cf5aae78dfb475a7c96f8cb34a",
+      "bytes": 176961,
+      "sha256": "6128f2425612023def7c3eb1ba71bdf93583f115a04aff8ef3f8bef2146cda8a"
+    },
+    "newSection": 36,
+    "wholeHistoricalPrefixPreserved": true
+  },
+  "sourceR2": {
+    "sha": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0",
+    "bytes": 11351
+  },
+  "documents": [
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/10-acceptance-recovery.md",
+      "sha": "4e05d188a4ada8cf5aae78dfb475a7c96f8cb34a",
+      "bytes": 176961,
+      "sha256": "6128f2425612023def7c3eb1ba71bdf93583f115a04aff8ef3f8bef2146cda8a"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/prospective-r1.md",
+      "sha": "3cc579c3e62d1bcea45a75c0f312bb13d0d22ed5",
+      "bytes": 11372,
+      "sha256": "366f86ae5e86be5dc6093aecce8e472e634e28a09a583551673f8c73799b4e46"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/manifest.json",
+      "sha": "94040726094cbfe74388d7aa21d294d46b4d36b0",
+      "bytes": 5455,
+      "sha256": "52945167f7c723059d0bd5dc8cfb998c00c43e470f736a2b7607bcd26ff86cbe"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/candidate.patch",
+      "sha": "96da4bd5b4277e58629f2116be867ba801b8a296",
+      "bytes": 1166,
+      "sha256": "533e3ff2b76b4754b232218c1d2dd9ebf2fb3676887449ee48a1cfcdea5c8425"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/audit.json",
+      "sha": "828c841c6df604871a97cbd96861112a04cb762c",
+      "bytes": 15308,
+      "sha256": "57166c5e1d70d5a6046961e639e94922ff206246abc9ed69d7f4439e44c0b8e3"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/preservation-proof.json",
+      "sha": "13f7263c3fa8dc6b957bffb61c041d0ea4a386d3",
+      "bytes": 1132,
+      "sha256": "a276262b8c4aa1e9f56e9b5763f99310bb3c61d2070df6cee1e37b1255aa30d6"
+    },
+    {
+      "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/original-handle-cleanup-2026-11-16/source-r2.json",
+      "sha": "4e39c889239b2aee3c4deebf7bcecf75e99bdba0",
+      "bytes": 11351,
+      "sha256": "e8ac254399f42a61f3cf12997427d795ea1c68a28972e6d7b5277cc5aadb78bf"
+    }
+  ],
+  "preservation": "All other current leaves including B2, consumer3, incoming Plans54-57 and completed reviews stay exact. Source child changes only the sole reviewed path after actual published-R1 R2.",
+  "sequence": [
+    "Immediately expected-parent push documentary commit.",
+    "Full documentary readback and independent actual published-R1 binding R2.",
+    "Exact one-path source child, immediately expected-parent push.",
+    "Full source readback and independent verification; original resulting-source CI."
+  ],
+  "qualification": "No local execution, old-head PASS transfer or mandatory extra CI/RED round. No primary FF while useful original jobs run. Draft/open/original-base PR1192, no release/default/Stage2 or genuine Claude/Codex.",
+  "incomingCommitChain": [
+    "2d74c6efbe1b3047fb835284afbf82f574634b50",
+    "ae1b50b480d6019ae846dab04585baf5b1a040f3",
+    "1f174b343cc0c01465907d1b316982d006900a4b",
+    "14bdd395516d9a520c4e558cf6640365e76879ef",
+    "769078797e96df86ceadd0c3bdf563abc265932f"
+  ]
+}

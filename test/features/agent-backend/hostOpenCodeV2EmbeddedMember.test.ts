@@ -1,0 +1,378 @@
+// @vitest-environment node
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterEach, expect, test, vi } from 'vitest';
+
+import type { MemberProviderContext } from '../../../packages/legacy-agent-host/src/adapters/providers/MemberProvider';
+import type { OpenCodeV2OwnedSession } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2OwnedSession';
+
+const nativeMediaLimits = {
+  revision: 'opencode-2.1.4-native-media-v1',
+  maxBytes: 4 * 1024 * 1024,
+  maxCount: 5,
+  maxTotalBytes: 8 * 1024 * 1024,
+  videos: false,
+};
+const attachmentBinding: Parameters<NonNullable<MemberProviderContext['attachments']>['resolve']>[0] = {
+  trustedBinding: 'TEST-trusted-binding',
+  sessionRef: 'TEST-native-session',
+  inputId: 'TEST-input',
+  operationRef: 'TEST-operation',
+  fingerprint: 'b'.repeat(64),
+  reference: { artifactId: 'TEST-png', mimeType: 'image/png', byteLength: 1, digest: 'c'.repeat(64) },
+};
+
+const controlled = vi.hoisted(() => ({
+  client: (): unknown => {
+    throw new Error('TEST client unset');
+  },
+  server: (): unknown => {
+    throw new Error('TEST server unset');
+  },
+  capture: (_context: MemberProviderContext): void => {},
+  captureOwned: (_owned: OpenCodeV2OwnedSession): void => {},
+}));
+vi.mock(
+  '../../../packages/legacy-agent-host/node_modules/@agent-teams/provider-implementations/dist/opencode.js',
+  () => ({
+    createOpenCodeV2OwnedSessionClient: () => controlled.client(),
+    readOpenCodeV2CheckpointSessionId: () => {
+      throw new Error('TEST unexpected checkpoint read');
+    },
+  })
+);
+vi.mock(
+  '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedServer.js',
+  () => ({
+    createOpenCodeV2EmbeddedServer: () => controlled.server(),
+  })
+);
+vi.mock(
+  '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedConfig.js',
+  () => ({
+    openCodeV2EmbeddedConfig: () => ({
+      config: {},
+      requiredToolNames: ['TEST-tool'],
+      requiredServerNames: ['agent-teams'],
+      selection: {
+        agent: 'TEST-agent',
+        model: { providerID: 'TEST-provider', id: 'TEST-model' },
+        permissions: [],
+      },
+    }),
+  })
+);
+vi.mock(
+  '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2MemberProvider.js',
+  () => ({
+    createOpenCodeV2MemberProvider: (
+      context: MemberProviderContext,
+      owned: OpenCodeV2OwnedSession
+    ) => {
+      controlled.capture(context);
+      controlled.captureOwned(owned);
+      return {
+        factory: {
+          async open() {
+            if (!(await owned.probe(new AbortController().signal)))
+              throw new Error('TEST refused probe');
+            return { driver: {}, capabilities: ['text', 'attachments'] };
+          },
+        },
+        seal() {},
+        cleanup: () => owned.stopOwned(),
+        isReady: () => true,
+      };
+    },
+  })
+);
+import { createOpenCodeV2EmbeddedMemberProvider } from '../../../packages/legacy-agent-host/src/adapters/providers/OpenCodeV2EmbeddedMemberProvider';
+
+const roots: string[] = [];
+afterEach(() => {
+  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+});
+function fixture(image = true) {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'TEST-v2-attachment-owner-')));
+  roots.push(root);
+  for (const name of ['config', 'data', 'workspace', 'home']) mkdirSync(join(root, name));
+  const selection = {
+    id: 'ses_TEST',
+    agent: 'TEST-agent',
+    model: { providerID: 'TEST-provider', id: 'TEST-model' },
+    permissions: [],
+  };
+  let live = true, ownerCurrent = true, mcpReads = 0;
+  const ready = Object.freeze({ endpoint: 'http://127.0.0.1:12345', pid: 10, startIdentity: 'TEST-birth' });
+  const stop = vi.fn(async () => { live = false; return true; }),
+    resolve = vi.fn(async (binding: unknown) => ({ binding, bytes: new Uint8Array([1]) }));
+  let callbackFailure: Error | undefined,
+    disposalFailure = false,
+    heldDisposal: Promise<void> | undefined;
+  let disposalStarted = () => {};
+  const client = {
+    async identity() {
+      if (callbackFailure) throw callbackFailure;
+      return { pid: 10, version: '2.1.4' };
+    },
+    async createSession() {
+      return selection;
+    },
+    async readSession() {
+      return selection;
+    },
+    async savedPermissionsEmpty() {
+      return true;
+    },
+    async builtinPluginsOnly() {
+      return true;
+    },
+    async readMcp() {
+      mcpReads++;
+      return [{ name: 'agent-teams', status: 'connected' }];
+    },
+    async readCatalog() {
+      return {
+        provider: { id: 'TEST-provider', name: 'TEST provider', activation: 'enabled' },
+        defaultModel: { providerId: 'TEST-provider', modelId: 'TEST-model' },
+        models: [
+          {
+            id: 'TEST-model',
+            enabled: true,
+            variants: ['default'],
+            supportsTools: true,
+            inputModalities: image ? ['text', 'image'] : ['text'],
+          },
+        ],
+      };
+    },
+    async dispose() {
+      disposalStarted();
+      await heldDisposal;
+      if (disposalFailure) throw new Error('TEST disposal failed');
+    },
+  };
+  controlled.client = () => client;
+  controlled.server = () => ({
+    async start() {
+      return ready;
+    },
+    isOriginalLive: (capture: unknown) => capture === ready && live,
+    async readNativeCustody() {
+      return live ? { pid: ready.pid, startIdentity: ready.startIdentity, version: '2.1.4',
+        executablePath: '/TEST/bun', executableSha256: 'a'.repeat(64) } : undefined;
+    },
+    readPassword: () => 'TEST-private',
+    stopOwned: stop,
+    confirmStopped: stop,
+  });
+  let delegateContext: MemberProviderContext | undefined, ownedSession: OpenCodeV2OwnedSession | undefined;
+  controlled.capture = (context) => {
+    delegateContext = context;
+  };
+  controlled.captureOwned = (owned) => { ownedSession = owned; };
+  const catalogReceipt = {
+    sequence: 1, binding: { memberId: 'TEST-member' }, toolNames: ['TEST-tool'],
+  };
+  const getCatalogReceipt = vi.fn((): typeof catalogReceipt | undefined => catalogReceipt);
+  const canAllocate = vi.fn(() => true);
+  const request = {
+    tenantId: 'TEST-tenant',
+    projectId: 'TEST-project',
+    sessionId: 'TEST-session',
+    generation: 1,
+    configRevision: 'TEST-r1',
+    requiredCapabilities: ['text'],
+  };
+  const context = {
+    profile: {
+      provider: 'opencode',
+      nativeGeneration: 'v2',
+      protocolRevision: '2.1.4',
+      embedded: { version: '2.1.4', externalDirectory: 'deny' },
+      teamId: 'TEST-team',
+      memberId: 'TEST-member',
+      sessionId: request.sessionId,
+      configRevision: request.configRevision,
+      accountBinding: 'TEST-account',
+      model: 'TEST-model',
+      cwd: join(root, 'workspace'),
+      endpoint: 'http://127.0.0.1:12345',
+      nativeOptions: { providerId: 'TEST-provider' },
+      limits: { timeoutMs: 1000 },
+      executable: { path: '/TEST/bun', sha256: 'a'.repeat(64) },
+      environment: { HOME: join(root, 'home'), XDG_CONFIG_HOME: join(root, 'config'), XDG_DATA_HOME: join(root, 'data') },
+    },
+    request,
+    endpoint: {
+      binding: { memberId: 'TEST-member' },
+      getCatalogReceipt,
+    },
+    instructions: 'TEST original context',
+    isCurrent: () => ownerCurrent,
+    canAllocate,
+    attachments: {
+      model: 'TEST-provider/TEST-model',
+      revision: 'TEST-PNG-policy',
+      mimeTypes: ['image/png'],
+      resolve,
+    },
+  } as unknown as MemberProviderContext;
+  const provider = createOpenCodeV2EmbeddedMemberProvider(context);
+  return {
+    provider,
+    request,
+    stop,
+    resolve,
+    canAllocate,
+    getCatalogReceipt,
+    mcpReads: () => mcpReads,
+    reattest: () => ownedSession!.probe(new AbortController().signal),
+    attachments: () => delegateContext!.attachments!,
+    revokeOwner() { ownerCurrent = false; },
+    publishAuth() {
+      const directory = join(root, 'data', 'opencode');
+      mkdirSync(directory, { mode: 0o700 });
+      writeFileSync(join(directory, 'auth.json'), JSON.stringify({
+        'TEST-provider': { type: 'api', key: 'TEST-new-key' },
+      }), { mode: 0o600 });
+    },
+    fail(primary: Error) {
+      callbackFailure = primary;
+      disposalFailure = true;
+    },
+    failDisposal() { disposalFailure = true; },
+    holdDispose() {
+      let release = () => {};
+      heldDisposal = new Promise<void>((done) => {
+        release = done;
+      });
+      const entered = new Promise<void>((done) => {
+        disposalStarted = done;
+      });
+      return { release, entered };
+    },
+  };
+}
+
+test.each(['false', 'throw'] as const)('missing catalog and %s allocation stop the original opening without further polling', async mode => {
+  const f = fixture(), failure = new Error('TEST original allocation refused');
+  f.getCatalogReceipt.mockImplementation(() => {
+    f.canAllocate.mockImplementation(() => { if (mode === 'throw') throw failure; return false; });
+    return undefined;
+  });
+  const opening = f.provider.factory.open(f.request);
+  if (mode === 'throw') await expect(opening).rejects.toBe(failure);
+  else await expect(opening).rejects.toThrow('OpenCode V2 embedded session unavailable');
+  expect(f.mcpReads()).toBe(1);
+  expect(f.stop).toHaveBeenCalledTimes(1);
+  expect(f.provider.isReady()).toBe(false);
+  expect(f.resolve).not.toHaveBeenCalled();
+  expect(await f.provider.cleanup()).toBe(true);
+});
+
+test('missing catalog with current allocation may complete and valid later receipts add no allocation read', async () => {
+  const f = fixture();
+  f.getCatalogReceipt.mockReturnValueOnce(undefined);
+  await f.provider.factory.open(f.request);
+  expect(f.mcpReads()).toBe(2);
+  const allocationReads = f.canAllocate.mock.calls.length;
+  f.canAllocate.mockImplementation(() => { throw new Error('TEST allocated Runtime must not be read here'); });
+  await expect(f.reattest()).resolves.toBe(true);
+  expect(f.canAllocate).toHaveBeenCalledTimes(allocationReads);
+  expect(await f.provider.cleanup()).toBe(true);
+});
+
+test.each(['stop', 'dispose'] as const)('admission loss preserves %s cleanup uncertainty', async mode => {
+  const f = fixture();
+  if (mode === 'stop') f.stop.mockResolvedValue(false);
+  f.getCatalogReceipt.mockImplementation(() => {
+    f.canAllocate.mockReturnValue(false);
+    if (mode === 'dispose') f.failDisposal();
+    return undefined;
+  });
+  await expect(f.provider.factory.open(f.request)).rejects.toMatchObject({
+    message: 'OpenCode V2 embedded cleanup unknown',
+    cause: { message: 'OpenCode V2 embedded session unavailable' },
+  });
+  expect(f.mcpReads()).toBe(1);
+  expect(f.stop).toHaveBeenCalledTimes(1);
+  expect(await f.provider.cleanup()).toBe(false);
+  expect(f.provider.isReady()).toBe(false);
+  expect(f.resolve).not.toHaveBeenCalled();
+});
+
+test('rejected owned-client disposal stays UNKNOWN while physical stop preserves the original callback failure', async () => {
+  const f = fixture(),
+    primary = new Error('TEST original callback failure');
+  f.fail(primary);
+  await expect(f.provider.factory.open(f.request)).rejects.toMatchObject({
+    message: 'OpenCode V2 embedded cleanup unknown',
+    cause: primary,
+  });
+  expect(f.stop).toHaveBeenCalled();
+  expect(await f.provider.cleanup()).toBe(false);
+  expect(f.provider.isReady()).toBe(false);
+  expect(f.resolve).not.toHaveBeenCalled();
+});
+
+test('seal, revoked owner or changed auth during catalog disposal cannot resolve attachment bytes', async () => {
+  for (const mode of ['seal', 'owner', 'auth'] as const) {
+    const f = fixture();
+    await f.provider.factory.open(f.request);
+    expect(f.provider.attachmentCapabilities).toEqual({
+      images: true,
+      documents: false,
+      textFiles: false,
+      nativeMedia: {
+        ...nativeMediaLimits,
+        mimeTypes: ['image/png'],
+      },
+    });
+    const held = f.holdDispose();
+    const pending = f
+      .attachments()
+      .resolve(
+        attachmentBinding,
+        new AbortController().signal
+      );
+    const rejected = expect(pending).rejects.toMatchObject(
+      mode === 'seal'
+        ? { name: 'AbortError' }
+        : { message: 'OpenCode V2 embedded session unavailable' }
+    );
+    await held.entered;
+    if (mode === 'seal') f.provider.seal();
+    else if (mode === 'owner') f.revokeOwner();
+    else f.publishAuth();
+    held.release();
+    await rejected;
+    expect(f.resolve).not.toHaveBeenCalled();
+    expect(f.provider.isReady()).toBe(false);
+    expect(await f.provider.cleanup()).toBe(true);
+  }
+});
+
+test('image capability is absent before native catalog attestation and disabled for a text-only model', async () => {
+  const f = fixture(false);
+  expect(f.provider.attachmentCapabilities?.images).toBe(false);
+  await f.provider.factory.open(f.request);
+  expect(f.provider.attachmentCapabilities).toEqual({
+    images: false,
+    documents: false,
+    textFiles: false,
+    nativeMedia: { ...nativeMediaLimits, mimeTypes: [] },
+  });
+  expect(
+    await f
+      .attachments()
+      .resolve(
+        attachmentBinding,
+        new AbortController().signal
+      )
+  ).toBeUndefined();
+  expect(f.resolve).not.toHaveBeenCalled();
+  expect(await f.provider.cleanup()).toBe(true);
+});

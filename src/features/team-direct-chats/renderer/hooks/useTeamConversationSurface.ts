@@ -56,9 +56,7 @@ export function useTeamConversationSurface(args: {
   groupChatIds?: readonly string[];
   onScopeChange?: () => void;
 }): TeamConversationSurfaceState {
-  const stateKey = args.contextId
-    ? JSON.stringify([args.contextId, args.teamName])
-    : args.teamName;
+  const stateKey = args.contextId ? JSON.stringify([args.contextId, args.teamName]) : args.teamName;
   const initial = getTeamMessagesSidebarUiState(stateKey);
   const [surface, setSurface] = useState<ConversationSurface>(
     () => initial.conversationSurface ?? 'list'

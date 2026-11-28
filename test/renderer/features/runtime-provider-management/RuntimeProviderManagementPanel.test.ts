@@ -3,10 +3,14 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { OpenCodeRuntimeStatus } from '@shared/types';
+
 const mocks = vi.hoisted(() => ({
   loadProjectPathProjects: vi.fn(),
   useRuntimeProviderManagement: vi.fn(),
-  nativeRuntimeStatus: null as { installed: boolean; version: string; state: string } | null,
+  nativeRuntimeStatus: null as
+    | (Omit<OpenCodeRuntimeStatus, 'source'> & { source?: OpenCodeRuntimeStatus['source'] })
+    | null,
   fetchOpenCodeRuntimeStatus: vi.fn(async () => undefined),
   invalidateOpenCodeRuntimeStatus: vi.fn(async () => undefined),
   generationProps: [] as Array<'v1' | 'v2' | null>,
@@ -307,11 +311,13 @@ describe('RuntimeProviderManagementPanel', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
-    const render = async (version: string) => {
-      mocks.nativeRuntimeStatus = { installed: true, version, state: 'ready' };
+    const render = async (status: string | OpenCodeRuntimeStatus, open = true) => {
+      mocks.nativeRuntimeStatus = typeof status === 'string'
+        ? { installed: true, version: status, state: 'ready' }
+        : status;
       await act(async () => {
         root.render(React.createElement(RuntimeProviderManagementPanel, {
-          runtimeId: 'opencode', open: true,
+          runtimeId: 'opencode', open,
         }));
         await Promise.resolve();
       });
@@ -324,6 +330,37 @@ describe('RuntimeProviderManagementPanel', () => {
     expect(mocks.generationProps.at(-1)).toBe('v2');
     await render('1.19.5');
     expect(mocks.generationProps.at(-1)).toBe('v1');
+    const captured: OpenCodeRuntimeStatus = {
+      installed: true,
+      source: 'captured-host',
+      state: 'ready',
+      nativeGeneration: 'v1',
+      sourceRevision: 'a'.repeat(64),
+    };
+    await render(captured);
+    expect(mocks.generationProps.at(-1)).toBe('v1');
+    const revision = mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0].runtimeRevision;
+    expect(revision).toBe(JSON.stringify(['ready', null, null, captured.sourceRevision, 'v1']));
+    await render({ ...captured, sourceRevision: 'b'.repeat(64) });
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0].runtimeRevision).not.toBe(
+      revision
+    );
+    await render({ ...captured, nativeGeneration: 'v2' });
+    expect(mocks.generationProps.at(-1)).toBeNull();
+    expect(mocks.useRuntimeProviderManagement.mock.calls.at(-1)?.[0].runtimeRevision).not.toBe(
+      revision
+    );
+    await render({ ...captured, version: '3.0.0' });
+    expect(mocks.generationProps.at(-1)).toBeNull();
+    expect(mocks.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledExactlyOnceWith('cache-only');
+    expect(mocks.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(1);
+    expect(mocks.invalidateOpenCodeRuntimeStatus.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.fetchOpenCodeRuntimeStatus.mock.invocationCallOrder[0]
+    );
+    await render(captured, false);
+    await render(captured);
+    expect(mocks.invalidateOpenCodeRuntimeStatus).toHaveBeenNthCalledWith(2, 'cache-only');
+    expect(mocks.fetchOpenCodeRuntimeStatus).toHaveBeenCalledTimes(2);
     await act(async () => root.unmount());
   });
 

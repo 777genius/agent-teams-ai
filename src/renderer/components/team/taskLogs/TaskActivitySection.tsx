@@ -13,6 +13,7 @@ import {
 } from '@shared/utils/boardTaskActivityPresentation';
 import { AlertCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 
+import { HostTaskActivityIndex } from './HostTaskActivityViews';
 import { TaskActivityLinkedToolCard } from './TaskActivityLinkedToolCard';
 
 import type { TaskDetailIdentity } from '@features/team-task-detail/core';
@@ -22,6 +23,7 @@ import type {
   BoardTaskActivityDetailResult,
   BoardTaskActivityEntry,
 } from '@shared/types';
+import type { HostTaskActivityView, HostTaskLogDetailResult } from '@shared/types/teamActivity';
 
 interface TaskActivitySectionProps {
   identity: TaskDetailIdentity;
@@ -268,10 +270,13 @@ export const TaskActivitySection = ({
   );
   const resourceRevision = useStore((state) => state.taskDetailResourcesRevision);
   const ensureTaskDetailActivityDetail = useStore((state) => state.ensureTaskDetailActivityDetail);
-  const entries = useMemo(
-    () => (activityEntry?.data as BoardTaskActivityEntry[] | null | undefined) ?? [],
-    [activityEntry?.data]
-  );
+  const rawActivity = activityEntry?.data as
+    | BoardTaskActivityEntry[]
+    | HostTaskActivityView
+    | null
+    | undefined;
+  const hostActivity = rawActivity && !Array.isArray(rawActivity) ? rawActivity : null;
+  const entries = useMemo(() => (Array.isArray(rawActivity) ? rawActivity : []), [rawActivity]);
   const loading = Boolean(activityEntry?.loading && !activityEntry.loaded);
   const error = activityEntry?.error ?? null;
 
@@ -295,9 +300,9 @@ export const TaskActivitySection = ({
       if (!entry) return { status: 'idle' };
       if (entry.loading && !entry.loaded) return { status: 'loading' };
       if (entry.error) return { status: 'error', error: entry.error };
-      const result = entry.data as BoardTaskActivityDetailResult | null;
+      const result = entry.data as BoardTaskActivityDetailResult | HostTaskLogDetailResult | null;
       if (!result) return { status: 'idle' };
-      return result.status === 'ok'
+      return result.status === 'ok' && !('kind' in result.detail)
         ? { status: 'ok', detail: normalizeDetail(result.detail) }
         : { status: 'missing' };
     },
@@ -363,6 +368,16 @@ export const TaskActivitySection = ({
       );
     }
 
+    if (hostActivity?.taskId === identity.taskId)
+      return (
+        <HostTaskActivityIndex
+          key={JSON.stringify(identity)}
+          teamName={identity.teamName}
+          value={hostActivity}
+          mode="activity"
+        />
+      );
+
     if (visibleEntries.length === 0) {
       return (
         <p className="text-xs text-[var(--color-text-muted)]">
@@ -390,6 +405,8 @@ export const TaskActivitySection = ({
     getDetailState,
     handleToggle,
     hasOnlyLowSignalExecution,
+    hostActivity,
+    identity,
     loading,
     visibleEntries,
     t,

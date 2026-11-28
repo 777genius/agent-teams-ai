@@ -326,7 +326,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       reportIntents: [],
       outboxItems: [],
       metricEvents: [],
-    });
+    }, { resetPrimaryIncarnation: true });
   });
 
   it('does not complete team purge while a rejected RPC still has a retiring writer', async () => {
@@ -408,13 +408,17 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     });
 
     const pendingPurgePath = paths.getPendingPrimaryPurgePath(TEAM);
+    await gateway.importTeam(TEAM, await gateway.listTeamSnapshot(TEAM), {
+      incarnation: 'TEST-purge-original-owner',
+    });
+    expect(await gateway.readPrimaryIncarnation(TEAM)).toBe('TEST-purge-original-owner');
     const realImportTeam = gateway.importTeam.bind(gateway);
     const realRecordStoreImport = gateway.recordStoreImport.bind(gateway);
     let observedFenceBeforeEmptyCommit = false;
     let recordedImportCount: number | null = null;
     const importTeam = vi
       .spyOn(gateway, 'importTeam')
-      .mockImplementation(async (teamName, snapshot) => {
+      .mockImplementation(async (teamName, snapshot, binding) => {
         if (
           snapshot.statuses.length === 0 &&
           snapshot.reportIntents.length === 0 &&
@@ -424,9 +428,10 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
           await expect(readFile(pendingPurgePath, 'utf8')).resolves.toContain(
             '"activeJsonStateCleared": true'
           );
+          expect(binding).toEqual({ resetPrimaryIncarnation: true });
           observedFenceBeforeEmptyCommit = true;
         }
-        await realImportTeam(teamName, snapshot);
+        await realImportTeam(teamName, snapshot, binding);
       });
     const recordStoreImport = vi
       .spyOn(gateway, 'recordStoreImport')
@@ -438,7 +443,10 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       });
     const writeClean = vi
       .spyOn(InternalStorageJsonReplica.prototype, 'writeClean')
-      .mockRejectedValueOnce(new Error('simulated crash before empty clean replica publication'));
+      .mockImplementationOnce(async () => {
+        expect(await gateway.readPrimaryIncarnation(TEAM)).toBeNull();
+        throw new Error('simulated crash before empty clean replica publication');
+      });
     try {
       await expect(store.purgeTeam(TEAM)).rejects.toThrow(
         'simulated crash before empty clean replica publication'
@@ -450,6 +458,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
     }
 
     expect(observedFenceBeforeEmptyCommit).toBe(true);
+    expect(await gateway.readPrimaryIncarnation(TEAM)).toBeNull();
     expect(recordedImportCount).toBe(0);
     expect(await gateway.listTeamSnapshot(TEAM)).toEqual({
       statuses: [],
@@ -877,7 +886,7 @@ describe('internal storage SQLite -> JSON fallback -> SQLite continuity', () => 
       reportIntents: [],
       outboxItems: [],
       metricEvents: [],
-    });
+    }, { resetPrimaryIncarnation: true });
   });
 
   it('purgeTeam prevents a same-name resume from hydrating the deleted team from stale state', async () => {

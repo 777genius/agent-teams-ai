@@ -31,9 +31,12 @@ import { createLogger } from '@shared/utils/logger';
 import { type ApiKeyService } from '../services/extensions/apikeys/ApiKeyService';
 import { GitHubStarsService } from '../services/extensions/catalog/GitHubStarsService';
 
+import { captureDesktopNativeExtensions } from './agentBackend';
+
 import type { ExtensionFacadeService } from '../services/extensions/ExtensionFacadeService';
 import type { McpInstallService } from '../services/extensions/install/McpInstallService';
 import type { PluginInstallService } from '../services/extensions/install/PluginInstallService';
+import type { NativeExtensionCapture } from '../services/extensions/runtime/CapturedNativeExtensions';
 import type { McpHealthDiagnosticsService } from '../services/extensions/state/McpHealthDiagnosticsService';
 import type {
   ApiKeyEntry,
@@ -57,10 +60,15 @@ const logger = createLogger('IPC:extensions');
 /** Allowed scope values. Multimodel runtimes expose `global` for MCPs, not Claude plugins. */
 const VALID_PLUGIN_SCOPES = new Set(['local', 'user', 'project']);
 const VALID_MCP_SCOPES = new Set(['local', 'user', 'project', 'global']);
+const isPluginScope = (value: string): value is PluginInstallRequest['scope'] =>
+  VALID_PLUGIN_SCOPES.has(value);
+const isMcpScope = (value: string): value is McpInstallRequest['scope'] =>
+  VALID_MCP_SCOPES.has(value);
 
 // ── Module state ───────────────────────────────────────────────────────────
 
 const starsService = new GitHubStarsService();
+let captureNative: NativeExtensionCapture | undefined;
 
 let extensionFacade: ExtensionFacadeService | null = null;
 let pluginInstaller: PluginInstallService | null = null;
@@ -84,7 +92,11 @@ export function initializeExtensionHandlers(
   mcpHealthDiagnostics = mcpDiagnostics ?? null;
 }
 
-export function registerExtensionHandlers(ipcMain: IpcMain): void {
+export function registerExtensionHandlers(
+  ipcMain: IpcMain,
+  nativeCapture: NativeExtensionCapture = captureDesktopNativeExtensions
+): void {
+  captureNative = nativeCapture;
   ipcMain.handle(PLUGIN_GET_ALL, handleGetAll);
   ipcMain.handle(PLUGIN_GET_README, handleGetReadme);
   ipcMain.handle(PLUGIN_INSTALL, handlePluginInstall);
@@ -157,16 +169,22 @@ async function wrapHandler<T>(operation: string, handler: () => Promise<T>): Pro
 // ── Plugin Handlers ────────────────────────────────────────────────────────
 
 async function handleGetAll(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   projectPath?: string,
   forceRefresh?: boolean
 ): Promise<IpcResult<EnrichedPlugin[]>> {
-  return wrapHandler('getAll', () =>
-    getFacade().getEnrichedPlugins(
-      typeof projectPath === 'string' ? projectPath : undefined,
-      typeof forceRefresh === 'boolean' ? forceRefresh : false
-    )
-  );
+  return wrapHandler('getAll', async () => {
+    const project = typeof projectPath === 'string' ? projectPath : undefined;
+    const native = await captureNative?.(event, project, {
+      panel: 'plugins',
+      scope: project ? 'project' : 'user',
+    });
+    return getFacade().getEnrichedPlugins(
+      project,
+      typeof forceRefresh === 'boolean' ? forceRefresh : false,
+      await native?.plugins()
+    );
+  });
 }
 
 async function handleGetReadme(
@@ -222,12 +240,17 @@ async function handleMcpGetById(
 }
 
 async function handleMcpGetInstalled(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   projectPath?: string
 ): Promise<IpcResult<InstalledMcpEntry[]>> {
-  return wrapHandler('mcpGetInstalled', () =>
-    getFacade().getInstalledMcp(typeof projectPath === 'string' ? projectPath : undefined)
-  );
+  return wrapHandler('mcpGetInstalled', async () => {
+    const project = typeof projectPath === 'string' ? projectPath : undefined;
+    const native = await captureNative?.(event, project, {
+      panel: 'mcp',
+      scope: project ? 'project' : 'user',
+    });
+    return native ? native.mcp() : getFacade().getInstalledMcp(project);
+  });
 }
 
 function getMcpHealthDiagnostics(): McpHealthDiagnosticsService {
@@ -238,12 +261,17 @@ function getMcpHealthDiagnostics(): McpHealthDiagnosticsService {
 }
 
 async function handleMcpDiagnose(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   projectPath?: string
 ): Promise<IpcResult<McpServerDiagnostic[]>> {
-  return wrapHandler('mcpDiagnose', () =>
-    getMcpHealthDiagnostics().diagnose(typeof projectPath === 'string' ? projectPath : undefined)
-  );
+  return wrapHandler('mcpDiagnose', async () => {
+    const project = typeof projectPath === 'string' ? projectPath : undefined;
+    const native = await captureNative?.(event, project, {
+      panel: 'mcp',
+      scope: project ? 'project' : 'user',
+    });
+    return native ? native.diagnose() : getMcpHealthDiagnostics().diagnose(project);
+  });
 }
 
 // ── Install/Uninstall Handlers ────────────────────────────────────────────
@@ -263,7 +291,7 @@ function getMcpInstaller(): McpInstallService {
 }
 
 async function handlePluginInstall(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: PluginInstallRequest
 ): Promise<IpcResult<OperationResult>> {
   return wrapHandler('pluginInstall', async () => {
@@ -273,7 +301,12 @@ async function handlePluginInstall(
     if (!VALID_PLUGIN_SCOPES.has(request.scope)) {
       throw new Error(`Invalid scope: "${request.scope}"`);
     }
-    const result = await getPluginInstaller().install(request);
+    const captured = structuredClone(request);
+    const native = await captureNative?.(event, captured.projectPath, {
+      panel: 'plugins',
+      scope: captured.scope,
+    });
+    const result = await getPluginInstaller().install(captured, native);
     if (result.state === 'success') {
       getFacade().invalidateInstalledCache();
     }
@@ -282,7 +315,7 @@ async function handlePluginInstall(
 }
 
 async function handlePluginUninstall(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   pluginId?: string,
   scope?: string,
   projectPath?: string
@@ -291,13 +324,19 @@ async function handlePluginUninstall(
     if (typeof pluginId !== 'string' || !pluginId) {
       throw new Error('pluginId is required');
     }
-    if (scope !== undefined && !VALID_PLUGIN_SCOPES.has(scope)) {
+    if (scope !== undefined && !isPluginScope(scope)) {
       throw new Error(`Invalid scope: "${scope}"`);
     }
+    const native = await captureNative?.(
+      event,
+      typeof projectPath === 'string' ? projectPath : undefined,
+      { panel: 'plugins', scope: scope ?? 'user' }
+    );
     const result = await getPluginInstaller().uninstall(
       pluginId,
       typeof scope === 'string' ? scope : undefined,
-      typeof projectPath === 'string' ? projectPath : undefined
+      typeof projectPath === 'string' ? projectPath : undefined,
+      native
     );
     if (result.state === 'success') {
       getFacade().invalidateInstalledCache();
@@ -307,7 +346,7 @@ async function handlePluginUninstall(
 }
 
 async function handleMcpInstall(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: McpInstallRequest
 ): Promise<IpcResult<OperationResult>> {
   return wrapHandler('mcpInstall', async () => {
@@ -320,7 +359,12 @@ async function handleMcpInstall(
     if (!VALID_MCP_SCOPES.has(request.scope)) {
       throw new Error(`Invalid scope: "${request.scope}"`);
     }
-    const result = await getMcpInstaller().install(request);
+    const captured = structuredClone(request);
+    const native = await captureNative?.(event, captured.projectPath, {
+      panel: 'mcp',
+      scope: captured.scope,
+    });
+    const result = await getMcpInstaller().install(captured, native);
     if (result.state === 'success') {
       getFacade().invalidateInstalledCache();
     }
@@ -329,7 +373,7 @@ async function handleMcpInstall(
 }
 
 async function handleMcpInstallCustom(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   request?: McpCustomInstallRequest
 ): Promise<IpcResult<OperationResult>> {
   return wrapHandler('mcpInstallCustom', async () => {
@@ -342,7 +386,12 @@ async function handleMcpInstallCustom(
     if (!VALID_MCP_SCOPES.has(request.scope)) {
       throw new Error(`Invalid scope: "${request.scope}"`);
     }
-    const result = await getMcpInstaller().installCustom(request);
+    const captured = structuredClone(request);
+    const native = await captureNative?.(event, captured.projectPath, {
+      panel: 'mcp',
+      scope: captured.scope,
+    });
+    const result = await getMcpInstaller().installCustom(captured, native);
     if (result.state === 'success') {
       getFacade().invalidateInstalledCache();
     }
@@ -351,7 +400,7 @@ async function handleMcpInstallCustom(
 }
 
 async function handleMcpUninstall(
-  _event: IpcMainInvokeEvent,
+  event: IpcMainInvokeEvent,
   name?: string,
   scope?: string,
   projectPath?: string
@@ -360,13 +409,19 @@ async function handleMcpUninstall(
     if (typeof name !== 'string' || !name) {
       throw new Error('Server name is required');
     }
-    if (scope !== undefined && !VALID_MCP_SCOPES.has(scope)) {
+    if (scope !== undefined && !isMcpScope(scope)) {
       throw new Error(`Invalid scope: "${scope}"`);
     }
+    const native = await captureNative?.(
+      event,
+      typeof projectPath === 'string' ? projectPath : undefined,
+      { panel: 'mcp', scope: scope ?? 'local' }
+    );
     const result = await getMcpInstaller().uninstall(
       name,
       typeof scope === 'string' ? scope : undefined,
-      typeof projectPath === 'string' ? projectPath : undefined
+      typeof projectPath === 'string' ? projectPath : undefined,
+      native
     );
     if (result.state === 'success') {
       getFacade().invalidateInstalledCache();

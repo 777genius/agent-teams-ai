@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "kind": "TEST_NATIVE_SPI_M0660_AUTHOR_EVIDENCE_CHECKPOINT",
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997620,
+  "jobId": 133017915100,
+  "artifactId": 14193041377,
+  "observedTerminalSliceUTC": "2026-11-16T02:31:34Z",
+  "outcome": "Original exact-source job SUCCESS; TEST receipt complete with broad qualification flags false",
+  "payloadCount": 10,
+  "payloadBytes": 396152,
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/job-133017915100.log",
+      "bytes": 68653,
+      "blob": "cab186128f9c8051b27e61e97bff46fd7f917865",
+      "sha256": "6aaa1c8ae3bb9aba1facec0dea0ce22471e5ea3a35bff7c8fa5f23b86c2ed142"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/job-log-response.json",
+      "bytes": 69966,
+      "blob": "1706feadea6cfe4d15d98667021f639f0cd7ccc3",
+      "sha256": "f8ef8f76887ae6ba45ac3e2a1acb1f58dd312f17bd2e416a068a00710b46539f"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/official-artifacts-response.json",
+      "bytes": 7345,
+      "blob": "ade0e28152e32b1bd69540fe41d7256e4271305b",
+      "sha256": "41f5bbb6a7e3f5bef211e67f0e20b9326f27169670bd54a0425c264c17fc0411"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/artifact-14193041377.zip",
+      "bytes": 3156,
+      "blob": "d83f3b001549ffba2ca5850dbd3303aa4a5f32b0",
+      "sha256": "71a0c93dcd053cfb20e6518f30fa220675d11cb2f1c8297ba8e66fa8fa02af35"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/archive-audit.json",
+      "bytes": 871,
+      "blob": "324858b00701e1df5a9213da4a6b498c3132efbf",
+      "sha256": "937a959852d381dffbee9db4e06c0def0ac91a91a266a307535400bf659947d3"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/source-and-command-audit.json",
+      "bytes": 6570,
+      "blob": "3623d99776928e418e7dcacab405ff06b1404271",
+      "sha256": "8610a2522bebec9ee51ce887f49f3a31e453b86e8fa0573bb213e40453b2abdc"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/audit.json",
+      "bytes": 23865,
+      "blob": "6afd3dc0d3889ffd82629c758d1bbdf440525dc9",
+      "sha256": "947c1f0d0c921b02ab9681c2b8888278a4b1d13f23e61b2a2a09ab90ed29fa88"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/Plan29-spi-linux-appendix.md",
+      "bytes": 6986,
+      "blob": "0b13f691c11527182eeed34d24c1133834612eeb",
+      "sha256": "48dbe048a1423096115415bf2ab21c0706f962123a42472a56e080650bab00f8"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/v2-jobs-api-0231.json",
+      "bytes": 45617,
+      "blob": "c8060bc34b944637c34c33ce6a6014e66e90f520",
+      "sha256": "81659cc8e7fd44a50b4db8ab5e49c888808b31324eb80bbe673fda39392b2d55"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/host-source-M0660-git-audit.json",
+      "bytes": 163123,
+      "blob": "c6f687fc66ecfbd5ab750c1fa657af628e2329e7",
+      "sha256": "05d5046c29097f54d9fb6c48bb8ab4236240a883d5ebfda4854269c5779a2893"
+    }
+  ],
+  "recoverableOriginalMembers": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/extracted/agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json",
+      "bytes": 3225,
+      "blob": "3b2c8685d514b6e5f57a6eb90ec79a4dd244640d",
+      "sha256": "8bf8a9c7adb9099f7138cc75349a404b913189ad2b039d1a5ee449104b277133",
+      "member": "agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json",
+      "archive": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/artifact-14193041377.zip",
+      "crc32": "36307b89"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/extracted/_temp/opencode-v2-host-cli/package-lock.json",
+      "bytes": 6764,
+      "blob": "9267217bc0c99ae3a1f502bbc7cc33ff7aa0061f",
+      "sha256": "8300e598ffc99a2575effe83c6fb504af9698e1effa4947feb6feed94036a550",
+      "member": "_temp/opencode-v2-host-cli/package-lock.json",
+      "archive": "/workspace/scratch/82d3f9ba6b85/native-audit-M0660/spi-linux/artifact-14193041377.zip",
+      "crc32": "570e75df"
+    }
+  ],
+  "sourceJoin": {
+    "selectedGitObjects": 22,
+    "sharedHostGitFiles": 619,
+    "sharedHostGitSourceLF": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+    "runtimeSourceCensusRetained": false,
+    "hostDistDigestRetained": false,
+    "archivedBinaryBytes": false
+  },
+  "observedResults": {
+    "reporterCases": 16,
+    "pass": 14,
+    "fail": 0,
+    "skip": 2,
+    "cancelled": 0,
+    "orderedNativeReceiptSteps": 25,
+    "cleanup": true,
+    "qualified": false,
+    "productQualified": false,
+    "packagedElectronQualified": false
+  },
+  "independentR2": "Pending; this checkpoint freezes the author audit and raw originals only.",
+  "preservation": {
+    "noSignedDownloadURL": true,
+    "allZipMembersCRCAndExtractedBytesExact": true,
+    "originalsUnchanged": true,
+    "noProjectOrNativeExecution": true,
+    "noCIOrSourceRefMutations": true,
+    "allOwnedRunsTerminalPollingStopped": true,
+    "previousPackagesUnchanged": true
+  }
+}

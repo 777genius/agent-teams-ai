@@ -1,0 +1,310 @@
+{
+  "artifactId": 14501075844,
+  "zipBytes": 1421182,
+  "zipSha256": "3518bf989f28d041c1b4295b15dda3ede12254729ad3a6787fbc85cff150200a",
+  "files": [
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/62f71c2e-cadb-48ed-aee1-551816b562d9.jsonl",
+      "bytes": 0
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/TEST-peer-claude-scope/effects.ndjson",
+      "bytes": 7298
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/TEST-peer-codex-scope/effects.ndjson",
+      "bytes": 5032
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/claude/projects/-home-runner-work-_temp-TEST-desktop-backend-Yk5rj8-workspace/TEST-project-discovery-only.jsonl",
+      "bytes": 109
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/claude/projects/-home-runner-work-_temp-TEST-desktop-backend-Yk5rj8-workspace-other/TEST-project-discovery-only.jsonl",
+      "bytes": 115
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/desktop-app.log",
+      "bytes": 6406
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/desktop-backend-receipt.json",
+      "bytes": 1084326
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/desktop-descriptor.json",
+      "bytes": 4080
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/host-profile.json",
+      "bytes": 14945
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/184b2d1572bae0624609ff7bdef49e82cacf39c9f8872a3caf2279a124b55767.json",
+      "bytes": 3276
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/2efa8133a91179da8ba939a2edc08fe8ef93df355edb9c11a7b28e73516e39ce.json",
+      "bytes": 971
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/3cce2a7190a2ded3cde3e34384aad8c2a2129626bc0d2ce1519bc098197667e7.json",
+      "bytes": 928
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/4b27226d4ccab71eb476e52fb19deae990afd24e3285535120cae6a9e58f7cd2.json",
+      "bytes": 929
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/4b73c4b14d46e3cefcbc5cba93d627a4a95ed59eba0b1c403c1ec8c7e0d57364.json",
+      "bytes": 2871
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/7ac897853fcb05eb0e4d43f8e4646e84311c3b22b15853b2befe721200f0c07c.json",
+      "bytes": 904
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/818679c7da2e9bb5667a84927e25fc6e01c304284df107a6dcf4e14f2e731f7a.json",
+      "bytes": 915
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/99bd8825dd4c4a229041c189189c5d61630f003db27ce74775f7d5ae57ebfba4.json",
+      "bytes": 919
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/ca806d396709ea7472c74a06a2babbcbfa35611430d2a217c64f7bbba2aae579.json",
+      "bytes": 915
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/e6ba5ce582b7c4afd73f9e55c528d6c9d1db5dbc761a77b2bddc93ab5ce1520c.json",
+      "bytes": 4841
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/management-commands/f004fdbc76a680bb40756ba640116d54dd59bb7eef04ca693d82c932a08a56e9.json",
+      "bytes": 915
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/runtime-checkpoints/cp1-987fa758b1a01a35cb879cd69299c903f46dc1e4554abd5b658359c9f81856a7.json",
+      "bytes": 1549
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/runtime-checkpoints/cp1-f457d5948d73df0f36da365e51fad9119071c10749e45c1cefa664c73b45310b.json",
+      "bytes": 1502
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/runtime-sessions/12ca95791cf486c47239bca96c0845de7bb6c76b963d3e06cca4b72ce5573878/f5b27c261ca2c0a89efe8d68d4cf734e7710cbc1f60bb0b6d0d6b22a6c6cc9ae.json",
+      "bytes": 714
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/runtime-sessions/27931332834b70a8fc4644c6355db9b119f747f143201e217ccd1475fc13141d/b80f4fef5e78788a1481228f81f45e5cf874ae15250eba236dc89d927a3d00ab.json",
+      "bytes": 1899
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/runtime-sessions/94510904d83a37c53d25d864f3480154eab4a676fda34c60d7f4ad3c85b426a0/40fc55680ed74ad449d5f3984899962b40a7d2ff387432c0cbbcfb0cbe7209a6.json",
+      "bytes": 1898
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/runtime-sources/index.json",
+      "bytes": 4730
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/teams/test-created-native-mixed/.host-owner/launches/360b18f4f7ef44a62d68e4f9bb57f00ab4657027e925daef1f61b9afdee78047.json",
+      "bytes": 11761
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/teams/test-created-native-mixed/.host-owner/state.json",
+      "bytes": 7732
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/teams/test-desktop-backend/.host-owner/launches/840bff33b061255176357bc32755ed9faeb746b9c148514fd40fb66ef799c948.json",
+      "bytes": 2092
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 1025
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/mixed-models.json",
+      "bytes": 529
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/sentinel-invocations.ndjson",
+      "bytes": 338
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/ui-failure.png",
+      "bytes": 96967
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/userData/logs/app-errors.ndjson",
+      "bytes": 66446
+    },
+    {
+      "name": "TEST-desktop-backend-Yk5rj8/workspace/opencode.json",
+      "bytes": 453
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/claude/projects/-home-runner-work-_temp-TEST-desktop-backend-wby7qE-workspace/TEST-project-discovery-only.jsonl",
+      "bytes": 109
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/claude/projects/-home-runner-work-_temp-TEST-desktop-backend-wby7qE-workspace-other/TEST-project-discovery-only.jsonl",
+      "bytes": 115
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/desktop-backend-app.log",
+      "bytes": 16772
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/desktop-backend-receipt.json",
+      "bytes": 908507
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/desktop-descriptor.json",
+      "bytes": 3319
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/host-profile.json",
+      "bytes": 5011
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/141b6a5dad2c52201d38909897ff59f64ff36bc16e1c32138d8ab3874993235c.json",
+      "bytes": 804
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/1831cfaeeb8aa1c763aef5adab6680f997fe49d74b318f960cea6fa3d9a75ef2.json",
+      "bytes": 812
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/1cc94720f3ed063276495f05084400663b513db8d1c585c5641e04a4dc07c809.json",
+      "bytes": 2811
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/420cf92eff166354be37cb0ac6038fbb5edb862cd903414d90b3d98154533d39.json",
+      "bytes": 3216
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/6a00d9b6fe96c4a61a7bfbd2cb7d02f951ea7777bdb3e25e4f640b98ed631572.json",
+      "bytes": 3237
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/a299cff004fcfcbccb35970bb70a0212bbdbff3e8f7522ad21a7560ad8fd59e0.json",
+      "bytes": 3245
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/a8bd2849c8ea66bfe948442b750e67283852a0a718c54822b94081ac85d924d2.json",
+      "bytes": 3267
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/b7b3a417a8965bd5d05b3c15950b97949f807141ef95a7a19ffea06858f5fc70.json",
+      "bytes": 1370
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/c9869dd9e838bef7782e5c91cacf7803493dab4378e43cb172e43163126c3c06.json",
+      "bytes": 1345
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/d009e81c90a68166077a1dd1307d360f7f9fe8c341f893a1a13601d5aa0ca088.json",
+      "bytes": 812
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/eb064cf9a65f892135c4cbb44ebfcab986d133890a3d0c7a369e54e97bc0e203.json",
+      "bytes": 3237
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/management-commands/fde75875c945396c9fee90c56dd6abd7874c6a9bbf764755f69b136a6895772f.json",
+      "bytes": 2832
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/runtime-sources/index.json",
+      "bytes": 15919
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/tasks/test-desktop-backend/f910d268-83cd-5df0-8b9c-b6a9df695560.json",
+      "bytes": 868
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/teams/test-desktop-backend/.host-owner/commands/73d51a47022bad35094134a650a17f09916cdc1f2cab13ca2201e1ac8ef59773.json",
+      "bytes": 2037
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/hoststore/teams/test-desktop-backend/.host-owner/state.json",
+      "bytes": 567
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/preferences/global/global-runtime-preferences.json",
+      "bytes": 142
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/preferences/workspace/agent-teams-runtime-preferences.json",
+      "bytes": 123
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/sentinel-invocations.ndjson",
+      "bytes": 686
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/ui-seed-receipt.json",
+      "bytes": 2037
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/ui-v2-management-connected.png",
+      "bytes": 99784
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/ui-v2-management-inherited.png",
+      "bytes": 85415
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/ui-v2-management-project-override.png",
+      "bytes": 87303
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/ui-v2-management-rejected-key.png",
+      "bytes": 119687
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/ui-v2-management-reloaded.png",
+      "bytes": 85855
+    },
+    {
+      "name": "TEST-desktop-backend-wby7qE/userData/logs/app-errors.ndjson",
+      "bytes": 106027
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-dvzCLm/linux-child-exec/linux-child-exec",
+      "bytes": 790608
+    },
+    {
+      "name": "TEST-emulated-ui-inputs-dvzCLm/linux-child-exec/manifest.json",
+      "bytes": 2408
+    },
+    {
+      "name": "host-emulated-inputs.json",
+      "bytes": 1838
+    },
+    {
+      "name": "host-emulated-linux-child-exec-selection.json",
+      "bytes": 271
+    },
+    {
+      "name": "host-emulated-opencode-v2-inputs.json",
+      "bytes": 783
+    },
+    {
+      "name": "host-emulated-opencode-v2-live-membership-ui.log",
+      "bytes": 2375
+    },
+    {
+      "name": "host-emulated-opencode-v2-management-ui-verified.json",
+      "bytes": 402
+    },
+    {
+      "name": "host-emulated-opencode-v2-management-ui.log",
+      "bytes": 6731
+    }
+  ],
+  "workflowArtifactUrl": "https://github.com/777genius/agent-teams-ai/actions/runs/44455698034/artifacts/14501075844",
+  "localArchivePath": "/workspace/scratch/de9d4631e21c/membership-9ec6cb6f-20261119/artifact-14501075844.zip",
+  "qualification": "Artifact index only. Original ZIP and extracted raw receipts remain unmodified; no giant archive or full source roster duplicated into repository evidence."
+}

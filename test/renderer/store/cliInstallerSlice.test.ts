@@ -88,7 +88,7 @@ import {
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
-import type { CliInstallationStatus } from '@shared/types';
+import type { CliInstallationStatus, OpenCodeRuntimeStatus } from '@shared/types';
 
 function createMultimodelProvider(
   overrides: Partial<CliInstallationStatus['providers'][number]> & {
@@ -965,6 +965,36 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('OpenCode runtime installer actions', () => {
+    it('keeps download completion pending until the original install and Host selection return', async () => {
+      let release!: (status: OpenCodeRuntimeStatus) => void;
+      vi.mocked(api.openCodeRuntime.install).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = resolve;
+          })
+      );
+      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(
+        createReadyOpenCodeCatalogProvider('opencode/big-pickle')
+      );
+      const install = useStore.getState().installOpenCodeRuntime();
+      await vi.waitFor(() => expect(release).toBeTypeOf('function'));
+      const downloaded: OpenCodeRuntimeStatus = {
+        installed: true,
+        state: 'ready',
+        source: 'app-managed',
+        version: '1.19.5',
+      };
+      useStore.getState().applyOpenCodeRuntimeProgress(downloaded);
+      expect(useStore.getState().openCodeRuntimeStatus?.state).toBe('checking');
+      expect(useStore.getState().openCodeRuntimeStatusLoading).toBe(true);
+      release({ ...downloaded, sourceRevision: 'TEST-published-source' });
+      await install;
+      expect(useStore.getState().openCodeRuntimeStatus).toMatchObject({
+        state: 'ready',
+        sourceRevision: 'TEST-published-source',
+      });
+    });
+
     it('refreshes OpenCode provider status after a successful app-managed install', async () => {
       const placeholder = createMultimodelProvider({
         providerId: 'opencode',
@@ -1940,6 +1970,69 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('Codex runtime status invalidation', () => {
+    it.each(['runtime invalidation', 'provider refresh'] as const)(
+      'preserves the installed and published runtime when %s fails after installation',
+      async (failedStep) => {
+        const status: CodexRuntimeStatus = {
+          installed: true, source: 'captured-host', sourceRevision: 'b'.repeat(64),
+          version: '0.169.0', latestVersion: '0.169.0', updateAvailable: false, state: 'ready',
+          progress: { phase: 'ready', percent: 100, detail: 'Codex is ready for new launches.' },
+        };
+        const refreshError = new Error('TEST original status refresh unavailable');
+        vi.mocked(api.codexRuntime.install).mockResolvedValueOnce(status);
+        if (failedStep === 'runtime invalidation') {
+          vi.mocked(api.codexRuntime.invalidateStatus).mockRejectedValueOnce(refreshError);
+        } else {
+          vi.mocked(api.codexRuntime.invalidateStatus).mockResolvedValueOnce(undefined);
+          vi.mocked(api.cliInstaller.invalidateStatus).mockRejectedValueOnce(refreshError);
+        }
+
+        await useStore.getState().installCodexRuntime();
+
+        expect(useStore.getState().codexRuntimeStatus).toEqual(status);
+        expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+        expect(useStore.getState().codexRuntimeError).toBe(refreshError.message);
+        expect(api.codexRuntime.install).toHaveBeenCalledTimes(1);
+        expect(api.codexRuntime.invalidateStatus).toHaveBeenCalledTimes(1);
+        expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+        expect(posthogMocks.capturePostHogEvent.mock.calls.filter(([event]) => event === 'runtime_setup:install_end'))
+          .toEqual([['runtime_setup:install_end', expect.objectContaining({
+            runtime: 'codex', success: true, source: 'unknown', error_class: 'none',
+          })]]);
+      }
+    );
+
+    it('keeps an installed but unselected runtime failed without reporting success or refreshing another source', async () => {
+      const status: CodexRuntimeStatus = {
+        installed: true, source: 'app-managed', version: '0.169.0', latestVersion: '0.169.0',
+        updateAvailable: false, state: 'failed', error: 'Host selection was not confirmed',
+        progress: { phase: 'failed', detail: 'Host selection was not confirmed' },
+      };
+      vi.mocked(api.codexRuntime.install).mockResolvedValue(status);
+      await useStore.getState().installCodexRuntime();
+      expect(useStore.getState().codexRuntimeStatus).toEqual(status);
+      expect(useStore.getState().codexRuntimeStatusLoading).toBe(false);
+      expect(useStore.getState().codexRuntimeError).toBe(status.error);
+      expect(api.codexRuntime.invalidateStatus).not.toHaveBeenCalled();
+      expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+      expect(posthogMocks.capturePostHogEvent).toHaveBeenCalledWith('runtime_setup:install_end',
+        expect.objectContaining({ runtime: 'codex', success: false, source: 'app-managed' }));
+    });
+
+    it('a rejected original install leaves the update dialog retryable rather than permanently checking', async () => {
+      vi.mocked(api.codexRuntime.install).mockRejectedValue(new Error('Original context changed'));
+      await useStore.getState().installCodexRuntime();
+      expect(useStore.getState()).toMatchObject({
+        codexRuntimeStatusLoading: false, codexRuntimeError: 'Original context changed',
+        codexRuntimeStatus: { state: 'failed', progress: { phase: 'failed' } },
+      });
+      expect(api.codexRuntime.invalidateStatus).not.toHaveBeenCalled();
+      expect(posthogMocks.capturePostHogEvent.mock.calls.filter(([event]) => event === 'runtime_setup:install_end'))
+        .toEqual([['runtime_setup:install_end', expect.objectContaining({
+          runtime: 'codex', success: false, source: 'unknown',
+        })]]);
+    });
+
     it('retires a pending native read and publishes only the status fetched after invalidation', async () => {
       const pendingOld = createDeferredValue<CodexRuntimeStatus>();
       const pendingFresh = createDeferredValue<CodexRuntimeStatus>();

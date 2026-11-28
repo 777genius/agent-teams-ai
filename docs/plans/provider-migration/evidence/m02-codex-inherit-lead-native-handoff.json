@@ -1,0 +1,52 @@
+{
+  "status": "scoped-native-pass",
+  "mode": "inheritLead",
+  "jobId": "6fb33051d0720d22048bac173911ea1d",
+  "runnerExitCode": 0,
+  "nativeCodexVersion": "0.162.0",
+  "nativeCodexSha256": "8238273076041e55beded03ba1d51e034f997b7d100b0642d36daf036620fe57",
+  "providerArchiveSha256": "49448bf6897c008f1692f26730951393d6f9d31c8879ca664cda15f96b2dd46b",
+  "hostSourceSha256": "3b738278dddddd56f2ddf4b56a622eedc84ca852588d0fb239be4b8e746e61d5",
+  "hostDistSha256": "a694d688967c7206ef763b2b1759cd6c1fd8f40c04c3b497ca011bcf333005e7",
+  "retainedHandoff": ".artifacts/provider-migration/p6-native-mcp-policy-attempt6/handoff.json",
+  "retainedHandoffSha256": "101c70f4fbb0b9655fcb83d19297191d956d9c905f623a62286a4224649846b3",
+  "retainedFiles": 858,
+  "receiptSha256": "9354148c4aa273bf3502e53dc03b70876ac6f84b126448f1d21dcd99b748a223",
+  "terminalSha256": "3c5958bf5c9f39739dcbc43c14b07a2be61a760cea066193946e317e3c771fce",
+  "assertions": {
+    "originalInputs": 1,
+    "matchingOriginalSucceededResults": 1,
+    "admittedModelRequests": 2,
+    "selectedReadOnlyEchoEffects": 1,
+    "exactNativeStructuredEchoReturnVerified": true,
+    "reservedTeamMcpSubsetMatchesCapture": true,
+    "selectedMcpInitializeListCall": [
+      4,
+      4,
+      1
+    ],
+    "ambientMcpInitializeListCall": [
+      0,
+      0,
+      0
+    ],
+    "selectedLoopbackOAuthMetadataGets": 24,
+    "ambientLoopbackOAuthMetadataGets": 96,
+    "selectedCatalogDrift": {
+      "source": "captured-selected-catalog",
+      "refused": true,
+      "delivery": "known-not-sent",
+      "originalOutcomeReplayed": false
+    },
+    "nativePermissionPolicyUnchanged": "never + readOnly + Auto; genuinely read-only echo annotations",
+    "capturedCleanup": "confirmed",
+    "retryPerformed": false
+  },
+  "trafficScope": "Two admitted local model requests and separate 24 selected and 96 ambient OAuth metadata GETs are recorded. This is not a total native HTTP census or zero-network claim.",
+  "limits": [
+    "Isolated TEST profile and localhost inference; real account authorization and manual elicitation/question UI are not qualified.",
+    "Native built-in tools remain available. A successful read-only annotated echo does not qualify arbitrary external tool approval.",
+    "Only this Codex inheritLead tuple; OpenCode and other modes remain separate qualifications.",
+    "Earlier failed epochs remain unchanged; no product Task effects, complete M02/M15 or whole Stage1 claim. Stage2 excluded."
+  ]
+}

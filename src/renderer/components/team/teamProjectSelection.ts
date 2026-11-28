@@ -4,6 +4,14 @@ import type { TeamProjectContextView } from '@features/team-project-context/cont
 import type { Project, RepositoryGroup } from '@renderer/types/data';
 import type { TeamSummary } from '@shared/types';
 
+export function getRecentTeamProjects(team: TeamSummary): string[] {
+  const history = team.projectPathHistory;
+  if (!history || history.length === 0) {
+    return team.projectPath ? [team.projectPath] : [];
+  }
+  return history.slice(-3).reverse();
+}
+
 export interface ResolveTeamProjectSelectionInput {
   repositoryGroups: readonly RepositoryGroup[];
   projects: readonly Project[];

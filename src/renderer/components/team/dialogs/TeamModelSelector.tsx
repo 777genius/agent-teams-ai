@@ -153,6 +153,7 @@ import { useOpenCodeProjectDefaultModel } from './useOpenCodeDefaultRouteLabel';
 import { usePublishOpenCodeProviderScopedStatus } from './useOpenCodeProviderScopedModelAuthority';
 import { useTeamDefaultModelTooltip } from './useTeamDefaultModelTooltip';
 import { useTeamModelProviderStatus } from './useTeamModelProviderStatus';
+import { useTeamModelSelectorRuntime } from './useTeamModelSelectorRuntime';
 export {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -161,6 +162,7 @@ export {
   getTeamProviderLabel,
 } from './teamModelSummary';
 
+import type { TeamModelSelectorProps } from './TeamModelSelector.types';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
@@ -594,7 +596,8 @@ function shouldHydrateProviderModelCatalog(
       catalog?.source === 'static-fallback' ||
       (runtimeCatalog?.dynamic === true &&
         runtimeCatalog.source !== 'anthropic-compatible-api' &&
-        catalog?.source !== 'anthropic-models-api')
+        catalog?.source !== 'anthropic-models-api' &&
+        catalog?.source !== 'claude-sdk')
     );
   }
 
@@ -867,32 +870,6 @@ const OpenCodeFilterLoadingSkeleton = (): React.JSX.Element => (
   </div>
 );
 
-export interface TeamModelSelectorProps {
-  providerId: TeamProviderId;
-  onProviderChange: (providerId: TeamProviderId) => void;
-  value: string;
-  onValueChange: (value: string) => void;
-  /** Automatic catalog changes never count as manual user edits. */
-  onNormalizedValueChange?: (value: string) => void;
-  preserveSelectedModel?: boolean;
-  limitContext?: boolean;
-  projectPath?: string | null;
-  id?: string;
-  disableGeminiOption?: boolean;
-  providerNoticeById?: Partial<Record<TeamProviderId, React.ReactNode>>;
-  providerDisabledReasonById?: Partial<Record<TeamProviderId, string | null | undefined>>;
-  providerDisabledBadgeLabelById?: Partial<Record<TeamProviderId, string | null | undefined>>;
-  providerReadyById?: Partial<Record<TeamProviderId, boolean>>;
-  modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  onOpenProviderSettings?: (providerId: TeamProviderId) => void;
-  onManageProviders?: (providerId: TeamProviderId) => void;
-  onOpenCodeProviderScopedStatusChange?: Parameters<
-    typeof usePublishOpenCodeProviderScopedStatus
-  >[0];
-}
-
 export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   providerId,
   onProviderChange,
@@ -943,7 +920,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeProviderDirectoryCache = useRuntimeProviderDirectoryCacheWithGlobalFallback(
     openCodeCatalogScopeKey || null
   );
-  const sourceDiscovery = useOpenCodeSourceDirectory(openCodeCatalogScopeKey || null);
+  const sourceDiscovery = useOpenCodeSourceDirectory(openCodeCatalogScopeKey || null, true);
   const [pendingPrivateNetworkSetup, setPendingPrivateNetworkSetup] = useState<{
     target: OpenCodeLocalModelSetupTarget;
     projectPath: string;
@@ -955,25 +932,28 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     sourceCliStatus,
     providerStatus: passiveRuntimeProviderStatus,
     codexSnapshotPending,
+    scopesAnthropic,
   } = useTeamModelProviderStatus(effectiveProviderId, openCodeCatalogScopeKey, true);
   const { providerStatus: openCodePassiveProviderStatus } = useEffectiveCliProviderStatus(
     'opencode',
     { projectPath: openCodeCatalogScopeKey || null }
   );
-  const cliStatusLoading = useStore((s) => s.cliStatusLoading);
-  const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
-  const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
-  const invalidateCliProviderModelCatalog = useStore((s) => s.invalidateCliProviderModelCatalog);
-  const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
-  const openCodeRuntimeStatus = useStore((s) => s.openCodeRuntimeStatus);
-  const openCodeRuntimeStatusLoading = useStore((s) => s.openCodeRuntimeStatusLoading);
-  const openCodeRuntimeError = useStore((s) => s.openCodeRuntimeError);
-  const fetchOpenCodeRuntimeStatus = useStore((s) => s.fetchOpenCodeRuntimeStatus);
-  const codexRuntimeStatus = useStore((s) => s.codexRuntimeStatus);
-  const codexRuntimeStatusLoading = useStore((s) => s.codexRuntimeStatusLoading);
-  const codexRuntimeError = useStore((s) => s.codexRuntimeError);
-  const fetchCodexRuntimeStatus = useStore((s) => s.fetchCodexRuntimeStatus);
-  const installCodexRuntime = useStore((s) => s.installCodexRuntime);
+  const {
+    cliStatusLoading,
+    cliProviderStatusLoading,
+    cliProviderStatusScopeRevision,
+    invalidateCliProviderModelCatalog,
+    fetchCliProviderStatus,
+    openCodeRuntimeStatus,
+    openCodeRuntimeStatusLoading,
+    openCodeRuntimeError,
+    fetchOpenCodeRuntimeStatus,
+    codexRuntimeStatus,
+    codexRuntimeStatusLoading,
+    codexRuntimeError,
+    fetchCodexRuntimeStatus,
+    installCodexRuntime,
+  } = useTeamModelSelectorRuntime(openCodeCatalogScopeKey);
   const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const multimodelAvailable =
     multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';
@@ -1489,6 +1469,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   useEffect(() => {
     if (
       effectiveProviderId === 'opencode' ||
+      (scopesAnthropic && openCodeCatalogScopeKey) ||
       !multimodelAvailable ||
       effectiveCliStatus?.flavor !== 'agent_teams_orchestrator' ||
       providerModelCatalogLoading ||
@@ -1509,7 +1490,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId,
     fetchCliProviderStatus,
     multimodelAvailable,
+    openCodeCatalogScopeKey,
     providerModelCatalogLoading,
+    scopesAnthropic,
     shouldHydrateRuntimeModelCatalog,
   ]);
 
@@ -1560,7 +1543,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               shouldRetainOpenCodeLocalCatalogModel(
                 option.value,
                 catalogModelById.get(option.value),
-                openCodeLocalModelOverlay.modelIds
+                openCodeLocalModelOverlay.modelIds,
+                runtimeProviderStatus?.catalogScope
               )
           )
         : unscopedRuntimeOptions;
@@ -1640,7 +1624,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           !shouldRetainOpenCodeLocalCatalogModel(
             launchModel || catalogModelId,
             model,
-            openCodeLocalModelOverlay.modelIds
+            openCodeLocalModelOverlay.modelIds,
+            runtimeProviderStatus?.catalogScope
           )
         ) {
           continue;
@@ -1669,6 +1654,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     openCodeLocalModelOverlay.catalogModels,
     openCodeLocalModelOverlay.modelIds,
     runtimeProviderStatus?.modelCatalog,
+    runtimeProviderStatus?.catalogScope,
   ]);
   const openCodeModelMetadata = useMemo<OpenCodeModelOptionMetadata[]>(() => {
     if (effectiveProviderId !== 'opencode') {
@@ -3604,3 +3590,5 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     </TooltipProvider>
   );
 };
+
+export type { TeamModelSelectorProps } from './TeamModelSelector.types';

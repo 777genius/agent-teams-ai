@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 1,
+  "head": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+  "tree": "06ddfb2e88ee1e049f14a9c6c11290004d16dda2",
+  "runId": 44434982536,
+  "runAttempt": 1,
+  "event": "pull_request",
+  "workflowConclusion": "failure",
+  "scope": "Five original Host process platform jobs reached test compilation and stopped on the same two TS2339 diagnostics before native/process/runtime qualification.",
+  "rows": [
+    {
+      "jobId": 135261468433,
+      "name": "Host process fixtures (win32-arm64)",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982536/job/135261468433",
+      "startedAt": "2026-11-19T01:12:51Z",
+      "completedAt": "2026-11-19T01:21:30Z",
+      "conclusion": "failure",
+      "failedStep": {
+        "number": 9,
+        "name": "Build existing controller and Host"
+      },
+      "actualCheckout": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "checkoutExcerpts": [
+        "2026-11-19T01:13:28.0182380Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" log -1 --format=%H",
+        "2026-11-19T01:13:28.0689965Z 42a4ee210aff6ffa310025d024fd55cfbdbcd277"
+      ],
+      "actualNode": "2026-11-19T01:13:47.2912303Z node: v24.21.0",
+      "diagnosticExcerpts": [
+        "2026-11-19T01:21:22.8895524Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'.",
+        "2026-11-19T01:21:22.8906219Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'."
+      ],
+      "runtimeQualificationEntered": false,
+      "skippedQualificationStepNumbers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "rawLog": {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/job-135261468433-terminal.log",
+        "bytes": 78426,
+        "sha256": "bee500849f8eaf557716b2475fe00e56dd40a50f6f406bd3c5271ccb58ad7182",
+        "gitBlobComputed": "2abdaefbafbefdc86d9fb78dc2be1ebfe1d0bd9d"
+      },
+      "logEndpointRetired": true
+    },
+    {
+      "jobId": 135261468702,
+      "name": "Host process fixtures (win32-x64)",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982536/job/135261468702",
+      "startedAt": "2026-11-19T01:34:55Z",
+      "completedAt": "2026-11-19T01:36:59Z",
+      "conclusion": "failure",
+      "failedStep": {
+        "number": 9,
+        "name": "Build existing controller and Host"
+      },
+      "actualCheckout": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "checkoutExcerpts": [
+        "2026-11-19T01:35:14.4436535Z [command]\"C:\\Program Files\\Git\\bin\\git.exe\" log -1 --format=%H",
+        "2026-11-19T01:35:14.4727998Z 42a4ee210aff6ffa310025d024fd55cfbdbcd277"
+      ],
+      "actualNode": "2026-11-19T01:35:25.1200175Z node: v24.21.0",
+      "diagnosticExcerpts": [
+        "2026-11-19T01:36:55.0375661Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'.",
+        "2026-11-19T01:36:55.0400505Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'."
+      ],
+      "runtimeQualificationEntered": false,
+      "skippedQualificationStepNumbers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "rawLog": {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/job-135261468702-terminal.log",
+        "bytes": 51047,
+        "sha256": "f6ed26411d4aec2ec7d5ccd79583948083c91f5b1ac70f9a12781d2984b574c4",
+        "gitBlobComputed": "69fdc1e6ad813bd3c34e3057bd3d0b880f212aa5"
+      },
+      "logEndpointRetired": true
+    },
+    {
+      "jobId": 135261468736,
+      "name": "Host process fixtures (linux-x64)",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982536/job/135261468736",
+      "startedAt": "2026-11-19T01:36:22Z",
+      "completedAt": "2026-11-19T01:37:20Z",
+      "conclusion": "failure",
+      "failedStep": {
+        "number": 9,
+        "name": "Build existing controller and Host"
+      },
+      "actualCheckout": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "checkoutExcerpts": [
+        "2026-11-19T01:36:40.7011896Z [command]/usr/bin/git log -1 --format=%H",
+        "2026-11-19T01:36:40.7033138Z 42a4ee210aff6ffa310025d024fd55cfbdbcd277"
+      ],
+      "actualNode": "2026-11-19T01:36:44.8039733Z node: v24.21.0",
+      "diagnosticExcerpts": [
+        "2026-11-19T01:37:16.3843885Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'.",
+        "2026-11-19T01:37:16.3851874Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'."
+      ],
+      "runtimeQualificationEntered": false,
+      "skippedQualificationStepNumbers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "rawLog": {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/job-135261468736-terminal.log",
+        "bytes": 42558,
+        "sha256": "a65b67d6a66b710188cea0f01869259d5d00779badc7f5d007dac0841da6c3a7",
+        "gitBlobComputed": "d647f4684d815623cff24c3814c675845fe3b673"
+      },
+      "logEndpointRetired": true
+    },
+    {
+      "jobId": 135261468848,
+      "name": "Host process fixtures (darwin-x64)",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982536/job/135261468848",
+      "startedAt": "2026-11-19T01:35:47Z",
+      "completedAt": "2026-11-19T01:39:16Z",
+      "conclusion": "failure",
+      "failedStep": {
+        "number": 9,
+        "name": "Build existing controller and Host"
+      },
+      "actualCheckout": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "checkoutExcerpts": [
+        "2026-11-19T01:36:09.7306830Z [command]/usr/local/bin/git log -1 --format=%H",
+        "2026-11-19T01:36:09.7613960Z 42a4ee210aff6ffa310025d024fd55cfbdbcd277"
+      ],
+      "actualNode": "2026-11-19T01:36:25.4030180Z node: v24.21.0",
+      "diagnosticExcerpts": [
+        "2026-11-19T01:39:10.7953820Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'.",
+        "2026-11-19T01:39:10.8890840Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'."
+      ],
+      "runtimeQualificationEntered": false,
+      "skippedQualificationStepNumbers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "rawLog": {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/job-135261468848-terminal.log",
+        "bytes": 54894,
+        "sha256": "d3c5089e10ed2b616505e16475ff76914141bbef38f2a1eacbbf350a4397be84",
+        "gitBlobComputed": "31dc93ea99a8487701867d8f2bb02c58493af7b5"
+      },
+      "logEndpointRetired": true
+    },
+    {
+      "jobId": 135261468917,
+      "name": "Host process fixtures (darwin-arm64)",
+      "url": "https://github.com/777genius/agent-teams-ai/actions/runs/44434982536/job/135261468917",
+      "startedAt": "2026-11-19T01:30:07Z",
+      "completedAt": "2026-11-19T01:32:08Z",
+      "conclusion": "failure",
+      "failedStep": {
+        "number": 9,
+        "name": "Build existing controller and Host"
+      },
+      "actualCheckout": "42a4ee210aff6ffa310025d024fd55cfbdbcd277",
+      "checkoutExcerpts": [
+        "2026-11-19T01:30:25.9515860Z [command]/opt/homebrew/bin/git log -1 --format=%H",
+        "2026-11-19T01:30:25.9616190Z 42a4ee210aff6ffa310025d024fd55cfbdbcd277"
+      ],
+      "actualNode": "2026-11-19T01:30:32.2435540Z node: v24.21.0",
+      "diagnosticExcerpts": [
+        "2026-11-19T01:32:02.7350030Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,42): error TS2339: Property 'base' does not exist on type 'never'.",
+        "2026-11-19T01:32:02.7437320Z ##[error]packages/legacy-agent-host/tests/native-host-close.test.ts(107,65): error TS2339: Property 'specifier' does not exist on type 'never'."
+      ],
+      "runtimeQualificationEntered": false,
+      "skippedQualificationStepNumbers": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23
+      ],
+      "rawLog": {
+        "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/job-135261468917-terminal.log",
+        "bytes": 51287,
+        "sha256": "189a84e85b429240b5a0e3b5c557a66813a96e61530076b77480477e44d2a69e",
+        "gitBlobComputed": "c1caea0604b241ce2e79ee27af0ff0d9d90ce8c0"
+      },
+      "logEndpointRetired": true
+    }
+  ],
+  "fullTerminalCapture": {
+    "path": "/workspace/scratch/c714f5bce554/ci-current-42a4/run-44434982536-terminal-capture.json",
+    "bytes": 72723,
+    "sha256": "4ebf69f2749705caf47af617d0dcec83643445c637aaa51399a848552de1052a",
+    "gitBlobComputed": "482e26e7465555ff1a71a528d69ddd2bd0f797d1"
+  },
+  "artifactInventory": {
+    "captured": true,
+    "count": 5,
+    "artifactIds": [
+      14489841399,
+      14489582321,
+      14488862114,
+      14488784771,
+      14488299362
+    ],
+    "contentsDownloaded": false
+  },
+  "sourceCorrection": {
+    "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+    "beforeBlob": "1e4522ba6e600545535c116e59a53a95f6120b37",
+    "candidateBlob": "4a64e6228f2b44f42ec9f3d24cca63272915291e",
+    "verificationBlob": "bc1759cba496c59c519fafbc7c4c38fba2751ea9",
+    "independentReviewBlob": "414a18cf191e21170e157ae838a4e4a3738b271e",
+    "change": "Two <typeof loads> arguments preserve the existing callback, strict assertions and exact erased runtime JavaScript."
+  },
+  "limits": [
+    "This compile failure is not a native readiness or cleanup failure.",
+    "No runtime, native process, source-A/B, attachment relocation or E2E qualification can be inferred from these skipped steps.",
+    "Artifact inventory was retained; artifact ZIP contents were not downloaded for this compile-only failure.",
+    "The candidate is only supported by focused TS7 RED/GREEN, identical erased JavaScript, two finite existing regressions and independent source review; it still requires original CI."
+  ],
+  "retirement": "Workflow metadata, complete jobs page, artifact inventory and all five original job logs retained once; endpoints permanently retired."
+}

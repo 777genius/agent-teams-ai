@@ -29,3 +29,16 @@ export function shouldHideDirectMemberRoute(
   }
   return normalizedTo === 'user' || normalizeParticipant(from) === 'user';
 }
+
+export function parseIdlePeerSummaryRoute(summary: string): {
+  recipient: string | null;
+  body: string;
+} {
+  const trimmed = summary.trim();
+  const match = /^\[to\s+([^\]]+)\]\s*(.*)$/i.exec(trimmed);
+  if (!match) return { recipient: null, body: trimmed };
+
+  const recipient = match[1]?.trim() || null;
+  const body = match[2]?.trim() || trimmed;
+  return { recipient, body };
+}

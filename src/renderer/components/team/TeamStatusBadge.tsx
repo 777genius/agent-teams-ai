@@ -35,6 +35,12 @@ export const TeamStatusBadge = ({
           {startupCopy.statusLabel}
         </span>
       );
+    case 'unknown':
+      return (
+        <span className="inline-flex rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] text-text-muted">
+          {t('list.aggregate.unknown')}
+        </span>
+      );
     case 'offline':
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-medium text-zinc-500">

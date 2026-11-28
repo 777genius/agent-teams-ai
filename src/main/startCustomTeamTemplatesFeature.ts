@@ -15,6 +15,7 @@ import {
   createCustomTeamTemplatesFeature,
   CustomTeamTemplateDesktopFileService,
   type CustomTeamTemplatesFeature,
+  type CustomTeamTemplateSnapshotReader,
   ElectronCustomTeamTemplateFileGateway,
   registerCustomTeamTemplatesFileIpc,
   registerCustomTeamTemplatesIpc,
@@ -41,10 +42,12 @@ export type CustomTeamTemplatesStartup = Omit<CustomTeamTemplatesFeature, 'dispo
  * itself stays owned by internal-storage.
  */
 export function startCustomTeamTemplatesFeature(
-  internalStorage: InternalStorageFeature
+  internalStorage: InternalStorageFeature,
+  snapshotReader?: CustomTeamTemplateSnapshotReader
 ): CustomTeamTemplatesStartup {
   const feature = createCustomTeamTemplatesFeature({
     backend: internalStorage.customTeamTemplatesBackend,
+    ...(snapshotReader ? { snapshotReader } : {}),
   });
   // The desktop file workflow reuses the composed use cases: the adapter only
   // adds native dialogs, bounded reads and atomic writes around them.

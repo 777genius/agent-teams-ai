@@ -1,0 +1,1312 @@
+name: Host Emulated Acceptance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - '.github/workflows/host-emulated-acceptance.yml'
+      - 'packages/legacy-agent-host/**'
+      - 'packages/task-change-ledger/**'
+      - 'scripts/legacy-agent-host/**'
+      - 'tools/owned-process-broker/fixtures/**'
+      - 'tools/linux-node-exec/**'
+      - 'scripts/build/buildLinuxNodeExec.mjs'
+      - 'scripts/dev-with-runtime.mjs'
+      - 'scripts/build/linuxNodeExec.native.test.mjs'
+      - 'scripts/electron-builder/afterPack.cjs'
+      - 'scripts/electron-builder/dist.mjs'
+      - 'scripts/electron-builder/verifyLinuxNodeExec.cjs'
+      - 'src/features/agent-backend/**'
+      - 'src/features/runtime-provider-management/**'
+      - 'src/features/codex-runtime-installer/**'
+      - 'src/features/opencode-runtime-installer/**'
+      - 'src/main/**'
+      - 'src/preload/**'
+      - 'src/renderer/**'
+      - 'src/shared/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+
+permissions:
+  contents: read
+
+# Draft PRs run finite peers and the separately declared OpenCode-only local-model lane.
+# Existing native Claude/Codex gates keep their scope.
+concurrency:
+  # Leave the obsolete always-aggregate group after all of its matrix jobs were cancelled.
+  group: ${{ github.workflow }}-v2-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || (github.event_name == 'merge_group' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && github.ref_type == 'branch' && github.event.repository.default_branch != '' && github.ref_name != github.event.repository.default_branch && !startsWith(github.ref_name, 'release/') }}
+
+jobs:
+  offline-desktop-scenario:
+    name: Offline Host Desktop (${{ matrix.platform || 'linux-x64' }}, ${{ matrix.lane }})
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ${{ matrix.runner || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [team, taskboard, skills, cross-team, collaboration, extensions, import, management, codex-login, codex, claude, claude-lifecycle, opencode, review, selection, processes]
+        include:
+          - lane: installer
+            runner: macos-15
+            platform: darwin-arm64
+          - lane: opencode-v2-management
+            runner: ubuntu-latest
+            platform: linux-x64
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      HOST_EMULATED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      HOST_EMULATED_LANE: ${{ matrix.lane }}
+      HOST_EMULATED_PLATFORM: ${{ matrix.platform || 'linux-x64' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+      - name: Verify original checkout and runner tuple
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"
+          node -e "require('node:assert/strict').equal(process.platform + '-' + process.arch, process.env.HOST_EMULATED_PLATFORM)"
+          printf 'TMPDIR=%s\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Prepare private Linux display
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y xvfb xauth lsof
+      - name: Install frozen workspace and Electron
+        run: |
+          set -euo pipefail
+          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1
+          node scripts/ensure-electron-install.cjs --strict
+          node -e "require('node:assert/strict').equal(require('electron/package.json').version, '44.10.1')"
+          pnpm exec electron-rebuild --module-dir . --force --only better-sqlite3 --version 44.10.1
+      - name: Build existing Desktop prerequisites and verify admission
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_OS" = Linux ]]; then node scripts/build/buildLinuxNodeExec.mjs; fi
+          pnpm --filter @agent-teams/legacy-agent-host build
+          pnpm --filter agent-teams-controller build
+          pnpm --filter agent-teams-mcp build
+          node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts
+          node --test test/scripts/installDependenciesWithRetry.test.mjs
+      - name: Verify original Runtime and Team conversation contracts
+        if: matrix.lane == 'team'
+        run: |
+          set -euo pipefail
+          node --test --test-concurrency=1 packages/legacy-agent-host/tests/runtime-activity.test.ts packages/legacy-agent-host/tests/runtime-team-host.test.ts packages/legacy-agent-host/tests/team-snapshot.test.ts packages/legacy-agent-host/tests/team-product-changes.test.ts packages/legacy-agent-host/tests/team-activity-read.test.ts packages/legacy-agent-host/tests/captured-claude-process.test.ts packages/legacy-agent-host/tests/codex-member-provider.test.ts packages/legacy-agent-host/tests/member-process-stderr.test.ts packages/legacy-agent-host/tests/member-provider-authority.test.ts packages/legacy-agent-host/tests/owned-process-facade.test.ts
+      - name: Verify complete workspace types and original typed lint scopes
+        if: matrix.lane == 'team'
+        run: |
+          set -euo pipefail
+          pnpm lint:fast:files -- \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeConfigurationSource.ts \
+            packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts \
+            packages/legacy-agent-host/tests/opencode-configuration-source.test.ts \
+            scripts/e2e/opencode-diagnostics/platform.mjs \
+            scripts/e2e/opencode-diagnostics/platform.test.mjs \
+            scripts/legacy-agent-host/desktop-backend-fixture.ts \
+            scripts/legacy-agent-host/desktop-backend-observations.test.ts \
+            scripts/legacy-agent-host/desktop-captured-app.ts \
+            scripts/legacy-agent-host/desktop-emulated-collaboration-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-lifecycle-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts \
+            scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts \
+            scripts/legacy-agent-host/desktop-emulated-selection-ui.ts \
+            scripts/legacy-agent-host/desktop-native-process-ui.test.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts \
+            scripts/legacy-agent-host/desktop-opencode-v2-management-ui.ts \
+            scripts/legacy-agent-host/desktop-owner-routing-availability-ui.ts \
+            scripts/legacy-agent-host/desktop-packaged-relaunch-smoke.ts \
+            scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts \
+            scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \
+            scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
+            scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
+            scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
+            scripts/legacy-agent-host/qualify-linux-process-sdk.ts \
+            scripts/legacy-agent-host/run-packaged-opencode-v2.ts \
+            src/features/agent-backend/main/infrastructure/CapturedWindowsCustody.ts \
+            src/features/agent-backend/renderer/createHostMemberSpawnStatuses.ts \
+            src/features/agent-backend/renderer/createHostTeamChanges.ts \
+            src/features/agent-backend/renderer/createHostTeamProvisioning.ts \
+            src/features/agent-backend/renderer/index.ts \
+            src/renderer/store/slices/teamSlice.ts \
+            src/renderer/store/team/teamRuntimeRunAdoption.ts \
+            test/features/agent-backend/capturedWindowsSelection.test.ts \
+            test/features/agent-backend/hostMemberSpawnStatuses.test.ts \
+            test/features/agent-backend/runtimeActivityFacade.test.ts \
+            test/renderer/store/teamRuntimeRunAdoption.test.ts \
+            test/renderer/store/teamSlice.test.ts \
+            tools/owned-process-broker/nativeWindowsAppGate.mjs \
+            packages/legacy-agent-host/src/adapters/providers/ClaudeMemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/CodexMemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/MemberProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/OpenCodeCoordinationProbe.ts \
+            packages/legacy-agent-host/src/adapters/providers/ScheduledRunProvider.ts \
+            packages/legacy-agent-host/src/adapters/providers/observeMemberProcessStderr.ts \
+            packages/legacy-agent-host/src/composition/HostScheduledRuns.ts \
+            packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts \
+            packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts \
+            packages/legacy-agent-host/src/composition/readTeamActivity.ts \
+            packages/legacy-agent-host/src/composition/runtimeActivityProjection.ts \
+            packages/legacy-agent-host/src/composition/scheduledRunProjection.ts \
+            packages/legacy-agent-host/src/diagnostics/diagnosticsRedaction.ts \
+            packages/legacy-agent-host/src/diagnostics/redactDiagnosticAssignments.ts \
+            packages/legacy-agent-host/src/diagnostics/runtimeDiagnosticText.ts \
+            packages/legacy-agent-host/src/runtime/RuntimeActivityCoordinator.ts \
+            packages/legacy-agent-host/src/runtime/RuntimeOwner.ts \
+            packages/legacy-agent-host/src/runtime/activityContracts.ts \
+            packages/legacy-agent-host/src/runtime/normalizeActivity.ts \
+            packages/legacy-agent-host/src/runtime/providerActivityContracts.ts \
+            packages/legacy-agent-host/tests/captured-claude-process.test.ts \
+            packages/legacy-agent-host/tests/codex-member-provider.test.ts \
+            packages/legacy-agent-host/tests/fixtures/native-windows-claude.ts \
+            packages/legacy-agent-host/tests/management-model-probe.test.ts \
+            packages/legacy-agent-host/tests/member-process-stderr.test.ts \
+            packages/legacy-agent-host/tests/member-provider-authority.test.ts \
+            packages/legacy-agent-host/tests/native-claude-host.native.ts \
+            packages/legacy-agent-host/tests/native-codex-team.native.ts \
+            packages/legacy-agent-host/tests/owned-process-facade.test.ts \
+            packages/legacy-agent-host/tests/runtime-activity.test.ts \
+            packages/legacy-agent-host/tests/runtime-team-host.test.ts \
+            packages/legacy-agent-host/tests/scheduled-run-host.test.ts \
+            packages/legacy-agent-host/tests/team-activity-read.test.ts \
+            scripts/legacy-agent-host/desktop-activity-ui-smoke.ts \
+            src/features/agent-backend/contracts/operations.ts \
+            src/features/agent-backend/main/adapters/output/projectBackendResult.ts \
+            src/features/agent-backend/main/adapters/output/projectRuntimeActivity.ts \
+            src/features/agent-backend/renderer/createHostTaskActivityApi.ts \
+            src/renderer/components/team/ClaudeLogsPanel.tsx \
+            src/renderer/components/team/ClaudeLogsSection.tsx \
+            src/renderer/components/team/members/HostMemberActivityLog.tsx \
+            src/renderer/components/team/members/MemberLogStreamWithLegacyFallback.tsx \
+            src/renderer/components/team/members/MemberLogsTab.tsx \
+            src/shared/types/teamActivity.ts \
+            src/shared/utils/diagnosticsRedaction.ts \
+            src/shared/utils/redactDiagnosticAssignments.ts \
+            src/shared/utils/runtimeDiagnosticText.ts \
+            test/features/agent-backend/hostTaskActivity.test.ts \
+            test/renderer/components/team/ClaudeLogsSection.test.ts \
+            test/renderer/components/team/members/MemberLogsPolling.test.ts \
+            test/renderer/components/team/members/hostLogStatsTabs.test.tsx \
+            test/renderer/components/team/taskLogs/hostTaskActivityTabs.test.tsx \
+            tools/owned-process-broker/fixtures/claudeProviderPeer.mjs \
+            tools/owned-process-broker/fixtures/providerDesktopPeer.mjs \
+            tools/owned-process-broker/nativeDebugServiceScenario.ts
+          pnpm typecheck:workspace
+          node node_modules/@typescript/native/bin/tsc --noEmit -p test/features/agent-backend/tsconfig.json
+          pnpm lint:ci:files src/main src/preload src/shared src/types --cache-location .eslintcache-main
+          pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer
+          pnpm lint:ci:files src/features --cache-location .eslintcache-features
+          pnpm lint:mcp
+      - name: Capture package-manager and Host inputs without vendor executables
+        id: inputs
+        run: |
+          set -euo pipefail
+          selected_inputs="$(mktemp -d "$RUNNER_TEMP/TEST-emulated-ui-inputs-XXXXXX")"
+          mkdir "$selected_inputs/corepack" "$selected_inputs/cache"
+          printf '{"private":true}\n' > "$selected_inputs/corepack/package.json"
+          pnpm --dir "$selected_inputs/corepack" add --ignore-scripts --save-exact corepack@0.36.0
+          COREPACK_HOME="$selected_inputs/cache" node "$selected_inputs/corepack/node_modules/corepack/dist/pnpm.js" --version
+          if [[ "$RUNNER_OS" = Linux ]]; then
+            LEGACY_LINUX_CHILD_EXEC_GO=1 node packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts \
+              --linux-child-exec "$selected_inputs/linux-child-exec" "$(command -v cc)" "$(command -v readelf)" \
+              > "$RUNNER_TEMP/host-emulated-linux-child-exec-selection.json"
+          fi
+          HOST_EMULATED_INPUTS="$selected_inputs" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
+          import { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';
+          import { join } from 'node:path';
+          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const selected = process.env.HOST_EMULATED_INPUTS;
+          const corepack = realpathSync(join(selected, 'corepack/node_modules/corepack'));
+          assert.equal(JSON.parse(readFileSync(join(corepack, 'package.json'), 'utf8')).version, '0.36.0');
+          const pnpm = join(corepack, 'dist/pnpm.js');
+          let processLauncher, linuxChildExec;
+          if (process.platform === 'linux') {
+            const launcher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
+            processLauncher = { manifestSha256: launcher.manifestSha256, binarySha256: launcher.binarySha256 };
+            const pin = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-linux-child-exec-selection.json'), 'utf8'));
+            assert.deepEqual(Object.keys(pin).sort(), ['binarySha256', 'manifestPath', 'manifestSha256']);
+            assert.equal(pin.manifestPath, join(selected, 'linux-child-exec/manifest.json'));
+            assert.ok(!/[\r\n]/.test(pin.manifestPath));
+            linuxChildExec = verifyLinuxChildExecInput(pin);
+            assert.deepEqual(linuxChildExec, pin);
+            assert.equal(JSON.parse(readFileSync(pin.manifestPath, 'utf8')).sourceSha256,
+              sha('packages/legacy-agent-host/native/linux-child-exec.c'));
+          }
+          const values = {
+            LEGACY_DESKTOP_BACKEND_GO: '1', LEGACY_DESKTOP_EMULATED_ONLY: '1',
+            LEGACY_DESKTOP_COREPACK_HOME: join(selected, 'cache'),
+            LEGACY_DESKTOP_NODE_SHA256: sha(realpathSync(process.execPath)),
+            LEGACY_DESKTOP_HOST_ENTRY_SHA256: sha('packages/legacy-agent-host/dist/cli.js'),
+            LEGACY_DESKTOP_PNPM_PATH: pnpm, LEGACY_DESKTOP_PNPM_SHA256: sha(pnpm),
+            LEGACY_DESKTOP_COREPACK_PACKAGE_SHA256: sha(join(corepack, 'package.json')),
+            LEGACY_DESKTOP_COREPACK_LIBRARY_SHA256: sha(join(corepack, 'dist/lib/corepack.cjs')),
+            ...(linuxChildExec ? { LEGACY_LINUX_CHILD_EXEC_MANIFEST: linuxChildExec.manifestPath,
+              LEGACY_LINUX_CHILD_EXEC_SHA256: linuxChildExec.manifestSha256 } : {}),
+          };
+          for (const [key, value] of Object.entries(values)) appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), JSON.stringify({
+            sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, platform: process.platform,
+            architecture: process.arch, nativeProviders: process.env.HOST_EMULATED_LANE === 'opencode-v2-management' ? 'OpenCode V2 with finite localhost model only' : 'forbidden',
+            values, linuxChildExec, processLauncher,
+          }, null, 2), { mode: 0o600 });
+          NODE
+      - name: Capture original controlled Linux process input without a provider
+        if: matrix.lane == 'processes'
+        run: |
+          set -euo pipefail
+          HOST_EMULATED_CC="$(command -v cc)" HOST_EMULATED_READELF="$(command -v readelf)" node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+          import { dirname, join, resolve } from 'node:path';
+          import { buildLinuxProcessNativeArtifact } from './packages/legacy-agent-host/scripts/buildLinuxProcessNativeArtifact.ts';
+          import { readPackagedLinuxProcessArtifact } from './packages/legacy-agent-host/dist/process/readPackagedProcessArtifact.js';
+          import { treeHash } from './packages/legacy-agent-host/tests/fixtures/native-host.ts';
+          assert.equal(process.version, 'v24.21.0'); assert.equal(process.platform, 'linux'); assert.equal(process.arch, 'x64');
+          const pin = source => { const path = realpathSync(source); return { path, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') }; };
+          const inputPath = join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json');
+          const inputs = JSON.parse(readFileSync(inputPath, 'utf8'));
+          assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
+          const selected = realpathSync(dirname(inputs.values.LEGACY_DESKTOP_COREPACK_HOME));
+          const compiler = pin(process.env.HOST_EMULATED_CC), inspector = pin(process.env.HOST_EMULATED_READELF);
+          const node = pin(process.execPath), source = pin('packages/legacy-agent-host/native/registered-process-linux.c');
+          const headersRoot = realpathSync(resolve(dirname(node.path), '../include/node'));
+          const built = buildLinuxProcessNativeArtifact({ compiler: compiler.path, compilerSha256: compiler.sha256,
+            inspector: inspector.path, inspectorSha256: inspector.sha256, headersRoot,
+            headers: ['node_api.h', 'node_api_types.h', 'js_native_api.h', 'js_native_api_types.h'].map(file => ({ file, sha256: pin(join(headersRoot, file)).sha256 })),
+            source: source.path, sourceSha256: source.sha256, outputDirectory: join(selected, 'process-custody') });
+          const processArtifact = { directory: built.directory, manifestSha256: built.manifestSha256 };
+          const bridge = readPackagedLinuxProcessArtifact(processArtifact);
+          assert.equal(pin(bridge.path).sha256, bridge.sha256);
+          const pnpm = inputs.values.LEGACY_DESKTOP_PNPM_PATH;
+          const host = { ...pin('packages/legacy-agent-host/dist/cli.js'),
+            sourceSha256: await treeHash('packages/legacy-agent-host/src', '.ts'),
+            distSha256: await treeHash('packages/legacy-agent-host/dist', '.js') };
+          assert.equal(host.sha256, inputs.values.LEGACY_DESKTOP_HOST_ENTRY_SHA256);
+          assert.equal(node.sha256, inputs.values.LEGACY_DESKTOP_NODE_SHA256);
+          const capture = { schemaVersion: 1, kind: 'TEST-controlled-process-no-provider-v1', platform: 'linux-x64', node, host,
+            corepack: { entry: pin(pnpm), package: pin(join(dirname(pnpm), '../package.json')), library: pin(join(dirname(pnpm), 'lib/corepack.cjs')) }, processArtifact };
+          const path = join(selected, 'process-ui-capture.json');
+          writeFileSync(path, JSON.stringify(capture, null, 2), { flag: 'wx', mode: 0o600 });
+          const captured = pin(path);
+          for (const [key, value] of Object.entries({ LEGACY_PROCESS_COLD_UI_GO: '1',
+            LEGACY_DESKTOP_PROCESS_CAPTURE_PATH: captured.path, LEGACY_DESKTOP_PROCESS_CAPTURE_SHA256: captured.sha256 }))
+            appendFileSync(process.env.GITHUB_ENV, `${key}=${value}\n`);
+          inputs.controlledProcesses = { capture: captured, processArtifact, binarySha256: bridge.sha256, sourceSha256: source.sha256 };
+          writeFileSync(inputPath, JSON.stringify(inputs, null, 2), { mode: 0o600 });
+          NODE
+      - name: Exercise ordinary Team controls and renderer reload
+        if: matrix.lane == 'team'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: team-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-team-ui.log"
+      - name: Exercise ordinary Taskboard controls and persistence
+        if: matrix.lane == 'taskboard'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: task-board-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-task-board-ui.log"
+      - name: Exercise original Skills and cross-Team controls
+        if: contains(fromJSON('["skills", "cross-team"]'), matrix.lane)
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: ${{ matrix.lane == 'skills' && 'skills-ui' || 'task-board-cross-team-ui' }}
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-$LEGACY_DESKTOP_PROOF_MODE.log"
+      - name: Exercise model, effort and credential controls with the pinned TEST peer
+        if: matrix.lane == 'management'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-management-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-management-ui.log"
+      - name: Exercise original collaboration, Extensions and saved-import controls through finite peers
+        if: contains(fromJSON('["collaboration", "extensions", "import"]'), matrix.lane)
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-${{ matrix.lane }}-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-$LEGACY_DESKTOP_PROOF_MODE.log"
+      - name: Exercise original Codex browser and device login controls through the finite TEST peer
+        if: matrix.lane == 'codex-login'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-codex-login-ui
+        run: |
+          set -euo pipefail
+          node --test --test-concurrency=1 packages/legacy-agent-host/tests/codex-login.test.ts
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-codex-login-ui.log"
+      - name: Exercise original cold Claude Resume and active Quit with the finite SDK peer
+        if: matrix.lane == 'claude-lifecycle'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-claude-lifecycle-ui
+        run: |
+          set -euo pipefail
+          node --test --test-concurrency=1 packages/legacy-agent-host/tests/scheduled-run-host.test.ts packages/legacy-agent-host/tests/claude-management-host.test.ts
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-claude-lifecycle-ui.log"
+      - name: Exercise original provider conversations and schedules through pinned TEST peers
+        if: contains(fromJSON('["codex", "claude", "opencode"]'), matrix.lane)
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-${{ matrix.lane }}-runtime-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-$LEGACY_DESKTOP_PROOF_MODE.log"
+      - name: Exercise original Review Keep, Reject, Undo, Redo and reload
+        if: matrix.lane == 'review'
+        id: review
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: review-ui
+        run: |
+          set -euo pipefail
+          node --test scripts/legacy-agent-host/desktop-review-fixture.test.ts
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-review-ui.log"
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, readFileSync, realpathSync } from 'node:fs';
+          import { basename, dirname, join } from 'node:path';
+          const rows = readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-review-ui.log'), 'utf8')
+            .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+          const last = rows.findLast(row => row.receipt && row.status);
+          assert.equal(last?.status, 'PASS');
+          const bytes = readFileSync(last.receipt), receipt = JSON.parse(bytes.toString('utf8'));
+          const root = realpathSync(dirname(last.receipt));
+          assert.ok(root.startsWith(realpathSync(process.env.RUNNER_TEMP) + '/'));
+          assert.match(basename(root), /^TEST-desktop-backend-[A-Za-z0-9]+$/);
+          assert.equal(receipt.mode, 'review-ui'); assert.equal(receipt.status, 'PASS');
+          assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);
+          assert.equal(receipt.source.dirty, false); assert.equal(receipt.reviewUiProof.status, 'PASS');
+          assert.equal(receipt.emulation.only, true);
+          assert.equal(receipt.emulation.runtimeConfigured, false);
+          assert.equal(receipt.emulation.managementConfigured, false);
+          assert.equal(receipt.cleanup.capturedHostAbsent, true); assert.deepEqual(receipt.cleanup.remaining, []);
+          appendFileSync(process.env.GITHUB_OUTPUT, `root=${root}\nreceipt_sha256=${createHash('sha256').update(bytes).digest('hex')}\n`);
+          NODE
+      - name: Exercise original Review after a cold Host and app restart
+        if: matrix.lane == 'review' && steps.review.outcome == 'success'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: review-readback-ui
+          LEGACY_DESKTOP_READBACK_ROOT: ${{ steps.review.outputs.root }}
+          LEGACY_DESKTOP_READBACK_RECEIPT_SHA256: ${{ steps.review.outputs.receipt_sha256 }}
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-review-readback-ui.log"
+      - name: Exercise saved next-launch selection while the original Team remains live
+        if: matrix.lane == 'selection'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-selection-ui
+        run: |
+          set -euo pipefail
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-selection-ui.log"
+      - name: Exercise original cold Processes Stop with an independently retained neighbor
+        if: matrix.lane == 'processes'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: process-cold-ui
+        run: |
+          set -euo pipefail
+          node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-backend-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-process-cold-ui.log"
+      - name: Exercise stock Codex Update while the original Team retains its captured source
+        if: matrix.lane == 'installer'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: emulated-installer-ui
+        run: |
+          set -euo pipefail
+          node scripts/legacy-agent-host/desktop-backend-smoke.ts \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-emulated-installer-ui.log"
+      - name: Stage checksum-pinned OpenCode base without executing the legacy CLI
+        if: matrix.lane == 'opencode-v2-management'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/stage-runtime.mjs --platform linux-x64
+      - name: Prepare exact OpenCode V2 Bun and engine graph
+        if: matrix.lane == 'opencode-v2-management'
+        env:
+          OPENCODE_V2_TEST_PLATFORM: linux-x64
+          OPENCODE_V2_TEST_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          OPENCODE_V2_EMBEDDED_INPUTS_RECEIPT: ${{ runner.temp }}/host-emulated-opencode-v2-inputs.json
+        run: node --import tsx scripts/legacy-agent-host/prepare-opencode-v2-native.ts
+      - name: Exercise original OpenCode V2 credential and scoped model Settings
+        if: matrix.lane == 'opencode-v2-management'
+        env:
+          LEGACY_DESKTOP_PROOF_MODE: opencode-v2-management-ui
+        run: |
+          set -euo pipefail
+          unset LEGACY_DESKTOP_EMULATED_ONLY
+          xvfb-run --auto-servernum --server-args='-screen 0 1600x1000x24 -nolisten tcp' \
+            bash -euo pipefail -c 'export LEGACY_DESKTOP_TEST_DISPLAY="$DISPLAY" LEGACY_DESKTOP_TEST_XAUTHORITY="$XAUTHORITY"; exec node scripts/legacy-agent-host/desktop-opencode-v2-management-smoke.ts' \
+            2>&1 | tee "$RUNNER_TEMP/host-emulated-opencode-v2-management-ui.log"
+      - name: Verify original OpenCode V2 UI receipts and physical cleanup
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane == 'opencode-v2-management' }}
+        run: node scripts/legacy-agent-host/verify-desktop-v2-management-receipt.ts
+      - name: Verify exact source, original screenshots, receipts and cleanup
+        if: ${{ !cancelled() && steps.inputs.outcome == 'success' && matrix.lane != 'opencode-v2-management' }}
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { createHash } from 'node:crypto';
+          import { readFileSync, readdirSync, realpathSync, writeFileSync } from 'node:fs';
+          import { captureLinuxNodeExecArtifact } from './src/main/utils/linuxNodeExecArtifact.ts';
+          import { verifyLinuxChildExecInput } from './src/main/utils/linuxChildLaunchSelection.ts';
+          import { basename, dirname, join } from 'node:path';
+          import { isSkillsMetadataRefusal } from './scripts/legacy-agent-host/desktop-skills-fixture.ts';
+          import { assertDesktopEmulatedImportModelChecks } from './scripts/legacy-agent-host/desktop-emulated-import-ui.ts';
+          import { readDesktopStoppedImportSeed, stoppedImportSourceBytes } from './scripts/legacy-agent-host/desktop-stopped-import-fixture.ts';
+          const inputs = JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-inputs.json'), 'utf8'));
+          assert.equal(inputs.sourceHead, process.env.HOST_EMULATED_SOURCE_HEAD);
+          assert.equal(inputs.platform + '-' + inputs.architecture, process.env.HOST_EMULATED_PLATFORM);
+          assert.equal(inputs.nativeProviders, 'forbidden');
+          let linuxChildExec;
+          if (process.platform === 'linux') {
+            const processLauncher = captureLinuxNodeExecArtifact(realpathSync('resources/process-launch/linux-x64'));
+            assert.equal(processLauncher.manifestSha256, inputs.processLauncher.manifestSha256);
+            assert.equal(processLauncher.binarySha256, inputs.processLauncher.binarySha256);
+            linuxChildExec = verifyLinuxChildExecInput(inputs.linuxChildExec);
+            assert.deepEqual(linuxChildExec, inputs.linuxChildExec);
+            assert.equal(inputs.values.LEGACY_LINUX_CHILD_EXEC_MANIFEST, linuxChildExec.manifestPath);
+            assert.equal(inputs.values.LEGACY_LINUX_CHILD_EXEC_SHA256, linuxChildExec.manifestSha256);
+          } else {
+            assert.equal(process.platform, 'darwin'); assert.equal(process.arch, 'arm64');
+            assert.equal(inputs.linuxChildExec, undefined); assert.equal(inputs.processLauncher, undefined);
+          }
+          const modesByLane = {
+            team: ['team-ui'],
+            taskboard: ['task-board-ui'],
+            skills: ['skills-ui'],
+            'cross-team': ['task-board-cross-team-ui'],
+            collaboration: ['emulated-collaboration-ui'],
+            extensions: ['emulated-extensions-ui'],
+            import: ['emulated-import-ui'],
+            management: ['emulated-management-ui'],
+            'codex-login': ['emulated-codex-login-ui'],
+            codex: ['emulated-codex-runtime-ui'],
+            claude: ['emulated-claude-runtime-ui'],
+            'claude-lifecycle': ['emulated-claude-lifecycle-ui'],
+            opencode: ['emulated-opencode-runtime-ui'],
+            review: ['review-ui', 'review-readback-ui'],
+            selection: ['emulated-selection-ui'],
+            installer: ['emulated-installer-ui'],
+            processes: ['process-cold-ui'],
+          };
+          const lane = process.env.HOST_EMULATED_LANE;
+          assert.ok(Object.hasOwn(modesByLane, lane), 'one exact declared UI lane');
+          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const readRecords = (directory, optional = false) => {
+            let names;
+            try { names = readdirSync(directory); }
+            catch (error) {
+              if (optional && error.code === 'ENOENT' && error.path === directory) return [];
+              throw error;
+            }
+            names = names.filter(name => name.endsWith('.json'));
+            assert.ok(names.length <= 256);
+            return names.map(name => JSON.parse(readFileSync(join(directory, name), 'utf8')));
+          };
+          const completed = [];
+          for (const mode of modesByLane[lane]) {
+            const rows = readFileSync(join(process.env.RUNNER_TEMP, `host-emulated-${mode}.log`), 'utf8')
+              .split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line));
+            const last = rows.findLast(row => row.receipt && row.status);
+            assert.ok(last && last.status === 'PASS', 'original UI flow and cleanup must pass');
+            const receipt = JSON.parse(readFileSync(last.receipt, 'utf8'));
+            const root = realpathSync(dirname(last.receipt));
+            assert.match(basename(root), /^TEST-desktop-backend-/);
+            assert.equal(receipt.status, 'PASS'); assert.equal(receipt.mode, mode);
+            assert.equal(receipt.source.head, process.env.HOST_EMULATED_SOURCE_HEAD);
+            assert.equal(receipt.source.dirty, false);
+            assert.deepEqual(receipt.linuxChildExecInput, linuxChildExec);
+            if (linuxChildExec) assert.equal(receipt.linuxChildExecInputVerifiedAfterCleanup, true);
+            const runtimeProvider = { 'emulated-codex-runtime-ui': 'codex', 'emulated-claude-runtime-ui': 'claude', 'emulated-opencode-runtime-ui': 'opencode' }[mode];
+            const skills = mode === 'skills-ui', crossTeam = mode === 'task-board-cross-team-ui';
+            const taskboard = mode === 'task-board-ui' || crossTeam;
+            const installer = mode === 'emulated-installer-ui';
+            const selection = mode === 'emulated-selection-ui' || installer, processes = mode === 'process-cold-ui';
+            const lifecycle = mode === 'emulated-claude-lifecycle-ui';
+            const collaboration = mode === 'emulated-collaboration-ui';
+            const extensions = mode === 'emulated-extensions-ui', savedImport = mode === 'emulated-import-ui';
+            // Settings fixtures pin a Runtime profile, while their wrappers permit management only.
+            const runtime = runtimeProvider !== undefined || selection || lifecycle || collaboration || extensions || savedImport;
+            const codexLogin = mode === 'emulated-codex-login-ui';
+            assert.deepEqual(receipt.emulation, { only: true, runtimeConfigured: runtime,
+              managementConfigured: mode === 'emulated-management-ui' || codexLogin || runtime || skills, noNativeHostChildrenBeforeUi: true, noNativeHostChildren: true });
+            assert.equal(receipt.hostChild.observedBeforeShutdown, true);
+            assert.equal(receipt.cleanup.capturedHostAbsent, true);
+            assert.deepEqual(receipt.cleanup.remaining, []);
+            assert.equal(receipt.cleanup.cleanupFailure, undefined);
+            assert.equal(receipt.sourceFreezeFailure, undefined);
+            assert.deepEqual(receipt.selectedSourceHashesAfterFlow, receipt.selectedSourceHashesBeforeApp);
+            if (skills) assert.ok(receipt.finalSentinelCensus.refusedInvocations.every(isSkillsMetadataRefusal), 'only exact original metadata refusals');
+            else assert.deepEqual(receipt.finalSentinelCensus.refusedInvocations, []);
+            assert.ok(receipt.finalSentinelCensus.invocations.length > 0);
+            const proof = mode === 'team-ui' ? receipt.userControlProof : taskboard ? receipt.taskBoardUiProof : skills ? receipt.skillsUiProof :
+              collaboration ? receipt.emulatedCollaborationUiProof : extensions ? receipt.nativeExtensionsUi : savedImport ? receipt.stoppedImportUiProof :
+              codexLogin ? receipt.codexLoginUi : lifecycle ? receipt.emulatedLifecycleUiProof : mode === 'emulated-management-ui' ? receipt.emulatedManagementUiProof : selection ? receipt.emulatedSelectionUiProof :
+              processes ? receipt.nativeProcessUi : runtime ? receipt.emulatedRuntimeUiProof : receipt.reviewUiProof;
+            assert.equal(proof.status, 'PASS'); assert.ok(proof.steps.length > 0);
+            if (skills) {
+              assert.equal(proof.finalJournal.length, 5);
+              assert.equal(proof.nativeTrash.completed.phase, 'completed');
+              assert.equal(proof.nativeTrash.completed.resourceHeld, false);
+              assert.equal(proof.nativeTrash.replacementSurvived, true);
+            }
+            if (crossTeam) {
+              for (const key of ['taskReviewCycleUiProof', 'taskNotificationUiProof', 'crossTeamUiProof',
+                'oversizedCommentUiProof', 'taskTrashRestoreUiProof', 'f08ReadTimingProof', 'ownerDefaultRoutingProof'])
+                assert.equal(receipt[key].status, 'PASS', 'original complete cross-Team proof: ' + key);
+              assert.equal(receipt.ownerDefaultRoutingProof.epochs.length, 3);
+              for (const epoch of receipt.ownerDefaultRoutingProof.epochs) {
+                assert.equal(epoch.status, 'PASS'); assert.equal(epoch.cleanup.hostsAbsent, true);
+                assert.deepEqual(epoch.cleanup.remaining, []); assert.equal(epoch.cleanupFailure, undefined);
+              }
+            }
+            if (collaboration || extensions || savedImport) {
+              const pins = proof.fixturePins, cleanup = receipt.emulatedRuntimeCleanup;
+              assert.equal(pins.runtimeConfigured, true); assert.equal(pins.managementConfigured, true);
+              assert.equal(pins.vendorsAllowed, false);
+              assert.equal(cleanup.absent, true); assert.deepEqual(cleanup.remaining, []);
+              assert.equal(cleanup.observationFailed, undefined);
+              assert.ok(cleanup.originalPeerPids.length > 0);
+              const births = cleanup.effects.filter(row => row.event === 'launch');
+              assert.ok(births.length > 0);
+              assert.equal(cleanup.effects.some(row => row.event === 'failure'), false);
+              const inventory = extensions ? proof.finitePluginInventoryRead : null;
+              let inventoryBirth;
+              if (extensions) {
+                assert.deepEqual(inventory.command, ['plugin', 'list']);
+                assert.deepEqual(inventory.executable, pins.executable);
+                assert.ok(Number.isSafeInteger(inventory.pid) && inventory.pid > 1);
+                assert.ok(Number.isSafeInteger(inventory.parentPid) && inventory.parentPid > 1);
+                assert.notEqual(inventory.parentPid, receipt.hostChild.pid);
+                assert.equal(inventory.app.pid, receipt.app.pid);
+                assert.equal(inventory.app.pgid, receipt.app.processGroup);
+                assert.equal(inventory.app.ppid, inventory.parentPid);
+                assert.equal(inventory.exitCode, 0); assert.equal(inventory.signal, null);
+                assert.equal(inventory.outputSha256, createHash('sha256').update('Installed plugins:\n  frontend-design@claude-plugins-official (user)\n').digest('hex'));
+                const readers = births.filter(row => row.pid === inventory.pid);
+                assert.equal(readers.length, 1); inventoryBirth = readers[0];
+                assert.deepEqual(inventoryBirth.command, ['plugin', 'list']);
+                const observations = cleanup.effects.filter(row => row.pid === inventory.pid);
+                assert.deepEqual(observations.map(row => row.event), ['launch', 'extension-read']);
+                assert.ok(observations.every(row => JSON.stringify(row.command) === JSON.stringify(['plugin', 'list'])));
+              }
+              for (const birth of births) {
+                assert.ok(Number.isSafeInteger(birth.pid) && birth.pid > 1);
+                assert.equal(birth.parentPid, birth === inventoryBirth ? inventory.parentPid : receipt.hostChild.pid);
+                assert.ok(cleanup.originalPeerPids.includes(birth.pid));
+              }
+              for (const pin of [...pins.sources, ...(collaboration ? pins.executables : [pins.executable])]) {
+                assert.equal(realpathSync(pin.path), pin.path);
+                assert.equal(sha(pin.path), pin.sha256);
+              }
+              if (extensions || savedImport) {
+                assert.equal(proof.execution, 'finite-protocol-peer');
+                assert.equal(pins.provider, 'claude'); assert.equal(pins.protocolRevision, 'sdk-0.3.305');
+                assert.ok(cleanup.effects.every(row => row.provider === 'claude' && (row.role === 'management' || savedImport && row.role === 'runtime')));
+                assert.deepEqual(readRecords(join(root, 'hoststore/runtime-sessions'), true), [], 'no allocated Runtime session');
+              }
+            }
+            if (collaboration) {
+              assert.equal(proof.execution, 'finite-protocol-peers'); assert.equal(proof.nativeQualification, false);
+              assert.deepEqual(proof.providers, ['claude', 'codex', 'opencode']);
+              assert.deepEqual(proof.fixturePins.providers, proof.providers);
+              assert.equal(proof.fixturePins.collaborationVariant, 'mixed-v1');
+              assert.deepEqual(proof.fixturePins.protocolRevisions, { claude: 'sdk-0.3.305', codex: '0.162.0', opencode: '1.19.4' });
+              assert.equal(proof.initial.sessions.length, 2);
+              assert.equal(proof.initial.physical.length, 2);
+              for (const [kind, value] of [['add', proof.added], ['restore', proof.restored]]) {
+                assert.equal(value.receipt.liveMembership.phase, 'completed');
+                assert.equal(value.receipt.liveMembership.delta.kind, kind);
+                assert.equal(value.member.name, 'carol'); assert.equal(value.member.settings.providerId, 'opencode');
+                assert.equal(value.readiness.probe.phase, 'completed'); assert.equal(value.readiness.probe.ok, true);
+                assert.equal(value.readiness.probe.resourceHeld, false); assert.equal(value.readiness.consumer.disposition, 'consumed');
+              }
+              assert.equal(proof.removed.receipt.liveMembership.delta.kind, 'remove');
+              assert.equal(proof.removed.receipt.liveMembership.phase, 'completed');
+              assert.equal(proof.removed.originalProcessAbsent, true); assert.equal(proof.removed.oldGrant.revoked, true);
+              assert.equal(proof.removed.session.phase, 'closed'); assert.equal(proof.removed.session.custody, 'released');
+              assert.equal(proof.restored.member.memberId, proof.added.member.memberId);
+              assert.notEqual(proof.restored.binding.generation, proof.added.binding.generation);
+              assert.notEqual(proof.restored.selection.principalId, proof.added.selection.principalId);
+              assert.notEqual(proof.restored.session.sessionRef, proof.added.session.sessionRef);
+              assert.notEqual(proof.restored.physical.pid, proof.added.physical.pid);
+              assert.equal(proof.direct.direct.physical.to, 'bob'); assert.equal(proof.direct.dispatched.physical.to, 'carol');
+              assert.equal(proof.direct.reply.phase, 'completed');
+              assert.equal(proof.direct.reply.principalId, proof.added.selection.principalId);
+              assert.equal(proof.group.logical.length, 2); assert.equal(proof.group.sends.length, 2);
+              assert.equal(proof.group.deliveries.length, 3); assert.equal(proof.group.observedInputs.length, 3);
+              assert.deepEqual(proof.group.logical.find(row => row.text === 'TEST_UI_COLLAB_GROUP').groupRecipientNames, ['bob']);
+              assert.deepEqual([...proof.group.logical.find(row => row.text === 'TEST_UI_COLLAB_GROUP_REPLY').groupRecipientNames].sort(), ['alice', 'carol']);
+              for (const delivery of [proof.direct.direct, proof.direct.dispatched, proof.attachments.delivery, proof.restored.delivery, ...proof.group.deliveries]) {
+                assert.equal(delivery.receipt.phase, 'completed'); assert.equal(delivery.outbox.phase, 'admitted');
+                assert.equal(delivery.input.phase, 'terminal'); assert.equal(delivery.input.terminal, 'succeeded');
+                assert.equal(delivery.input.intent.messageId, delivery.physical.messageId);
+                if (delivery.ack) {
+                  assert.equal(delivery.ack.inboxMessageId, delivery.physical.messageId);
+                  assert.equal(delivery.ack.groupRunKey, delivery.physical.groupRunKey);
+                }
+              }
+              const attachments = receipt.nativeChatAttachments;
+              assert.equal(attachments.status, 'PASS'); assert.equal(attachments.execution, 'finite-protocol-peer');
+              assert.equal(proof.attachments.observedBytes.image.sha256, attachments.preparedImage.sha256);
+              assert.equal(proof.attachments.observedBytes.document.sha256, attachments.download.sha256);
+              assert.equal(attachments.preview.sha256, attachments.preparedImage.sha256);
+              assert.deepEqual(attachments.finiteReadback, { previewRetained: true, downloadedBytesRetained: true, downloadClicks: 0 });
+              assert.equal(proof.stopped.sessions.length, 4); assert.equal(proof.stopped.originalBirths.length, 4);
+              assert.equal(proof.stopped.originalProcessesAbsent, true);
+              assert.deepEqual(proof.stopped.sessions.map(row => row.inputs.length).sort(), [1, 2, 2, 3]);
+              for (const session of proof.stopped.sessions) {
+                assert.equal(session.phase, 'closed'); assert.equal(session.custody, 'released');
+                assert.ok(session.inputs.every(row => row.phase === 'terminal' && row.terminal === 'succeeded'));
+              }
+              const effects = receipt.emulatedRuntimeCleanup.effects;
+              const runtimeBirths = effects.filter(row => row.event === 'launch' && row.role === 'runtime');
+              assert.equal(new Set(runtimeBirths.map(row => row.pid)).size, runtimeBirths.length);
+              const originalPids = proof.stopped.originalBirths.map(row => row.pid);
+              assert.equal(new Set(originalPids).size, 4);
+              const catalogBirths = runtimeBirths.filter(birth => effects.some(row => row.pid === birth.pid && row.event === 'mcp-catalog'));
+              for (const birth of catalogBirths) {
+                assert.equal(originalPids.includes(birth.pid), false);
+                assert.equal(birth.provider, 'codex'); assert.equal(birth.argc, 3);
+                const observations = effects.filter(row => row.pid === birth.pid);
+                assert.ok(observations.every(row => row.provider === 'codex' && row.role === 'runtime'));
+                assert.deepEqual(observations.map(row => row.event), ['launch', 'mcp-catalog']);
+                assert.equal(observations[1].configuredServers, 0);
+              }
+              const births = runtimeBirths.filter(row => originalPids.includes(row.pid));
+              assert.deepEqual(births.map(row => row.provider).sort(), ['claude', 'codex', 'opencode', 'opencode']);
+              assert.deepEqual(births.map(row => row.pid).sort(), [...originalPids].sort());
+              // Derived probe profiles retain their Runtime environment. Every remaining birth must
+              // satisfy the pinned finite probe protocol; unknown children are never discarded.
+              const probeBirths = runtimeBirths.filter(row => !births.includes(row) && !catalogBirths.includes(row));
+              assert.deepEqual(probeBirths.map(row => row.provider).sort(), ['claude', 'codex', 'opencode', 'opencode']);
+              const policyPins = proof.fixturePins.sources.filter(row => row.path.endsWith('/adapters/providers/OpenCodeMcpPolicyPlugin.js'));
+              assert.equal(policyPins.length, 1);
+              for (const birth of probeBirths) {
+                const rows = effects.filter(row => row.pid === birth.pid);
+                assert.ok(rows.every(row => row.provider === birth.provider && row.role === 'runtime'));
+                const event = name => rows.filter(row => row.event === name);
+                const one = name => { const selected = event(name); assert.equal(selected.length, 1); return selected[0]; };
+                assert.equal(one('launch'), birth);
+                const input = one('input'), terminal = one('terminal');
+                assert.equal(input.marker, 'TEST_MODEL_PROBE');
+                const allowed = birth.provider === 'claude'
+                  ? ['launch', 'started', 'initialized', 'input', 'terminal', 'stdin-ended', 'exited']
+                  : birth.provider === 'codex'
+                    ? ['launch', 'managed-configuration-read', 'input', 'terminal', 'exit']
+                    : ['launch', 'policy-configured', 'input', 'terminal', 'exit'];
+                assert.ok(rows.every(row => allowed.includes(row.event)), 'no business, control, MCP or unknown probe effects');
+                for (const name of allowed) assert.ok(event(name).length <= 1);
+                const core = rows.filter(row => !['stdin-ended', 'exited', 'exit', 'managed-configuration-read', 'policy-configured'].includes(row.event));
+                assert.deepEqual(core.map(row => row.event), birth.provider === 'claude'
+                  ? ['launch', 'started', 'initialized', 'input', 'terminal'] : ['launch', 'input', 'terminal']);
+                if (birth.provider !== 'claude') assert.equal(event('exit').length, 1);
+                for (const row of rows.filter(row => ['exited', 'exit'].includes(row.event))) {
+                  assert.equal(row.code, 0); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));
+                }
+                if (birth.provider === 'claude') {
+                  assert.equal(birth.restored, false); assert.equal(typeof birth.sessionId, 'string');
+                  for (const name of ['started', 'initialized']) {
+                    assert.equal(one(name).sessionId, birth.sessionId); assert.equal(one(name).restored, false);
+                  }
+                  assert.equal(input.sessionId, birth.sessionId); assert.equal(typeof input.inputId, 'string');
+                  assert.ok(input.inputId.length > 0); assert.equal(input.wrapped, false);
+                  assert.equal(terminal.inputId, input.inputId);
+                  assert.equal(terminal.marker, 'Reply only OK. Do not use tools, access files or run commands.');
+                  assert.equal(terminal.outcome, 'succeeded'); assert.equal(terminal.text, 'OK');
+                  for (const row of event('stdin-ended')) {
+                    assert.equal(row.active, false); assert.ok(rows.indexOf(row) > rows.indexOf(terminal));
+                  }
+                } else {
+                  assert.equal(terminal.marker, 'TEST_MODEL_PROBE');
+                  if (birth.provider === 'codex') {
+                    assert.equal(typeof input.turnId, 'string'); assert.equal(terminal.turnId, input.turnId);
+                    assert.ok(input.turnId.length > 0);
+                    assert.equal(terminal.status, 'completed');
+                    for (const row of event('managed-configuration-read')) {
+                      assert.deepEqual(row.selectedServers, []); assert.ok(rows.indexOf(row) < rows.indexOf(input));
+                    }
+                  } else {
+                    assert.equal(terminal.outcome, 'succeeded');
+                    for (const row of event('policy-configured')) {
+                      assert.equal(row.pluginSha256, policyPins[0].sha256); assert.ok(rows.indexOf(row) < rows.indexOf(input));
+                    }
+                  }
+                }
+              }
+              // Validate the original durable probe bodies independently of the process effects.
+              // The producer does not persist a PID-to-command join, so no such join is inferred.
+              const { FileManagementCommandStore } = await import('./packages/legacy-agent-host/dist/adapters/providers/FileManagementCommandStore.js');
+              const probes = [...new FileManagementCommandStore(join(root, 'hoststore'), true).list()]
+                .filter(row => row.kind === 'model.probe');
+              assert.equal(probes.length, 4); assert.equal(new Set(probes.map(row => row.commandId)).size, 4);
+              for (const probe of probes) {
+                assert.match(probe.profileId, /^team-probe-[a-f0-9]{64}$/u);
+                assert.equal(probe.configRevision, probe.profileId);
+                assert.equal(probe.phase, 'completed'); assert.equal(probe.ok, true); assert.equal(probe.resourceHeld, false);
+              }
+              assert.deepEqual(probes.map(row => [row.providerId, row.modelId]).sort(), [
+                ['anthropic', 'sonnet'], ['codex', 'TEST-model'], ['test-provider', 'TEST-model'], ['test-provider', 'TEST-model'],
+              ]);
+              assert.notEqual(proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId);
+              for (const value of [proof.added, proof.restored]) {
+                const { reference, consumer, probe } = value.readiness;
+                const selected = probes.filter(row => row.commandId === probe.commandId);
+                assert.equal(selected.length, 1);
+                const { readinessRetired, ...projected } = selected[0];
+                assert.equal(readinessRetired, true); assert.deepEqual(projected, probe);
+                for (const key of ['commandId', 'profileId', 'configRevision', 'context', 'fingerprint', 'selectionDigest', 'resourceId', 'purpose', 'expiresAt'])
+                  assert.deepEqual(reference[key], probe[key]);
+                const origin = probe.localModelReadinessOrigin, preparation = probe.localModelReadinessPreparation;
+                const scope = probe.readinessScope, capture = value.receipt.liveMembership.capture;
+                assert.equal(probe.purpose, 'native-local-readiness-v1');
+                assert.equal(probe.readiness.context, probe.context); assert.equal(probe.readiness.selectionDigest, probe.selectionDigest);
+                assert.equal(probe.readiness.evidence.ordinary, 'confirmed'); assert.equal(probe.readiness.evidence.decision, 'allow');
+                assert.equal(origin.commandId, value.receipt.commandId); assert.equal(preparation.commandId, origin.commandId);
+                assert.equal(capture.commandId, origin.commandId); assert.equal(value.captured.commandId, origin.commandId);
+                for (const key of ['ownerDigest', 'contextId', 'selectionDigest']) assert.equal(preparation[key], origin[key]);
+                assert.equal(preparation.anchorCommandId, probe.commandId); assert.equal(preparation.expiresAt, probe.expiresAt);
+                assert.equal(scope.kind, 'team'); assert.equal(scope.rosterRevision, capture.expectedRevision);
+                assert.equal(scope.sourceRevision, capture.captureDigest); assert.equal(scope.cutoff, probe.expiresAt);
+                assert.equal(reference.mechanismDigest, scope.mechanismDigest);
+                assert.equal(probe.profileId, 'team-probe-' + value.captured.configurationDigest);
+                assert.equal(probe.configRevision, probe.profileId);
+                assert.equal(consumer.actionId, value.receipt.commandId); assert.equal(consumer.groupCommandId, probe.commandId);
+                assert.equal(consumer.memberId, value.member.memberId); assert.deepEqual(consumer.binding, value.binding);
+                assert.equal(consumer.inputDigest, capture.requestDigest); assert.equal(consumer.cutoff, scope.cutoff);
+                assert.equal(consumer.baseConfigurationDigest, value.captured.configurationDigest);
+                assert.equal(consumer.configurationDigest, value.captured.configurationDigest);
+                assert.equal(value.selection.configurationDigest, value.captured.configurationDigest);
+                assert.equal(consumer.disposition, 'consumed');
+              }
+              const initialProbes = probes.filter(row => ![proof.added.readiness.probe.commandId, proof.restored.readiness.probe.commandId].includes(row.commandId));
+              assert.deepEqual(initialProbes.map(row => [row.providerId, row.modelId, row.effort]).sort(),
+                [['anthropic', 'sonnet', 'low'], ['codex', 'TEST-model', undefined]]);
+              assert.equal(proof.reload.historyRetained, true); assert.equal(proof.reload.noEffects, true);
+              assert.equal(proof.effects.some(row => row.event === 'failure'), false);
+            }
+            if (extensions) {
+              const selected = JSON.parse(readFileSync(join(root, 'native-extensions-selection.json'), 'utf8'));
+              assert.equal(selected.execution, 'finite-protocol-peer');
+              assert.deepEqual(selected.profile.executable, proof.fixturePins.executable);
+              assert.equal(proof.nativePluginListObserved, true); assert.equal(proof.reloadObserved, true);
+              assert.equal(proof.neighborUnchanged, true); assert.equal(sha(selected.neighborPath), selected.neighborSha256);
+              assert.equal(proof.completedOriginalCommandIds.length, 4);
+              assert.equal(new Set(proof.completedOriginalCommandIds).size, 4);
+              const mutations = readRecords(join(root, 'hoststore/management-commands')).filter(row => row.kind === 'extension.mutation');
+              assert.deepEqual(mutations.map(row => row.commandId).sort(), [...proof.completedOriginalCommandIds].sort());
+              assert.deepEqual(mutations.map(row => [row.action, row.scope]).sort(),
+                [['mcp.install', 'global'], ['mcp.uninstall', 'user'], ['plugin.install', 'user'], ['plugin.uninstall', 'user']]);
+              assert.ok(mutations.every(row => row.phase === 'completed' && row.resourceHeld === false && row.profileId === selected.profile.profileId));
+              const effects = receipt.emulatedRuntimeCleanup.effects;
+              assert.equal(effects.some(row => row.event === 'input'), false);
+              assert.deepEqual(effects.filter(row => row.event === 'extension-command').map(row => row.command), [
+                ['plugin', 'install', '-s', 'user', 'frontend-design@claude-plugins-official'],
+                ['plugin', 'uninstall', '-s', 'user', 'frontend-design@claude-plugins-official'],
+                ['mcp', 'add', '-s', 'user', '-t', 'http', 'test-native-extension-config-only', 'http://127.0.0.1:9/TEST-native-extension-config-only'],
+                ['mcp', 'remove', '-s', 'user', 'test-native-extension-config-only'],
+              ]);
+              assert.ok(effects.some(row => row.event === 'extension-read' && row.command[0] === 'mcp' && row.status === 'failed'));
+              assert.equal(JSON.parse(readFileSync(join(selected.profile.environment.CLAUDE_CONFIG_DIR, 'settings.json'), 'utf8')).enabledPlugins['frontend-design@claude-plugins-official'], undefined);
+              assert.equal(JSON.parse(readFileSync(selected.nativeConfig, 'utf8')).mcpServers['test-native-extension-config-only'], undefined);
+              assert.deepEqual(proof.screenshots, ['native-extensions-plugin-installed.png', 'native-extensions-plugin-uninstalled.png', 'native-extensions-mcp-installed.png']);
+              assert.deepEqual(Object.keys(proof.screenshotHashes).sort(), [...proof.screenshots].sort());
+            }
+            if (savedImport) {
+              assert.equal(proof.sourceKind, 'legacy-format-test-archive');
+              assert.equal(proof.noLaunchSubmit, true); assert.equal(proof.sameOriginalImportAfterReload, true);
+              assert.deepEqual(proof.runtimeSessions, []);
+              assert.deepEqual(proof.sourceAfter, proof.sourceBefore);
+              const seed = await readDesktopStoppedImportSeed(root);
+              assert.equal(seed.sourceKind, undefined, 'finite archive is not a genuine native donor');
+              assert.equal(sha(join(root, 'stopped-import-ui-seed.json')), proof.seedSha256);
+              assert.deepEqual(await stoppedImportSourceBytes(root, seed.roots), proof.sourceAfter);
+              assert.equal(proof.importRecord.phase, 'published');
+              assert.deepEqual(readRecords(join(root, 'hoststore/.host-team-registry/imports')), [proof.importRecord]);
+              const ownerRoot = join(root, 'hoststore/teams', seed.teamName, '.host-owner');
+              const owner = JSON.parse(readFileSync(join(ownerRoot, 'state.json'), 'utf8'));
+              assert.deepEqual(owner.runtimeCaptures ?? [], []);
+              assert.deepEqual(readRecords(join(ownerRoot, 'outbox'), true), [], 'no imported Team input');
+              for (const [key, value] of Object.entries(seed.savedSettings)) assert.equal(owner.savedSettings[key], value);
+              assert.equal(proof.importedBlobSha256, sha(seed.blobPath));
+              assert.deepEqual(assertDesktopEmulatedImportModelChecks(proof.modelPreflightReceipts,
+                receipt.emulatedRuntimeCleanup.effects, seed.savedSettings), proof.probes);
+              assert.deepEqual(readRecords(join(root, 'hoststore/management-commands')).map(row => row.commandId).sort(),
+                proof.modelPreflightReceipts.map(row => row.commandId).sort());
+              const attachments = proof.attachmentsUi;
+              assert.equal(attachments.status, 'PASS'); assert.equal(attachments.download.status, 'PASS');
+              assert.equal(attachments.download.nativePicker, false);
+              assert.equal(attachments.ownerReadBytes.sha256, seed.sourceMessage.file.sha256);
+              assert.equal(attachments.download.sha256, seed.sourceMessage.file.sha256);
+              assert.equal(dirname(realpathSync(attachments.download.path)), join(root, 'home/Downloads'));
+              assert.equal(sha(attachments.download.path), seed.sourceMessage.file.sha256);
+              for (const key of ['kanbanThumbnail', 'lightboxImage', 'taskDetailThumbnail'])
+                assert.equal(attachments[key].sha256, seed.sourceMessage.image.sha256);
+              assert.equal(attachments.screenshots.length, 3);
+              assert.deepEqual(proof.taskReferenceNavigation.map(row => row.kind), ['destination', 'archive', 'gap']);
+              assert.equal(proof.taskReferenceNavigation[0].teamName, proof.lookup.selection);
+              assert.equal(proof.taskReferenceNavigation[0].taskId, seed.linkedTaskId);
+              for (const row of proof.taskReferenceNavigation.slice(1)) {
+                assert.equal(row.taskId, null); assert.equal(row.identity.taskId, row.requestedTaskId);
+                assert.equal(row.ownerSurfaceId, row.tabId);
+                assert.equal(row.outcome, 'unavailable at captured source owner');
+                assert.ok(['unavailable', 'missing'].includes(row.phase));
+              }
+            }
+            if (mode === 'emulated-management-ui') {
+              assert.deepEqual(proof.savedSelection, { providerId: 'opencode', model: 'local/TEST-model', effort: 'high' });
+              assert.equal(proof.selectionRetainedAfterReload, true);
+              assert.equal(proof.fixturePins.runtimeConfigured, false);
+              assert.equal(proof.fixturePins.managementConfigured, true);
+              assert.equal(receipt.emulatedManagementCleanup.absent, true);
+              assert.ok(receipt.emulatedManagementCleanup.originalPeerPids.length > 0);
+              assert.deepEqual(receipt.emulatedManagementCleanup.remaining, []);
+              assert.deepEqual(proof.oauthCancellation, { phase: 'cancelled', resourceHeld: false, credentialAbsent: true, testOpenerCount: 1 });
+              assert.deepEqual(proof.oauthDeviceCancellation, { phaseBeforeCancel: 'completing', phase: 'cancelled',
+                resourceHeld: false, credentialAbsent: true, deviceCodeRendered: true, copyAcknowledged: true,
+                privateTextAbsent: true, privateLinkAbsent: true, cancelEnabled: true,
+                testOpenerCount: 2, authorizeCount: 1, callbackCount: 1 });
+              assert.equal(proof.oauthDeviceWaitingScreenshot.path, join(root, 'ui-emulated-oauth-device-waiting.png'));
+              assert.equal(proof.oauthDeviceWaitingScreenshot.sha256, sha(join(root, 'ui-emulated-oauth-device-waiting.png')));
+
+              for (const key of ['peerSha256', 'sourceSha256', 'versionSentinelSha256', 'openerSha256'])
+                assert.match(proof.fixturePins[key], /^[a-f0-9]{64}$/);
+            }
+            if (codexLogin) {
+              assert.equal(proof.execution, 'finite-protocol-peer');
+              assert.equal(proof.protocolRevision, '0.162.0');
+              assert.equal(proof.vendorExecutable, false); assert.equal(proof.nativeVersion, undefined);
+              assert.equal(receipt.codexInitialAccount.managedAccount, null);
+              assert.deepEqual(proof.cases.map(row => row.mode), ['browser', 'device_code']);
+              for (const row of proof.cases) {
+                assert.equal(row.status, 'PASS'); assert.equal(row.nativeStatus, 'pending');
+                for (const key of ['copyAcknowledged', 'externalOpenDispatched', 'reopenPreservedOriginal',
+                  'cancelledOriginal', 'privateFieldsCleared']) assert.equal(row[key], true);
+              }
+              assert.equal(proof.input.allClicksTrusted, true); assert.ok(proof.input.clicks >= 8);
+              assert.equal(proof.fixturePins.kind, 'codex-login');
+              assert.equal(proof.fixturePins.protocolRevision, '0.162.0');
+              assert.equal(proof.fixturePins.vendorExecutable, false);
+              assert.equal(proof.fixturePins.runtimeConfigured, false);
+              assert.equal(proof.fixturePins.managementConfigured, true);
+              for (const key of ['peerSha256', 'sourceSha256', 'openerSha256'])
+                assert.match(proof.fixturePins[key], /^[a-f0-9]{64}$/);
+              const cleanup = receipt.emulatedManagementCleanup;
+              assert.equal(cleanup.absent, true); assert.deepEqual(cleanup.remaining, []);
+              assert.ok(cleanup.originalPeerPids.length >= 2);
+              assert.equal(cleanup.externalOpenCount, 2);
+              assert.deepEqual(cleanup.fixturePins, proof.fixturePins);
+              assert.deepEqual(cleanup.protocol, { browserStarts: 1, deviceStarts: 1, cancellations: 2,
+                originalLoginIdsCancelled: true, accountReads: cleanup.protocol.accountReads,
+                logout: 0, sessionOrModelRequests: 0, accountAbsent: true });
+              assert.ok(Number.isSafeInteger(cleanup.protocol.accountReads) && cleanup.protocol.accountReads > 0);
+              for (const key of ['launchLogSha256', 'wireLogSha256', 'externalOpenLogSha256'])
+                assert.match(cleanup[key], /^[a-f0-9]{64}$/);
+            }
+            if (mode === 'review-ui' || mode === 'review-readback-ui') {
+              assert.ok(proof.persistence.length > 0);
+              assert.match(proof.seedSha256, /^[a-f0-9]{64}$/); assert.match(proof.fileSha256, /^[a-f0-9]{64}$/);
+            }
+            if (runtimeProvider !== undefined) {
+              assert.equal(proof.provider, runtimeProvider); assert.equal(proof.reloadWithoutReplay, true);
+              assert.equal(proof.stopReleased, true); assert.equal(proof.stoppedInput.phase, 'unknown'); assert.equal(proof.stoppedInput.terminalConfirmed, false);
+              const catalog = { codex: ['/cost'], claude: ['/compact', '/cost', '/review', '/test-desktop-skill'], opencode: [] }[runtimeProvider];
+              assert.deepEqual([...proof.catalog].sort(), [...catalog].sort());
+              if (runtimeProvider === 'claude') {
+                assert.equal(proof.nativeCommands.length, 4);
+                assert.equal(proof.standalone.logVisible, true); assert.equal(proof.standalone.deletedWhileActive, true);
+                assert.equal(proof.standalone.cleanup, 'confirmed'); assert.equal(proof.standalone.taskWrites, 0);
+                assert.equal(proof.standalone.originalPids.length, 2); assert.deepEqual(proof.standalone.limits, { maxTurns: 6, maxBudgetUsd: 0.25 });
+                assert.equal(proof.standalone.releasedRecord.phase, 'closed'); assert.equal(proof.standalone.releasedRecord.custody, 'released');
+              }
+              if (runtimeProvider === 'opencode') {
+                for (const key of ['inputTokens', 'outputTokens', 'costUsd']) assert.equal(proof.stats[key], null);
+                assert.deepEqual(proof.unsupportedBaseline, ['structured questions', 'native slash commands', 'native usage counters']);
+              }
+              assert.equal(proof.fixturePins.vendorsAllowed, false);
+              assert.equal(proof.fixturePins.runtimeConfigured, true);
+              assert.equal(proof.fixturePins.managementConfigured, true);
+              assert.equal(proof.fixturePins.protocolRevision, { codex: '0.162.0', claude: 'sdk-0.3.305', opencode: '1.19.4' }[runtimeProvider]);
+              assert.equal(proof.schedule.status, 'dispatched'); assert.ok(proof.schedule.taskId);
+              assert.equal(proof.schedule.savedPromptAcknowledged, true); assert.equal(proof.schedule.savedPromptNotReplayed, true);
+              const automatic = proof.automaticSchedule;
+              assert.equal(automatic.trigger, 'real-cron-tick'); assert.equal(automatic.runNowClicks, 0);
+              assert.equal(automatic.status, 'dispatched'); assert.equal(automatic.taskCompleted, true);
+              assert.equal(automatic.paused, true); assert.equal(automatic.savedPromptNotReplayed, true);
+              assert.equal(automatic.scheduleId, proof.schedule.scheduleId);
+              assert.notEqual(automatic.runId, proof.schedule.runId); assert.notEqual(automatic.taskId, proof.schedule.taskId);
+              assert.equal(automatic.peerEffect.taskId, automatic.taskId);
+              assert.ok(Date.parse(automatic.armedAt) < Date.parse(automatic.selectedNextRunAt));
+              assert.ok(Date.parse(automatic.scheduledFor) >= Date.parse(automatic.selectedNextRunAt));
+              assert.ok(Date.parse(automatic.scheduledFor) < Date.parse(automatic.selectedNextRunAt) + 15000);
+              assert.equal(automatic.startedAt, automatic.scheduledFor);
+              assert.equal(receipt.emulatedRuntimeCleanup.absent, true);
+              assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length > 0);
+              assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);
+              assert.ok(proof.effects.some(row => ['connected', 'mcp-connected'].includes(row.event)));
+              assert.equal(proof.effects.some(row => row.event === 'failure'), false);
+            }
+            if (lifecycle) {
+              assert.equal(proof.provider, 'claude'); assert.equal(proof.nativeQualification, false);
+              assert.equal(proof.awaitingOriginalQuit, false); assert.equal(proof.resume.status, 'PASS');
+              assert.notEqual(proof.resume.sourceGeneration, proof.resume.selectedGeneration);
+              assert.equal(proof.resume.originalPromptReplays, 0);
+              assert.equal(proof.resume.reference, proof.source.reference);
+              assert.equal(proof.resume.nativeSession, proof.source.nativeSession);
+              assert.equal(proof.resume.peer.resumedHistory.sha256, proof.source.historySha256);
+              assert.equal(proof.resume.peer.resumedHistory.rows, 2);
+              assert.equal(proof.resume.peer.resumedHistory.bootRetained, true);
+              assert.equal(proof.fixturePins.lifecycleVariant, 'cold-resume-active-quit-v1');
+              assert.equal(proof.fixturePins.protocolRevision, 'sdk-0.3.305');
+              assert.equal(proof.fixturePins.vendorsAllowed, false);
+              assert.equal(proof.fixturePins.runtimeConfigured, true); assert.equal(proof.fixturePins.managementConfigured, true);
+              const cold = receipt.emulatedColdResumeBoundary;
+              assert.equal(cold.status, 'PASS'); assert.equal(cold.nativeQualification, false);
+              assert.equal(cold.firstCleanup.appExitCode, 0); assert.equal(cold.firstCleanup.appSignalCode, null);
+              assert.equal(cold.firstCleanup.capturedHostAbsent, true); assert.equal(cold.firstCleanup.writerLockReleased, true);
+              assert.deepEqual(cold.firstCleanup.remaining, []); assert.equal(cold.firstCleanup.peerCleanup.absent, true);
+              assert.equal(cold.secondEpoch.status, 'PASS');
+              assert.notEqual(cold.firstEpoch.app.processGroup, cold.secondEpoch.app.processGroup);
+              assert.notEqual(cold.firstEpoch.host.pid, cold.secondEpoch.host.pid);
+              assert.equal(cold.secondEpoch.checkpointAndHistoryUnchanged, true);
+              assert.equal(cold.secondEpoch.originalProductUnchanged, true);
+              assert.equal(cold.secondEpoch.runtimeAllocations, 0); assert.equal(cold.secondEpoch.promptReplays, 0);
+              assert.deepEqual(cold.firstEpoch.compiledBundleHashesAfterStartup, cold.secondEpoch.compiledBundleHashesAfterStartup);
+              assert.equal(proof.afterQuit.activeOutcome, 'unknown'); assert.equal(proof.afterQuit.queuedOutcome, 'cancelled');
+              assert.equal(proof.afterQuit.queuedNativeDeliveries, 0); assert.equal(proof.afterQuit.session.custody, 'released');
+              for (const key of ['productUnchanged', 'bothAppGroupsAbsent', 'bothHostsAbsent', 'writerLockReleased'])
+                assert.equal(proof.afterQuit[key], true);
+              assert.equal(proof.afterQuit.peerCleanup.absent, true); assert.deepEqual(proof.afterQuit.peerCleanup.remaining, []);
+              assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);
+              assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length >= 2);
+              assert.equal(proof.effects.filter(row => row.event === 'input' && row.marker === 'TEST_UI_BOOT').length, 1);
+              assert.equal(proof.effects.filter(row => row.event === 'input' && row.marker === 'TEST_UI_RESUME').length, 1);
+              assert.equal(proof.effects.some(row => row.event === 'input' && row.marker === 'TEST_UI_QUIT_QUEUED'), false);
+              assert.equal(proof.effects.some(row => row.event === 'failure'), false);
+            }
+            if (selection) {
+              assert.equal(proof.selectionRetainedAfterReload, true);
+              for (const [name, model, effort] of [['a', 'TEST-model', 'low'], ['b', 'TEST-model-next', 'high']]) {
+                assert.equal(proof[name].thread.model, model); assert.equal(proof[name].thread.effort, effort);
+                assert.equal(proof[name].thread.runtimeMcp, true);
+                assert.equal(proof[name].definition.capture.savedSettings.model, model);
+                assert.equal(proof[name].definition.capture.savedSettings.effort, effort);
+                assert.equal(proof[name + 'Stop'].phase, 'closed'); assert.equal(proof[name + 'Stop'].custody, 'released');
+                assert.equal(proof[name + 'Stop'].absent, true);
+              }
+              assert.notEqual(proof.a.thread.pid, proof.b.thread.pid); assert.notEqual(proof.a.thread.threadId, proof.b.thread.threadId);
+              assert.equal(proof.savedSelection.model, 'TEST-model-next'); assert.equal(proof.savedSelection.effort, 'high');
+              assert.equal(proof.stream.survivedBStop, true); assert.equal(proof.stream.terminal, 'succeeded');
+              assert.deepEqual(proof.observations.map(row => row.phase), ['before-create',
+                ...(installer ? ['before-original-installer-update', 'after-original-installer-ready'] : []),
+                'after-save-only', 'after-reload-before-next-launch', 'after-next-launch',
+                ...(installer ? ['before-original-installer-settings', 'before-original-installer-settings',
+                  'after-original-installer-settings', 'after-original-installer-settings'] : []),
+                'after-b-stop-during-a-input']);
+              assert.equal(proof.fixturePins.selectionVariant, 'two-models-v1'); assert.equal(proof.fixturePins.protocolRevision, '0.162.0');
+              assert.equal(proof.fixturePins.vendorsAllowed, false); assert.equal(proof.fixturePins.runtimeConfigured, true);
+              assert.equal(proof.fixturePins.managementConfigured, true);
+              assert.equal(receipt.emulatedRuntimeCleanup.absent, true); assert.deepEqual(receipt.emulatedRuntimeCleanup.remaining, []);
+              assert.ok(receipt.emulatedRuntimeCleanup.originalPeerPids.length >= 2);
+              assert.equal(proof.effects.filter(row => row.event === 'thread-selection' && row.runtimeMcp === true).length, 2);
+              assert.equal(proof.effects.some(row => row.event === 'failure'), false);
+            }
+            if (installer) {
+              const update = proof.installer;
+              assert.equal(update.status, 'PASS'); assert.equal(update.nativeQualification, false);
+              assert.equal(update.initialStatus.version, '0.162.0');
+              assert.equal(update.initialStatus.source, 'captured-host');
+              assert.equal(update.installedStatus.version, '0.169.0');
+              assert.equal(update.installedStatus.source, 'app-managed');
+              assert.equal(update.installedStatus.progress.phase, 'ready');
+              assert.equal(update.readbackStatus.sourceRevision, update.installedStatus.sourceRevision);
+              assert.notEqual(update.initialStatus.sourceRevision, update.installedStatus.sourceRevision);
+              assert.equal(update.publication.previousRevision, update.initialStatus.sourceRevision);
+              assert.equal(update.publication.revision, update.installedStatus.sourceRevision);
+              assert.equal(update.command.phase, 'published');
+              assert.equal(update.command.commandId, update.publication.commandId);
+              for (const key of ['sourceWrites', 'updateClicks', 'downloads']) assert.equal(update[key], 1);
+              for (const key of ['initialGetSourceWrites', 'finalGetSourceWrites']) assert.equal(update[key], 0);
+              assert.equal(update.originalRuntimeRetained, true);
+              assert.equal(proof.aInvocation.pid, proof.a.thread.pid);
+              assert.equal(proof.aInvocation.version, '0.162.0');
+              assert.equal(proof.bInvocation.pid, proof.b.thread.pid);
+              assert.equal(proof.bInvocation.version, '0.169.0');
+              assert.equal(proof.bInvocation.executable, update.installed.executable.path);
+              assert.notEqual(proof.aInvocation.executable, proof.bInvocation.executable);
+              assert.equal(proof.bSource.revision, update.publication.revision);
+              assert.equal(update.registry.filter(row => row.kind === 'tarball' && row.event === 'response').length, 1);
+              assert.ok(update.invocations.some(row => row.kind === 'version' && row.version === '0.169.0'));
+              assert.equal(update.fixturePins.aVersion, '0.162.0');
+              assert.equal(update.fixturePins.bVersion, '0.169.0');
+              assert.equal(update.fixturePins.bSha256, update.installed.executable.sha256);
+              for (const key of ['aSha256', 'bSha256', 'packageSha256', 'preloadSha256'])
+                assert.match(update.fixturePins[key], /^[a-f0-9]{64}$/);
+              assert.equal(update.settings.status, 'PASS');
+              for (const key of ['manageOpened', 'providerReady', 'accountHealthy', 'installActionAbsent', 'originalRuntimesRetained'])
+                assert.equal(update.settings[key], true);
+              assert.equal(update.settings.visibleVersionClaimed, false);
+              assert.equal(update.settings.sourceWrites, 0); assert.equal(update.settings.extraDownloads, 0);
+              assert.equal(update.settings.finalStatus.version, '0.169.0');
+              assert.equal(update.settings.finalStatus.source, 'app-managed');
+              assert.equal(update.settings.finalStatus.sourceRevision, update.publication.revision);
+            }
+            if (processes) {
+              const controlled = receipt.controlledProcessColdUi, capturePin = inputs.controlledProcesses.capture;
+              const captureBytes = readFileSync(capturePin.path), capture = JSON.parse(captureBytes.toString('utf8'));
+              assert.equal(createHash('sha256').update(captureBytes).digest('hex'), capturePin.sha256);
+              assert.equal(capture.kind, 'TEST-controlled-process-no-provider-v1'); assert.equal(capture.claude, undefined);
+              assert.equal(controlled.captureKind, capture.kind); assert.equal(controlled.providersConfigured, false);
+              assert.deepEqual(controlled.processArtifact, inputs.controlledProcesses.processArtifact);
+              const manifestBytes = readFileSync(join(controlled.processArtifact.directory, 'manifest.json'));
+              assert.equal(createHash('sha256').update(manifestBytes).digest('hex'), controlled.processArtifact.manifestSha256);
+              const manifest = JSON.parse(manifestBytes.toString('utf8'));
+              assert.equal(manifest.binarySha256, inputs.controlledProcesses.binarySha256);
+              assert.equal(manifest.sourceSha256, inputs.controlledProcesses.sourceSha256);
+              const binary = readFileSync(join(controlled.processArtifact.directory, 'registered-process.node'));
+              assert.equal(createHash('sha256').update(binary).digest('hex'), manifest.binarySha256);
+              assert.equal(controlled.status, 'PASS'); assert.equal(controlled.runtimeCustody, 'NOT_ALLOCATED');
+              assert.equal(controlled.hostA.exitCode, 0); assert.equal(controlled.hostA.signalCode, null);
+              assert.equal(controlled.hostA.writerLockReleased, true); assert.equal(controlled.hostB.distinctFromHostA, true);
+              assert.notEqual(controlled.hostA.pid, controlled.hostB.pid); assert.equal(controlled.neighborHealthyBeforeCleanup, true);
+              assert.equal(controlled.canonicalPrimary.capturedNative.version, 3);
+              assert.equal(controlled.cleanup.status, 'PASS'); assert.equal(controlled.cleanup.rootExitCode, 0);
+              assert.equal(controlled.cleanup.rootSignalCode, null);
+              for (const key of ['originalTargetObservation', 'originalNeighborObservation', 'originalRootObservation']) assert.equal(controlled.cleanup[key], 'absent');
+              assert.equal(controlled.cleanup.primaryCleanupSignals, 0); assert.equal(controlled.cleanup.neighborCleanupSignals, 1);
+              assert.equal(receipt.controlledProcessCleanupFailure, undefined);
+              assert.equal(proof.runtimeCustody, 'NOT_ALLOCATED'); assert.deepEqual(proof.nativeRuntimeAllocation, { providerSessions: 0, inputs: 0, modelServers: 0 });
+              assert.equal(proof.qualificationScope, 'controlled-native-kernel-real-Host-restart-original-UI-stop');
+              assert.equal(proof.stopQualification, 'COMPLETED_ORIGINAL_REF_STOP');
+              assert.equal(proof.terminalStop.originalProcessRef, controlled.originalProcessRef);
+              assert.equal(proof.terminalStop.state.phase, 'completed'); assert.equal(proof.terminalStop.state.native, 'observed-absent');
+              assert.equal(proof.ownerHistory.length, 1); assert.equal(proof.stoppedRenderedRow.killCount, 0);
+              assert.equal(proof.stoppedRenderedRow.stoppedStyle, true); assert.equal(proof.stoppedRenderedRow.stoppedIndicator, true);
+              assert.deepEqual(proof.neighborLifecycleAfterStop, proof.neighborLifecycleBeforeStop);
+            }
+            if (mode === 'review-readback-ui') {
+              assert.equal(proof.staleGuard.externalChangeBanner, true);
+              assert.equal(proof.staleGuard.undoDisabled, true);
+            }
+            const screenshots = mode === 'team-ui' ? [receipt.uiScreenshot] :
+              collaboration ? ['initial', 'direct', 'attachments', 'group', 'restored', 'stopped', 'reload'].map(key => proof[key].screenshot) :
+              extensions ? proof.screenshots.map(name => ({ path: join(root, name), sha256: proof.screenshotHashes[name] })) :
+              (taskboard ? ['initialScreenshot', 'dependencyScreenshot', 'reorderedScreenshot', 'blockedStartScreenshot', 'reloadedScreenshot'] :
+                skills ? ['initialScreenshot', 'importPreviewScreenshot', 'knownRejectedScreenshot', 'importAppliedScreenshot', 'editAppliedScreenshot', 'trashCompletedScreenshot', 'unknownHeldScreenshot', 'staleContextScreenshot'] :
+                savedImport ? ['importedDialogScreenshot', 'reloadedDialogScreenshot'] :
+                codexLogin ? ['finalScreenshot'] :
+                mode === 'emulated-management-ui' ? ['selectionScreenshot', 'reloadedScreenshot', 'connectedScreenshot', 'oauthWaitingScreenshot', 'oauthDeviceWaitingScreenshot', 'finalScreenshot'] :
+                selection ? ['aLaunchScreenshot', 'selectedScreenshot', 'reloadedScreenshot', 'bLaunchScreenshot', 'aSurvivedScreenshot', 'completedScreenshot', 'stoppedScreenshot'] :
+                processes ? ['beforeScreenshot', 'afterScreenshot'] :
+                lifecycle ? ['launchScreenshot', 'stoppedScreenshot', 'resumeSelectedScreenshot'] :
+                runtime ? ['launchScreenshot', 'partialScreenshot', 'completedScreenshot', 'denyScreenshot', 'allowScreenshot', 'logsScreenshot', 'statsScreenshot', 'reloadedScreenshot', 'scheduleScreenshot', 'heldScreenshot', 'stoppedScreenshot',
+                  ...(runtimeProvider !== 'opencode' ? ['questionScreenshot', 'questionDeclineScreenshot', 'costScreenshot'] : []),
+                  ...(runtimeProvider === 'claude' ? ['compactScreenshot', 'skillScreenshot', 'reviewScreenshot', 'standaloneCompletedScreenshot', 'standaloneHeldScreenshot', 'standaloneDeletedScreenshot'] : [])] :
+                mode === 'review-ui' ? ['historyScreenshot', 'reloadedHistoryScreenshot'] : ['restartedHistoryScreenshot', 'staleScreenshot'])
+                .map(key => proof[key]);
+            if (crossTeam) screenshots.push(receipt.taskReviewCycleUiProof.screenshot, receipt.taskNotificationUiProof.screenshot,
+              receipt.crossTeamUiProof.screenshot, receipt.oversizedCommentUiProof.screenshot, receipt.taskTrashRestoreUiProof.deletedScreenshot);
+            if (savedImport) screenshots.push(...proof.attachmentsUi.screenshots);
+            if (lifecycle) screenshots.push(proof.resume.screenshot, proof.beforeQuit.screenshot);
+            if (installer) screenshots.push(proof.installer.beforeScreenshot, proof.installer.readyScreenshot,
+              proof.installer.settings.pageScreenshot, proof.installer.settings.dialogScreenshot);
+            if (runtimeProvider !== undefined) screenshots.push(proof.automaticSchedule.screenshot);
+            for (const screenshot of screenshots) {
+              assert.equal(dirname(realpathSync(screenshot.path)), root);
+              const bytes = readFileSync(screenshot.path);
+              assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+              assert.ok(bytes.readUInt32BE(16) >= 640 && bytes.readUInt32BE(20) >= 480, 'actual rendered viewport');
+              assert.equal(createHash('sha256').update(bytes).digest('hex'), screenshot.sha256);
+            }
+            completed.push({ mode, receipt: last.receipt, screenshots: screenshots.map(row => row.sha256) });
+          }
+          writeFileSync(join(process.env.RUNNER_TEMP, 'host-emulated-summary.json'), JSON.stringify({
+            status: 'PASS', scope: 'selected lane only', lane, sourceHead: process.env.HOST_EMULATED_SOURCE_HEAD, completed,
+            nativeProviders: 'not executed', vendorAuthQualified: false, releaseQualified: false,
+            visualReview: 'original screenshots retained for independent inspection',
+          }, null, 2));
+          NODE
+      - name: Preserve original Desktop evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-emulated-${{ matrix.platform || 'linux-x64' }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.lane }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/host-emulated-*.json
+            ${{ runner.temp }}/host-emulated-*.log
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/linux-child-exec/manifest.json
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/linux-child-exec/linux-child-exec
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-ui-capture.json
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/manifest.json
+            ${{ runner.temp }}/TEST-emulated-ui-inputs-*/process-custody/registered-process.node
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-receipt.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-backend-app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/owner-routing-*-failure.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/host-profile.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-descriptor.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/management-commands/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-sources/index.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-sessions/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/*/inboxes/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/teams/*/group-chat*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/tasks/test-stopped-legacy/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/preferences/**/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-review-readback-receipt.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/desktop-review-readback-app.log
+            ${{ runner.temp }}/TEST-desktop-backend-*/review-ui-seed.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/review-ui-initial-git-diff.txt
+            ${{ runner.temp }}/TEST-desktop-backend-*/sentinel-invocations.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-oauth-host-management/native-effects.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-login-processes.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-codex-login-management/home/TEST-wire.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/external-open.jsonl
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-peer-*/effects.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-codex-install/*.ndjson
+            ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/runtimes/codex/current.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/TEST-peer-claude-scope/config/projects/TEST-desktop-peer/*.jsonl
+            ${{ runner.temp }}/TEST-desktop-backend-*/hoststore/runtime-checkpoints/*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/emulated-cold-resume-epoch1-bundles/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/ui-*.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-*.png
+            ${{ runner.temp }}/TEST-desktop-backend-*/native-extensions-selection.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/stopped-import-ui-seed.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/claude/teams/test-stopped-legacy/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/claude/tasks/test-stopped-legacy/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/attachments/test-stopped-legacy/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/userData/data/task-attachments/test-stopped-legacy/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/native-chat-attachment-inputs/**
+            ${{ runner.temp }}/TEST-desktop-backend-*/home/Downloads/source-original.txt
+            ${{ runner.temp }}/TEST-desktop-backend-*/home/Downloads/TEST-native-chat.txt
+            ${{ runner.temp }}/TEST-desktop-backend-*/controlled-process-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/process-ui-seed.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/process-*.json
+            ${{ runner.temp }}/TEST-desktop-backend-*/workspace/process-*.ndjson
+
+  offline-frontend-tests:
+    name: Offline frontend tests (${{ matrix.shard }}/4)
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        shell: bash
+    env:
+      AGENT_TEAMS_INSTALL_PROFILE: node-ci
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      HOST_EMULATED_SOURCE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      HOST_TEST_SHARD: ${{ matrix.shard }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Verify source and capture the original Host test runtime
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$HOST_EMULATED_SOURCE_HEAD"
+          echo "AGENT_BACKEND_TEST_NODE=$(node -p 'process.execPath')" >> "$GITHUB_ENV"
+      - name: Setup the original workspace test runtime
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Prepare original test prerequisites
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y lsof
+          node scripts/ci/install-dependencies-with-retry.mjs --child-concurrency=1
+          node scripts/ci/rebuild-better-sqlite3-node.cjs
+          pnpm --filter agent-teams-mcp build
+          pnpm --filter @agent-teams/legacy-agent-host build
+      - name: Run the complete safe frontend shard
+        run: |
+          set -euo pipefail
+          # Live subscriptions and real vendor executables are outside this finite lane.
+          # Excluded files remain unqualified; the existing native gates are unchanged.
+          pnpm exec vitest run --maxWorkers=2 --shard="$HOST_TEST_SHARD/4" \
+            --exclude '**/*.live.test.*' --exclude '**/*.live-e2e.test.*' --exclude '**/*.native.test.*' \
+            --reporter=default --reporter=json --outputFile "$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.json" \
+            2>&1 | tee "$RUNNER_TEMP/host-offline-tests-$HOST_TEST_SHARD.log"
+      - name: Preserve original test results, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: host-offline-tests-${{ github.event.pull_request.head.sha || github.sha }}-${{ matrix.shard }}
+          retention-days: 14
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/host-offline-tests-*.json
+            ${{ runner.temp }}/host-offline-tests-*.log
+
+  offline-desktop:
+    name: Offline Host Desktop
+    if: ${{ always() && !cancelled() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: [offline-desktop-scenario, offline-frontend-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every original UI lane and safe frontend shard to pass
+        env:
+          HOST_EMULATED_MATRIX_RESULT: ${{ needs['offline-desktop-scenario'].result }}
+          HOST_FRONTEND_TEST_RESULT: ${{ needs['offline-frontend-tests'].result }}
+        run: |
+          test "$HOST_EMULATED_MATRIX_RESULT" = success
+          test "$HOST_FRONTEND_TEST_RESULT" = success

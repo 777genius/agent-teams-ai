@@ -42,7 +42,7 @@
     "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",
     "team:smoke-changes-real-data": "tsx scripts/team-changes-real-data-smoke.ts",
     "smoke:codex-runtime-install": "tsx scripts/smoke/codex-runtime-install.ts",
-    "prebuild": "node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "prebuild": "node ./scripts/build/buildLinuxNodeExec.mjs && pnpm --filter @agent-teams/legacy-agent-host build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
     "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
@@ -70,7 +70,7 @@
     "preview": "electron-vite preview",
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.updater-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.release-tooling.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-e2e.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-preload.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.sentry-sdk-renderer.json && node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/tsconfig/tsconfig.desktop-e2e.json",
     "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
-    "typecheck:workspace": "pnpm typecheck && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
+    "typecheck:workspace": "pnpm typecheck && pnpm typecheck:legacy-host-scripts && pnpm --filter @agent-teams/legacy-agent-host typecheck:test && pnpm --filter agent-teams-mcp typecheck && pnpm --filter agent-teams-mcp typecheck:test",
     "lint": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js src/ --cache --cache-location .eslintcache --cache-strategy content",
     "lint:ci:files": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content",
     "lint:fast": "eslint --config eslint.fast.config.js --cache --cache-location .eslintcache-fast --cache-strategy content src/",
@@ -80,8 +80,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "build:workspace": "pnpm build && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
-    "test:workspace": "pnpm test && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test",
-    "test:workspace:ci": "pnpm test:ci && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test",
+    "test:workspace": "pnpm test && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test && pnpm --filter @agent-teams/legacy-agent-host test",
+    "test:workspace:ci": "pnpm test:ci && pnpm --filter agent-teams-controller test && pnpm --filter agent-teams-mcp test && pnpm --filter @agent-teams/legacy-agent-host test",
     "check:workspace": "pnpm typecheck:workspace && pnpm test:workspace && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
     "check:workspace:ci": "pnpm typecheck:workspace && pnpm test:workspace:ci && pnpm build:workspace && pnpm --filter agent-teams-mcp test:e2e",
     "check": "pnpm guard:source-file-size && pnpm guard:team-provisioning-architecture && pnpm check:workspace && pnpm lint && pnpm lint:mcp",
@@ -101,8 +101,8 @@
     "i18n:status": "i18next-cli status",
     "i18n:validate": "tsx scripts/i18n/validate.ts",
     "i18n:types": "i18next-cli types --quiet",
-    "test": "vitest run",
-    "test:ci": "vitest run --maxWorkers=1",
+    "test": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run",
+    "test:ci": "pnpm --filter agent-teams-mcp build && pnpm --filter @agent-teams/legacy-agent-host build && vitest run --maxWorkers=1",
     "test:task-change-ledger": "vitest run test/main/services/team/TaskChangeLedgerReader.test.ts test/main/services/team/taskChangeLedgerFixtures.integration.test.ts test/main/services/team/ReviewApplierService.test.ts test/main/services/team/FileContentResolver.test.ts test/main/services/team/ChangeExtractorService.test.ts test/renderer/store/changeReviewSlice.test.ts test/renderer/utils/reviewKey.test.ts test/main/services/team/TeamLogSourceTracker.test.ts test/main/services/team/stallMonitor/TeamTaskLogFreshnessReader.test.ts",
     "test:e2e:select-team-latch": "tsx scripts/e2e/select-team-latch-desktop.ts",
     "test:e2e:change-review": "node scripts/e2e/change-review-hunk-desktop.mjs",
@@ -123,6 +123,12 @@
     "test:native:parity": "vitest run --config scripts/local-checks/vitest.native-parity.config.ts",
     "typecheck:native:tooling": "node ./node_modules/@typescript/native/bin/tsc --noEmit -p scripts/local-checks/tsconfig.native-tooling.json",
     "test:native:retained": "vitest run --config scripts/local-checks/vitest.retained-policy.config.ts",
+    "pretypecheck": "pnpm --filter @agent-teams/legacy-agent-host build",
+    "test:real:suggestions": "node scripts/e2e/native-prompt-suggestions-real/run.mjs",
+    "test:real:suggestions:ui": "node scripts/e2e/native-prompt-suggestions-real/ui.ts",
+    "test:legacy-agent-host": "pnpm --filter @agent-teams/legacy-agent-host test && pnpm exec vitest run test/features/agent-backend --maxWorkers=1",
+    "stage:legacy-host-node": "node scripts/legacy-agent-host/stage-node.ts",
+    "typecheck:legacy-host-scripts": "node node_modules/@typescript/native/bin/tsc --project tsconfig.legacy-agent-host-scripts.json",
     "test:e2e:custom-template-import-export": "tsx scripts/e2e/custom-template-import-export-desktop.ts",
     "test:e2e:notification-channels": "node scripts/e2e/notification-channels-desktop.mjs"
   },
@@ -269,7 +275,9 @@
     "@openuidev/react-headless": "0.17.0",
     "@openuidev/react-lang": "0.3.2",
     "@openuidev/react-ui": "0.17.0",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "@agent-teams/legacy-agent-host": "workspace:*",
+    "@agent-teams/task-change-ledger": "workspace:*"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
@@ -402,6 +410,18 @@
       {
         "from": "mcp-server/dist/package.json",
         "to": "mcp-server/package.json"
+      },
+      {
+        "from": "resources/legacy-agent-host",
+        "to": "legacy-agent-host"
+      },
+      {
+        "from": "resources/legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/node-gyp/node_modules/undici/lib/llhttp/.gitkeep",
+        "to": "legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/node-gyp/node_modules/undici/lib/llhttp/.gitkeep"
+      },
+      {
+        "from": "resources/legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/tr46/lib/.gitkeep",
+        "to": "legacy-agent-host/native/opencode-v2/engine/local-cli/node_modules/tr46/lib/.gitkeep"
       }
     ],
     "npmRebuild": false,
@@ -455,6 +475,13 @@
       "icon": "resources/icons/win/icon.ico"
     },
     "linux": {
+      "extraResources": [
+        {
+          "from": "resources/process-launch/linux-x64",
+          "to": "process-launch/linux-x64",
+          "filter": ["manifest.json", "node-exec"]
+        }
+      ],
       "target": [
         "AppImage",
         "deb",

@@ -1,0 +1,52 @@
+{
+  "scope": "Working-tree captured Team model-preflight milestone only. Native test invokes Main application adapter with Desktop feature facade; IPC/event sender and Electron dialogs are not exercised by this native test. Not full stage1 or release qualification.",
+  "sourceSha256": "005e610b12634213520b527d7cff12074f969cbe65f3255a9684234b2e41fb28",
+  "distSha256": "7dc1c77b216dce1acea100c7d1a007736830d5782b99f1ddbf40f2ff0e1cc1ba",
+  "providerArchive": "vendor/provider-migration/claude-probe-v3/agent-teams-provider-implementations-0.0.0.tgz",
+  "providerArchiveSha256": "543cfa030a0d0cda0c5b091c207906c6f175ed6cd9eec28090094ff0b085af59",
+  "localModelRequests": 6,
+  "teamRequests": 3,
+  "globalRequests": 3,
+  "checks": [
+    {
+      "id": "b6d853cd222908af4cea66cd7d5f5efc",
+      "exit": 1,
+      "scope": "Root/Host types and234 Host tests passed; aggregate failed frozen LaunchDialog size cap before repair."
+    },
+    {
+      "id": "fecee05d3bd8484bbeb55b2a2d0c386a",
+      "exit": 0,
+      "scope": "Final root types,506 frontend/IPC tests, lint/guards, actual native combined case passed."
+    }
+  ],
+  "files": [
+    {
+      "path": "receipt.json",
+      "sha256": "efc707aab5cecaa8724ee5e796d1c952434d964436be65e44838b4df9ea3f70f"
+    },
+    {
+      "path": "attempt.json",
+      "sha256": "69e71be8c0d33fd0bb371d30dd1e44d68bf1084d7ada025071a8dced5900b8fb"
+    },
+    {
+      "path": "executed-native-test.ts",
+      "sha256": "23121bde0dc212ed3abf670befeb2363c9822a75c11543f29009488809ade84c"
+    },
+    {
+      "path": "jobs/b6d853cd222908af4cea66cd7d5f5efc/stdout.log",
+      "sha256": "264fc594c597695969a0f03864f764467b235c50bc7ab215bde452d231ae4f3f"
+    },
+    {
+      "path": "jobs/b6d853cd222908af4cea66cd7d5f5efc/stderr.log",
+      "sha256": "9e7546bbc94956a210247d56afe124f21cb29683847c4f518fdc53325ec40cbb"
+    },
+    {
+      "path": "jobs/fecee05d3bd8484bbeb55b2a2d0c386a/stdout.log",
+      "sha256": "1ca699d6a3b87b4acafbdb3a9c105e29f28960390bcdc4a667fda741df1cbf80"
+    },
+    {
+      "path": "jobs/fecee05d3bd8484bbeb55b2a2d0c386a/stderr.log",
+      "sha256": "73d50d7902ee000a4e136ac6b617b0090d4194d15b63f11d0baafcab2360276c"
+    }
+  ]
+}

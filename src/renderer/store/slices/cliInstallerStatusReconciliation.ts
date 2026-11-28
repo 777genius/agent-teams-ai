@@ -35,13 +35,13 @@ export function isMultimodelCliStatus(
 export function settleCliProviderStatusLoading(
   currentLoading: Partial<Record<CliProviderId, boolean>>,
   providerId: CliProviderId,
-  options: { silent: boolean; projectPath?: string | null }
+  options: { visible: boolean; pending: boolean }
 ): Partial<Record<CliProviderId, boolean>> {
-  return options.silent && !options.projectPath
+  return !options.visible
     ? currentLoading
     : {
         ...currentLoading,
-        [providerId]: false,
+        [providerId]: options.pending,
       };
 }
 
@@ -201,6 +201,13 @@ export function reconcileCliProviderSnapshot(
       ...currentProvider,
       teamLaunchAuthorityRestriction: undefined,
     });
+  }
+  if (
+    currentProvider &&
+    currentProvider.catalogScope !== incomingProvider.catalogScope &&
+    (currentProvider.catalogScope || incomingProvider.catalogScope)
+  ) {
+    return revokeProviderLaunchAuthority(incomingProvider);
   }
   const mergedProvider = currentProvider
     ? mergeProviderCatalogCache(incomingProvider, currentProvider)

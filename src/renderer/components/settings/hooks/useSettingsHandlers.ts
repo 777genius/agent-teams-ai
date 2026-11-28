@@ -39,7 +39,9 @@ interface SettingsHandlers {
 
   // Notification handlers
   handleNotificationToggle: (key: keyof AppConfig['notifications'], value: boolean) => void;
-  handleDesktopDestinationsChange: (events: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>) => void;
+  handleDesktopDestinationsChange: (
+    events: NonNullable<AppConfig['notifications']['desktopDisabledEvents']>
+  ) => void;
   handleTeamRuntimeRecoveryUpdate: (update: Partial<AppConfig['teamRuntimeRecovery']>) => void;
   handleStatusChangeStatusesUpdate: (statuses: string[]) => void;
   handleSnooze: (minutes: number) => Promise<void>;
@@ -371,6 +373,7 @@ export function useSettingsHandlers({
           anthropic: {
             authMode: 'auto',
             fastModeDefault: false,
+            nativeNextPromptSuggestionsEnabled: true,
             compatibleEndpoint: {
               enabled: false,
               baseUrl: '',
@@ -378,6 +381,7 @@ export function useSettingsHandlers({
           },
           codex: {
             preferredAuthMode: 'auto',
+            nativeNextPromptSuggestionsEnabled: true,
             customProvider: {
               enabled: false,
               baseUrl: '',

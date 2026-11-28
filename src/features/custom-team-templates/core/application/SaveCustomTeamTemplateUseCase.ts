@@ -17,6 +17,7 @@ import type {
 import type {
   CustomTeamTemplateHasher,
   CustomTeamTemplateSnapshotReader,
+  CustomTeamTemplateSourceAdmission,
   CustomTeamTemplateStorageGateway,
 } from './ports';
 import type { CustomTeamTemplateWriteIdentity } from './reconcileCustomTeamTemplateWrite';
@@ -66,7 +67,12 @@ interface WriteDecision {
 }
 
 type ConfirmedProjection =
-  | { status: 'confirmed'; preview: CustomTeamTemplatePreviewContent; contentHash: string }
+  | {
+      status: 'confirmed';
+      preview: CustomTeamTemplatePreviewContent;
+      contentHash: string;
+      isSourceCurrent(): Promise<boolean>;
+    }
   | { status: 'rejected'; result: ConfirmCustomTeamTemplateSaveResult };
 
 interface ParsedConfirmRequest {
@@ -141,6 +147,11 @@ export class SaveCustomTeamTemplateUseCase {
 
     const confirmed = await this.confirmProjection(state);
     if (confirmed.status === 'rejected') {
+      // Losing the source cannot decide a previously dispatched write. Keep its
+      // frozen identity available to the dedicated reconciliation path.
+      if (state.confirmedSave && this.deps.previewStore.hasUnresolvedWrite(state.token)) {
+        return { status: 'unresolvedWriteOutcome', templateId: state.confirmedSave.templateId };
+      }
       return confirmed.result;
     }
 
@@ -170,6 +181,11 @@ export class SaveCustomTeamTemplateUseCase {
     // legitimately belong to another record (see `resolveSaveTemplateId`).
     const templateId =
       state.confirmedSave?.templateId ?? (await this.resolveSaveTemplateId(gateway, writeIdentity));
+    if (!(await confirmed.isSourceCurrent())) {
+      return this.deps.previewStore.hasUnresolvedWrite(state.token)
+        ? { status: 'unresolvedWriteOutcome', templateId: templateId ?? writeIdentity.templateId }
+        : { status: 'sourceUnavailable', sourceTeamName: state.sourceTeamName };
+    }
     if (!templateId) {
       // Every candidate id is owned by a different record. Reporting the
       // derived id keeps the conflict honest: nothing was written, and the user
@@ -220,7 +236,13 @@ export class SaveCustomTeamTemplateUseCase {
       return { status: 'unresolvedWriteOutcome', templateId };
     }
     try {
-      const result = await this.createWithRecovery(gateway, request, state.token);
+      const result = await this.createWithRecovery(
+        gateway,
+        request,
+        state.token,
+        state.sourceTeamName,
+        confirmed.isSourceCurrent
+      );
       if (result.status === 'unresolvedWriteOutcome') {
         this.deps.previewStore.markUnresolvedWrite(state.token);
       } else if (
@@ -285,6 +307,15 @@ export class SaveCustomTeamTemplateUseCase {
   private async confirmProjection(
     state: CustomTeamTemplatePreviewState
   ): Promise<ConfirmedProjection> {
+    if (!this.isSourceCurrent(state, state.sourceAdmission)) {
+      return {
+        status: 'rejected',
+        result: {
+          status: 'sourceUnavailable',
+          sourceTeamName: state.sourceTeamName,
+        },
+      };
+    }
     const read = await this.deps.reader.readSnapshot(state.sourceTeamName);
     if (read.status === 'sourceUnavailable') {
       return {
@@ -294,6 +325,15 @@ export class SaveCustomTeamTemplateUseCase {
     }
     if (read.status === 'configurationChanged') {
       return { status: 'rejected', result: this.stale(state) };
+    }
+    if (!this.isSourceCurrent(state, read.sourceAdmission)) {
+      return {
+        status: 'rejected',
+        result: {
+          status: 'sourceUnavailable',
+          sourceTeamName: state.sourceTeamName,
+        },
+      };
     }
 
     const rebuilt = buildTemplatePreviewContent({
@@ -322,7 +362,39 @@ export class SaveCustomTeamTemplateUseCase {
       return { status: 'rejected', result: this.stale(state) };
     }
 
-    return { status: 'confirmed', preview: rebuilt.preview, contentHash };
+    return {
+      status: 'confirmed',
+      preview: rebuilt.preview,
+      contentHash,
+      isSourceCurrent: () => this.verifySourceCurrent(state, read.sourceAdmission),
+    };
+  }
+
+  private async verifySourceCurrent(
+    state: CustomTeamTemplatePreviewState,
+    current: CustomTeamTemplateSourceAdmission | undefined
+  ): Promise<boolean> {
+    if (!this.isSourceCurrent(state, current)) return false;
+    try {
+      await current?.verifyCurrent();
+      return this.isSourceCurrent(state, current);
+    } catch {
+      return false;
+    }
+  }
+
+  private isSourceCurrent(
+    state: CustomTeamTemplatePreviewState,
+    current: CustomTeamTemplateSourceAdmission | undefined
+  ): boolean {
+    try {
+      if (state.sourceAdmission?.identity !== current?.identity) return false;
+      state.sourceAdmission?.assertCurrent();
+      current?.assertCurrent();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private stale(state: CustomTeamTemplatePreviewState): ConfirmCustomTeamTemplateSaveResult {
@@ -367,6 +439,8 @@ export class SaveCustomTeamTemplateUseCase {
     gateway: CustomTeamTemplateStorageGateway,
     request: CreateCustomTeamTemplateRecordRequest,
     token: string,
+    sourceTeamName: string,
+    isSourceCurrent: () => Promise<boolean>,
     hadPriorUnresolvedWrite: boolean = false
   ): Promise<ConfirmCustomTeamTemplateSaveResult> {
     const templateId = request.template.templateId;
@@ -377,6 +451,11 @@ export class SaveCustomTeamTemplateUseCase {
     // same uncertainty behind, so it is restored from the retained operation.
     let hadUnknownExecution = hadPriorUnresolvedWrite;
     for (let attempt = 1; attempt <= TEMPLATE_CREATE_MAX_ATTEMPTS; attempt++) {
+      if (!(await isSourceCurrent())) {
+        return hadUnknownExecution || this.deps.previewStore.hasUnresolvedWrite(token)
+          ? { status: 'unresolvedWriteOutcome', templateId }
+          : { status: 'sourceUnavailable', sourceTeamName };
+      }
       let decision: WriteDecision;
       try {
         const response = await gateway.customTeamTemplateCreate(request);

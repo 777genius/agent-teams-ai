@@ -46,7 +46,7 @@ vi.mock('fs', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../../src/main/utils/pathDecoder', () => ({
+vi.mock('@main/utils/pathDecoder', () => ({
   getTeamsBasePath: () => '/mock/teams',
 }));
 

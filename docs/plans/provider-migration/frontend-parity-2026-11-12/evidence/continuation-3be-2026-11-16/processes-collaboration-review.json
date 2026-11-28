@@ -1,0 +1,297 @@
+{
+  "kind": "ORIGINAL_3BE_SELECTED_LANE_ARTIFACT_REVIEW",
+  "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+  "reviewer": "root",
+  "artifacts": [
+    {
+      "lane": "processes",
+      "run": 43933487563,
+      "job": 133531814184,
+      "artifact": 14264831064,
+      "archiveSha256": "014cce1a68f767c5f2f1270240fac857062391e276816868f25f42a7c4358189",
+      "receiptSha256": "cb4b2aa63f92882916d9a711f96828facfb2e85fe94fba62e19b2a2da8fb2a8a",
+      "mode": "process-cold-ui",
+      "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "sourcePins": 1776,
+      "screenshots": {
+        "ui-original-native-process-before-stop.png": "be9b9d405f467835ed12a96d1c3bbb1513ff0bf73135bebcf662d1dd5b32d650",
+        "ui-original-native-process-after-stop.png": "cc556d158f36db303ddf5b6d05b4119a2d9c70d3465abd5eca2ae42678d14d59"
+      },
+      "beforeHarnessCleanup": [],
+      "finalCleanup": {
+        "processGroup": 4551,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "hostExitCode": "controlled cold Host app shutdown; no provider Runtime allocation; first standalone Host separately observed exit0/null"
+      },
+      "qualification": "controlled-native-kernel-real-Host-restart-original-UI-stop",
+      "stopQualification": "COMPLETED_ORIGINAL_REF_STOP",
+      "nativeCleanupClaim": false,
+      "controlledReceiptSha256": "18acc4d3d1724a03ad27cc0362f088a9ee8fe4090b51d39a25df5c67b97556fe",
+      "visualInspection": "After-Stop screenshot independently inspected: same retained process row is dimmed, stopped, CLI count0 and no Kill control; retained TEST sidebar Task remains.",
+      "limits": "Linux controlled process/real Host restart only. No provider session, same-Main Windows Retry, SDK/native custody, positive Resume or whole-tree stop qualification."
+    },
+    {
+      "lane": "collaboration",
+      "run": 43933487563,
+      "job": 133531814265,
+      "artifact": 14263782770,
+      "archiveSha256": "dbdbf0209c9f4c53873cd9e1ede075e51d5282fa43cb2a4e86d7e9f9a7608294",
+      "receiptSha256": "ee1b0917c3496d8e53457808a8f169c32495f709bdf373586fe58be5a04c5bab",
+      "mode": "emulated-collaboration-ui",
+      "sourceHead": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+      "sourcePins": 1776,
+      "screenshots": {
+        "ui-emulated-collaboration-launch.png": "97dd2e59c67170f2cb571f7e98fa918a0060639a763dad7e74c063863a6aa92d",
+        "ui-emulated-collaboration-direct.png": "c3e0b0aab164a2f9e208c0c8b29a177d7ae4fb6f7470b16e1221032270d31be4",
+        "ui-emulated-collaboration-attachments.png": "4b002638e83adaf7f7cad1d1a5d76c0bbccf67b57dfcc883c251f90000a8c1d3",
+        "ui-emulated-collaboration-group.png": "c5a46eafe2cac771c8140e70118306b969a3c47c22867ef85b45caa0f02df7a8",
+        "ui-emulated-collaboration-member-logs.png": "9e9d62dffc7dd75e7ec96f76c6ed5a32b95fba5817b664b978e0e6f7b0663932",
+        "ui-emulated-collaboration-restored.png": "8d161c7066063be70573245a804037a3cfae28c3371fadffbbb391380539a9cf",
+        "ui-emulated-collaboration-stopped.png": "9bfd455501da20d51da320e291f3a2fb000c2fa4207056a15208efaf6f812fae",
+        "ui-emulated-collaboration-reloaded.png": "546a01e187c447ccd937387d3aac6c5822ef7ee81b73351213cb1b0d0082718d"
+      },
+      "beforeHarnessCleanup": [
+        {
+          "pid": 5040,
+          "ppid": 1,
+          "pgid": 4966
+        }
+      ],
+      "finalCleanup": {
+        "processGroup": 4966,
+        "remaining": [],
+        "appExitCode": 0,
+        "appSignalCode": null,
+        "capturedHostObserved": true,
+        "capturedHostAbsent": true,
+        "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+      },
+      "qualification": "Original saved Launch, live Add/Remove/Restore, cross-member DM, direct image/text attachments, group Send/ACK/reply, Stop and read-only renderer reload",
+      "originalPeerPids": [
+        6101,
+        6082,
+        6309,
+        6420,
+        6578,
+        10465,
+        6089,
+        6325,
+        6336,
+        6345,
+        6365,
+        6544,
+        6555,
+        6571,
+        6589,
+        6601,
+        6629,
+        6639,
+        6797,
+        7019,
+        7256,
+        7463,
+        7490,
+        7646,
+        8260,
+        10471,
+        7011,
+        7102,
+        9051,
+        9207
+      ],
+      "groupAttachments": "Unavailable in the original group Composer and Host send contract",
+      "visualInspection": "Original attachment screenshot independently inspected: image preview and text-file card in direct chat, retained attachment reply, three-member team and sidebar Task visible.",
+      "limits": "Finite mixed-v1 peers only; not actual Claude/Codex/OpenCode qualification, native C8 or native V2 PNG. One original app-group process was still listed before harness cleanup; final absence is recorded without claiming pre-cleanup natural group absence or a separately observed Host exit code."
+    }
+  ],
+  "checks": [
+    {
+      "lane": "processes",
+      "fact": "PASS receipt and selected-lane summary",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original source head and clean tree",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "All1776 before/after source pins unchanged",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original requested app Quit0/null",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Final captured Host absence and no remaining owned group",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "No vendor/release qualification",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original screenshot bytes ui-original-native-process-before-stop.png",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original screenshot bytes ui-original-native-process-after-stop.png",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "No provider Runtime/input/model allocated",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original HostA exited and writer lock released before distinct HostB",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original process reference retained by terminal Stop",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Existing UI changes one Kill to stopped no-Kill row",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Neighbor unchanged across original scoped Stop",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "All original root/target/neighbor absent after explicit cleanup",
+      "pass": true
+    },
+    {
+      "lane": "processes",
+      "fact": "Original target needed no fallback cleanup signal",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "PASS receipt and selected-lane summary",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original source head and clean tree",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "All1776 before/after source pins unchanged",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original requested app Quit0/null",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Final captured Host absence and no remaining owned group",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "No vendor/release qualification",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-launch.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-direct.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-attachments.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-group.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-member-logs.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-restored.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-stopped.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Original screenshot bytes ui-emulated-collaboration-reloaded.png",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Finite three-protocol scope only",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Removed member released and original process absent",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Restore preserves member identity with distinct runtime generation and no replayed input",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Four original sessions closed/released before reload",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Reload preserves history without effects",
+      "pass": true
+    },
+    {
+      "lane": "collaboration",
+      "fact": "Final finite peers all absent",
+      "pass": true
+    }
+  ],
+  "validation": {
+    "count": 35,
+    "allPassed": true,
+    "archiveSizeDigestAndZipCrcVerified": true,
+    "safeExtraction": true,
+    "archivedExecutablesRun": false,
+    "projectOrGuiExecuted": false,
+    "newHeadQualified": false
+  }
+}

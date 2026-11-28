@@ -1,0 +1,762 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "332fbe3420c811c095dac4187d3f9664e8c47179",
+  "run": 43766708055,
+  "snapshot": {
+    "path": "native-jobs-snapshot-20261115-2213.json",
+    "bytes": 62308,
+    "sha256": "a0c1f786e1cfbe051e82701aefde4d89202da4e0fd5283d99bd19031f83e41bf",
+    "gitBlob": "c49f72aa82650d5779743d2dbe492eb591cd0820"
+  },
+  "sources": [
+    {
+      "path": "tools/owned-process-broker/nativeFixture.cpp",
+      "bytes": 17041,
+      "sha256": "4ed2586ee2129d7a7ed471db795a4cc3ea28c2895d62db12fdb7c1abfffacfb0",
+      "gitBlob": "43603d29138a5c43547f46099c5dad39d3d75815"
+    },
+    {
+      "path": "tools/owned-process-broker/CMakeLists.txt",
+      "bytes": 2160,
+      "sha256": "c58f71f7f341fd6f77fce721db77a4ae843a719e744a227757268b8eb6778e2e",
+      "gitBlob": "cf158110832d24afd7f97b6e9ef2dbf7472b0410"
+    },
+    {
+      "path": "scripts/build/buildOwnedProcessBroker.ts",
+      "bytes": 3476,
+      "sha256": "4db8137541af5f78d821d55f70b1f3a497b79a3e82bfa700e09d4237b3d97682",
+      "gitBlob": "90499776e145f9ffaba230b280d5d9da9e15a8e0"
+    },
+    {
+      "path": ".github/workflows/host-process-acceptance.yml",
+      "bytes": 30399,
+      "sha256": "a7e59eb17ee93d15ffad248322d79e536d9d9c0b02c83a30a31687fd6e618ce0",
+      "gitBlob": "123e52f461e42790ddf5fb8b1ea653b9e32c30db"
+    }
+  ],
+  "platforms": [
+    {
+      "platform": "win32-x64",
+      "job": 132973378700,
+      "artifact": 14182688207,
+      "archive": {
+        "schemaVersion": 1,
+        "artifact": {
+          "id": 14182688207,
+          "name": "host-process-fixtures-win32-x64-332fbe3420c811c095dac4187d3f9664e8c47179",
+          "size_in_bytes": 9691,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182688207",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182688207/zip",
+          "expired": false,
+          "created_at": "2026-11-15T22:10:23Z",
+          "expires_at": "2026-11-29T22:10:22Z",
+          "updated_at": "2026-11-15T22:10:23Z",
+          "digest": "sha256:7d62e776f1594773e418a19dd79a3771d9b85874d4fdcc86de31d1385f6934a0",
+          "workflow_run": {
+            "id": 43766708055,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179"
+          }
+        },
+        "archive": "332-process-win32-x64.zip",
+        "archiveIdentity": {
+          "bytes": 9691,
+          "sha256": "7d62e776f1594773e418a19dd79a3771d9b85874d4fdcc86de31d1385f6934a0",
+          "gitBlob": "d2351a6d306da55671ef982307a19ab6e5d9a0d9"
+        },
+        "validation": {
+          "apiSize": true,
+          "apiSha256": true,
+          "allCrc32": true,
+          "safeUniqueRelativeNames": true,
+          "noSymlinks": true
+        },
+        "extract": "process_win_x64",
+        "fileCount": 4,
+        "members": [
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+            "crc32": "58a6af71",
+            "compressedBytes": 321,
+            "bytes": 757,
+            "sha256": "ba6a3b4c7a7cc312583bd9468fd6df1c87ff8d1788e377d87d855d451f94d56c",
+            "gitBlob": "16f521b9a367eb5d4b7f55d21509d48f4b2e1d74"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+            "crc32": "dd298e25",
+            "compressedBytes": 2051,
+            "bytes": 7705,
+            "sha256": "18095ec0d0692da5b7b541e2198f0d0181019dd2a93b52ac203b63d0f65059f4",
+            "gitBlob": "10c333954f126527f2c31f1b642d21a8f0d47724"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+            "crc32": "f33fcf35",
+            "compressedBytes": 6299,
+            "bytes": 20044,
+            "sha256": "a93134e4df6696b2bb9a339f978a38c3e323d7e655009efef04ce7629b4a8116",
+            "gitBlob": "6bcdf39d49284fa19c8a1b1676430854e99c3de6"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+            "crc32": "6277a41c",
+            "compressedBytes": 42,
+            "bytes": 41,
+            "sha256": "a9972b88d7e66f87204889e5fff4564cf7be2099166ffb1fbd5df3b72a77dac4",
+            "gitBlob": "2d6f8e861060e6bf0e6efb26eb84a7e39679b0a0"
+          }
+        ]
+      },
+      "fullJob": {
+        "bytes": 94192,
+        "sha256": "dd5e6457a7a4d1ddad575e3ca59c4a59197b1ef7f87a7627253c0aa2c8030b79",
+        "gitBlob": "2c3063fa4db921167f324a1e87f80bef0795ae89"
+      },
+      "sourceHeadMatches": true,
+      "stepConclusions": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T22:07:23Z",
+          "completed_at": "2026-11-15T22:07:23Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T22:07:23Z",
+          "completed_at": "2026-11-15T22:07:35Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T22:07:35Z",
+          "completed_at": "2026-11-15T22:07:42Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T22:07:42Z",
+          "completed_at": "2026-11-15T22:07:50Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T22:07:50Z",
+          "completed_at": "2026-11-15T22:08:14Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T22:08:14Z",
+          "completed_at": "2026-11-15T22:08:14Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T22:08:14Z",
+          "completed_at": "2026-11-15T22:08:36Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T22:08:36Z",
+          "completed_at": "2026-11-15T22:08:43Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T22:08:43Z",
+          "completed_at": "2026-11-15T22:09:54Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T22:09:54Z",
+          "completed_at": "2026-11-15T22:09:54Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T22:09:54Z",
+          "completed_at": "2026-11-15T22:09:54Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T22:09:54Z",
+          "completed_at": "2026-11-15T22:09:54Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T22:09:54Z",
+          "completed_at": "2026-11-15T22:09:54Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T22:09:54Z",
+          "completed_at": "2026-11-15T22:09:54Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 15,
+          "started_at": "2026-11-15T22:09:54Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:22Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T22:10:22Z",
+          "completed_at": "2026-11-15T22:10:23Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 44,
+          "started_at": "2026-11-15T22:10:23Z",
+          "completed_at": "2026-11-15T22:10:23Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 45,
+          "started_at": "2026-11-15T22:10:23Z",
+          "completed_at": "2026-11-15T22:10:23Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T22:10:23Z",
+          "completed_at": "2026-11-15T22:10:24Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T22:10:24Z",
+          "completed_at": "2026-11-15T22:10:24Z"
+        }
+      ],
+      "sourceCommandLogs": {
+        "protocol.log": {
+          "identity": {
+            "bytes": 757,
+            "sha256": "ba6a3b4c7a7cc312583bd9468fd6df1c87ff8d1788e377d87d855d451f94d56c",
+            "gitBlob": "16f521b9a367eb5d4b7f55d21509d48f4b2e1d74"
+          },
+          "summaries": [
+            " Test Files  3 passed (3)",
+            "      Tests  53 passed (53)"
+          ]
+        },
+        "retained-main.log": {
+          "identity": {
+            "bytes": 7705,
+            "sha256": "18095ec0d0692da5b7b541e2198f0d0181019dd2a93b52ac203b63d0f65059f4",
+            "gitBlob": "10c333954f126527f2c31f1b642d21a8f0d47724"
+          },
+          "summaries": [
+            " Test Files  8 passed (8)",
+            "      Tests  81 passed (81)"
+          ]
+        },
+        "host-contracts.log": {
+          "identity": {
+            "bytes": 20044,
+            "sha256": "a93134e4df6696b2bb9a339f978a38c3e323d7e655009efef04ce7629b4a8116",
+            "gitBlob": "6bcdf39d49284fa19c8a1b1676430854e99c3de6"
+          },
+          "summaries": [
+            "\u2139 tests 163",
+            "\u2139 pass 160",
+            "\u2139 fail 0",
+            "\u2139 cancelled 0",
+            "\u2139 skipped 3",
+            "\u2139 todo 0"
+          ]
+        }
+      },
+      "ordinaryTotals": {
+        "pass": 294,
+        "skip": 3,
+        "fail": 0,
+        "cancelled": 0
+      },
+      "linkErrors": [
+        "2026-11-15T22:10:20.2085336Z nativeFixture.obj : error LNK2019: unresolved external symbol __imp_GetSystemWow64Directory2W referenced in function \"bool __cdecl wow64Startup(void)\" (?wow64Startup@@YA_NXZ) [D:\\a\\_temp\\TEST-process-build-x64\\owned-process-fixture.vcxproj]",
+        "2026-11-15T22:10:20.2126800Z D:\\a\\_temp\\TEST-process-build-x64\\Release\\owned-process-fixture.exe : fatal error LNK1120: 1 unresolved externals [D:\\a\\_temp\\TEST-process-build-x64\\owned-process-fixture.vcxproj]"
+      ],
+      "nativeBuildErrorRetained": true,
+      "sdkCompilerLines": [
+        "2026-11-15T22:09:56.0177565Z -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.20348.",
+        "2026-11-15T22:10:05.9597784Z -- The CXX compiler identification is MSVC 19.44.35230.0"
+      ],
+      "nativeGateStepReached": false,
+      "nativeReceiptArchived": false,
+      "binaryManifestArchived": false,
+      "nativeCleanupQualified": false
+    },
+    {
+      "platform": "win32-arm64",
+      "job": 132973379104,
+      "artifact": 14182743469,
+      "archive": {
+        "schemaVersion": 1,
+        "artifact": {
+          "id": 14182743469,
+          "name": "host-process-fixtures-win32-arm64-332fbe3420c811c095dac4187d3f9664e8c47179",
+          "size_in_bytes": 10004,
+          "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182743469",
+          "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14182743469/zip",
+          "expired": false,
+          "created_at": "2026-11-15T22:12:49Z",
+          "expires_at": "2026-11-29T22:12:48Z",
+          "updated_at": "2026-11-15T22:12:49Z",
+          "digest": "sha256:81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f",
+          "workflow_run": {
+            "id": 43766708055,
+            "repository_id": 1163183284,
+            "head_repository_id": 1163183284,
+            "head_branch": "fix/frontend-parity-completion-20261113",
+            "head_sha": "332fbe3420c811c095dac4187d3f9664e8c47179"
+          }
+        },
+        "archive": "332-process-win32-arm64.zip",
+        "archiveIdentity": {
+          "bytes": 10004,
+          "sha256": "81cc2ea667125ab5028ccff9eed5d245d77b01dfbd07447f52034504fb4ce95f",
+          "gitBlob": "02675c175e8d3c8ac7660b1cddaf4ce44022dd7b"
+        },
+        "validation": {
+          "apiSize": true,
+          "apiSha256": true,
+          "allCrc32": true,
+          "safeUniqueRelativeNames": true,
+          "noSymlinks": true
+        },
+        "extract": "process_win_arm64",
+        "fileCount": 4,
+        "members": [
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/host-contracts.log",
+            "crc32": "35fb370b",
+            "compressedBytes": 6316,
+            "bytes": 20053,
+            "sha256": "1580e6721ab584d1e15e2ab901c155417850a4ad6bbf04f5ce624268dc211d9b",
+            "gitBlob": "e4310b08a060a446473b62382c1b50e4b499a05e"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/protocol.log",
+            "crc32": "78ac452a",
+            "compressedBytes": 327,
+            "bytes": 757,
+            "sha256": "819d1ee2b5a28b46a0508ab043496bdb13370b221e3686794a5b40f41c8a629b",
+            "gitBlob": "50dca7340988ea744c06e89a63d5063489bfacc8"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/retained-main.log",
+            "crc32": "22eb3eea",
+            "compressedBytes": 2341,
+            "bytes": 9713,
+            "sha256": "c93aa8f12259fc20b5b436ac3b2ea4f70dafb272eaa79ddfe9be060ccd9145ed",
+            "gitBlob": "b2665b0771091e82460c0b41f518e8dd07873d83"
+          },
+          {
+            "name": "agent-teams-ai/agent-teams-ai/process-acceptance-evidence/source-head.txt",
+            "crc32": "6277a41c",
+            "compressedBytes": 42,
+            "bytes": 41,
+            "sha256": "a9972b88d7e66f87204889e5fff4564cf7be2099166ffb1fbd5df3b72a77dac4",
+            "gitBlob": "2d6f8e861060e6bf0e6efb26eb84a7e39679b0a0"
+          }
+        ]
+      },
+      "fullJob": {
+        "bytes": 120277,
+        "sha256": "35a82d37a581106c8e2482be5ad05edf3b2c964f2ca994dc7d5d04704d2e177b",
+        "gitBlob": "0a24ab51b1ff7428d104e419519a0cfdedb64346"
+      },
+      "sourceHeadMatches": true,
+      "stepConclusions": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-11-15T22:01:05Z",
+          "completed_at": "2026-11-15T22:01:07Z"
+        },
+        {
+          "name": "Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-11-15T22:01:07Z",
+          "completed_at": "2026-11-15T22:01:37Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-11-15T22:01:37Z",
+          "completed_at": "2026-11-15T22:01:53Z"
+        },
+        {
+          "name": "Select the pinned package manager with bundled Corepack",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-11-15T22:01:53Z",
+          "completed_at": "2026-11-15T22:02:05Z"
+        },
+        {
+          "name": "Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-11-15T22:02:05Z",
+          "completed_at": "2026-11-15T22:04:48Z"
+        },
+        {
+          "name": "Bind exact source and actual process tuple",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-11-15T22:04:48Z",
+          "completed_at": "2026-11-15T22:04:49Z"
+        },
+        {
+          "name": "Install frozen workspace without Desktop postinstall",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7,
+          "started_at": "2026-11-15T22:04:49Z",
+          "completed_at": "2026-11-15T22:09:55Z"
+        },
+        {
+          "name": "Build existing controller and Host",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-11-15T22:09:55Z",
+          "completed_at": "2026-11-15T22:10:04Z"
+        },
+        {
+          "name": "Verify process contracts and retained Main Host transport",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-11-15T22:10:04Z",
+          "completed_at": "2026-11-15T22:12:00Z"
+        },
+        {
+          "name": "Verify original POSIX Node and shell lifecycle fixtures",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-11-15T22:12:00Z",
+          "completed_at": "2026-11-15T22:12:00Z"
+        },
+        {
+          "name": "Prepare pinned Electron for native process fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-11-15T22:12:00Z",
+          "completed_at": "2026-11-15T22:12:00Z"
+        },
+        {
+          "name": "Verify Linux Node exec descriptor closure under both original parents",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 12,
+          "started_at": "2026-11-15T22:12:00Z",
+          "completed_at": "2026-11-15T22:12:00Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 13,
+          "started_at": "2026-11-15T22:12:00Z",
+          "completed_at": "2026-11-15T22:12:00Z"
+        },
+        {
+          "name": "Qualify original Linux pidfs and retained pidfd under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 14,
+          "started_at": "2026-11-15T22:12:00Z",
+          "completed_at": "2026-11-15T22:12:00Z"
+        },
+        {
+          "name": "Build original Windows product broker and C++ fixtures",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 15,
+          "started_at": "2026-11-15T22:12:00Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Host Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 16,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Qualify original Windows Job and control under Electron Node",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 17,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Qualify Windows wrappers and actual Main Host provider routes with TEST peers",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 18,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Qualify original codex source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Qualify original claude source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 20,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Qualify original opencode source A B with TEST peer",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 21,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Require completed original platform receipts and unchanged source",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 22,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:48Z"
+        },
+        {
+          "name": "Preserve original process evidence including failures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-11-15T22:12:48Z",
+          "completed_at": "2026-11-15T22:12:49Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 44,
+          "started_at": "2026-11-15T22:12:49Z",
+          "completed_at": "2026-11-15T22:12:49Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v7.0.0",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 45,
+          "started_at": "2026-11-15T22:12:49Z",
+          "completed_at": "2026-11-15T22:12:49Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v7.0.1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 46,
+          "started_at": "2026-11-15T22:12:49Z",
+          "completed_at": "2026-11-15T22:12:53Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 47,
+          "started_at": "2026-11-15T22:12:53Z",
+          "completed_at": "2026-11-15T22:12:53Z"
+        }
+      ],
+      "sourceCommandLogs": {
+        "protocol.log": {
+          "identity": {
+            "bytes": 757,
+            "sha256": "819d1ee2b5a28b46a0508ab043496bdb13370b221e3686794a5b40f41c8a629b",
+            "gitBlob": "50dca7340988ea744c06e89a63d5063489bfacc8"
+          },
+          "summaries": [
+            " Test Files  3 passed (3)",
+            "      Tests  53 passed (53)"
+          ]
+        },
+        "retained-main.log": {
+          "identity": {
+            "bytes": 9713,
+            "sha256": "c93aa8f12259fc20b5b436ac3b2ea4f70dafb272eaa79ddfe9be060ccd9145ed",
+            "gitBlob": "b2665b0771091e82460c0b41f518e8dd07873d83"
+          },
+          "summaries": [
+            " Test Files  8 passed (8)",
+            "      Tests  81 passed (81)"
+          ]
+        },
+        "host-contracts.log": {
+          "identity": {
+            "bytes": 20053,
+            "sha256": "1580e6721ab584d1e15e2ab901c155417850a4ad6bbf04f5ce624268dc211d9b",
+            "gitBlob": "e4310b08a060a446473b62382c1b50e4b499a05e"
+          },
+          "summaries": [
+            "\u2139 tests 163",
+            "\u2139 pass 160",
+            "\u2139 fail 0",
+            "\u2139 cancelled 0",
+            "\u2139 skipped 3",
+            "\u2139 todo 0"
+          ]
+        }
+      },
+      "ordinaryTotals": {
+        "pass": 294,
+        "skip": 3,
+        "fail": 0,
+        "cancelled": 0
+      },
+      "linkErrors": [
+        "2026-11-15T22:12:43.3820394Z nativeFixture.obj : error LNK2019: unresolved external symbol __imp_GetSystemWow64Directory2W referenced in function \"class std::basic_string<wchar_t,struct std::char_traits<wchar_t>,class std::allocator<wchar_t> > __cdecl wow64Command(void)\" (?wow64Command@@YA?AV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@XZ) [C:\\a\\_temp\\TEST-process-build-arm64\\owned-process-fixture.vcxproj]",
+        "2026-11-15T22:12:43.4096859Z C:\\a\\_temp\\TEST-process-build-arm64\\Release\\owned-process-fixture.exe : fatal error LNK1120: 1 unresolved externals [C:\\a\\_temp\\TEST-process-build-arm64\\owned-process-fixture.vcxproj]"
+      ],
+      "nativeBuildErrorRetained": true,
+      "sdkCompilerLines": [
+        "2026-11-15T22:12:03.0282224Z -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.",
+        "2026-11-15T22:12:17.5912043Z -- The CXX compiler identification is MSVC 19.52.37029.0"
+      ],
+      "nativeGateStepReached": false,
+      "nativeReceiptArchived": false,
+      "binaryManifestArchived": false,
+      "nativeCleanupQualified": false
+    }
+  ],
+  "limits": [
+    "Actual compile/link failure at step15 precedes the native gate; it is neither a new stage5 runtime refusal nor a cleanup failure.",
+    "The unresolved SDK import symbol is retained exactly on both architectures; these records do not identify the correct alternative SDK library or prove any prospective correction.",
+    "Native controllers/source A/B did not run. The archives contain only prerequisite logs and source-head, no native receipt or binary manifests.",
+    "Prior4dc stage5 and its confirmed cleanup remain separate historical evidence; no retroactive cause or PASS transfer.",
+    "Read-only byte/source audit, with no project tests, compilers, native actors, provider calls or CI actions."
+  ]
+}

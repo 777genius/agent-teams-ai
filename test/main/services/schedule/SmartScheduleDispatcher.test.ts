@@ -1,3 +1,4 @@
+import { HostSmartScheduleRuntimeAdapter } from '@features/agent-backend/main/adapters/output/HostSmartScheduleRuntimeAdapter';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -5,6 +6,9 @@ import {
   type SmartScheduleRuntimePort,
 } from '../../../../src/main/services/schedule/SmartScheduleDispatcher';
 
+import type { BackendLaunchSnapshot } from '@features/agent-backend/contracts/launch';
+import type { BackendRuntimeSnapshot } from '@features/agent-backend/contracts/operations';
+import type { CapturedHostScheduleTarget } from '@features/agent-backend/main/application/captureHostScheduleTarget';
 import type {
   Schedule,
   ScheduleRun,
@@ -81,6 +85,7 @@ function makePort(): SmartScheduleRuntimePort {
     })),
     getLeadName: vi.fn(async () => 'lead'),
     getSavedRequest: vi.fn(async () => saved),
+    hasLaunchConfig: vi.fn(async () => true),
     attachMember: vi.fn(async () => undefined),
     createTask: vi.fn(async () => ({ id: 'task-1', displayId: '7', subject: 'task', status: 'in_progress' } as TeamTask)),
     launchTeam: vi.fn(async () => ({ runId: 'launched-1', launchStatus: 'started' as const })),
@@ -102,6 +107,125 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   beforeEach(() => {
     port = makePort();
     dispatch = new SmartScheduleDispatcher(port);
+  });
+
+  it('awaits owner-backed liveness and busy checks before creating scheduled work', async () => {
+    port.isTeamAlive = vi.fn(async () => true);
+    port.isTeamLaunching = vi.fn(async () => false);
+    port.isTeamBusy = vi.fn(async () => false);
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'async-owner-run', active);
+    expect(result.kind).toBe('dispatched');
+    expect(port.createTask).toHaveBeenCalledTimes(1);
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('attaches only the original owned unopened Host generation and fences Start to its run', async () => {
+    const selection = 'host-team:TEST-handle';
+    const unopened: BackendRuntimeSnapshot = { memberId: 'TEST-member', generation: 'TEST-generation',
+      phase: 'unopened', custody: 'owned', attached: false, sealed: false, nativeReady: false,
+      inputs: [], interactions: [] };
+    const state = { ...unopened };
+    const launch: BackendLaunchSnapshot = { launchId: 'TEST-original-run', rosterRevision: 'TEST-roster',
+      status: 'partial', ready: 0, expected: 1, retryCapability: 'same-binding-no-allocation-only',
+      members: [{ memberId: state.memberId, generation: state.generation!, attemptId: 'TEST-attempt',
+        status: 'not-started', nativeReady: false, usable: false, controlAvailable: false,
+        noAllocation: true, reason: 'TEST-unopened' }] };
+    const invoke = vi.fn<CapturedHostScheduleTarget['invoke']>(async request => {
+      switch (request.operation) {
+        case 'team.roster.read': return { ok: true, value: { revision: 'TEST-roster', removedMembers: [],
+          members: [{ memberId: state.memberId, name: 'alice', role: 'member', settings: {} }] } };
+        case 'team.snapshot': return { ok: true, value: { teamName: selection, revision: 'TEST-revision',
+          feed: { streamId: 'TEST-stream', sequence: 0, cursor: 'TEST-cursor' }, members: [], tasks: [], messages: [],
+          kanbanState: { teamName: selection, reviewers: [], tasks: {} } } };
+        case 'team.launch.read': return { ok: true, value: launch };
+        case 'runtime.read': case 'runtime.open': return { ok: true, value: state };
+        case 'task.start': return { ok: true, value: { commandId: request.commandId,
+          operation: 'task.start', phase: 'completed', notifiedOwner: true } };
+        default: throw new Error('Unexpected TEST scheduled operation');
+      }
+    });
+    const target: CapturedHostScheduleTarget = { target: { kind: 'host', contextId: 'TEST-context',
+      handleId: 'TEST-handle', ownerResourceRef: 'TEST-owner', teamResourceRef: 'TEST-team' },
+      isCurrent: () => true, invoke, prepareModels: async () => { throw new Error('Unexpected TEST model preparation'); } };
+    const adapter = new HostSmartScheduleRuntimeAdapter({ target, selection, runId: 'TEST-occurrence',
+      taskFirst: true, getPreviousRuns: async () => [] });
+    const expected = { runId: launch.launchId, generation: state.generation! };
+    expect(await adapter.getMemberStatuses(selection)).toMatchObject({
+      statuses: { alice: { status: 'offline' } } });
+    await adapter.attachMember(selection, 'alice', expected);
+    expect(invoke).toHaveBeenCalledWith(expect.objectContaining({ operation: 'runtime.open' }),
+      { launchId: expected.runId, memberId: state.memberId, expectedGeneration: state.generation });
+    const admission = { expectedOwner: 'alice', expectedRunId: expected.runId,
+      expectedGeneration: expected.generation, isCurrent: () => true, canStart: async () => true };
+    await expect(adapter.startTaskByUser(selection, 'TEST-task', admission)).resolves.toEqual({ notifiedOwner: true });
+    expect(invoke).toHaveBeenCalledWith(expect.objectContaining({ operation: 'task.start',
+      payload: { taskId: 'TEST-task', notification: 'user', expectedRecipient: {
+        name: 'alice', memberId: state.memberId, ...expected, requireIdle: true } } }));
+    for (const changed of [{ custody: 'unknown' as const }, { sealed: true }, { attached: true }, { phase: 'allocated' }]) {
+      Object.assign(state, unopened, changed);
+      expect(await adapter.getMemberStatuses(selection)).toMatchObject({ statuses: { alice: { status: 'error' } } });
+      await expect(adapter.attachMember(selection, 'alice', expected)).rejects.toThrow('manual restart');
+    }
+    Object.assign(state, unopened);
+    launch.launchId = 'TEST-replacement-run'; // Same generation label cannot authorize another run.
+    await expect(adapter.attachMember(selection, 'alice', expected)).rejects.toThrow('recipient changed');
+    await expect(adapter.startTaskByUser(selection, 'TEST-task', admission)).rejects.toThrow('recipient changed');
+    expect(invoke.mock.calls.filter(([request]) => request.operation === 'runtime.open')).toHaveLength(1);
+    expect(invoke.mock.calls.filter(([request]) => request.operation === 'task.start')).toHaveLength(1);
+  });
+
+  it('awaits the final owner check after task creation before starting a task', async () => {
+    enableTaskFirstPorts();
+    let busy = false;
+    port.isTeamAlive = vi.fn(async () => true);
+    port.isTeamLaunching = vi.fn(async () => false);
+    port.isTeamBusy = vi.fn(async () => busy);
+    port.hasActiveOwnedTask = vi.fn(async () => false);
+    port.startTaskByUser = vi.fn(async (
+      _team: string,
+      _task: string,
+      admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+    ) => {
+      busy = true;
+      return { notifiedOwner: await admission!.canStart() };
+    });
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), taskFirst: true }, 'async-owner-start', active
+    );
+    expect(port.createTask).toHaveBeenCalledTimes(1);
+    expect(port.startTaskByUser).toHaveBeenCalledTimes(1);
+    expect(result.kind).toBe('skipped');
+  });
+
+  it('observes cancellation that arrives during the last asynchronous liveness read', async () => {
+    let cancelled = false;
+    let reads = 0;
+    port.isTeamAlive = vi.fn(async () => {
+      if (++reads === 3) cancelled = true;
+      return true;
+    });
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'cancel-at-read', () => cancelled);
+    expect(reads).toBe(3);
+    expect(result.kind).toBe('skipped');
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('refuses Host-owned schedules before reading or mutating the legacy runtime', async () => {
+    for (const mode of ['agent', 'team'] as const) {
+      const result = await dispatch.dispatch(
+        { ...makeSchedule(mode), teamName: 'host-team:TEST-captured-handle' },
+        'TEST-host-run',
+        active
+      );
+      expect(result.kind).toBe('skipped');
+    }
+    expect(port.isTeamAlive).not.toHaveBeenCalled();
+    expect(port.getSavedRequest).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.runOneShot).not.toHaveBeenCalled();
   });
 
   it('rejects invalid persisted modes instead of silently launching a team', async () => {
@@ -482,6 +606,12 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
   it('fences scheduled work against a runtime replaced during the task-service read', async () => {
     enableTaskFirstPorts();
     let replaced = false;
+    let checkingStart = false;
+    let cancelled = false;
+    port.isTeamAlive = vi.fn(async () => {
+      if (checkingStart) replaced = true;
+      return true;
+    });
     port.getRuntime = vi.fn(async () => ({
       ...runtimeMembers(true),
       runId: replaced ? 'replacement-run' : 'team-run-1',
@@ -489,20 +619,24 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     port.startTaskByUser = vi.fn(async (
       _team: string,
       _taskId: string,
-      admission?: { expectedOwner: string; canStart: () => Promise<boolean> }
+      admission?: Parameters<NonNullable<SmartScheduleRuntimePort['startTaskByUser']>>[2]
     ) => {
-      replaced = true;
-      if (!(await admission?.canStart())) throw new Error('Scheduled task start superseded');
-      return { notifiedOwner: true };
+      checkingStart = true;
+      expect(admission?.isCurrent()).toBe(true);
+      expect(await admission?.canStart()).toBe(false);
+      cancelled = true;
+      expect(admission?.isCurrent()).toBe(false);
+      throw new Error('Scheduled task start superseded');
     });
     const outcome = await dispatch.dispatch(
       { ...makeSchedule('agent'), taskFirst: true, targetMember: 'alice' },
-      'superseded-during-read', active
+      'superseded-during-read', () => cancelled
     );
     expect(outcome).toMatchObject({ kind: 'skipped', taskId: 'task-1' });
     expect(port.startTaskByUser).toHaveBeenCalledWith(
       'test-team', 'task-1',
-      expect.objectContaining({ expectedOwner: 'alice', canStart: expect.any(Function) })
+      expect.objectContaining({ expectedOwner: 'alice', expectedRunId: 'team-run-1',
+        canStart: expect.any(Function), isCurrent: expect.any(Function) })
     );
     expect(port.createTask).toHaveBeenCalledOnce();
   });
@@ -547,6 +681,77 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     );
     expect(port.launchTeam).not.toHaveBeenCalled();
     expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('skips a retained one-agent schedule if its team was deleted', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.getSavedRequest = vi.fn(async () => null);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' },
+      'orphaned-team',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('configuration is missing') });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for a configured selected teammate when the team is stopped', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'alice' }, 'selected-alice-offline', active
+    );
+    expect(result).toMatchObject({
+      kind: 'skipped',
+      summary: expect.stringContaining('Selected teammate "alice" cannot run'),
+    });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('preserves the separate offline lead one-shot path without a team launch', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'LEAD' }, 'selected-lead-offline', active
+    );
+    expect(result.kind).toBe('one_shot');
+    expect(port.runOneShot).toHaveBeenCalledOnce();
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
+  });
+
+  it('skips an offline one-agent schedule if its selected member was removed', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    const result = await dispatch.dispatch(
+      { ...makeSchedule('agent'), targetMember: 'removed-member' },
+      'orphaned-member',
+      active
+    );
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('not configured') });
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('does not run an offline agent with missing verified launch configuration', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasLaunchConfig = vi.fn(async () => false);
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'missing-config', active);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
+  });
+
+  it('rechecks stop/cancel admission after validating the saved offline recipient', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    let cancelled = false;
+    port.getLeadName = vi.fn(async () => {
+      cancelled = true;
+      return 'lead';
+    });
+    const result = await dispatch.dispatch(makeSchedule('agent'), 'cancelled-during-lookup', () => cancelled);
+    expect(result.kind).toBe('skipped');
+    expect(port.runOneShot).not.toHaveBeenCalled();
   });
 
   it('rejects a lead without current process evidence even when alive is claimed', async () => {
@@ -607,7 +812,7 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     const schedule = { ...makeSchedule('agent'), targetMember: 'alice' };
     const result = await dispatch.dispatch(schedule, 'run-4', active);
     expect(result.kind).toBe('dispatched');
-    expect(port.attachMember).toHaveBeenCalledOnce();
+    expect(port.attachMember).toHaveBeenCalledExactlyOnceWith('test-team', 'alice', { runId: 'team-run-1' });
     expect(port.createTask).toHaveBeenCalledOnce();
     expect(port.createTask).toHaveBeenCalledWith('test-team', expect.objectContaining({ owner: 'alice' }));
   });
@@ -645,6 +850,16 @@ describe('SmartScheduleDispatcher (source-level dispatch E2E)', () => {
     );
     expect(result.kind).toBe('skipped');
     expect(port.attachMember).not.toHaveBeenCalled();
+  });
+
+  it('refuses metadata-only draft schedules without invoking the unsafe launch path', async () => {
+    port.isTeamAlive = vi.fn(() => false);
+    port.hasLaunchConfig = vi.fn(async () => false);
+    await expect(dispatch.assertCanSchedule(makeSchedule('team'))).rejects.toThrow('Finish team setup');
+    const result = await dispatch.dispatch(makeSchedule('team'), 'draft-run', active);
+    expect(result).toMatchObject({ kind: 'skipped', summary: expect.stringContaining('Finish team setup') });
+    expect(port.launchTeam).not.toHaveBeenCalled();
+    expect(port.createTask).not.toHaveBeenCalled();
   });
 
   it('launches the whole team once using saved provider/CWD and one prompt', async () => {

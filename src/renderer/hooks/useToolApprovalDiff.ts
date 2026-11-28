@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api } from '@renderer/api';
 
 import type { ToolApprovalFileContent } from '@shared/types';
+import type { ToolApprovalReadScope } from '@shared/types/team';
 
 // =============================================================================
 // Types
@@ -92,10 +93,11 @@ export function useToolApprovalDiff(
   toolName: string,
   toolInput: Record<string, unknown>,
   requestId: string,
-  enabled: boolean
+  enabled: boolean,
+  approvalScope?: ToolApprovalReadScope
 ): ToolApprovalDiffData {
   const [state, setState] = useState<ToolApprovalDiffData>(INITIAL_STATE);
-  const activeRef = useRef<string | null>(null);
+  const activeRef = useRef<symbol | null>(null);
 
   const hasDiff = DIFF_TOOLS.has(toolName);
   const filePath = getFilePath(toolInput);
@@ -127,7 +129,7 @@ export function useToolApprovalDiff(
     }
 
     // Write / Edit: need to read current file from disk
-    const currentRequestId = requestId;
+    const currentRequestId = Symbol(requestId);
     activeRef.current = currentRequestId;
 
     setState((prev) => ({ ...prev, hasDiff: true, loading: true, error: null }));
@@ -135,7 +137,7 @@ export function useToolApprovalDiff(
     void (async () => {
       let result: ToolApprovalFileContent;
       try {
-        result = await api.teams.readFileForToolApproval(filePath);
+        result = await api.teams.readFileForToolApproval(filePath, approvalScope);
       } catch (err) {
         if (activeRef.current !== currentRequestId) return;
         setState((prev) => ({
@@ -204,7 +206,16 @@ export function useToolApprovalDiff(
       activeRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toolInput is a fresh object each render, use requestId for identity
-  }, [hasDiff, enabled, filePath, requestId, toolName]);
+  }, [
+    hasDiff,
+    enabled,
+    filePath,
+    requestId,
+    toolName,
+    approvalScope?.teamName,
+    approvalScope?.runId,
+    approvalScope?.requestId,
+  ]);
 
   if (!hasDiff) return INITIAL_STATE;
 

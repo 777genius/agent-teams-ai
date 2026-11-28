@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "kind": "passive-diagnostic-byte-bound-test-correction",
+  "sourceBase": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+  "localChecks": {
+    "kind": "one-line stale test reservation correction",
+    "sourceBase": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+    "trigger": {
+      "run": 44596324911,
+      "job": 135833334422,
+      "sourceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+      "sourceIdenticalTo3f": true
+    },
+    "file": {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "preimageSha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+      "postimageSha256": "f5576a8cfb02db2755d17e6213a4e3cce4099cae90b046f1a6f353007d31595b",
+      "bytes": 52832,
+      "exactSingleLiteralLineReplacement": true
+    },
+    "receiver": {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "sha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+      "unchanged": true,
+      "reservedRows": 7,
+      "rowBytes": 513,
+      "totalUtf8Bytes": 65536,
+      "ordinaryCeiling": 61945
+    },
+    "node": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node",
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "version": "v24.21.0"
+    },
+    "verification": {
+      "red": {
+        "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node --test --test-name-pattern='^a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable$' packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "exitCode": 1,
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/native-host-diagnostic-byte-bound-red.log",
+        "sha256": "f5d8ca59374eed2de853c6271e460853e38e9f0ac70e2f1d02e82a87ca372dea"
+      },
+      "green": {
+        "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node --test --test-name-pattern='^a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable$' packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "exitCode": 0,
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/native-host-diagnostic-byte-bound-green.log",
+        "sha256": "75313e2853df0db84edf74ec20e47e9ee67e13c539553165194337502c0037db"
+      }
+    },
+    "patch": {
+      "path": "/workspace/scratch/f45fed8e9067/audit1192/native-host-diagnostic-byte-bound.patch",
+      "sha256": "3f105c2bb4ad24aeea55743284ccf77750035748097460fc145785250adaf563"
+    },
+    "scope": "Only the obsolete saturation expectation changes. Original finite Node child, all malformed-row/UTF8/epoch checks, final257row/64KiB/513B ceilings, runtime actions, receiver and production source remain unchanged. No real Claude/Codex or manual CI action.",
+    "remaining": "Independent R2 passed; publication is tracked in STATUS.md."
+  },
+  "independentReview": {
+    "schemaVersion": 1,
+    "kind": "independent-root-review",
+    "recordedAt": "2026-11-19T20:46:18.647611+00:00",
+    "reviewer": "/root",
+    "author": "/root/ci_observer_3f",
+    "sourceHead": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+    "result": "PASS",
+    "file": {
+      "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+      "preimageSha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+      "postimageSha256": "f5576a8cfb02db2755d17e6213a4e3cce4099cae90b046f1a6f353007d31595b",
+      "bytes": 52832,
+      "exactSingleLiteralLineReplacement": true
+    },
+    "receiver": {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+      "sha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+      "unchanged": true,
+      "reservedRows": 7,
+      "rowBytes": 513,
+      "totalUtf8Bytes": 65536,
+      "ordinaryCeiling": 61945
+    },
+    "findings": [],
+    "reasoning": [
+      "Seven existing receiver terminal categories reserve 7 * 513 bytes before any terminal is observed; the ordinary ceiling is 65536 - 3591 = 61945 bytes.",
+      "Repeated finite pressure rows are at most 513 bytes. Saturation therefore leaves ordinary bytes strictly greater than ceiling minus 513 and at most ceiling.",
+      "Only the single numeric expectation line differs from the parent. Original malformed-row, UTF-8, cross-epoch, terminal, row-count and final byte-limit assertions remain byte-identical.",
+      "Original finite Node child test failed on the stale expectation, then passed 1/1 after this one-line correction. No vendor CLI, receiver or production action changed."
+    ],
+    "verification": {
+      "red": {
+        "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node --test --test-name-pattern='^a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable$' packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "exitCode": 1,
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/native-host-diagnostic-byte-bound-red.log",
+        "sha256": "f5d8ca59374eed2de853c6271e460853e38e9f0ac70e2f1d02e82a87ca372dea"
+      },
+      "green": {
+        "command": "/workspace/scratch/f45fed8e9067/audit1192/TEST-node-inputs/node/v24.21.0/linux-x64/node --test --test-name-pattern='^a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable$' packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "exitCode": 0,
+        "path": "/workspace/scratch/f45fed8e9067/audit1192/native-host-diagnostic-byte-bound-green.log",
+        "sha256": "75313e2853df0db84edf74ec20e47e9ee67e13c539553165194337502c0037db"
+      }
+    },
+    "limits": [
+      "This is a controlled TEST regression, not a native GUI/source readiness qualification.",
+      "The older metadata CI failure is retained as source-identical defect evidence, not current-source CI success."
+    ]
+  },
+  "oldMetadataSourceAudit": {
+    "kind": "bounded source audit of stale passive diagnostic test byte reservation",
+    "sourceHead": "a81340ccc205946548b9e7da1cfefbabc37fb421",
+    "currentHeadCompared": "3f78524c84829d6b87025fde5c8fe9d8481a4485",
+    "run": 44596324911,
+    "job": 135833334422,
+    "scope": "old PR-body metadata run; not current3f qualification",
+    "conclusion": "failure",
+    "log": "/workspace/scratch/f45fed8e9067/audit1192/job-135833334422.log",
+    "logSha256": "8697acd0c756ad655a6a381a001a2571a27571bce74299ff510c3257db9af178",
+    "firstFailingTest": "a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable",
+    "location": "packages/legacy-agent-host/tests/native-host-close.test.ts:602",
+    "assertion": "beforeBytes > 64 * 1024 - 7 * 513 && beforeBytes <= 64 * 1024 - 6 * 513",
+    "preservedReceiverLimits": {
+      "totalUtf8Bytes": 65536,
+      "maxRowBytes": 513,
+      "reservedRows": [
+        "read-cut-failed",
+        "metadata-read-failed",
+        "host-probe-close-failed",
+        "readiness-refused",
+        "runtime-open-failed",
+        "driver-close-failed",
+        "trace-limit"
+      ],
+      "allReservedPriorToOrdinarySaturation": true,
+      "ordinaryByteCeiling": 61945,
+      "testRequiresBytesStrictlyGreaterThan": 61945
+    },
+    "finding": "The test lower bound is inconsistent with the existing seven-row receiver reservation, deterministically rejecting a saturated but correctly bounded receiver. No timing, native process, authority or product capacity change is indicated.",
+    "minimalProposedChange": "Retain the same synthetic saturation, malformed UTF-8/refusal checks and all final caps; change only ordinary saturated range to >65536-8*513 and <=65536-7*513 (or express the seven original receiver reservations explicitly).",
+    "sourceFiles": [
+      {
+        "path": "packages/legacy-agent-host/tests/native-host-close.test.ts",
+        "workingSha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "a813Sha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "3fSha256": "e8fb716e45691705683ad88e3b22cf25511bdb485d09dd9cce951d8470513c65",
+        "allIdentical": true
+      },
+      {
+        "path": "packages/legacy-agent-host/tests/fixtures/native-opencode-team/passive-diagnostics.ts",
+        "workingSha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+        "a813Sha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+        "3fSha256": "31a236606f13b7ac6b677d85a74060fe41221b488bd9a205c7f1b020f310e094",
+        "allIdentical": true
+      }
+    ],
+    "actions": {
+      "edits": false,
+      "testsOrNativeExecution": false,
+      "manualCiActions": false
+    }
+  },
+  "patch": "diff --git a/packages/legacy-agent-host/tests/native-host-close.test.ts b/packages/legacy-agent-host/tests/native-host-close.test.ts\nindex 4a64e62..be3d864 100644\n--- a/packages/legacy-agent-host/tests/native-host-close.test.ts\n+++ b/packages/legacy-agent-host/tests/native-host-close.test.ts\n@@ -599,7 +599,7 @@ process.stderr.write('', () => process.exit(1));\n     const ordinary = passive.entries.length;\n     const beforeBytes = passive.entries.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row)) + 1, 0);\n     assert.ok(ordinary < 253, 'closed-row bytes saturate before ordinary count in this capture');\n-    assert.ok(beforeBytes > 64 * 1024 - 7 * 513 && beforeBytes <= 64 * 1024 - 6 * 513);\n+    assert.ok(beforeBytes > 64 * 1024 - 8 * 513 && beforeBytes <= 64 * 1024 - 7 * 513);\n     const terminal = { event: 'metadata-read-failed', atMs: 11, stage: 'admission', reason: 'held',\n       elapsedMs: 0, deadlineExpired: true, aborted: null, raw: secret };\n     const lateRead = { event: 'read-cut-failed', atMs: 12, stage: 'after-log', reason: 'cleanup_unknown',\n",
+  "logs": {
+    "red": {
+      "bytes": 1054,
+      "sha256": "f5d8ca59374eed2de853c6271e460853e38e9f0ac70e2f1d02e82a87ca372dea",
+      "text": "✖ a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable (382.350911ms)\nℹ tests 1\nℹ suites 0\nℹ pass 0\nℹ fail 1\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 1016.156133\n\n✖ failing tests:\n\ntest at packages/legacy-agent-host/tests/native-host-close.test.ts:176:1\n✖ a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable (382.350911ms)\n  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n  \n    assert.ok(beforeBytes > 64 * 1024 - 7 * 513 && beforeBytes <= 64 * 1024 - 6 * 513)\n  \n      at TestContext.<anonymous> (file:///workspace/scratch/f45fed8e9067/agent-teams-ai/packages/legacy-agent-host/tests/native-host-close.test.ts:602:12)\n      at async Test.run (node:internal/test_runner/test:1409:7)\n      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {\n    generatedMessage: true,\n    code: 'ERR_ASSERTION',\n    actual: false,\n    expected: true,\n    operator: '==',\n    diff: 'simple'\n  }\n"
+    },
+    "green": {
+      "bytes": 231,
+      "sha256": "75313e2853df0db84edf74ec20e47e9ee67e13c539553165194337502c0037db",
+      "text": "✔ a failed original Node child retains CPU evidence and bounded file refusals stay distinguishable (362.755911ms)\nℹ tests 1\nℹ suites 0\nℹ pass 1\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 716.090187\n"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useRetainedLegacyLaunch } from '@features/agent-backend/renderer';
 import { api } from '@renderer/api';
 
 import type {
@@ -135,7 +136,10 @@ export function useOpenCodeLocalProviders({
   /** Bump to re-read after the project scope changed, e.g. its folder was just created. */
   refreshRevision?: number;
 }): UseOpenCodeLocalProvidersResult {
-  const scopeKey = projectPath?.trim() ?? '';
+  const retained = useRetainedLegacyLaunch();
+  const management = retained?.management;
+  const path = projectPath?.trim() ?? '';
+  const scopeKey = retained ? JSON.stringify([retained.choice.scopeId, path]) : path;
   const apiAvailable = Boolean(window.electronAPI) || typeof EventSource !== 'undefined';
   const requestIdRef = useRef(0);
   const [snapshot, setSnapshot] = useState<OpenCodeLocalProviderSnapshot | null>(null);
@@ -155,17 +159,17 @@ export function useOpenCodeLocalProviders({
     const loadProviders = async (): Promise<void> => {
       try {
         const requests = [
-          api.runtimeProviderManagement.listLocalProviders({
+          (management ?? api.runtimeProviderManagement).listLocalProviders({
             runtimeId: 'opencode',
             scope: 'global',
             projectPath: null,
           }),
-          ...(scopeKey
+          ...(path
             ? [
-                api.runtimeProviderManagement.listLocalProviders({
+                (management ?? api.runtimeProviderManagement).listLocalProviders({
                   runtimeId: 'opencode' as const,
                   scope: 'project' as const,
-                  projectPath: scopeKey,
+                  projectPath: path,
                 }),
               ]
             : []),
@@ -173,9 +177,11 @@ export function useOpenCodeLocalProviders({
 
         const [responses, scanResponse] = await Promise.all([
           Promise.allSettled(requests),
-          typeof api.runtimeProviderManagement.scanLocalProviders === 'function'
+          typeof (management ?? api.runtimeProviderManagement).scanLocalProviders === 'function'
             ? Promise.allSettled([
-                api.runtimeProviderManagement.scanLocalProviders({ runtimeId: 'opencode' }),
+                (management ?? api.runtimeProviderManagement).scanLocalProviders({
+                  runtimeId: 'opencode',
+                }),
               ]).then((results) => results[0] ?? null)
             : Promise.resolve(null),
         ]);
@@ -202,7 +208,7 @@ export function useOpenCodeLocalProviders({
     };
 
     void loadProviders();
-  }, [apiAvailable, enabled, refreshKey, refreshRevision, scopeKey]);
+  }, [management, apiAvailable, enabled, path, refreshKey, refreshRevision, scopeKey]);
 
   return useMemo(() => {
     if (!enabled || !apiAvailable) {

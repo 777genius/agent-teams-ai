@@ -1,5 +1,16 @@
+import {
+  hostTeamSelectionKey,
+  isHostTeamRunId,
+  isHostTeamSelectionKey,
+  parseHostTeamRunId,
+} from '@features/agent-backend/contracts';
+import {
+  hostMemberSpawnSnapshotCurrentness,
+  hostProjectProgressOwners,
+} from '@features/agent-backend/renderer';
+
 import { areMemberSpawnSnapshotsSemanticallyEqual } from './teamMemberSpawnSnapshotEquality';
-import { isTeamRunIgnored } from './teamProvisioningRunIdentity';
+import { addIgnoredTeamRun, isTeamRunIgnored } from './teamProvisioningRunIdentity';
 import { isTerminalProvisioningState } from './teamProvisioningStateRules';
 
 import type { IgnoredTeamRunOwners } from './teamProvisioningRunIdentity';
@@ -20,6 +31,73 @@ const STOPPED_SPAWN_STATUSES: ReadonlySet<MemberSpawnStatus> = new Set([
 export type IncomingRuntimeRunAdoption = 'reject' | 'apply' | 'retarget';
 
 type SpawnStatusLike = Pick<MemberSpawnStatusEntry, 'status' | 'runtimeAlive'>;
+
+/** Capture the existing Host status-read scope and both pins before its await. */
+export function captureHostProvisioningStatusRead(
+  runId: string,
+  get: () => {
+    currentProvisioningRunIdByTeam: Record<string, string | null>;
+    currentRuntimeRunIdByTeam: Record<string, string | null>;
+    teamByName?: Record<string, unknown>;
+  },
+  captureScopeCurrentness: (teamName: string) => () => boolean
+): (progress?: TeamProvisioningProgress) => boolean {
+  if (!isHostTeamRunId(runId)) return () => true;
+  const teamName = hostTeamSelectionKey(parseHostTeamRunId(runId).handleId);
+  const original = get();
+  const owned = (state: ReturnType<typeof get>) =>
+    new Set([
+      teamName,
+      ...Object.entries(state.currentProvisioningRunIdByTeam)
+        .filter(([, id]) => id === runId)
+        .map(([name]) => name),
+      ...Object.entries(state.currentRuntimeRunIdByTeam)
+        .filter(([, id]) => id === runId)
+        .map(([name]) => name),
+    ]);
+  const originalOwners = owned(original);
+  const names = new Set([
+    teamName,
+    ...Object.keys(original.teamByName ?? {}),
+    ...Object.keys(original.currentProvisioningRunIdByTeam),
+    ...Object.keys(original.currentRuntimeRunIdByTeam),
+  ]);
+  const captured = new Map(
+    [...names].filter(isHostTeamSelectionKey).map((name) => [
+      name,
+      {
+        current: captureScopeCurrentness(name),
+        provisioning: original.currentProvisioningRunIdByTeam[name],
+        runtime: original.currentRuntimeRunIdByTeam[name],
+      },
+    ])
+  );
+  return (progress) => {
+    const next = get(),
+      latestOwners = owned(next);
+    if (
+      latestOwners.size !== originalOwners.size ||
+      [...latestOwners].some((name) => !originalOwners.has(name))
+    )
+      return false;
+    const proved = progress ? hostProjectProgressOwners(progress) : undefined;
+    if (proved === null) return false;
+    const required = new Set([...originalOwners, ...(proved ?? [])]);
+    if (progress && progress.teamName !== teamName && !proved?.includes(progress.teamName))
+      return false;
+    for (const name of required) {
+      const pin = captured.get(name);
+      if (
+        !pin ||
+        !pin.current() ||
+        next.currentProvisioningRunIdByTeam[name] !== pin.provisioning ||
+        next.currentRuntimeRunIdByTeam[name] !== pin.runtime
+      )
+        return false;
+    }
+    return true;
+  };
+}
 
 export function isPinnedRuntimeRunFullyStopped(
   statuses: Record<string, SpawnStatusLike> | undefined
@@ -69,6 +147,27 @@ export function resolveIncomingRuntimeRunAdoption(input: {
   return 'reject';
 }
 
+function isSameHostLaunchRevision(
+  teamName: string,
+  previous: string,
+  next: string,
+  verifiedProject = false
+): boolean {
+  if (previous === next) return false;
+  try {
+    const before = parseHostTeamRunId(previous),
+      after = parseHostTeamRunId(next);
+    return (
+      (hostTeamSelectionKey(before.handleId) === teamName || verifiedProject) &&
+      before.handleId === after.handleId &&
+      before.launchId === after.launchId &&
+      before.rosterRevision !== after.rosterRevision
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function shouldAdoptSuccessorProvisioningRun(input: {
   teamName: string;
   previousRunId?: string | null;
@@ -80,6 +179,7 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
   currentRuntimeRunId?: string | null;
   ignoredRuntimeRunIds: IgnoredTeamRunOwners;
   pinnedSpawnStatuses?: Record<string, SpawnStatusLike>;
+  verifiedHostProjectOwner?: boolean;
 }): boolean {
   const nextRunId = input.nextRunId?.trim() || null;
   if (!nextRunId || isTeamRunIgnored(input.ignoredRuntimeRunIds, nextRunId, input.teamName)) {
@@ -90,6 +190,17 @@ export function shouldAdoptSuccessorProvisioningRun(input: {
   if (!previousRunId || previousRunId === nextRunId) {
     return false;
   }
+
+  // Only a fresh captured snapshot can first move the same Host launch's runtime pin.
+  if (
+    isSameHostLaunchRevision(
+      input.teamName,
+      previousRunId,
+      nextRunId,
+      input.verifiedHostProjectOwner
+    )
+  )
+    return input.currentRuntimeRunId === nextRunId;
 
   const previousIsTerminal =
     input.previousState == null || isTerminalProvisioningState(input.previousState);
@@ -134,6 +245,7 @@ export function nextRuntimeRunIdByTeamAfterAdoption(
 
 export interface IncomingMemberSpawnProjectionState {
   ignoredRuntimeRunIds: IgnoredTeamRunOwners;
+  ignoredProvisioningRunIds?: IgnoredTeamRunOwners;
   currentRuntimeRunIdByTeam: Record<string, string | null>;
   leadActivityByTeam: Record<string, LeadActivityState>;
   memberSpawnStatusesByTeam: Record<string, Record<string, MemberSpawnStatusEntry>>;
@@ -147,14 +259,37 @@ export function projectIncomingMemberSpawnSnapshot(input: {
   onEqualSuppressed: (teamName: string, runId: string | null | undefined) => void;
 }): Partial<IncomingMemberSpawnProjectionState> {
   const { teamName, snapshot, prev } = input;
-  const adoption = resolveIncomingRuntimeRunAdoption({
-    teamName,
-    snapshotRunId: snapshot.runId,
-    currentRuntimeRunId: prev.currentRuntimeRunIdByTeam[teamName],
-    ignoredRuntimeRunIds: prev.ignoredRuntimeRunIds,
-    leadActivity: prev.leadActivityByTeam[teamName],
-    pinnedSpawnStatuses: prev.memberSpawnStatusesByTeam[teamName],
-  });
+  const previousRunId = prev.currentRuntimeRunIdByTeam[teamName];
+  const hostCurrent = hostMemberSpawnSnapshotCurrentness(snapshot, teamName);
+  const hostRevision =
+    typeof previousRunId === 'string' &&
+    typeof snapshot.runId === 'string' &&
+    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId, hostCurrent === true);
+  if (hostCurrent === false || (hostRevision && hostCurrent !== true)) return {};
+  if (
+    hostRevision &&
+    [previousRunId, snapshot.runId].some(
+      (runId) =>
+        isTeamRunIgnored(prev.ignoredRuntimeRunIds, runId!, teamName) ||
+        isTeamRunIgnored(prev.ignoredProvisioningRunIds ?? {}, runId!, teamName)
+    )
+  )
+    return {};
+  const retired = hostRevision
+    ? {
+        ignoredRuntimeRunIds: addIgnoredTeamRun(prev.ignoredRuntimeRunIds, previousRunId, teamName),
+      }
+    : {};
+  const adoption = hostRevision
+    ? 'retarget'
+    : resolveIncomingRuntimeRunAdoption({
+        teamName,
+        snapshotRunId: snapshot.runId,
+        currentRuntimeRunId: prev.currentRuntimeRunIdByTeam[teamName],
+        ignoredRuntimeRunIds: prev.ignoredRuntimeRunIds,
+        leadActivity: prev.leadActivityByTeam[teamName],
+        pinnedSpawnStatuses: prev.memberSpawnStatusesByTeam[teamName],
+      });
   if (adoption === 'reject') {
     return {};
   }
@@ -172,10 +307,11 @@ export function projectIncomingMemberSpawnSnapshot(input: {
     if (nextCurrentRuntimeRunIdByTeam === prev.currentRuntimeRunIdByTeam) {
       return {};
     }
-    return { currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
+    return { ...retired, currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam };
   }
 
   return {
+    ...retired,
     currentRuntimeRunIdByTeam: nextCurrentRuntimeRunIdByTeam,
     memberSpawnStatusesByTeam: {
       ...prev.memberSpawnStatusesByTeam,

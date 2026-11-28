@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { hostTeamRunId, hostTeamSelectionKey } from '@features/agent-backend/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storeState = {
@@ -9,8 +10,16 @@ const storeState = {
   provisioningErrorByTeam: {} as Record<string, string>,
   clearProvisioningError: vi.fn(),
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
+  restartMember: vi.fn(),
+  activeContextId: 'local',
+  isContextSwitching: false,
+  currentRuntimeRunIdByTeam: {} as Record<string, string>,
+  currentProvisioningRunIdByTeam: {} as Record<string, string>,
+  ignoredRuntimeRunIds: {},
+  ignoredProvisioningRunIds: {},
   selectedTeamName: 'northstar-core',
   selectedTeamData: {
+    isAlive: undefined as boolean | undefined,
     members: [
       { name: 'team-lead', agentType: 'team-lead' },
       { name: 'alice', agentType: 'reviewer', runtimeAdvisory: undefined },
@@ -27,7 +36,7 @@ const storeState = {
         { name: 'jack', agentType: 'developer' },
       ],
     },
-  } as Record<string, { members: Array<Record<string, unknown>> }>,
+  } as Record<string, { members: Array<Record<string, unknown>>; isAlive?: boolean }>,
   memberSpawnStatusesByTeam: {
     'northstar-core': {},
   },
@@ -35,10 +44,15 @@ const storeState = {
 };
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+  useStore: Object.assign(
+    (selector: (state: typeof storeState) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
 }));
 
-vi.mock('@renderer/store/slices/teamSlice', () => ({
+vi.mock('@renderer/store/slices/teamSlice', async () => ({
+  selectTeamIsAliveForName: (await import('@renderer/store/team/teamDataSelectors'))
+    .selectTeamIsAliveForName,
   getCurrentProvisioningProgressForTeam: () => storeState.progress,
   selectTeamDataForName: (_state: typeof storeState, teamName: string) =>
     storeState.teamDataCacheByName[teamName] ??
@@ -91,6 +105,7 @@ vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
 }));
 
 import { TeamProvisioningBanner } from '@renderer/components/team/TeamProvisioningBanner';
+import { TeamProvisioningPanel } from '@renderer/components/team/TeamProvisioningPanel';
 
 describe('TeamProvisioningBanner launch-step alignment', () => {
   afterEach(() => {
@@ -98,7 +113,13 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
   });
 
   beforeEach(() => {
+    storeState.activeContextId = 'local';
+    storeState.isContextSwitching = false;
+    storeState.currentRuntimeRunIdByTeam = {};
+    storeState.currentProvisioningRunIdByTeam = {};
+    storeState.restartMember.mockReset().mockResolvedValue(undefined);
     storeState.selectedTeamName = 'northstar-core';
+    storeState.selectedTeamData.isAlive = undefined;
     storeState.provisioningErrorByTeam = {};
     storeState.clearProvisioningError.mockReset();
     storeState.clearProvisioningError.mockImplementation((teamName: string) => {
@@ -115,7 +136,7 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       cliLogsTail: '',
       assistantOutput: '',
     };
-    storeState.retryFailedOpenCodeSecondaryLanes.mockResolvedValue({
+    storeState.retryFailedOpenCodeSecondaryLanes.mockReset().mockResolvedValue({
       attempted: [],
       confirmed: [],
       pending: [],
@@ -560,10 +581,107 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
     expect(host.textContent).toContain('Retry failed OpenCode teammates');
 
     await act(async () => {
+      const retry = [...host.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('Retry failed OpenCode teammates')
+      );
+      retry?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(storeState.retryFailedOpenCodeSecondaryLanes).toHaveBeenCalledWith('northstar-core');
+    expect(storeState.restartMember).not.toHaveBeenCalled();
+
+    await act(async () => {
       root.unmount();
       await Promise.resolve();
     });
   });
+
+  it.each(['confirmed', 'late-context-change'] as const)(
+    'routes the existing Host Retry to captured member restart (%s), without legacy or duplicate admission',
+    async (outcome) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const teamName = hostTeamSelectionKey('TEST-owner');
+      const runId = hostTeamRunId('TEST-owner', 'TEST-launch', 'TEST-roster');
+      const captured = {
+        runId,
+        memberId: 'A',
+        generation: 'A1',
+        attemptId: 'TEST-failed',
+        noAllocation: false,
+      };
+      storeState.selectedTeamName = teamName;
+      storeState.progress = { ...storeState.progress, teamName, runId };
+      storeState.currentRuntimeRunIdByTeam[teamName] = runId;
+      storeState.currentProvisioningRunIdByTeam[teamName] = runId;
+      storeState.teamDataCacheByName[teamName] = {
+        isAlive: true,
+        members: [
+          { name: 'team-lead', agentType: 'team-lead', runtimeOwner: 'captured-host' },
+          {
+            name: 'alice',
+            agentType: 'developer',
+            providerId: 'opencode',
+            runtimeOwner: 'captured-host',
+          },
+        ],
+      };
+      storeState.memberSpawnSnapshotsByTeam[teamName] = {
+        runId,
+        statuses: {
+          alice: {
+            status: 'error',
+            launchState: 'failed_to_start',
+            runtimeAlive: false,
+            hostFailedMemberRetry: captured,
+          },
+        },
+      };
+      let release!: () => void;
+      storeState.restartMember.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          })
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(React.createElement(TeamProvisioningPanel, { teamName }));
+      });
+      const retry = [...host.querySelectorAll('button')].find((button) =>
+        button.textContent?.includes('Retry failed OpenCode teammates')
+      );
+      expect(retry).toBeDefined();
+      await act(async () => {
+        retry!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        retry!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      expect(storeState.restartMember.mock.calls).toEqual([
+        [teamName, 'alice', undefined, captured],
+      ]);
+      expect(storeState.retryFailedOpenCodeSecondaryLanes).not.toHaveBeenCalled();
+      if (outcome === 'late-context-change') {
+        storeState.activeContextId = 'other-context';
+        await act(async () => {
+          root.render(React.createElement(TeamProvisioningPanel, { teamName }));
+        });
+      }
+      await act(async () => {
+        release();
+      });
+      if (outcome === 'confirmed') {
+        expect(host.textContent).toContain('Restart requested for 1 OpenCode teammate');
+      } else {
+        expect(host.textContent).not.toContain('Restart requested');
+        expect(host.textContent).not.toContain('Team launch changed');
+        expect(host.textContent).not.toContain('Retrying OpenCode...');
+      }
+      expect(storeState.restartMember).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  );
 
   it('uses info severity while runtimes are online but teammate contact is still pending', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -738,5 +856,125 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it.each([true, undefined, false])(
+    'withholds ready success only when this team is explicitly offline (%s)',
+    async (isAlive) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.selectedTeamData.isAlive = isAlive;
+      storeState.teamDataCacheByName['northstar-core'].isAlive = isAlive === false;
+      storeState.selectedTeamData.members = [{ name: 'team-lead', agentType: 'team-lead' }];
+      storeState.teamDataCacheByName['northstar-core'].members = [
+        ...storeState.selectedTeamData.members,
+      ];
+      delete storeState.memberSpawnSnapshotsByTeam['northstar-core'];
+      const progress = storeState.progress;
+      const retainedProgress = structuredClone(progress);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      try {
+        await act(async () => {
+          root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+        });
+
+        const block = host.querySelector('[data-testid="progress-block"]');
+        if (isAlive === false) {
+          expect(block).toBeNull();
+          expect(host.textContent).toBe('');
+        } else {
+          expect(block).not.toBeNull();
+          expect(block?.textContent).toContain('Team launched - lead online');
+        }
+        expect(storeState.progress).toBe(progress);
+        expect(storeState.progress).toEqual(retainedProgress);
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('uses this team cache instead of another selected team offline state', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamName = 'other-team';
+    storeState.selectedTeamData.isAlive = false;
+    storeState.teamDataCacheByName['northstar-core'].isAlive = true;
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+      });
+      expect(host.querySelector('[data-testid="progress-block"]')?.textContent).toContain(
+        'Finishing launch'
+      );
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it.each(['assembling', 'failed'])(
+    'preserves %s progress while this team is offline',
+    async (state) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.selectedTeamData.isAlive = false;
+      storeState.progress = {
+        ...storeState.progress,
+        state,
+        message: 'TEST retained launch diagnostic',
+      };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      try {
+        await act(async () => {
+          root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+        });
+        expect(host.querySelector('[data-testid="progress-block"]')).not.toBeNull();
+        expect(host.textContent).toContain('TEST retained launch diagnostic');
+      } finally {
+        await act(async () => root.unmount());
+      }
+    }
+  );
+
+  it('recovers ready presentation on the same mounted panel without rewriting progress', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.selectedTeamData.isAlive = true;
+    const progress = storeState.progress;
+    const retainedProgress = structuredClone(progress);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    // The existing store mock does not subscribe; this prop rerenders the same mounted panel.
+    const render = async (className: string) => {
+      await act(async () => {
+        root.render(
+          React.createElement(TeamProvisioningPanel, { teamName: 'northstar-core', className })
+        );
+      });
+    };
+
+    try {
+      await render('before-stop');
+      expect(host.querySelector('[data-testid="progress-block"]')).not.toBeNull();
+      storeState.selectedTeamData.isAlive = false;
+      await render('stopped');
+      expect(host.querySelector('[data-testid="progress-block"]')).toBeNull();
+      storeState.selectedTeamData.isAlive = true;
+      await render('restored');
+      expect(host.querySelector('[data-testid="progress-block"]')?.textContent).toContain(
+        'Finishing launch'
+      );
+      expect(storeState.progress).toBe(progress);
+      expect(storeState.progress).toEqual(retainedProgress);
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 });

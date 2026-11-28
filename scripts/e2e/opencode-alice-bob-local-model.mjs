@@ -15,6 +15,7 @@ import { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } from '../lib/r
 import { CdpClient } from './comment-notification/cdp.mjs';
 import { prepareNativeDesktopEnvironment } from './opencode-native-desktop-environment.ts';
 import { startGroupChatModelServer } from './group-chat-model-server.ts';
+import { createPeerModelFixture } from './opencode-peer-model-fixture.ts';
 
 assert.equal(process.platform, 'linux', 'This synthetic OpenCode peer E2E requires Linux');
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -35,6 +36,9 @@ const modelOutput = path.join(output, 'model-requests.ndjson');
 const screenshot = path.join(output, 'alice-bob-desktop.png');
 const candidates = new Map();
 const actions = new Map();
+const seedReports = new Map();
+const seedReads = [];
+let peerSnapshot;
 let model;
 let client;
 let app;
@@ -46,68 +50,9 @@ let logs = '';
 let creationResponse;
 let latestRuntime;
 const pause = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-const isRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const literal = v => JSON.stringify(v);
 
-function textOf(v) {
-  if (typeof v === 'string') return v;
-  if (Array.isArray(v)) return v.map(textOf).join('\n');
-  if (isRecord(v)) return typeof v.text === 'string' ? v.text : textOf(v.content);
-  return '';
-}
-function toolMessageResult(messages, id) {
-  return messages.some(m =>
-    (m?.role === 'tool' && m.tool_call_id === id) ||
-    (Array.isArray(m?.content) && m.content.some(block =>
-      block?.type === 'tool_result' && block.tool_use_id === id))
-  );
-}
-function syntheticModelTurn(body) {
-  const messages = Array.isArray(body.messages) ? body.messages : [];
-  const last = [...messages].reverse().find(m =>
-    m?.role === 'user' && textOf(m.content).trim() &&
-    !(Array.isArray(m.content) && m.content.every(p => p?.type === 'tool_result')));
-  const active = textOf(last?.content);
-  const seed = [...active.matchAll(/PEER_SEED:(alice|bob):(alice|bob):([0-9a-f-]{36})/g)].at(-1);
-  const challenge = [...active.matchAll(/CHALLENGE:([0-9a-f-]{36})/g)].at(-1);
-  const ack = [...active.matchAll(/ACK:([0-9a-f-]{36})/g)].at(-1);
-  if (!seed && !challenge && !ack) return undefined;
-  if (ack && !seed && !challenge && candidates.has(ack[1])) {
-    // Silent ACK read: native OpenCode must commit this real turn.
-    return { id: 'silent_' + ack[1].replaceAll('-', ''), text: '' };
-  }
-  let directive;
-  if (seed) {
-    const from = seed[1], to = seed[2], nonce = seed[3];
-    if (!candidates.has(nonce) || candidates.get(nonce).from !== from ||
-        candidates.get(nonce).to !== to || from === to)
-      return { id: 'rejected_' + nonce, text: 'Unowned peer directive' };
-    directive = { kind: 'challenge', from, to, nonce, text: 'CHALLENGE:' + nonce };
-  } else if (challenge && candidates.has(challenge[1])) {
-    const nonce = challenge[1], initial = candidates.get(nonce);
-    directive = { kind: 'ack', from: initial.to, to: initial.from,
-      nonce, text: 'ACK:' + nonce };
-  } else return undefined;
-  const key = directive.kind + ':' + directive.nonce;
-  const id = 'call_' + directive.nonce.replaceAll('-', '') + '_' + directive.kind;
-  if (toolMessageResult(messages, id)) {
-    actions.set(key, { ...directive, completedToolResult: true, callId: id });
-    return { id: 'done_' + directive.nonce, text: '' };
-  }
-  const names = (Array.isArray(body.tools) ? body.tools : [])
-    .map(t => t?.function?.name ?? t?.name)
-    .filter(v => typeof v === 'string');
-  const tool = names.find(name =>
-    name === 'message_send' || /(?:^|__|_)message_send$/.test(name));
-  assert(tool, 'Real OpenCode runtime did not expose message_send');
-  const origin = /"relayOfMessageId":"([^"\n]+)"/.exec(active)?.[1];
-  return { id, name: tool, input: {
-    teamName, from: directive.from, to: directive.to, text: directive.text,
-    ...(directive.kind === 'ack' && origin ? {
-      source: 'runtime_delivery', relayOfMessageId: origin,
-    } : {}),
-  } };
-}
+const syntheticModelTurn = createPeerModelFixture({ teamName, candidates, actions, seedReports });
 async function wait(label, fn, ms = 180_000) {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {
@@ -160,6 +105,68 @@ async function receiptFor(message, bound, runId) {
     r.memberName === message.to && r.laneId === bound.laneId &&
     r.runtimeSessionId === bound.runtimeSessionId &&
     r.replyRecipient === message.from) ?? null;
+}
+async function settleSeed(nonce, snapshot) {
+  const candidate = candidates.get(nonce);
+  const completed = seedReports.get('seed-report:' + nonce);
+  if (!candidate?.seedMessageId || !completed) return false;
+  const { from, to, seedMessageId } = candidate;
+  const seeds = (await inbox(from)).filter(m => m.messageId === seedMessageId &&
+    m.from === 'user' && m.to === from && m.text === 'PEER_SEED:' + from + ':' + to + ':' + nonce);
+  const reports = (await inbox('user')).filter(m => m.from === from &&
+    m.to === 'user' && m.source === 'runtime_delivery' && m.relayOfMessageId === seedMessageId);
+  if (seeds.length !== 1 || reports.length !== 1) return false;
+  const report = reports[0];
+  if (report.messageId !== completed.messageId || report.text !== completed.text ||
+      typeof report.summary !== 'string' || !report.summary.trim()) return false;
+  const receipt = await receiptFor(seeds[0], snapshot.members[from], snapshot.runId);
+  const promptId = receipt?.lastRuntimePromptMessageId ?? receipt?.runtimePromptMessageId;
+  const committed = receipt?.acceptanceUnknown === false && Boolean(receipt.acceptedAt) &&
+    Boolean(promptId) && receipt.deliveredUserMessageId === promptId &&
+    Boolean(receipt.observedAssistantMessageId) && receipt.status === 'responded' &&
+    receipt.visibleReplyMessageId === report.messageId && receipt.visibleReplyInbox === 'user' &&
+    receipt.visibleReplyCorrelation === 'relayOfMessageId' &&
+    Boolean(receipt.inboxReadCommittedAt) && receipt.inboxReadCommitError === null && !receipt.cancelledAt;
+  if (seeds[0].read !== true || !committed) return false;
+  return { nonce, seedMessageId, replyMessageId: report.messageId, member: from,
+    inboxRead: true, committed: true, ledgerStatus: receipt.status, responseState: receipt.responseState };
+}
+// Before cleanup, capture at most two original seed and four original peer
+// rows, using only allowlisted delivery facts from the TEST-owned run.
+async function ownedDeliveryDiagnostics(snapshot) {
+  if (!snapshot?.runId || !snapshot.members?.alice || !snapshot.members?.bob) return [];
+  const facts = [];
+  for (const [nonce, candidate] of candidates) {
+    const { from, to, seedMessageId } = candidate;
+    const messages = [
+      { member: from, sender: 'user', text: 'PEER_SEED:' + from + ':' + to + ':' + nonce,
+        id: seedMessageId },
+      { member: to, sender: from, text: 'CHALLENGE:' + nonce },
+      { member: from, sender: to, text: 'ACK:' + nonce },
+    ];
+    for (const expected of messages) {
+      const rows = (await inbox(expected.member)).filter(m => m.from === expected.sender &&
+        m.to === expected.member && m.text === expected.text &&
+        (expected.id === undefined || m.messageId === expected.id));
+      const row = rows.length === 1 ? rows[0] : null;
+      const receipt = row && await receiptFor(row, snapshot.members[expected.member], snapshot.runId);
+      facts.push({ nonce, member: expected.member, sender: expected.sender,
+        matches: rows.length, message: row && { messageId: row.messageId, from: row.from,
+          to: row.to, read: row.read, source: row.source ?? null, relayOfMessageId: row.relayOfMessageId ?? null },
+        receipt: receipt && { id: receipt.id, runId: receipt.runId, laneId: receipt.laneId,
+          runtimeSessionId: receipt.runtimeSessionId, inboxMessageId: receipt.inboxMessageId,
+          status: receipt.status, responseState: receipt.responseState, acceptedAt: receipt.acceptedAt,
+          acceptanceUnknown: receipt.acceptanceUnknown, deliveredUserMessageId: receipt.deliveredUserMessageId,
+          runtimePromptMessageId: receipt.lastRuntimePromptMessageId ?? receipt.runtimePromptMessageId,
+          observedAssistantMessageId: receipt.observedAssistantMessageId,
+          visibleReplyMessageId: receipt.visibleReplyMessageId, visibleReplyInbox: receipt.visibleReplyInbox,
+          visibleReplyCorrelation: receipt.visibleReplyCorrelation,
+          inboxReadCommittedAt: receipt.inboxReadCommittedAt,
+          inboxReadCommitError: receipt.inboxReadCommitError !== null,
+          cancelledAt: receipt.cancelledAt ?? null } });
+    }
+  }
+  return facts;
 }
 async function settleMessages(messages, snapshot) {
   return wait('four original peer read commits', async () => {
@@ -294,6 +301,7 @@ async function run() {
       a.runtimeSessionId !== b.runtimeSessionId
       ? value : false;
   }, 240_000);
+  peerSnapshot = snapshot;
   await client.screenshot(screenshot);
   phase = 'peer-challenge-and-ack';
   const originalMessages = [];
@@ -309,6 +317,9 @@ async function run() {
       const ack = (await inbox(from)).filter(m =>
         m.from === to && m.to === from && m.text === 'ACK:' + nonce);
       if (challenge.length !== 1 || ack.length !== 1) return false;
+      const seedRead = await settleSeed(nonce, snapshot);
+      if (!seedRead) return false;
+      seedReads.push(seedRead);
       return [challenge[0], ack[0]];
     }, 180_000);
     originalMessages.push(...pair);
@@ -316,6 +327,9 @@ async function run() {
   assert.equal(new Set(originalMessages.map(m => m.messageId)).size, 4);
   const settlement = await settleMessages(originalMessages, snapshot);
   assert.equal(actions.size, 4, 'Four independent model-directed real message_send results required');
+  assert.equal(seedReports.size, 2, 'Two independent correlated human reports required');
+  assert.equal(seedReads.length, 2, 'Both original human inputs must have durable read commits');
+  assert.equal(new Set(seedReads.map(row => row.replyMessageId)).size, 2);
   assert.equal(model.errors.length, 0, 'Local model protocol rejected an OpenCode request');
   phase = 'normal-original-stop';
   stopSubmitted = true;
@@ -344,6 +358,7 @@ async function run() {
         runtimeSessionId: snapshot.members[name].runtimeSessionId },
     ])),
     peerReads: settlement, actions: [...actions.values()],
+    seedReads, seedReports: [...seedReports.values()],
     originalStopSubmitted: true, codingTaskAndRelaunchQualified: false,
     screenshot: path.basename(screenshot),
   }, null, 2) + '\n');
@@ -381,8 +396,11 @@ catch (error) {
       }))
       .catch(readError => ({ unavailable: String(readError) }))
     : null;
+  const ownedDeliveries = await ownedDeliveryDiagnostics(peerSnapshot)
+    .catch(readError => ({ unavailable: String(readError) }));
   await writeFile(ledgerOutput, JSON.stringify({
     schemaVersion: 1, success: false, phase, error: String(error),
+    seedReads, seedReports: [...seedReports.values()], ownedDeliveries,
     diagnosticBundle,
     creationResponse, latestRuntime, progress, persisted,
     modelErrors: model?.errors ?? [], actions: [...actions.values()],

@@ -1,0 +1,32 @@
+{
+  "status": "PASS existing status/cancel API and shared progress callback; existing-dialog E2E and full stage1 remain INCOMPLETE",
+  "evidence": "docs/plans/provider-migration/evidence/p5-existing-provisioning-progress-v2/manifest.json",
+  "hostSource": "01828612ce128963d77c3e5f4108bad2a754307a6b134ab22b842bf8e1212f46",
+  "hostDist": "8693156a9a66b1c5d427239f2edf001e2cb7c3744911c0b669db8faeddbeb015",
+  "implementation": {
+    "routing": "Reserved canonical host-run key contains opaque handle, application launch ID and roster revision. Malformed or missing/replaced selections never reach legacy run APIs. Current context is captured/rechecked around discovery and observations.",
+    "progress": "Existing TeamProvisioningProgress DTO uses original Host admission time and actual Host observation time. Missing/invalid old timestamps refuse instead of using renderer Date.now. Pending native/context/human, unknown custody, partial failure and confirmed stopped outcomes remain distinct; no invented PID/logs or readiness.",
+    "subscription": "Existing onProvisioningProgress callback shares the Team observation loop. No parallel timer/queue or business-state cache. Long bootstrap remains observed after initial store polling. Timestamp-only observations deduplicate; new subscribers receive a current projection. Failed owners are isolated and late results after context change/unsubscribe are discarded.",
+    "readOrder": "Direct status reads and callback observations share launch read-order metadata in the existing TeamProductReadOrder. Newer reads or mutation boundaries invalidate older observations, including a late pre-stop ready result. The capture guard is checked again after the async capture returns.",
+    "cancel": "All target member generations are captured before the first stop. Cancellation does not reread into a replacement and continues independent original members after refusal. Physical release must be confirmed; failures retain unknown outcome. Later status reads do not interrupt already-dispatched cleanup.",
+    "aggregate": "Skipped members remain in the expected roster and need no native allocation; an otherwise ready Team reaches ready. Empty/all-skipped rosters cannot invent readiness. Aggregate admission timestamp survives polling/replay/reconstruction; older records use original claimed attempt time if aggregate time was never stored."
+  },
+  "checks": {
+    "hostJobId": "af3b6605385f4eb7c69a71edb54a5373",
+    "host": "238/238 PASS including strict Host test types, source timestamp retention/reconstruction, skip/empty roster and existing launch/restore/grant/recovery cases. Host source/dist unchanged through final verification.",
+    "finalFrontendJobId": "382cb6d8508f850c3613ceed3cca4968",
+    "frontend": "170/170 PASS across21 files, including15 progress cases and controlled-provider real NDJSON integration. Tests cover canonical routing, original timestamps, partial/human/unknown/stopped states, no legacy fallback, scoped cancellation, slow bootstrap, shared subscriptions, stale context and stop/read ordering races.",
+    "quality": "Root typecheck/build, affected fast lint, frozen source-file-size and Team provisioning architecture guards, whitespace PASS. Full lint/CI/release and other owning gates remain required.",
+    "sourceBoundary": "Working-tree hashes retained after managed checks; not a pre/post immutable full Main dependency closure or release qualification. Host source remained unchanged after its238-test pass. Final170-test frontend suite includes shared status/callback read ordering and cancellation-crossing regressions, with no production changes after it. Intermediate v1 is retained as historical evidence before the shared-read-order fix."
+  },
+  "integration": {
+    "scope": "Ordinary TeamsAPI -> production finite Main facade -> real NDJSON TeamHost/Runtime/filesystem/MCP with an explicitly controlled provider Session. It observes ready, canonical message/native event activity, scoped cancellation and cancelled status; legacy status/cancel/stop methods are not invoked.",
+    "limitations": "No actual SDK/CLI execution or vendor auth qualification in this new progress slice. No actual Electron Launch/Create/Resume acceptance. The earlier actual SDK/CLI model-mapping receipt retains its historical Host tuple and is not rewritten to claim this tuple. No full app Quit/Relaunch or packaging claim."
+  },
+  "remainingImmediate": [
+    "Authoritative dynamic roster/member settings with the original UI contracts; do not substitute an unchanged-roster no-op for full replacement.",
+    "Full configuration/capability/auth launch authority and ordinary replaceMembers -> launchTeam submission; create and selected Resume/relaunch.",
+    "Actual Electron E2E via existing dialogs, plus all other required P0-P8/M01-M19 parity and delivery gates."
+  ],
+  "delivery": "Isolated worktree; existing UI only. Draft PRs must link exact-head plan/contracts/matrix; no main/release merge. Stage2 excluded. No commit/push/PR/merge in this slice."
+}

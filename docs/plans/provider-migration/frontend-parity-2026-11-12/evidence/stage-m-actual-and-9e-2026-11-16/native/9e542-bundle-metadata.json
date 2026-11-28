@@ -1,0 +1,39 @@
+{
+  "schema": "recoverable-native-bundle-publication/v1",
+  "cohort": "9e542-completed-0017",
+  "source": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "archive": {
+    "path": "9e542-native-evidence.zip",
+    "bytes": 630348,
+    "blob": "c07f242d66ec9538f2f3f9a64e8c44758fd61d10",
+    "sha256": "0144dfbe4d92402a20c2e016eda15b06008e43c8e1c283fee9cf6973eebf2582"
+  },
+  "inventory": {
+    "path": "9e542-inventory.json",
+    "bytes": 10925,
+    "blob": "b2e5042cc00a6921789bd45815b0bb781b239df0",
+    "sha256": "4deba782c8e97cac97ce9b4446a71a19e0e2c43fb5520d6715c47014b17453d5"
+  },
+  "readme": {
+    "path": "9e542-README.md",
+    "bytes": 1177,
+    "blob": "7fb3e3c7cd7ed3dc9875804cddf15b82858ab97e",
+    "sha256": "69688873e9f6a978e1e7869e76bf2406e73cbce67ff7df8e796e4677fbfe99d3"
+  },
+  "checkpoint": {
+    "path": "checkpoint-20261116-0017.json",
+    "bytes": 21502,
+    "blob": "09fab681c2aa99962c1503656443cc428a583fe8",
+    "sha256": "afa91121dc690daf5555ef2dfb330ecc2ecf123478cd862809531d042953edd5"
+  },
+  "payloadFileCount": 46,
+  "payloadBytes": 2430767,
+  "outerMembers": 48,
+  "originalArchiveCount": 8,
+  "originalArtifactMembers": 66,
+  "allOriginalPayloadHashesMatched": true,
+  "fullOuterByteReadbackExact": true,
+  "outerCRCAllPass": true,
+  "originalZipCRCsChecked": true,
+  "signedUrlScanPassed": true
+}

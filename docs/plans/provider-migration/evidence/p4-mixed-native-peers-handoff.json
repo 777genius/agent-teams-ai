@@ -1,0 +1,62 @@
+{
+  "status": "Scoped six native peer routes plus selected history restore PASS; full P0-P8/M01-M19 INCOMPLETE",
+  "archive": "docs/plans/provider-migration/evidence/p4-mixed-native-peers-v1.tar.gz",
+  "archiveSha256": "9ba590559f4e3aa2d7f9917552fb72d8a5a28ef2e5a581fd7f6570e937138539",
+  "receiptSha256": "d257904a56389437be73cd3e09a0981856bb659ed1a718ed7539b97c8b40af46",
+  "jobId": "1dfd24a56a6c99666c4c92408fe95b94",
+  "hostSourceSha256": "ec9a0330a9f10d80c14a0efba38a38441789c5f0390661146f4ebdce321c7260",
+  "hostDistSha256": "40ab68c65dbfca676fe0e7429c0b3e7c0b7bd40f8faa3b11113d53ce347cb7f0",
+  "providerSha256": "3baf16ca2276d0a444be273fe6c36d5f71c0586a3ae521f01bfc22d8adff0204",
+  "scope": "One static mixed Team with actual pinned Claude SDK/CLI, Codex app-server and OpenCode, localhost scripted inference and actual tools/MCP/persistence.",
+  "facts": {
+    "directedPeerMessages": 6,
+    "directedPeerAcknowledgements": 6,
+    "humanPeerSummaries": 3,
+    "completedNativePeerCommands": 15,
+    "humanCommandsIncludingEarlierTwoTurns": 9,
+    "completedCanonicalTasks": 3,
+    "nativeInputsIncludingNotificationsAndPeerMessages": 25,
+    "modelRequests": [
+      23,
+      22,
+      22
+    ],
+    "modelFailures": [
+      [],
+      [],
+      []
+    ],
+    "hostExits": [
+      0,
+      0,
+      0
+    ],
+    "cleanupConfirmed": true,
+    "remainingCapturedRunProcesses": 0,
+    "routing": "Each exact inbox row is checked for original actor/to/text and exactly one occurrence. The matching completed receipt is bound to the actual captured native principal; each original outbox targets the intended member and current generation. All six native ACK inputs are observed by the intended receiving model and every Runtime input reaches succeeded terminal.",
+    "historyAndReplay": "All three providers restore selected A history across actual Host restart with same private native identity. Concurrent duplicate restores share one result. Second Host restart and replay of all9 human intents does not invoke a model/native submit."
+  },
+  "retainedFailure": {
+    "jobId": "fe47e202f0e24228f060aec0ef58a0c0",
+    "receiptSha256": "83021c94e8d43b3142c73e8d1f8e1798689e3ac78ac2cc77ff0e6fc3dfadd955",
+    "status": "INCOMPLETE retained; cleanup confirmed",
+    "finding": "All6 original messages committed. The first fixture tried to send additional user ACK summaries after its final summary on an already-completed board; canonical post-completion deduplication suppressed these. Host correctly refused to report exact delivery with a different receipt. The test oracle sealed on the failed native tool rather than inventing successful work.",
+    "correction": "Native ACKs now go to the original sending peer; the human gets only one summary per explicit new user input. Canonical board-completion/repeat guards are unchanged. No original successful mutation was replayed; successor used a fresh TEST root.",
+    "source": "Original failed inference/harness source retained in archive and its harness hash verified against original receipt."
+  },
+  "verification": {
+    "previousHostSuite": "226/226 for same production source/dist; no production changes were needed for peer scenario",
+    "frontend": "27/27 plus root TS7, affected lint and architecture guards retained in native-restore handoff",
+    "peerHarness": "Strict Host test-source typecheck passed; preceding4 model-oracle tests passed, actual revised peer paths qualified by this native run",
+    "archive": "Native histories, SQLite/WAL, profiles, original canonical receipts/outboxes/events, exact source/dist and immutable provider artifacts retained; only reproducible node_modules/.npm caches excluded. Archived source/dist pins independently recomputed.",
+    "owningGateLimit": "D aggregate check:changed failures and Host CMS adoption remain unresolved, as recorded in native-restore handoff."
+  },
+  "remaining": [
+    "Group and cross-Team messaging plus second Team",
+    "Ordinary Desktop launch/resume/messaging/approvals workflow",
+    "Complete10 MCP groups and dynamic Team/roster/archive/import",
+    "M13 full review/evidence/apply/undo",
+    "Settings/auth/attachments/compaction/subagent provenance and typed feeds",
+    "P7 fork-free startup and P8 OS packaging/packaged Quit/Relaunch"
+  ]
+}

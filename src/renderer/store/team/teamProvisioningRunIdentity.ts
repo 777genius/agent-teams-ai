@@ -1,3 +1,5 @@
+import { isHostTeamRunId } from '@features/agent-backend/contracts';
+
 import {
   getProvisioningProgressError,
   isTerminalProvisioningState,
@@ -82,6 +84,9 @@ export function projectProvisioningRuntimeAdoption(
   teamName: string,
   runId: string | null | undefined
 ): Partial<ProvisioningState> {
+  // A Host runtime observation cannot approve a separate provisioning revision.
+  // Its original status read publishes that pin only after the captured proof arrives.
+  if (runId && isHostTeamRunId(runId)) return {};
   if (!runId || state.currentRuntimeRunIdByTeam[teamName] === runId) return {};
   const previousRunId = state.currentProvisioningRunIdByTeam[teamName];
   const progress = state.provisioningRuns[runId];

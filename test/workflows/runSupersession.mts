@@ -17,6 +17,12 @@ export const SUPERSESSION_GROUP = `\${{ github.workflow }}-\${{ github.event_nam
 
 export const SUPERSESSION_CANCEL = `\${{ github.event_name == 'pull_request' || ${SUPERSEDABLE_PUSH} }}`;
 
+// Host Desktop moved off an obsolete aggregate that could retain the old group after cancellation.
+// Only its namespace changes; every original event identity and cancellation rule stays exact.
+export const HOST_EMULATED_SUPERSESSION_GROUP = SUPERSESSION_GROUP.replace(
+  '${{ github.workflow }}-', '${{ github.workflow }}-v2-'
+);
+
 // Every workflow file must be classified; a new workflow fails until its policy is chosen.
 export const RUN_SUPERSESSION_POLICY = {
   // Automatic checks: the canonical expression, verbatim.
@@ -29,12 +35,14 @@ export const RUN_SUPERSESSION_POLICY = {
     'custom-team-templates-desktop-e2e',
     'dependency-review',
     'electron-dev-profile-cross-platform',
+    'host-process-acceptance',
     'kanban-table-desktop-e2e',
     'landing-hetzner-release',
     'notification-channels-desktop-e2e',
     'opencode-desktop-e2e',
     'opencode-local-provider-app-launch',
     'opencode-v2-cold-dashboard-e2e',
+    'opencode-v2-stage1-preflight',
     'provider-real-runtime-e2e',
     'project-scoped-team-history-desktop-e2e',
     'prepare-updater-native-inputs',
@@ -49,6 +57,8 @@ export const RUN_SUPERSESSION_POLICY = {
     'windows-backfill-diagnostic',
     'windows-teammate-console-native',
   ],
+  // One closed migration exception, with the exact v2 group and canonical cancellation.
+  isolatedV2: ['host-emulated-acceptance'],
   // Canonical group plus isolated PR edits for the required check.
   ci: ['ci'],
   // PR-only packaged gate with isolated title/body edits.
@@ -65,6 +75,10 @@ export const RUN_SUPERSESSION_POLICY = {
     'release-publication-guard',
     'stage-existing-partial-draft',
   ],
+  // Native feature workflows preserve their existing distinct concurrency contracts:
+  // Host cancels same-PR/ref runs, while vendor reproduction has no workflow group
+  // and serializes only its separate archive-publication job.
+  native: ['native-prompt-suggestions-host', 'native-prompt-suggestions-vendor-once'],
   // Manual-only Mac updater runs, reusable workflows and ReviewRouter: no workflow-level group.
   unmanaged: [
     'opencode-packaged-e2e',

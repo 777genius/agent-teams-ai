@@ -26,11 +26,11 @@ export function createNotificationDestinationRenderer({
   onDesktopExcludedChange,
   onBudgetDesktopChange,
 }: DestinationRendererOptions) {
-  return (
+  return function renderNotificationDestinations(
     events: readonly DeliveryEvent[],
     eventEnabled: boolean,
     budgetNativeToast = false
-  ): React.JSX.Element => {
+  ): React.JSX.Element {
     const disabledCount = events.filter((event) => desktopDisabledEvents.includes(event)).length;
     const desktopEnabled = budgetNativeToast
       ? budgetDesktopEnabled

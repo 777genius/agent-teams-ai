@@ -75,6 +75,7 @@ function isSettingsSection(value: string | undefined): value is SettingsSection 
     value === 'appearance' ||
     value === 'connection' ||
     value === 'providers' ||
+    value === 'gatewayProviders' ||
     value === 'externalAgentConnection' ||
     value === 'notifications' ||
     value === 'reviewFlow' ||

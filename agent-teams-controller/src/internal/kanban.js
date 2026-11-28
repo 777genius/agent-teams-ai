@@ -61,8 +61,8 @@ function assertKanbanColumnAllowed(context, task, column, options = {}) {
   }
 }
 
-function getKanbanState(context) {
-  return kanbanStore.readKanbanState(context.paths, context.teamName);
+function getKanbanState(context, options) {
+  return kanbanStore.readKanbanState(context.paths, context.teamName, options);
 }
 
 function setKanbanColumn(context, taskId, column, options = {}) {
@@ -163,10 +163,11 @@ function isLeadSignoffFlow(context) {
  * Kanban state as agents and policy checks must see it: the raw state plus the EFFECTIVE flow,
  * prompt and where they come from. Never write this view back; writers use getKanbanState.
  */
-function getEffectiveKanbanState(context) {
+function getEffectiveKanbanState(context, options) {
+  const state = getKanbanState(context, options);
   const policy = getReviewFlowPolicy(context);
   return {
-    ...kanbanStore.withoutReviewFlowOverride(getKanbanState(context)),
+    ...kanbanStore.withoutReviewFlowOverride(state),
     reviewFlow: policy.reviewFlow,
     ...(policy.reviewFlowPrompt ? { reviewFlowPrompt: policy.reviewFlowPrompt } : {}),
     reviewFlowSource: policy.source,
@@ -177,6 +178,16 @@ function getEffectiveKanbanState(context) {
  * Desktop user action only. `settings` is a COMPLETE override unit ({ reviewFlow, reviewFlowPrompt? });
  * `null` removes the override so the team follows the global default again.
  */
+function getReviewFlowSettings(context) {
+  try {
+    const state = getKanbanState(context);
+    return { settings: state.reviewFlow === undefined ? null : reviewFlow.parseReviewFlowSettings(state) };
+  } catch (error) {
+    if (error.code === 'invalid_review_flow') return { settings: null, unreadable: true };
+    throw error;
+  }
+}
+
 function setReviewFlowSettings(context, settings) {
   const next = settings === null ? null : reviewFlow.parseReviewFlowSettings(settings);
   return withTeamBoardLock(context.paths, () => {
@@ -200,6 +211,7 @@ module.exports = {
   isHumanApprovalFlow,
   isLeadSignoffFlow,
   setReviewFlowSettings,
+  getReviewFlowSettings,
   clearKanban,
   listReviewers,
   addReviewer,

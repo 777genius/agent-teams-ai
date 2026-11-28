@@ -1,0 +1,201 @@
+{
+  "kind": "independent-static-source-and-prospective-R1-review",
+  "verdict": "APPROVE exact frozen one-path candidate and final R1; future actual-parent/publication/CI binding remains required",
+  "reviewer": "native_failures",
+  "noExecution": true,
+  "canonicalMutation": false,
+  "sourceBase": "3be1fb3ec43d5682aa2ca77a6af62e6fa27b597b",
+  "manifest": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/manifest.json",
+    "bytes": 5455,
+    "gitBlob": "94040726094cbfe74388d7aa21d294d46b4d36b0",
+    "sha256": "52945167f7c723059d0bd5dc8cfb998c00c43e470f736a2b7607bcd26ff86cbe"
+  },
+  "sourceBefore": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/before/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "bytes": 59419,
+    "gitBlob": "9b3a19c372ab3c52e28848b19f67c99fe8bab1f5",
+    "sha256": "f1835c824ecf0f977e86a2cf24203d7e742f96409a9b702a4aa245f71e2aeeae"
+  },
+  "sourceAfter": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/after/tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+    "bytes": 59461,
+    "gitBlob": "b1f0e95ce23ac56ee4ce400157be3316afddbd29",
+    "sha256": "0a23987a84677fc2fc20f44f565cd20150ee6108111dc5793d52bcc9e01ff436"
+  },
+  "patch": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/candidate.patch",
+    "bytes": 1166,
+    "gitBlob": "96da4bd5b4277e58629f2116be867ba801b8a296",
+    "sha256": "533e3ff2b76b4754b232218c1d2dd9ebf2fb3676887449ee48a1cfcdea5c8425"
+  },
+  "r1": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/prospective-r1.md",
+    "bytes": 11372,
+    "gitBlob": "3cc579c3e62d1bcea45a75c0f312bb13d0d22ed5",
+    "sha256": "366f86ae5e86be5dc6093aecce8e472e634e28a09a583551673f8c73799b4e46"
+  },
+  "authorAudit": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/audit.json",
+    "bytes": 15308,
+    "gitBlob": "828c841c6df604871a97cbd96861112a04cb762c",
+    "sha256": "57166c5e1d70d5a6046961e639e94922ff206246abc9ed69d7f4439e44c0b8e3"
+  },
+  "preservationProof": {
+    "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/preservation-proof.json",
+    "bytes": 1132,
+    "gitBlob": "13f7263c3fa8dc6b957bffb61c041d0ea4a386d3",
+    "sha256": "a276262b8c4aa1e9f56e9b5763f99310bb3c61d2070df6cee1e37b1255aa30d6"
+  },
+  "independentOriginalEvidenceAudit": {
+    "path": "/tmp/migration-evidence-20261116/native/3be1-process-win-x64-133531812580/audit.json",
+    "bytes": 68342,
+    "gitBlob": "48d39f53c4fa57187dc0882a364d50845678a31f",
+    "sha256": "63cafb49d7e5a4bbbff841e1b79113edda725c7d779e11d73ca55b557afba773"
+  },
+  "referenceReadbacks": [
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/host-emulated-acceptance.yml",
+      "bytes": 106650,
+      "gitBlob": "a1513210012356a5178620b1f370bd1daf0de9d9",
+      "sha256": "56158f6aac71a16f66959bd022d979860391bb237eacc31ab0571239b4835ca1"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeEmulatedProviderGate.ts",
+      "bytes": 15213,
+      "gitBlob": "31a6c30bd3962500e20e99786353cb9ec418adaf",
+      "sha256": "5ecad2b6f6c7f5819e0e18430b5625a9a86ef1120e7e99f595dbd3ad73126bbd"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeFixture.cpp",
+      "bytes": 19440,
+      "gitBlob": "8fc74b25d5334395b455ee189e333b53ec9e4d36",
+      "sha256": "45892c8dde062cbb34f09c5187614a1db237bbff8779edd03bf7b94f281247fc"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeGateContext.raw.json",
+      "bytes": 7631,
+      "gitBlob": "ba7c12aacd49c2ddcb3a3577da866f2ad4900de4",
+      "sha256": "bfc65e765d12e43b8828623476f74b41c5227a19e8312bd7d0cb7e717b3a7af4"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/nativeGateContext.ts",
+      "bytes": 7278,
+      "gitBlob": "27c6da3bac59ac276c40e79f7c4e1c548adb9d31",
+      "sha256": "7e9096550ed0b90589a91978f8621572424d5b6c24137c13c641f3dde7897200"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/tsconfig.json",
+      "bytes": 557,
+      "gitBlob": "4936675ad8af5a71d8c001a414836e90250a5daf",
+      "sha256": "9692a10f0691d73cd929940768cd38b084fce81f705b9561d8b1af2ba9a2daef"
+    },
+    {
+      "path": "/tmp/migration-evidence-20261116/migration-scope/3be1-opencode-cleanup-r2/reference/tsconfig.retained-host.json",
+      "bytes": 393,
+      "gitBlob": "905f1a1489f3b37d651a9984169b0321c9915a15",
+      "sha256": "c39028ec42fec7402ec1260cb5ed0fca78762d4700847658d9eb95f9e8adbdb7"
+    }
+  ],
+  "exactPreservation": {
+    "singleChangedWindow": "original lines316-319; four original physical lines replaced by four natural statements",
+    "allOtherSourceBytesEqual": true,
+    "fullForwardAndInverseExact": true,
+    "fullUnifiedPatchExact": true,
+    "physicalLinesBefore": 800,
+    "physicalLinesAfter": 800,
+    "deltaBytes": 42,
+    "newFiles": 0,
+    "newTests": 0,
+    "workflowChanges": 0,
+    "rulesOrCapsChanged": false
+  },
+  "semanticFindings": [
+    {
+      "item": "Pre-wait custody state",
+      "finding": "custodyConfirmed evaluates the original root/witness/resumed/stopped/drained/released conjunction at the same original point. Later asynchronous acknowledgement changes cannot promote a previously false conjunction."
+    },
+    {
+      "item": "Exact captured HANDLE",
+      "finding": "Original Scenario235-237 captures the witness using the prepared root PID and FILETIME before resume. Context27c6 keeps one actor and one held HANDLE; the native8fc actor validates birth and outer Job, grants only synchronization/query rights and never reopens the PID for W."
+    },
+    {
+      "item": "Existing wait semantics",
+      "finding": "Context142-150 memoizes the same wait Promise; one W is sent at most once. Existing independent10000ms timeout wrappers cover write and exit awaits. Native actor154-186 uses the unchanged15000ms finite nonvendor wait and returns0 only for WAIT_OBJECT_0."
+    },
+    {
+      "item": "Strict missing/failed observation",
+      "finding": "Optional witness access prevents a type dereference without authorizing success: undefined, null or nonzero cannot equal0. A rejected/throwing wait remains an error; originalHandleAbsent is set only after successful strict0 observation."
+    },
+    {
+      "item": "Successful path unchanged",
+      "finding": "Every successful cleanup still needs both the same pre-wait custody conjunction and the original root-HANDLE observation. The normal path keeps one original wait and no new actor/query/signal. A memoized prior wait is reused."
+    },
+    {
+      "item": "Captured pre-resume failure",
+      "finding": "For original slot2, the wait becomes reachable despite resumed=false. If it returns0, handleAbsent can become true but custodyConfirmed remains false, preserving the original composite failure. The candidate cannot make the original readiness failure or scenario PASS."
+    },
+    {
+      "item": "Failure ordering disclosed",
+      "finding": "If wait fails, the later composite assertion is not reached. This changes cleanup error selection when both faults coexist; the original business/readiness failure remains first in the unchanged outer aggregate. The final R1 explicitly discloses this rather than claiming all old assertions still execute."
+    },
+    {
+      "item": "Actual retained evidence",
+      "finding": "Original slot0 absence was previously proved. Slot1 early logfalse precedes wait and finaltrue follows it. Slot2 original finalfalse is an unperformed wait after the resumed conjunction failed, not proof that a wait failed or a process survived. No historical slot2 absence is inferred."
+    },
+    {
+      "item": "Additional cost",
+      "finding": "The previously skipped failure path now performs the existing wait and may consume its existing finite timeout intervals. No zero-overhead claim or expanded deadline is made."
+    },
+    {
+      "item": "No broader acceptance transfer",
+      "finding": "Original15s readiness/25ms poll, source selection, Stop/drain/release, Host shutdown, outer sentinel/controller, first-refusal retention, observer cleanup, source pin checks and all other lines are unchanged."
+    }
+  ],
+  "caseReasoning": [
+    {
+      "case": "pre-wait conjunction true; witness0",
+      "result": "Same successful requirements; handleAbsent=true then unchanged assertion succeeds."
+    },
+    {
+      "case": "pre-wait conjunction false; witness0",
+      "result": "Original HANDLE fact may now be recorded, but saved false conjunction still fails."
+    },
+    {
+      "case": "pre-wait false later becomes true during await",
+      "result": "Saved false still fails; no timing-based admission widening."
+    },
+    {
+      "case": "witness absent or returns null/nonzero",
+      "result": "Strict0 assertion fails; no handleAbsent promotion."
+    },
+    {
+      "case": "witness wait rejects or throws",
+      "result": "Cleanup error retained; no later composite execution claimed."
+    },
+    {
+      "case": "witness already awaited",
+      "result": "Same memoized Promise, no additional W or new target."
+    }
+  ],
+  "typingAndExistingRoutes": {
+    "sourceBinding": "Only existing local const plus optional access; no self-reference/inference cycle or new imported symbol. Static review is not a compiler result.",
+    "lint": "Current Host workflowa1513210012356a5178620b1f370bd1daf0de9d9 original pnpm lint:fast:files line115 includes this exact source at120; no operand change needed.",
+    "types": "Retained-host905 includes Gate31a6, whose unchanged direct import reaches Scenario. General broker493 explicitly excludes Scenario and is not independently claimed as coverage.",
+    "native": "Original source A/B acceptance remains Host Node on both Windows architectures. The separate original Windows Job/control acceptance remains Host Node and Electron Node on both architectures.",
+    "futureValidation": "Only existing complete original CI/type/lint/native commands; no new RED-only cycle, mirrored fixture, workflow or local execution."
+  },
+  "r1Review": {
+    "completeFinalTextRead": true,
+    "onlyLateProseChange": "Qualification paragraph now explicitly separates existing A/B Host-Node route from native Job/control Host+Electron-Node route. Source and patch unchanged.",
+    "actualParentPending": true,
+    "requiresFreshRootLeaseAndWholePreservation": true,
+    "requiresDocumentaryPublicationAndIndependentPublishedR1ReadbackBeforeSourceChild": true,
+    "actualCIQualificationPending": true
+  },
+  "remainingBoundaries": [
+    "This is a source-only R2 of the exact inert candidate, not actual branch publication or current-source CI success.",
+    "It does not determine original readiness latency, change expiry, qualify historical HANDLE absence or complete P08/P09/P10/P11/vendor/release gates.",
+    "No project/native/provider/GUI code, compiler/test/lint, Git/index/ref or Actions mutation was executed by this reviewer."
+  ]
+}

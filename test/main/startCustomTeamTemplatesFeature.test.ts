@@ -75,6 +75,19 @@ beforeEach(() => {
 });
 
 describe('startCustomTeamTemplatesFeature', () => {
+  it('preserves the captured owner-routed source reader through actual Main startup', () => {
+    const snapshotReader = {
+      readSnapshot: vi.fn(async (sourceTeamName: string) => ({
+        status: 'sourceUnavailable' as const, sourceTeamName,
+      })),
+    };
+    startCustomTeamTemplatesFeature(internalStorage(), snapshotReader);
+    expect(hoisted.createCustomTeamTemplatesFeature).toHaveBeenCalledExactlyOnceWith({
+      backend: BACKEND, snapshotReader,
+    });
+    expectExactlyChannels(registeredChannels());
+  });
+
   it('composes over the supplied storage backend and registers the IPC bridge', () => {
     const startup = startCustomTeamTemplatesFeature(internalStorage());
 

@@ -1,0 +1,15 @@
+{
+  "head": "3184acb5f000c2ce2e368ff9babc6105c5adc5c1",
+  "tree": "2b8e39d1f3edf063d98eda76d3531156aa8e386c",
+  "parents": [
+    "a4c32a3247b6c39731e4ec12a257b894eaeac887"
+  ],
+  "oneChangedPath": "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+  "identity": {
+    "bytes": 55362,
+    "blob": "c30eda98e0860599d6e7026ba73e8fdf80d909d4",
+    "sha256": "a3a221384b5fe822cb15d7005b7697f6dbaf55bf860b41839b2d544c9bb25f08"
+  },
+  "completeByteReadback": true,
+  "other9555LeavesExactByReviewedTree": true
+}

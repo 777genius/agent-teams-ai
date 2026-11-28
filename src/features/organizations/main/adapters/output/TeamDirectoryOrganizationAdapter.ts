@@ -39,7 +39,10 @@ export class TeamDirectoryOrganizationAdapter implements OrganizationsTeamDirect
    * logical team, so one team is one candidate. It defaults to "no folding".
    */
   constructor(
-    private readonly teamDataService: TeamDataService,
+    private readonly teamDataService: Pick<
+      TeamDataService,
+      'listTeams' | 'getAllTasks' | 'listAliveProcessTeams'
+    >,
     private readonly projectTeams: (teams: TeamSummary[]) => Promise<TeamSummary[]> = (teams) =>
       Promise.resolve(teams)
   ) {}

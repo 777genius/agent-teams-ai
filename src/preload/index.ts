@@ -1,3 +1,4 @@
+import { createAgentBackendBridge } from '@features/agent-backend/preload';
 import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
@@ -8,6 +9,7 @@ import { createExternalAgentConnectionBridge } from '@features/external-agent-co
 import { createGatewayProviderBridge } from '@features/gateway-provider/preload';
 import { createMemberLogStreamBridge } from '@features/member-log-stream/preload';
 import { createMemberWorkSyncBridge } from '@features/member-work-sync/preload';
+import { createNativeNextPromptBridge } from '@features/native-prompt-suggestions/preload';
 import { createNotificationChannelsBridge } from '@features/notification-channels/preload';
 import { createOrganizationsBridge } from '@features/organizations/preload';
 import { createProjectFolderBridge } from '@features/project-folder/preload';
@@ -390,6 +392,7 @@ import type {
   TeamClaudeLogsQuery,
   TeamClaudeLogsResponse,
   TeamCreateConfigRequest,
+  TeamCreateConfigResponse,
   TeamCreateRequest,
   TeamCreateResponse,
   TeamForceStopResult,
@@ -523,6 +526,7 @@ ipcRenderer.on(
 // =============================================================================
 
 const electronAPI: ElectronAPI = {
+  agentBackend: createAgentBackendBridge(ipcRenderer, ipcRenderer, ipcRenderer, ipcRenderer),
   externalAgentConnection: createExternalAgentConnectionBridge(ipcRenderer),
   appCloseCoordination: createAppCloseCoordinationBridge(ipcRenderer),
   ...createCodexAccountBridge({
@@ -542,6 +546,7 @@ const electronAPI: ElectronAPI = {
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),
   memberWorkSync: createMemberWorkSyncBridge(ipcRenderer),
   memberLogStream: createMemberLogStreamBridge(),
+  nativePromptSuggestions: createNativeNextPromptBridge(ipcRenderer),
   organizations: createOrganizationsBridge(ipcRenderer),
   terminalWorkspace: createTerminalWorkspaceBridge(ipcRenderer),
   tokenUsage: createTokenUsageBridge(ipcRenderer),
@@ -940,7 +945,8 @@ const electronAPI: ElectronAPI = {
       selectedModels?: string[],
       limitContext?: boolean,
       modelVerificationMode?: TeamProvisioningModelVerificationMode,
-      selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+      selectedModelChecks?: TeamProvisioningModelCheckRequest[],
+      context?: Parameters<ElectronAPI['teams']['prepareProvisioning']>[7]
     ) => {
       return invokeIpcWithResult<TeamProvisioningPrepareResult>(
         TEAM_PREPARE_PROVISIONING,
@@ -950,7 +956,8 @@ const electronAPI: ElectronAPI = {
         selectedModels,
         limitContext,
         modelVerificationMode,
-        selectedModelChecks
+        selectedModelChecks,
+        ...(context === undefined ? [] : [context])
       );
     },
     getWorktreeGitStatus: async (projectPath: string) => {
@@ -971,6 +978,7 @@ const electronAPI: ElectronAPI = {
     createTeam: async (request: TeamCreateRequest) => {
       return invokeIpcWithResult<TeamCreateResponse>(TEAM_CREATE, request);
     },
+    createTeamResult: (request: TeamCreateRequest) => ipcRenderer.invoke(TEAM_CREATE, request),
     launchTeam: async (request: TeamLaunchRequest) => {
       return invokeIpcWithResult<TeamLaunchResponse>(TEAM_LAUNCH, request);
     },
@@ -1084,8 +1092,10 @@ const electronAPI: ElectronAPI = {
       );
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
-      return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);
+      return invokeIpcWithResult<void | TeamCreateConfigResponse>(TEAM_CREATE_CONFIG, request);
     },
+    createConfigResult: (request: TeamCreateConfigRequest) =>
+      ipcRenderer.invoke(TEAM_CREATE_CONFIG, request),
     getMemberLogs: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<MemberLogSummary[]>(TEAM_GET_MEMBER_LOGS, teamName, memberName);
     },
@@ -1198,7 +1208,13 @@ const electronAPI: ElectronAPI = {
         teamName
       );
     },
-    restartMember: async (teamName: string, memberName: string, expectedSecondary?: boolean) => {
+    restartMember: async (
+      teamName: string,
+      memberName: string,
+      expectedSecondary?: boolean,
+      captured?: unknown
+    ) => {
+      if (captured !== undefined) throw new Error('Captured Host retry requires the Host adapter');
       return parseTeamMemberRestartResult(
         await invokeIpcWithResult<unknown>(
           TEAM_RESTART_MEMBER,
@@ -1788,8 +1804,10 @@ const electronAPI: ElectronAPI = {
     install: async (options?: OpenCodeRuntimeInstallOptions): Promise<OpenCodeRuntimeStatus> => {
       return invokeIpcWithResult<OpenCodeRuntimeStatus>(OPENCODE_RUNTIME_INSTALL, options);
     },
-    invalidateStatus: async (): Promise<void> => {
-      return invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS);
+    invalidateStatus: async (mode?: 'cache-only'): Promise<void> => {
+      return mode === undefined
+        ? invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS)
+        : invokeIpcWithResult<void>(OPENCODE_RUNTIME_INVALIDATE_STATUS, mode);
     },
     onProgress: (callback: (event: unknown, data: OpenCodeRuntimeStatus) => void): (() => void) => {
       ipcRenderer.on(

@@ -15,9 +15,14 @@
  */
 
 import { createLogger } from '@shared/utils/logger';
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 
 import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
+import {
+  captureDesktopSkills,
+  registerDesktopAgentBackend,
+  removeDesktopAgentBackendHandlers,
+} from './agentBackend';
 import {
   initializeCliInstallerHandlers,
   registerCliInstallerHandlers,
@@ -94,6 +99,8 @@ import { registerUtilityHandlers, removeUtilityHandlers } from './utility';
 import { registerValidationHandlers, removeValidationHandlers } from './validation';
 import { registerWindowHandlers, removeWindowHandlers } from './window';
 
+export { getDesktopProviderManagementPort, shutdownDesktopAgentBackend } from './agentBackend';
+
 import type {
   BoardTaskActivityDetailService,
   BoardTaskActivityService,
@@ -133,8 +140,32 @@ import type { CrossTeamService } from '../services/team/CrossTeamService';
 import type { LaunchIoGovernor } from '../services/team/LaunchIoGovernor';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { ResolveOpenCodeInputDeclaration } from '@features/agent-attachments';
+import type {
+  NativeNextPromptCandidate,
+  NativeNextPromptProvider,
+} from '@features/native-prompt-suggestions/contracts';
 
 const logger = createLogger('IPC:handlers');
+
+/** Independent connection must be registered before legacy runtime initialization can await. */
+export function initializeAgentBackendConnection(
+  registry: Pick<ServiceContextRegistry, 'getActiveContextId' | 'captureActiveSelection'>,
+  selection: {
+    getMainWindow: () => import('electron').BrowserWindow | null;
+    rendererIndexPath: string;
+    publishHttpNativePromptSuggestion?: (candidate: NativeNextPromptCandidate) => void;
+    nativeNextPromptProviders?: readonly NativeNextPromptProvider[];
+  }
+): void {
+  registerDesktopAgentBackend({
+    ipc: ipcMain,
+    ...selection,
+    getActiveContextId: () => registry.getActiveContextId(),
+    captureActiveSelection: () => registry.captureActiveSelection(),
+    userDataPath: app.getPath('userData'),
+    env: process.env,
+  });
+}
 
 /**
  * Initializes IPC handlers with service registry.
@@ -271,7 +302,12 @@ export function initializeIpcHandlers(
       apiKeyService,
       mcpHealthDiagnosticsService
     );
-    initializeSkillsHandlers(skillsCatalogService, skillsMutationService, skillsWatcherService);
+    initializeSkillsHandlers(
+      skillsCatalogService,
+      skillsMutationService,
+      skillsWatcherService,
+      captureDesktopSkills
+    );
   }
   if (crossTeamService) {
     initializeCrossTeamHandlers(crossTeamService);
@@ -335,6 +371,7 @@ export function initializeIpcHandlers(
  * Should be called when shutting down.
  */
 export function removeIpcHandlers(): void {
+  removeDesktopAgentBackendHandlers();
   removeProjectHandlers(ipcMain);
   removeSessionHandlers(ipcMain);
   removeSearchHandlers(ipcMain);

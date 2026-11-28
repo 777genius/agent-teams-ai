@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
@@ -268,6 +270,26 @@ describe('TeamProvisioningService pre-ready live messages', () => {
     hoisted.files.clear();
     hoisted.appendSentMessage.mockClear();
     hoisted.sendInboxMessage.mockClear();
+  });
+
+  it('does not emit a phantom member-spawn from the echoed Main hydration prompt', () => {
+    const service = new TeamProvisioningService();
+    const teamName = 'test-retained-original';
+    seedConfig(teamName);
+    const events: TeamChangeEvent[] = [];
+    service.setTeamChangeEmitter((event) => events.push(event));
+    const run = attachRun(service, teamName);
+    // Use the same Main-built LF hydration on every checkout platform.
+    const prompt = readFileSync(
+      'tools/owned-process-broker/fixtures/retainedLegacyHydrationPrompt.txt',
+      'utf8'
+    ).replace(/\r\n/g, '\n');
+    callHandleStreamJsonMessage(service, run, {
+      type: 'user',
+      message: { role: 'user', content: prompt },
+    });
+    expect([...run.memberSpawnStatuses.keys()]).toEqual([]);
+    expect(events.filter((event) => event.type === 'member-spawn')).toEqual([]);
   });
 
   it('pre-ready assistant text is added to liveLeadProcessMessages', () => {

@@ -1,3 +1,4 @@
+import { isTaskReviewDecisionEventType } from '@shared/utils/taskHistory';
 import { isTeamTaskActivelyWorked } from '@shared/utils/teamTaskState';
 
 import type { TeamTaskWithKanban } from '@shared/types';
@@ -752,10 +753,7 @@ function getCurrentReviewTimerAnchorEvent(
 
     if (
       event.type === 'review_requested' ||
-      event.type === 'review_approved' ||
-      event.type === 'review_completed' ||
-      event.type === 'human_approved' ||
-      event.type === 'review_changes_requested' ||
+      isTaskReviewDecisionEventType(event.type) ||
       event.type === 'task_created' ||
       (event.type === 'status_changed' &&
         (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))
@@ -776,10 +774,7 @@ function getCurrentReviewCycleStartedAtMs(task: TeamTaskWithKanban, fallbackMs: 
       return startedAtMs > 0 ? startedAtMs : fallbackMs;
     }
     if (
-      event.type === 'review_approved' ||
-      event.type === 'review_completed' ||
-      event.type === 'human_approved' ||
-      event.type === 'review_changes_requested' ||
+      isTaskReviewDecisionEventType(event.type) ||
       event.type === 'task_created' ||
       (event.type === 'status_changed' &&
         (event.to === 'in_progress' || event.to === 'pending' || event.to === 'deleted'))

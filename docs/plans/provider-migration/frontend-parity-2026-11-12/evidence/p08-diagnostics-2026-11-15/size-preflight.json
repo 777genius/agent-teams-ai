@@ -1,0 +1,122 @@
+{
+  "sourceHead": "e935176e908d99c73de18964aac02fc5f86e3497",
+  "sourceTree": "a0fa8b21dbff5efc3656bf6ec9d51117ed2be59b",
+  "clean": true,
+  "nodePath": "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "selectedLeaves": [
+    {
+      "path": "tools/owned-process-broker/nativeWindowsAppGate.mjs",
+      "blob": "75b360aa8d689007c21b27ce89554ba078a1061e",
+      "bytes": 33413,
+      "sha256": "51b01d76bc961ee519dd29e0d11bd0e28ce7a7cc802302f303cd5fec24ed6fa7"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "blob": "651e505c54c3875e1436e5ecacd725fd827c6027",
+      "bytes": 23607,
+      "sha256": "7c15ac3d896d3a6ea5578d8636dfc141d5d0804c78d4b19b5af1dc2a2d73aaaf"
+    },
+    {
+      "path": ".github/workflows/host-emulated-acceptance.yml",
+      "blob": "c956c196e4208c11b421b1eb5b68d4850ac50d43",
+      "bytes": 96492,
+      "sha256": "a34e37d28c377e2f76bd1fe774cd203fca95daf2bed7ad412ebec48536fb347e"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "bytes": 25052,
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/platform.mjs",
+      "blob": "71d5629149e8f499a45b54a99922145ee3cae09e",
+      "bytes": 12335,
+      "sha256": "32a6424daf52342445fd11febc7ea5d59fb1940209a677f063e5fcd5e65c8f2e"
+    },
+    {
+      "path": "scripts/e2e/opencode-diagnostics/packaged.mjs",
+      "blob": "7da83c7a4e631f7599fc57861f19e14629db6036",
+      "bytes": 27780,
+      "sha256": "5fd9116cb656ce7804dc3253decb3f386e2c17feda57cc40586cc6e0df6fd8d5"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+      "blob": "5c8d6a2ee1555257a4f83fa074a4e0de6549b14c",
+      "bytes": 17208,
+      "sha256": "1b42dba0f093e95ca716dda19ec8416cf59a964c35b388618a77886726e04aff"
+    },
+    {
+      "path": "tsconfig.legacy-agent-host-scripts.json",
+      "blob": "538fdfe23d7aa6bac6f18a483d5d364aef644a39",
+      "bytes": 646,
+      "sha256": "7aaf5b4f155ab3e350a387ad4687f6d4c1a9ad21e428aa4a74f7d6bd7a555306"
+    },
+    {
+      "path": "eslint.fast.config.js",
+      "blob": "8a6d66ce8d2112b0891f6fc2f78a08c103b4ebfb",
+      "bytes": 7268,
+      "sha256": "f9d2fc0a4724b04fa231487a1bf0b4e470809d3f79e01315bee4ba236f161c88"
+    }
+  ],
+  "selectedDependencyInputs": [
+    {
+      "path": "package.json",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/package.json",
+      "bytes": 26839,
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/pnpm-lock.yaml",
+      "bytes": 956809,
+      "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+    },
+    {
+      "path": "vitest.config.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/vitest.config.ts",
+      "bytes": 1187,
+      "sha256": "877867b6b52de7919946cc62501a18eb39e78d689d10128011151cf83cd2edbc"
+    },
+    {
+      "path": "test/setup.ts",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/test/setup.ts",
+      "bytes": 5297,
+      "sha256": "cb945908ebb8f9aecec7eb6eca354a9fe6a34b2aec1994ac7463d56dfd5f0d3b"
+    },
+    {
+      "path": "node_modules/.pnpm/lock.yaml",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/lock.yaml",
+      "bytes": 956809,
+      "sha256": "8ac1ad56c4856ade77cc3747bfc9ac6feb93def40b280b972fd7e0aeab2356b5"
+    },
+    {
+      "path": "node_modules/.modules.yaml",
+      "realpath": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e/node_modules/.modules.yaml",
+      "bytes": 165605,
+      "sha256": "788c92a6d710a140815ca93fbe3cc4cea575d9bab25083babfe873dc433745e1"
+    },
+    {
+      "path": "node_modules/vitest/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/package.json",
+      "bytes": 5029,
+      "sha256": "86c8529110b6690e7ed95e243c867ee9b3118ac91d8ae8857d22f228666252c4"
+    },
+    {
+      "path": "node_modules/vitest/vitest.mjs",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/vitest@3.2.6_@types+debug@4.1.12_@types+node@24.12.4_happy-dom@21.0.4_jiti@1.21.7_sass@_7767bf0bd3868e54c8c8c0f16b6140e1/node_modules/vitest/vitest.mjs",
+      "bytes": 43,
+      "sha256": "39db22f579acf5639bbb17a261408debbde03f4692c0c439e77e7f13aeba74d6"
+    },
+    {
+      "path": "node_modules/@typescript/native/package.json",
+      "realpath": "/workspace/scratch/c714f5bce554/agent-teams-parity/node_modules/.pnpm/typescript@7.0.2/node_modules/typescript/package.json",
+      "bytes": 3087,
+      "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+    }
+  ],
+  "nativeProcessCapturePresent": false,
+  "dependencyLimit": "Same nine selected frozen inputs; not a complete package payload census."
+}

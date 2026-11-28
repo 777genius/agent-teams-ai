@@ -11,6 +11,7 @@ import type {
   GlobalTask,
   TaskComment,
   TeamMessageNotificationData,
+  TeamReadUnavailable,
   TeamSummary,
 } from '../../../src/shared/types';
 
@@ -97,6 +98,41 @@ describe('teamGlobalTaskNotifications', () => {
     hoisted.showMessageNotification.mockClear();
     resetGlobalTaskNotificationTrackerForTests();
   });
+
+
+  for (const kind of ['team', 'owner'] as const) {
+    it(`seeds a recovered ${kind} without suppressing healthy Task notifications`, () => {
+      const healthy = createTask({ id: 'healthy', teamName: 'team-b', teamDisplayName: 'Team B',
+        ownerResourceRef: 'TEST-owner-b' });
+      const recovered = createTask({ id: 'historical', status: 'completed', needsClarification: 'user',
+        blockedBy: ['old-b', 'old-a', 'old-b', ''], ownerResourceRef: 'TEST-owner-a' });
+      const unavailable: TeamReadUnavailable[] = [kind === 'team'
+        ? { kind, teamName: recovered.teamName, displayName: recovered.teamDisplayName,
+          code: 'busy', outcome: 'not-dispatched' }
+        : { kind, ownerResourceRef: 'TEST-owner-a', code: 'unavailable', outcome: 'unknown' }];
+      const config = createConfig();
+      processGlobalTaskNotifications({ oldTasks: [], newTasks: [healthy], appConfig: config,
+        teamByName: {}, isInitialFetch: true });
+      const finished = { ...healthy, status: 'completed' as const };
+      const created = { ...healthy, id: 'new-healthy-task' };
+      const current = [finished, created, recovered];
+      processGlobalTaskNotifications({ oldTasks: [healthy], newTasks: current,
+        appConfig: config, teamByName: {}, isInitialFetch: false, previouslyUnavailable: unavailable });
+      expect(sentNotifications().filter((row) => row.teamName === recovered.teamName)).toEqual([]);
+      expect(sentNotifications().filter((row) => row.teamName === healthy.teamName).map((row) => row.teamEventType))
+        .toEqual(['task_status_change', 'task_created']);
+      const next = [...current, { ...recovered, id: 'new-recovered-task', status: 'pending' as const,
+        needsClarification: undefined, blockedBy: [] }];
+      processGlobalTaskNotifications({ oldTasks: current, newTasks: next,
+        appConfig: config, teamByName: {}, isInitialFetch: false });
+      processGlobalTaskNotifications({ oldTasks: next, newTasks: next,
+        appConfig: config, teamByName: {}, isInitialFetch: false });
+      expect(sentNotifications().filter((row) => row.teamName === recovered.teamName)).toMatchObject([
+        { teamEventType: 'task_created', target: { taskId: 'new-recovered-task' } },
+      ]);
+      expect(sentNotifications().filter((row) => row.teamName === recovered.teamName)).toHaveLength(1);
+    });
+  }
 
   it('tracks the first global tasks fetch as a resettable module flag', () => {
     expect(consumeFirstGlobalTasksFetchFlag()).toBe(true);

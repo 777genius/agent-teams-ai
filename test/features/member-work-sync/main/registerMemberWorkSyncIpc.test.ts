@@ -48,6 +48,10 @@ function makeIpcMain() {
 
 function makeFeature(): MemberWorkSyncFeatureFacade {
   return {
+    captureNativeStopFence: () => {
+      throw new Error('Native Stop is not an IPC WorkSync operation');
+    },
+    withStoppedImportFence: (_teamName, read) => read(),
     startBackground: vi.fn(),
     getStatus: vi.fn(async (request) => ({
       teamName: request.teamName,
@@ -217,39 +221,51 @@ describe('registerMemberWorkSyncIpc', () => {
     const report = handlers.get(MEMBER_WORK_SYNC_REPORT);
 
     await expect(
-      report?.({}, {
-        teamName: 'team-a',
-        memberName: 'bob',
-        state: 'still_working',
-        agendaFingerprint: 'agenda:v1:test',
-        taskIds: [1],
-      })
+      report?.(
+        {},
+        {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:test',
+          taskIds: [1],
+        }
+      )
     ).rejects.toThrow(/taskIds must be an array of strings/i);
     await expect(
-      report?.({}, {
-        teamName: 'team-a',
-        memberName: 'bob',
-        state: 'done',
-        agendaFingerprint: 'agenda:v1:test',
-      })
+      report?.(
+        {},
+        {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'done',
+          agendaFingerprint: 'agenda:v1:test',
+        }
+      )
     ).rejects.toThrow(/state must be still_working, blocked, or caught_up/i);
     await expect(
-      report?.({}, {
-        teamName: 'team-a',
-        memberName: 'bob',
-        state: 'still_working',
-        agendaFingerprint: 'agenda:v1:test',
-        note: 12,
-      })
+      report?.(
+        {},
+        {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:test',
+          note: 12,
+        }
+      )
     ).rejects.toThrow(/note must be a string/i);
     await expect(
-      report?.({}, {
-        teamName: 'team-a',
-        memberName: 'bob',
-        state: 'still_working',
-        agendaFingerprint: 'agenda:v1:test',
-        source: 'hook',
-      })
+      report?.(
+        {},
+        {
+          teamName: 'team-a',
+          memberName: 'bob',
+          state: 'still_working',
+          agendaFingerprint: 'agenda:v1:test',
+          source: 'hook',
+        }
+      )
     ).rejects.toThrow(/source must be mcp, app, or test/i);
     expect(feature.report).not.toHaveBeenCalled();
   });
@@ -326,7 +342,10 @@ describe('registerMemberWorkSyncIpc', () => {
     registerMemberWorkSyncIpc(ipcMain, feature);
 
     await expect(
-      handlers.get(MEMBER_WORK_SYNC_STOP)?.({}, { teamName: 'team-a', memberName: 'bob', reason: 12 })
+      handlers.get(MEMBER_WORK_SYNC_STOP)?.(
+        {},
+        { teamName: 'team-a', memberName: 'bob', reason: 12 }
+      )
     ).rejects.toThrow(/reason must be a string/i);
     expect(feature.stopAutoResume).not.toHaveBeenCalled();
   });

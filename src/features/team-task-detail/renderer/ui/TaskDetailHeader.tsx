@@ -289,7 +289,7 @@ export const TaskDetailHeader = ({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-h-8 min-w-0 items-center gap-2">
           {canReassign && onOwnerChange ? (
             <MemberSelect
               members={members}
@@ -360,7 +360,7 @@ export const TaskDetailHeader = ({
             variant="ghost"
             size="sm"
             className="h-6 text-xs"
-            disabled={!sessionController.isOwner}
+            disabled={!sessionController.canResolveClarification}
             onClick={actions.markClarificationResolved}
           >
             {t('taskDetail.actions.markResolved')}

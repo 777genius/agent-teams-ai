@@ -1,0 +1,5 @@
+$ node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json
+Killed
+/workspace/scratch/391e21b06e24/reconcile-base0543/packages/legacy-agent-host:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @agent-teams/legacy-agent-host@0.1.0 typecheck:test: `node node_modules/@typescript/native/bin/tsc -p tsconfig.test.json`
+Exit status 137

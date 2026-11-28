@@ -1,0 +1,1256 @@
+{
+  "schemaVersion": 1,
+  "kind": "recoverable-original-desktop-ui-evidence-bundle",
+  "createdAtUTC": "2026-11-16T00:20:31.156745+00:00",
+  "sources": [
+    "9e542899f36c47598a88c764c9e6745589fea3e1"
+  ],
+  "sourceBoundOnly": true,
+  "originalPayloadCount": 20,
+  "originalPayloadBytes": 6529474,
+  "payloadClassificationNote": "Preserved original scratch files include both original CI/API material and distinctly classified passive audit/appendix derivatives; no derivative is represented as raw CI evidence.",
+  "payloads": [
+    {
+      "archiveMember": "ci-desktop-9e542/Plan29-creation-windows-macos-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/Plan29-creation-windows-macos-appendix.md",
+      "classification": "source-bound-evidence-appendix",
+      "bytes": 6967,
+      "gitBlob": "ff226c7d1d71b10e01c918197b80c54ca30328a0",
+      "sha256": "c2daf5fe24c83b7c53f7044f5d0a4ac6bb4d6e37e965315d0ea0509b47f453ec"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-artifacts-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-artifacts-api.json",
+      "classification": "complete-structured-official-API-response-serialization",
+      "bytes": 1814,
+      "gitBlob": "ed17c5faf37b3fac381e96fa15f39cfdacca9241",
+      "sha256": "f152c9746a4abe2e0183ab589cc21ffe3c201f474f724a13ba25b4a320f0865d"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-mac-windows-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-mac-windows-audit.json",
+      "classification": "passive-original-evidence-audit",
+      "bytes": 21455,
+      "gitBlob": "9d7c5ee994c0b6b57d80ab3c3ebaddb2ae99b090",
+      "sha256": "8a4943aa9a39169e63ccb50c0a840b2d39a2b252eba54ea00ad39171736e6d35"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-macos/archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/archive-audit.json",
+      "classification": "passive-original-evidence-audit",
+      "bytes": 11008,
+      "gitBlob": "61f779b6daf937826d4ea37cc397a562c1ebf483",
+      "sha256": "55fdb7e06f50e15e9ccf37be3602ea6336f6dcef753b2045a04ab207ce85aa78"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/archive.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 2300138,
+      "gitBlob": "e6a76c17940499fecd124bf4d1f8c0c94ae81e61",
+      "sha256": "7b6274a8ad0a7a180edb3729a6d0f3a2cb646cace2f799c8a2f79d6d0252d82c"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-macos/job.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/job.log",
+      "classification": "complete-original-decoded-CI-job-log",
+      "bytes": 56882,
+      "gitBlob": "293c6485d2343f007873e00977d0f73e8d38c628",
+      "sha256": "dd9e92e9455d1f5df3c7eea367999322c8a86515fe41d3c61ea1f578ec90bc7e"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-windows/archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/archive-audit.json",
+      "classification": "passive-original-evidence-audit",
+      "bytes": 11009,
+      "gitBlob": "9b242ba179f71bfdb527ed549348dcb7dcfd0f43",
+      "sha256": "8563824c7052aa5639e2e9017a783276f053d91c2147836178e410d06964256f"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/archive.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1878919,
+      "gitBlob": "3779749414af1f64c21d2555f51473e8095cf502",
+      "sha256": "23f63d7ab14d57829839f1db384ec36fbce81d3c88b6d6ece5015b8c8f7ba83d"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-windows/job.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/job.log",
+      "classification": "complete-original-decoded-CI-job-log",
+      "bytes": 89876,
+      "gitBlob": "8cc158da7e5b119620b3688096814f424abb9724",
+      "sha256": "358dfb82fb25c94dd64be73973245b24722f550497dc72303c6fb69e8630fc25"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/full-api-jobs-0008.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/full-api-jobs-0008.json",
+      "classification": "complete-structured-official-API-response-serialization",
+      "bytes": 22667,
+      "gitBlob": "38a4eb43b45c04eee52666473dab905e0e669855",
+      "sha256": "59c617eeb9bdd59705e5bcabe0d69530ea62b96c206f116244cd678fadad7aa9"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/full-api-jobs-0014.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/full-api-jobs-0014.json",
+      "classification": "complete-structured-official-API-response-serialization",
+      "bytes": 23031,
+      "gitBlob": "994e20e759c68ad146c58d8b3a3962ca2796f876",
+      "sha256": "d1d3a02d1f0633b648edb699106c4cc3976ba3e009d8f952dd3c7bd5be3d0af4"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/full-api-jobs-0019.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/full-api-jobs-0019.json",
+      "classification": "complete-structured-official-API-response-serialization",
+      "bytes": 22969,
+      "gitBlob": "3769fbbf472ca52c106830e8a4e2ae019d77ee34",
+      "sha256": "cba8b9ce91713f5f33266b57dab9728e109cd027d3be3ef9ed503a7b5b90e133"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/Plan29-installer-appendix.md",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/Plan29-installer-appendix.md",
+      "classification": "source-bound-evidence-appendix",
+      "bytes": 8947,
+      "gitBlob": "19b5a7c52db1b40910e08ef4e49588b1fd712db1",
+      "sha256": "b27a1c82a0c5f4400f32737cebc88322abe199dadb5202a6c5caee0345b3d684"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/archive-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/archive-audit.json",
+      "classification": "passive-original-evidence-audit",
+      "bytes": 10322,
+      "gitBlob": "8275ce5aded2a3f8098e2e2a2fcaf0f94aaa5be8",
+      "sha256": "2d612a77f8d737d72f3a90b0e932c8bbff39d80e5fa42e420d5a25c8cc6792e3"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/archive.zip",
+      "classification": "original-official-artifact-zip",
+      "bytes": 1142289,
+      "gitBlob": "cad31c8b0ada276394be46c919c3ec707987d57c",
+      "sha256": "7677a6cafd7999d029968d9444787186c14ae95b97957c3a568f6659bbb2ac2f"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/artifacts-api.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/artifacts-api.json",
+      "classification": "complete-structured-official-API-response-serialization",
+      "bytes": 924,
+      "gitBlob": "145c2a67d8b385aebc60e4f2b110b850997a4e65",
+      "sha256": "4f86dcdc0aced8ddf1599f50467c1590e35229df27074624d3edd9cd7439ee26"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/checkpoint-20261116-0018.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/checkpoint-20261116-0018.json",
+      "classification": "bounded-file-checkpoint",
+      "bytes": 3104,
+      "gitBlob": "213e5477a90226e9e467d8a0eac723468e0b6fd5",
+      "sha256": "0a4bba0398642da7fa37846b95e4233b5fa98292b568504356ad1f4c802e9834"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/installer-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/installer-audit.json",
+      "classification": "passive-original-evidence-audit",
+      "bytes": 57978,
+      "gitBlob": "bdffd2d49332d45049a10e148921ca1263bbb5bb",
+      "sha256": "1dd632ca68531c9fefb00c1beae060190231a618efe03516c12a7ae74530b01d"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/job.log",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/job.log",
+      "classification": "complete-original-decoded-CI-job-log",
+      "bytes": 172360,
+      "gitBlob": "accec2560cf37b4f1bfe9c7110666424bce285f0",
+      "sha256": "b735fa9910ef7338a234515a1ad7fcdbf716adb9b506a285a17a49b63f2b7c2c"
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/source-pin-audit.json",
+      "originalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/source-pin-audit.json",
+      "classification": "selected-original-source-byte-audit",
+      "bytes": 686815,
+      "gitBlob": "ab8685fb8e22b7a6e801712e65973d70b71c7349",
+      "sha256": "a93dc1978b643bb5da0f28ca5ab7806c167f7b7c8b818a8349d8f327b6a20d74"
+    }
+  ],
+  "readme": {
+    "archiveMember": "README.md",
+    "bytes": 4317,
+    "gitBlob": "f73bd54955f2ae20cf8b1d7cbda1e57f3c4116d8",
+    "sha256": "21a6ef9098576bdd6828fa1c9a178c48518f8e3a1e6e60f3493ee5d654955fe7"
+  },
+  "originalZipAudits": [
+    {
+      "archiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "members": 41,
+      "pngs": 40,
+      "allUniqueSafeCrc": true,
+      "allExtractedDerivativesEqualOriginalZipBytes": true
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "members": 41,
+      "pngs": 40,
+      "allUniqueSafeCrc": true,
+      "allExtractedDerivativesEqualOriginalZipBytes": true
+    },
+    {
+      "archiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "members": 34,
+      "pngs": 11,
+      "allUniqueSafeCrc": true,
+      "allExtractedDerivativesEqualOriginalZipBytes": true
+    }
+  ],
+  "omittedExtractedDerivatives": [
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-config-only-created.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-config-only-created.png",
+      "crc32": "5bd73676",
+      "bytes": 31768,
+      "gitBlob": "867b5d3e07bde5139df640b80919c018d611a807",
+      "sha256": "b0e6658a54994e21b950f38f86ad0b12626aedb199ee9518ced176c7247e5997"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-copy-resumed-edits.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-copy-resumed-edits.png",
+      "crc32": "0a83e8da",
+      "bytes": 61975,
+      "gitBlob": "4cc662c0ea1752f7c03a6692e6798ccb483b50bf",
+      "sha256": "6ce0a9a9c640d35857bf4e51394f1b30015db04cecd6a248bd581af0761101a8"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-css-zoom-200.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-css-zoom-200.png",
+      "crc32": "5d73cbe0",
+      "bytes": 51368,
+      "gitBlob": "16f7beef51795eda7ce31e61f6aa46b87bcfa320",
+      "sha256": "26ad575bb06468c163526dd420f06bcbee7ef8fae4e292325dd743a0d0bc99e3"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-edited.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-edited.png",
+      "crc32": "0c575265",
+      "bytes": 62104,
+      "gitBlob": "9536462a69013908176db4c92de40eb469b1916b",
+      "sha256": "d9d8ddd52d1982e790ea76e31d26a623dd227c1be82be6e3234726931276737e"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-launch-controls-loaded.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-launch-controls-loaded.png",
+      "crc32": "73555f45",
+      "bytes": 75674,
+      "gitBlob": "4fc46aaa5d2e8828bc3387e0d77a7c2276a82747",
+      "sha256": "e95b5b26b274046c55995eda5b2aa130485cf30b568872a48bb1e641e66edd39"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-launch-still-modal.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-launch-still-modal.png",
+      "crc32": "938b361b",
+      "bytes": 90077,
+      "gitBlob": "2914719885f64da91421d9936c77325e4017ef85",
+      "sha256": "255cd686764925e648a2c8184de540b617d95218b16308de5e0d5c8e9eda0d31"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-missing-cli-value-validated.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-missing-cli-value-validated.png",
+      "crc32": "faae1743",
+      "bytes": 70612,
+      "gitBlob": "3928df7717e06ffd65bdf5f03e6be3fbb7d4dd0e",
+      "sha256": "32aa394d5fc81cb0af6553359063bf1990541cdf4dcce9a1a6bc7f229969dfca"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-native-electron-zoom-200.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-native-electron-zoom-200.png",
+      "crc32": "eae2d809",
+      "bytes": 52052,
+      "gitBlob": "c2332fe75aa3c4f2c4f22dffe6aedf9b559f51f1",
+      "sha256": "f4f9c05465efe6a0f976c9ae899725b0b828abe027d9aaea7e5d916914092425"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-opened.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-opened.png",
+      "crc32": "f385812f",
+      "bytes": 57034,
+      "gitBlob": "c46a83c75e15fb0daf180563dfc14171ed83fc19",
+      "sha256": "e449a41a15f77cf792528052430e43a8f5be6b5fe3e0e6780cb52110879d8db1"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-organization-created.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-organization-created.png",
+      "crc32": "5d5c1553",
+      "bytes": 36524,
+      "gitBlob": "ce297c5bee54d6e5c6998cc0ca45bdb118e55755",
+      "sha256": "b12f06f5fc11fb1e2ca1b3c2bc1ec5e25a0ad9e4ad46bd2090c95c4726faa1d9"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-organization-entry.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-organization-entry.png",
+      "crc32": "6c66c050",
+      "bytes": 63828,
+      "gitBlob": "0bca3c8de1ecfd109cc9075364c5560d477a0d92",
+      "sha256": "77b8b5c59939bb40b213c8aa74b9d771519e340f4ca57d29b4addd7b86c07629"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-page-result.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-page-result.json",
+      "crc32": "fc1ae76c",
+      "bytes": 2259,
+      "gitBlob": "6e7cb9d7a6130e2ba3b01e73e7b8104c42ed71a6",
+      "sha256": "af442d4320117d0477d34ae1395fc8e0295a1faef00148cf5fee9eabea7c47d8"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-provider-refreshed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-provider-refreshed.png",
+      "crc32": "4c842abf",
+      "bytes": 59529,
+      "gitBlob": "482783d91e1f3553ca5b3c780961c58c5876fc18",
+      "sha256": "8bb35c9cb0571933b8f743290b2968a19b2f85c089bb17e5a20810974d13dff5"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-restarted.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-restarted.png",
+      "crc32": "c6667a96",
+      "bytes": 58526,
+      "gitBlob": "e0c71983272b34999c269b444bd7dddf1bbc2a3d",
+      "sha256": "79a3f411ad99ff1925fbfff1a86adcfaa75f2a1897281ae09d59ddc803ffaec4"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-resumed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-resumed.png",
+      "crc32": "c11d54fe",
+      "bytes": 79156,
+      "gitBlob": "bb036ccf8ce6a94b9add5d5d6dc1c633956322f7",
+      "sha256": "0db74f5f40f2955fdc66c293375949dc4f788edd424a7b00f22b805bdbe74463"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-save-rejected.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-save-rejected.png",
+      "crc32": "bee1eb2e",
+      "bytes": 49011,
+      "gitBlob": "3fb232d360444cb7f5b7f03a85ae74c845d789d4",
+      "sha256": "b2e16c76b8f4843222cf20b3232afe85a05a20941758f098f2ecd02ce803a124"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-delete-confirm.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-delete-confirm.png",
+      "crc32": "7efad181",
+      "bytes": 55695,
+      "gitBlob": "a067a62ca1dc316012ab9847fa0ed1aa7735ddce",
+      "sha256": "6b517370ee8715e2d6aa02dabab379b6b240d4d3ab33b428bccf21710c4983f0"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-deleted.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-deleted.png",
+      "crc32": "5a3d3dc6",
+      "bytes": 36783,
+      "gitBlob": "a36508000b92a6137671ea7a26c8c7d3c91c510b",
+      "sha256": "40692dd90e86a3708d8dd8a20583e99358402725bc68049a70577025caf9771e"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-edit.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-edit.png",
+      "crc32": "885a57e4",
+      "bytes": 83247,
+      "gitBlob": "0c3dbc15351aeddb931278f89d146fd31dc2cac4",
+      "sha256": "9b43b907c61a1cd79d7ff6bc14fa7e60d3efb912f4cb87c0a5a7f664c1a9c1ad"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-editor-opened.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-editor-opened.png",
+      "crc32": "3aa8d593",
+      "bytes": 61473,
+      "gitBlob": "a1138cb67cad65c6fd24d4c512560d3687a49066",
+      "sha256": "288dd5f6d65395e5c939a3938e10aa9606b316578acf42d8e43488431d5c0f16"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-invalid-cron.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-invalid-cron.png",
+      "crc32": "cde0df34",
+      "bytes": 73028,
+      "gitBlob": "6142092088ecfb32ec11bdc491fbbde2eb00f2b2",
+      "sha256": "28090a4e5968a146beff5c20358306cf22220436e04cfe74fcc16a168573f58a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-list-dark.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-list-dark.png",
+      "crc32": "aeb1df8d",
+      "bytes": 41585,
+      "gitBlob": "f12a23f7f39e45dd1994afe16742304645de6354",
+      "sha256": "6d7a714bc869874475c9b287675e3b384233c88e6fb3bdc4d17efba0af6ac122"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-list-light.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-list-light.png",
+      "crc32": "d056e21f",
+      "bytes": 42858,
+      "gitBlob": "1dfb6f159024d3a8a558ba98adb8e8df4f32def1",
+      "sha256": "2933b9ae55b4e220c87ee86398002bbca79e9818d046941d482ff86607ce5360"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-list-narrow-700.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-list-narrow-700.png",
+      "crc32": "177eb093",
+      "bytes": 37491,
+      "gitBlob": "2cb83f5685d043e3555aaae8b3f565b3a5b71ffe",
+      "sha256": "81983b0e0f674dbc0a0406c8014ab456be0b10e4e542211f43c9a67aa0c5f3f7"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-list-native-electron-zoom-200.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "crc32": "156a1415",
+      "bytes": 54580,
+      "gitBlob": "9a7a67739747595cb92e24b7ff1567ab0d75728c",
+      "sha256": "42dbc5ab82962b9be101cbaa58f03d7f6621864d6bd601a5fbdc4486ff9779ff"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-old-prompt-review.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-old-prompt-review.png",
+      "crc32": "6e23e38f",
+      "bytes": 68074,
+      "gitBlob": "371ebdc48bc04945e9c7a60ed98c257561d5e6ba",
+      "sha256": "29b091ec748449a5477ce3a9fc0abe73eb02d3e82798a40ac9165cd11957726d"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-paused.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-paused.png",
+      "crc32": "979dd0c4",
+      "bytes": 44436,
+      "gitBlob": "b79974f35e92537b733d6d7d8e1b767088cdf70a",
+      "sha256": "3c05ca962163b1c557ed7626de0cdae377b044a85907a53f37b850fff43bad5c"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-pristine-submit-validation.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-pristine-submit-validation.png",
+      "crc32": "407413c8",
+      "bytes": 56468,
+      "gitBlob": "f77b6bab365abef1b06d80e3fcaa46fb5a68d49f",
+      "sha256": "7de3e9cbecbfc78a012f780ea695cd839d01dc6d33df6de2b51ca417618ad34a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-ready-to-create.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-ready-to-create.png",
+      "crc32": "ca468d9f",
+      "bytes": 61247,
+      "gitBlob": "a3be4a5ff876dc3ea4170a0b07314de2ffdffae8",
+      "sha256": "48cd4f284b8a24c6a56898e455a88a0f83278f94cc18a808b6c543380114fa49"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-run-history.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-run-history.png",
+      "crc32": "98cb224b",
+      "bytes": 48499,
+      "gitBlob": "416be7d9e4e143b3f6cd920dd1c2f40193dc2a79",
+      "sha256": "82a01ed70a018e452ee911b5c6fab1d4e81d631ba0c41f4b44f1bfd2afff4b76"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-run-log.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-run-log.png",
+      "crc32": "a63fb72a",
+      "bytes": 54094,
+      "gitBlob": "8610a8f84b9d7e90e1172c4e288746b71c25e90f",
+      "sha256": "31ea46a896540fee2c3ac071c61a52bfcc04b06e64d0b9d05577e36e963c25ef"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-schedules-resumed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-schedules-resumed.png",
+      "crc32": "3efc2024",
+      "bytes": 41757,
+      "gitBlob": "e4146007a6cb65879cdf2802ea15add46bbc4fb3",
+      "sha256": "a0993d1fab61dcdfcbc45d8965d005b8fae466fa427f25621d86e1f19248028e"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-split-pane.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-split-pane.png",
+      "crc32": "ea1955b2",
+      "bytes": 97912,
+      "gitBlob": "ef56db18b8faf128c20aac37d3bea7e8ae3b2ef1",
+      "sha256": "5f342b85fb6ed1942213b9baaa89cb278ed96c7e4e51bfe8323d36343bb0de1e"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-teammate-mode-override.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-teammate-mode-override.png",
+      "crc32": "191df361",
+      "bytes": 71242,
+      "gitBlob": "9d875252183d51aee351b697d424466dc9af89ac",
+      "sha256": "1e10977adaa36f2d6b0a3abf2ef130f4de00b578055fb8a7a5d435ecbbab0d65"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-teammate-mode-validated.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-teammate-mode-validated.png",
+      "crc32": "e9e670fb",
+      "bytes": 72376,
+      "gitBlob": "1a5d25fee16b6467358157d762bf4de2775aaa9b",
+      "sha256": "e834343db4029ed5b7b75ddd839b9337b93253f2e69cdd0fa7485209eff7ea20"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-template-confirmed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-template-confirmed.png",
+      "crc32": "4074ebdd",
+      "bytes": 74541,
+      "gitBlob": "21a58ca8501b66dadad26a79e18d4e7c1cb374d0",
+      "sha256": "a87053b7616dfc0325ee53bb55f8bd1de09d23b783fdd5dcfbd41e5471b6b6c6"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-theme-dark.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-theme-dark.png",
+      "crc32": "4ed5d69d",
+      "bytes": 63975,
+      "gitBlob": "3a418e7a8fc5051d3d096c467cc8d841100f40db",
+      "sha256": "04bcd508e5f027b68cfc8f28dc9ec5b6d146c63ae42be8d28ec65bf270dbb719"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "crc32": "a388f5bf",
+      "bytes": 88453,
+      "gitBlob": "b4c2196c190e472228857a199dbfd82a8df48f9a",
+      "sha256": "acefc4d2363491f1488dc77fa8519d0224b254a8c6754157037657c1f08b6eab"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-theme-light.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-theme-light.png",
+      "crc32": "2db455e4",
+      "bytes": 63628,
+      "gitBlob": "77cf9be7caa0947a3ebfb15d5a3445368dbf0663",
+      "sha256": "44a04a11fec1c1f0c643bdf9e96ae3fdecdaa4140d30e3e7498ac7cc30354508"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-zh-tw-task-detail-dialog.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-zh-tw-task-detail-dialog.png",
+      "crc32": "ff083208",
+      "bytes": 60184,
+      "gitBlob": "3ee18341adf69594c05d2ccf09c16ec88e1c55cf",
+      "sha256": "6906b4dfb24db6edb5e9f0fb1ebab4ee93f4e45246c4ef43425862c5789a70e3"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-macos/extracted/teams-create-zh-tw-task-detail-tab.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-macos/archive.zip",
+      "nestedMember": "teams-create-zh-tw-task-detail-tab.png",
+      "crc32": "626962ec",
+      "bytes": 52358,
+      "gitBlob": "70884666be259a527cabe1da6e4973544c0516b2",
+      "sha256": "a1681261e0a4d8d52055bbfedc2bb7c4dafa7e8eebd4dda23ff00c5eb67d843f"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-config-only-created.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-config-only-created.png",
+      "crc32": "5af775ab",
+      "bytes": 35467,
+      "gitBlob": "d0828caca9060e12ef9ebfee325186ff8c901ab1",
+      "sha256": "7cd515979451e4c3d6cb6ed640951deaa8fd6383b766812667c0a203657bf637"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-copy-resumed-edits.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-copy-resumed-edits.png",
+      "crc32": "4ef24435",
+      "bytes": 52262,
+      "gitBlob": "85bf8bdb97c0631f5f301adc93a679a654e089f2",
+      "sha256": "32f49f5c0050471f753e09e41973a7d11ed054af594cc06e897df69de632ab45"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-css-zoom-200.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-css-zoom-200.png",
+      "crc32": "6d143384",
+      "bytes": 46188,
+      "gitBlob": "057f843883544f3a2a1114f41aa3a4fd08e05ad6",
+      "sha256": "fda6147b8af2990ccc386ae20d99b099cb7aad3b1b3b4af9692b068c4e945d43"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-edited.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-edited.png",
+      "crc32": "2f3e031c",
+      "bytes": 53063,
+      "gitBlob": "86465e2a2a754240c0761d82dd362219a33cb7fb",
+      "sha256": "744a0e36a004459cd35af06a70e5c1602aee5554bc3a22b52c4269c04c112a6f"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-launch-controls-loaded.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-launch-controls-loaded.png",
+      "crc32": "5847de95",
+      "bytes": 59042,
+      "gitBlob": "cdb6c017007c8e9cfda541e63bd4f38ecc9e1136",
+      "sha256": "a277f57d266763dedea7d289502bf0425da3e906087fa397934322d3a78081c2"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-launch-still-modal.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-launch-still-modal.png",
+      "crc32": "d3670321",
+      "bytes": 54973,
+      "gitBlob": "d3c6ba28ff7df72ad3f7a08e1b4104d1b0c83094",
+      "sha256": "6e6cb0a5733b8cea66cf5312d4d2c83caa29c005655c78d5bffb2e03e4a8550e"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-missing-cli-value-validated.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-missing-cli-value-validated.png",
+      "crc32": "5f1b75d0",
+      "bytes": 52789,
+      "gitBlob": "6e970548d3bcfac107dd1c774993b3ae30e5aca7",
+      "sha256": "6f870f2b25010285ddee55696e1cf1ef6b6978b9b038cb73b8b188d5b292a7d1"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-native-electron-zoom-200.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-native-electron-zoom-200.png",
+      "crc32": "ead2b28e",
+      "bytes": 51086,
+      "gitBlob": "97b60271d1b238c4050095d8cdc30b4779ce1677",
+      "sha256": "db45ebcfd48b06b3883e7c288dae303eae37e09be039f92779a95213cd256c1a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-opened.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-opened.png",
+      "crc32": "e82018eb",
+      "bytes": 49032,
+      "gitBlob": "d71cce2fa7942cfb4bdd035fdfc7b3335febd7f9",
+      "sha256": "3cf24039bb4586db6197377061feacecb5accd921fb57730ae53a806fbdbc759"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-organization-created.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-organization-created.png",
+      "crc32": "8045ff16",
+      "bytes": 27911,
+      "gitBlob": "8e80ab09b72f3537d9df9bf7e28f274a2acddb48",
+      "sha256": "4d0f51069b1a7b21f06330b769b9727193f5c40011b9ebc9fbeef4ba5f8a7c9c"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-organization-entry.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-organization-entry.png",
+      "crc32": "55beb6b1",
+      "bytes": 53672,
+      "gitBlob": "77c084fcdf8bdb7d66760d7d8f4e3bc793be1ba2",
+      "sha256": "551a0c2d000494be91642af89961adfd556bdd444e59094a6c4cc9b14bd454d8"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-page-result.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-page-result.json",
+      "crc32": "322646dc",
+      "bytes": 2916,
+      "gitBlob": "bc84eb3ae25c11828ac0db5545deb8a1b7662761",
+      "sha256": "8ada4a87a47f27c6b07c45c4b5fcdef387cf08ad88bd549be175b24ad20ad03c"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-provider-refreshed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-provider-refreshed.png",
+      "crc32": "908c34db",
+      "bytes": 54356,
+      "gitBlob": "bd05ef2269f5753352e024cd7269d1a4da6ff666",
+      "sha256": "b91cc9a16cec0bf764ff44721d2d99ea6a03841a8640d0163ee8596a0b72e9ee"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-restarted.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-restarted.png",
+      "crc32": "f5d313e6",
+      "bytes": 49806,
+      "gitBlob": "d1d1c46830bb127a58196842fdfa64dcb6313e21",
+      "sha256": "9ee78ab33ae4e8a044dfe78df8b85d05eaddf95d14b9693e17610aded26a7f80"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-resumed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-resumed.png",
+      "crc32": "093cbbe1",
+      "bytes": 56077,
+      "gitBlob": "ae1ff5179fb0b6f6b97d973b0ffc45b9b0eb859c",
+      "sha256": "805dc8cfa3023531163078f723a79ee72080510f2b823b15cf006f08f9eed5f4"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-save-rejected.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-save-rejected.png",
+      "crc32": "9e5c575e",
+      "bytes": 42096,
+      "gitBlob": "f25c91be8c20424f990c2833d855b22a8947cade",
+      "sha256": "09ab994ad182f66136a951536d1b00bb1a256a0f0cf621df7d830369a9721dd1"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-delete-confirm.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-delete-confirm.png",
+      "crc32": "429bbdeb",
+      "bytes": 45483,
+      "gitBlob": "ad04e716d55915c43d3398d36b2e6e924e9dc2a3",
+      "sha256": "3142c7cedc2753b52a474addde2971aa05ba152c427756e964658546675a8127"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-deleted.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-deleted.png",
+      "crc32": "4943d945",
+      "bytes": 32745,
+      "gitBlob": "4394a60ae0c048008c5f3e275eab3e7c59fb519b",
+      "sha256": "f107470c8287f51b2a361cd07681998bc661f043b2ab0212b48f9b452643f58a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-edit.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-edit.png",
+      "crc32": "2d0fe921",
+      "bytes": 47605,
+      "gitBlob": "793c65933d0a2d57e917c93751e5b1c410942757",
+      "sha256": "c08ad6e3a4c434be311344f6a0ff0cfab6f1615b30b8ca9747547697eaf86bc2"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-editor-opened.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-editor-opened.png",
+      "crc32": "f76fc097",
+      "bytes": 62278,
+      "gitBlob": "9b12345bd77a254e642d3b4a13b7906eb482394b",
+      "sha256": "a16d8f15fd9c123920c34b9b6e2688bdf273bd8134fda2fceda2c62c4c24d933"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-invalid-cron.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-invalid-cron.png",
+      "crc32": "9e9a339a",
+      "bytes": 49724,
+      "gitBlob": "4318f58fa5ae7552330571682a76f2946f258c3f",
+      "sha256": "a22c7dd5c04867a99b76003852eaf7687a4f4bb636ceb848d15aee144af512b2"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-list-dark.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-list-dark.png",
+      "crc32": "be8cab0d",
+      "bytes": 34858,
+      "gitBlob": "11203838f217b1c71e2426dcd07c92a3982f89ef",
+      "sha256": "f4fbf962782546a739b2dcbfd2ccca6f5f12d59e24bb06774d64b47bb21f3c00"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-list-light.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-list-light.png",
+      "crc32": "3af13ac2",
+      "bytes": 34897,
+      "gitBlob": "2f3ecfe26bca9a629d58042a8d357548c85fbcb7",
+      "sha256": "370cf8bb7177841b5c4a527a9c3dda86d07d6c7cbd5d06ecd050bdab35554382"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-list-narrow-700.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-list-narrow-700.png",
+      "crc32": "f409089b",
+      "bytes": 31823,
+      "gitBlob": "64113b3098378638fb2d02fa392a8e24d27f7b32",
+      "sha256": "37f8419f88c6aa793615c33949f6d322caf9a4bf2d32478dee350613a3fb8a12"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-list-native-electron-zoom-200.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-list-native-electron-zoom-200.png",
+      "crc32": "df07a476",
+      "bytes": 54519,
+      "gitBlob": "c7c718354bb7310f525ac201d58b4e432c010282",
+      "sha256": "124a9b2c9679a87511fa4c27ffba30a4f98eae1531fd7c3c599644f3f7025f35"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-old-prompt-review.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-old-prompt-review.png",
+      "crc32": "01c444ff",
+      "bytes": 49333,
+      "gitBlob": "4efba47da518353ef20beebdfd39f8c5d78a0b85",
+      "sha256": "6d9cd308b22320a201e99bcdcd994358606d25e2262ae004b8e5d10c17f9c49c"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-paused.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-paused.png",
+      "crc32": "26e45d72",
+      "bytes": 35698,
+      "gitBlob": "b4e109a116a3a893b69d071e70002648ef35c0e2",
+      "sha256": "b520f6dad2b56a6ba302b406ca8d149383042bcc3147b76bbea49f179c12c8a6"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-pristine-submit-validation.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-pristine-submit-validation.png",
+      "crc32": "be620321",
+      "bytes": 41969,
+      "gitBlob": "2213bacab8de0b87b6cc6d296895be28a667e392",
+      "sha256": "9e340b0c209aaf55c10141f587a17d7d525e58ac42320eb99b10c2aa28ecbc7d"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-ready-to-create.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-ready-to-create.png",
+      "crc32": "379a8d11",
+      "bytes": 41413,
+      "gitBlob": "ac34917101c512a104cf7eb1ec067dfe7818f291",
+      "sha256": "cb585e2bbe6cae07bc8fb2cab1eb9d72b9d05d42123659487b6bf154bae7e30a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-resumed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-resumed.png",
+      "crc32": "6e9e3855",
+      "bytes": 35564,
+      "gitBlob": "06396e4dd553671c84af7b01a790279f06aa91e6",
+      "sha256": "f3b621cea99bdd554e1b31ba319a373179728a5d9c8b6257c7ba98d754a3b01b"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-run-history.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-run-history.png",
+      "crc32": "f67f1fc6",
+      "bytes": 39036,
+      "gitBlob": "df5177c4d4490dcef18db128848a1a04e3c9a531",
+      "sha256": "9e7f8d9665372832fc8a7e905b7e65f75f401b94055e15efafede92ecae27a09"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-schedules-run-log.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-schedules-run-log.png",
+      "crc32": "4dd545f4",
+      "bytes": 43701,
+      "gitBlob": "0fbd8ac83d9489954ffa1b231247b5d5929583b0",
+      "sha256": "b5f4eea322db8033b6ef48eb59af0af78f220b15784cd2a88ee6561d783a3881"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-split-pane.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-split-pane.png",
+      "crc32": "4bd25b3d",
+      "bytes": 78787,
+      "gitBlob": "983c23b2b9f3cf84870d3dad2ff0d9e215a616eb",
+      "sha256": "e0fa35877a4418399a3ca946a2d761ed06b7ae7a8c35a67244db2c002b482249"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-teammate-mode-override.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-teammate-mode-override.png",
+      "crc32": "3318451a",
+      "bytes": 53685,
+      "gitBlob": "bb2915b66dedf425824e71242f5412786fb248b0",
+      "sha256": "c9ee57f4fbc4c4dd0a8f479e1e6810a773283e606d1be14c626399857bc223df"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-teammate-mode-validated.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-teammate-mode-validated.png",
+      "crc32": "6d185e1b",
+      "bytes": 53802,
+      "gitBlob": "f7f12121cf72a5b1ea35921af540c6c02f530309",
+      "sha256": "b600cd557df118beb11b3c2544e87f42d00eae940bfd707237f40dd1d8af6672"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-template-confirmed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-template-confirmed.png",
+      "crc32": "aa283613",
+      "bytes": 61644,
+      "gitBlob": "d1ed2fd49518f4564e7a843e700c2430ac0470ce",
+      "sha256": "704fa7b615836886646bc56aa2ee80de01438d04fc8f675880c012b59d473acb"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-theme-dark.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-theme-dark.png",
+      "crc32": "a9bab5b6",
+      "bytes": 53101,
+      "gitBlob": "c10a83189e3aa145600848d542a77f794846d2a8",
+      "sha256": "de789328f021e1dff8f3c072f1ce92e1e8f5dc395ec15e9249c5cdf4bb936335"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-theme-light.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-theme-light.png",
+      "crc32": "97ecd4f9",
+      "bytes": 53213,
+      "gitBlob": "4cc993ebd217a4b78655ecab673ca40791c6f9fe",
+      "sha256": "b420e1a81618788b4becf2ac4ffe62c5bc108a15a4c410186504308b039d9a6a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-zh-tw-member-mcp-strict-allowlist.png",
+      "crc32": "8f09ba84",
+      "bytes": 66416,
+      "gitBlob": "1276ecbe5b74d5692b491aa1eca7df42fe0cfa29",
+      "sha256": "62a56f9fef33e1407227afa7dbc6c2a678d332e270bc6f6c8c2a8bd2f2d5706b"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-zh-tw-task-detail-dialog.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-zh-tw-task-detail-dialog.png",
+      "crc32": "01311495",
+      "bytes": 100389,
+      "gitBlob": "72338601b01f1719c9946cca89e5f2ed95ff36e0",
+      "sha256": "0857e63dccae6e13f72554750a449519b0aff209042697388686911730e75f72"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/creation-windows/extracted/teams-create-zh-tw-task-detail-tab.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/creation-windows/archive.zip",
+      "nestedMember": "teams-create-zh-tw-task-detail-tab.png",
+      "crc32": "e4ce21d4",
+      "bytes": 44425,
+      "gitBlob": "f1ca6a4d0c44fabeda6457d3936821376c2b7d33",
+      "sha256": "5527bc995bee013fbf02f414826b3af454580da28b40426c7e8e1eaa6a27fa04"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/TEST-codex-install/invocations.ndjson",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/TEST-codex-install/invocations.ndjson",
+      "crc32": "e84fd309",
+      "bytes": 16127,
+      "gitBlob": "6b76f6ca106f06a7acba4917e3572cedcf32427a",
+      "sha256": "318074f8fe4436271cf646aedae66749d978e0305cbf8d32890d005f19139896"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/TEST-codex-install/registry.ndjson",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/TEST-codex-install/registry.ndjson",
+      "crc32": "9f91a34c",
+      "bytes": 1652,
+      "gitBlob": "79016f74daa5166fbb3353f976cb145f5379770f",
+      "sha256": "fbe0a36062e492be5da4b411d2a320133053113660fbbe9411dc535c9579eae0"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/TEST-peer-codex-scope/effects.ndjson",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/TEST-peer-codex-scope/effects.ndjson",
+      "crc32": "fad02d18",
+      "bytes": 16501,
+      "gitBlob": "eb7da5165469496cbdf782de3751feab80e83624",
+      "sha256": "94e8de2149af1552fb62510895cac26374251b3448480861bb6d67e63cf5304a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/desktop-app.log",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/desktop-app.log",
+      "crc32": "9351173c",
+      "bytes": 21936,
+      "gitBlob": "daaa806f21da9ab47e4e5fa1e4899a60ecd9fa3a",
+      "sha256": "c159101105f89315dce718e16ea9fb7e8933df2cb751d6a468cb8176a338ff17"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/desktop-backend-receipt.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/desktop-backend-receipt.json",
+      "crc32": "e8ebb2a7",
+      "bytes": 840805,
+      "gitBlob": "c9bfaba396bf675756f7375b36c5b17b12716cb9",
+      "sha256": "4d0f21fe49806b6e98546806868ca3ab4b25c68b339347a2832ed171a162d538"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/management-commands/12482416e0d75226e3682ed4b29e05d95a98bb924960e6ffc620f49148645720.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/management-commands/12482416e0d75226e3682ed4b29e05d95a98bb924960e6ffc620f49148645720.json",
+      "crc32": "0951397b",
+      "bytes": 904,
+      "gitBlob": "5f60a04009b50264e8a715cd1af2b7b25f39c352",
+      "sha256": "73cb3a8fc150fd5930a9d49a1e271a7ba31ee7fa543689583a5a5f91a65a06f7"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/host-profile.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/host-profile.json",
+      "crc32": "3338dde2",
+      "bytes": 7471,
+      "gitBlob": "1d463ba08b5290d059d2c574460acd4a457f81c7",
+      "sha256": "a6468eb468ea50f88ed47f91353892fe771aeab7c720b1a150fb07492a0b202b"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/desktop-descriptor.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/desktop-descriptor.json",
+      "crc32": "d13be2d7",
+      "bytes": 2664,
+      "gitBlob": "a68730c512d7c34028b8ac74c8acfdfb86a8a8b1",
+      "sha256": "0571e22fdfd3830e35cc2a9652e4ad2ee69a491e2933a8db6f7ea02e97cb09ce"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/management-commands/5a74b75957a402f94edc7826634ae0f5e67e78ce89d9c63840966fc3143b717c.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/management-commands/5a74b75957a402f94edc7826634ae0f5e67e78ce89d9c63840966fc3143b717c.json",
+      "crc32": "bb2a87d2",
+      "bytes": 923,
+      "gitBlob": "d5369f6270b46beae10b2d7553e9a55c0071baea",
+      "sha256": "1f82bbcfd403e17339f8e69f136763095edd9552ba4a2f94ed21af8c07107639"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/management-commands/5dfcbd49eccb3ab1dbabc072229d2cb77e4996629b7cbb2362bf0e22d7d2798d.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/management-commands/5dfcbd49eccb3ab1dbabc072229d2cb77e4996629b7cbb2362bf0e22d7d2798d.json",
+      "crc32": "c788c21f",
+      "bytes": 2297,
+      "gitBlob": "8001958d288c912aa4eeb39371d2d501bc21d963",
+      "sha256": "4d5f208f17a4e1d65070722e965b7d1846884f2b45d265ee331e1775a6e67fcb"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/management-commands/c418e576740ff05615a5e866ed0e00e51281439b90ce0ec9aaad0c41a96bf712.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/management-commands/c418e576740ff05615a5e866ed0e00e51281439b90ce0ec9aaad0c41a96bf712.json",
+      "crc32": "9fd081e0",
+      "bytes": 929,
+      "gitBlob": "c58f2f05dbba6c66f933bdb502f6fa6fc9f46e57",
+      "sha256": "cb7f197283d1e0288353e3106cc55d6ecf24e353022f885c47f7fe139a2b178f"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/runtime-checkpoints/cp1-926ea7d5d697bb420b93b48908a6b3f1d905fcef06b2ba3b1db6893a0c5d04e8.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/runtime-checkpoints/cp1-926ea7d5d697bb420b93b48908a6b3f1d905fcef06b2ba3b1db6893a0c5d04e8.json",
+      "crc32": "ceecf0be",
+      "bytes": 2319,
+      "gitBlob": "6e05c6601d0f5a57b5cfc7976def76fa683c5cfb",
+      "sha256": "dfafa6f8da9d2cd01452e7b54ee86999bf83a2458c0312fad9ae1011f73bbf07"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/runtime-checkpoints/cp1-fe9e09ef46f2fd48591c2fd1b475939120499b189c236b9d390b489d0e96786e.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/runtime-checkpoints/cp1-fe9e09ef46f2fd48591c2fd1b475939120499b189c236b9d390b489d0e96786e.json",
+      "crc32": "d8c2fd24",
+      "bytes": 1895,
+      "gitBlob": "88c2b11dbd2d223a25475ee99fb5782932830ce5",
+      "sha256": "28beaa55e2fc713c14bd9262d733da8bce6884455aa76ecac782c1e6529cc35b"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/teams/test-desktop-backend/inboxes/alice.json",
+      "crc32": "24e8fa9d",
+      "bytes": 453,
+      "gitBlob": "435d66b2d1c9245e7ec677fb5a305ac14db553f3",
+      "sha256": "926d8e6dd92c82729ee8bf7c3b472023e1c7eb6e39516f3077e5b425c06542a1"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/teams/test-selection-next-team/inboxes/team-lead.json",
+      "crc32": "5f0d2294",
+      "bytes": 202,
+      "gitBlob": "d1c21cbdb9217b0c6a338d131aaac3e0ef525525",
+      "sha256": "ec321f0097d4642f1b1c1d6d047b747fe56f17762df57b7612803fbe1a964b3e"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/hoststore/runtime-sources/index.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/hoststore/runtime-sources/index.json",
+      "crc32": "6c5aeb39",
+      "bytes": 1687,
+      "gitBlob": "17caf883641f74adc6ce0fbf2dac311dc005e875",
+      "sha256": "ddd4fad9e98b382d04e52cdad05fddb6bcf1ee07282d76cbf69003733a82d5c4"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/sentinel-invocations.ndjson",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "gitBlob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-a-launch.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-a-launch.png",
+      "crc32": "0d07b147",
+      "bytes": 88913,
+      "gitBlob": "2944e8a253dcb9735815cdf97ee711bd8cb99803",
+      "sha256": "e8dd45314edd90c35e165c83f830a6661cccce7507cc7283c01152deaf86ad18"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-a-survived.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-a-survived.png",
+      "crc32": "ead9f986",
+      "bytes": 103606,
+      "gitBlob": "e8f5774eab8c54238137e2082e779fec2c1ace3e",
+      "sha256": "61b10148626ebe26a90a2f5e7fc5b500b6333f149f7f13b0ecafd7b431cb469a"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-b-launch.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-b-launch.png",
+      "crc32": "44fd9f2e",
+      "bytes": 84759,
+      "gitBlob": "30a84db74d0edff311458f4fe07e434e06bb659a",
+      "sha256": "5b6f0d037edfcd52fa25f33299a232b98d9b7132d91b0e0aeb9ad831008f6634"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-completed.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-completed.png",
+      "crc32": "b98005b6",
+      "bytes": 107574,
+      "gitBlob": "69b1f37aa8897a427d8d5f53ccc121dfd596d611",
+      "sha256": "d0ab6aedd81f2baab938112e8fe74893545b28647294d039c22e30bb977e1918"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-effects.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-effects.json",
+      "crc32": "4fd93409",
+      "bytes": 23413,
+      "gitBlob": "f6d8658bb95fec16c3f0c6508f99cec9c5d6cf39",
+      "sha256": "d8452a4b4df8fd9fcd1b7a73ee07cebb58a792582ca690ad17e76bdf4c0b7261"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-before.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-before.png",
+      "crc32": "4f38f8cb",
+      "bytes": 73511,
+      "gitBlob": "73cf8587c346adfd6ff28360854a9c46e6e86032",
+      "sha256": "0072404dc12084cdcfa88e3416ea351967b07237fa5d5f3855987d4270762cfd"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-ready.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-ready.png",
+      "crc32": "70e46ed5",
+      "bytes": 67264,
+      "gitBlob": "6ef1e492faebdcc988a7599ca1c92e2bcf87ebfb",
+      "sha256": "815cb3c504e6297188ddacf41465f10a39aaf31518bdaa4711c8ffeeb4b2b4c8"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-settings-page.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-settings-page.png",
+      "crc32": "aed427f8",
+      "bytes": 86993,
+      "gitBlob": "a22b13839e871e908dbe958cef2bf7af09aeb9bf",
+      "sha256": "1674d3429fcc4284a944b26ab476219dcb2bdcdedce9296c0807bacdf49c2f69"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-settings-dialog.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-installer-settings-dialog.png",
+      "crc32": "5205996f",
+      "bytes": 91558,
+      "gitBlob": "5a4326f77fab729a3d0ef3de193d5f51d002e838",
+      "sha256": "343cca845370f5b6682734b71ce0caf72dc698ea81d7eab7050bbc5bc4564f76"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-reloaded.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-reloaded.png",
+      "crc32": "5c2217e3",
+      "bytes": 76063,
+      "gitBlob": "33901f773bb218e793e7d212dd89df6161b02846",
+      "sha256": "d294c9ccced945c09ddab2eab1db4c586b4d9de92d7fa86646478fbe79b1ab9d"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-stopped.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-stopped.png",
+      "crc32": "a7e74ddc",
+      "bytes": 92663,
+      "gitBlob": "f445d26b6ae758f3c75ff4350b3bbcb91870cf44",
+      "sha256": "328d98c8dbbbc7981b80afbd9174b241a01e5f990a4760610171450ed43175a4"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-emulated-selection-selected.png",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-emulated-selection-selected.png",
+      "crc32": "98791fdb",
+      "bytes": 70748,
+      "gitBlob": "b26e432c4472b678b64d0615295244deedfdbf2b",
+      "sha256": "7653548c5f1674b5867c358514fbfa3b9ba3f2df4aab8323d0b463ee5361d571"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/ui-seed-receipt.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/ui-seed-receipt.json",
+      "crc32": "22c68886",
+      "bytes": 2335,
+      "gitBlob": "77b88e2d3769dd35f64d0ce12068c6f2050146e4",
+      "sha256": "2ae844866e15cbd5148608acf993b919e706f44bfff30d9af85117470f3fe523"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/TEST-desktop-backend-saKEFv/userData/data/runtimes/codex/current.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "TEST-desktop-backend-saKEFv/userData/data/runtimes/codex/current.json",
+      "crc32": "825b557c",
+      "bytes": 502,
+      "gitBlob": "9cbccd8d3f7829283effa26f04a5988a2fab83f3",
+      "sha256": "b2f855af41ca8676da2fc840d4cadf8ee4c506c41e6fb434209008284d637692"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/host-emulated-inputs.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "host-emulated-inputs.json",
+      "crc32": "e3ab5066",
+      "bytes": 1055,
+      "gitBlob": "062acf71e7e57261660b16e03adaf970d28f84bd",
+      "sha256": "ba5cf8bdfe0ebe8ebd5e7604aec4b10b77f63040ce388d6bc4ec2f774dfc90ae"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/host-emulated-emulated-installer-ui.log",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "host-emulated-emulated-installer-ui.log",
+      "crc32": "8f41bd92",
+      "bytes": 227,
+      "gitBlob": "bd6e59d9e545b7e53b1acd502367924c3975cfef",
+      "sha256": "a08e7cafd460cfa72331c76e48a77a701d2e7fa45f464b922d08f4f56407c220"
+    },
+    {
+      "derivativeOriginalPath": "/workspace/scratch/82d3f9ba6b85/ci-desktop-9e542/installer-macos/extracted/host-emulated-summary.json",
+      "restoreFromArchiveMember": "ci-desktop-9e542/installer-macos/archive.zip",
+      "nestedMember": "host-emulated-summary.json",
+      "crc32": "19b31710",
+      "bytes": 1355,
+      "gitBlob": "d366a41cf8c62356a958ef7e9fb1e5873602cacb",
+      "sha256": "21806981a7da30e145adec51f9bb3200d5c674ba1d2c31a4412d88d375d72b7c"
+    }
+  ],
+  "omittedCount": 116,
+  "omittedBytes": 6285725,
+  "signedTransportUrlMatches": 0,
+  "qualifiedNewSource": false,
+  "projectExecution": false,
+  "noTrackedEditsOrRefUpdates": true,
+  "manifestSelfHash": "Excluded to avoid recursion; external bundle-metadata.json carries manifest and ZIP identities."
+}

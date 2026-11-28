@@ -1,0 +1,139 @@
+import { z } from 'zod';
+import { isAbsolute, resolve } from 'node:path';
+import { memberSettingsSchema, savedTeamSettingsSchema } from '../team/rosterSchema.js';
+
+const id = z
+  .string()
+  .min(1)
+  .max(256)
+  .refine((value) => !!value.trim() && !value.includes('\0'));
+const segment = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/);
+
+/** Only Host project-context composition can issue this relation. It is never accepted in a Create DTO. */
+export const teamProjectContextRelationSchema = z
+  .object({
+    logicalTeamId: segment,
+    logicalHandleId: id,
+    workContextId: id,
+    projectKey: z.string().regex(/^[a-f0-9]{64}$/),
+    projectPath: z.string().min(1).max(8192),
+  })
+  .strict();
+export type TeamProjectContextRelation = z.infer<typeof teamProjectContextRelationSchema>;
+
+/** Product intent only. Context authority and the principal come from trusted composition. */
+export const createTeamRegistryPayloadSchema = z
+  .object({
+    contextId: id,
+    teamName: segment,
+    savedSettings: savedTeamSettingsSchema,
+    members: z
+      .array(z.object({ name: segment, memberSettings: memberSettingsSchema }).strict())
+      .max(255),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    const names = [
+      'team-lead',
+      'user',
+      ...value.members.map((member) => member.name.toLowerCase()),
+    ];
+    if (new Set(names).size !== names.length)
+      context.addIssue({ code: 'custom', message: 'Duplicate or reserved member name' });
+    if (
+      value.savedSettings.cwd !== '' &&
+      (!isAbsolute(value.savedSettings.cwd) ||
+        resolve(value.savedSettings.cwd) !== value.savedSettings.cwd)
+    )
+      context.addIssue({ code: 'custom', message: 'Expected a canonical absolute project path' });
+    if (new TextEncoder().encode(JSON.stringify(value)).byteLength > 512 * 1024)
+      context.addIssue({ code: 'custom', message: 'Creation intent too large' });
+  });
+
+export const teamRegistryScopeSchema = z
+  .object({
+    projectId: id,
+    workspaceId: id,
+    teamId: segment,
+    runId: id,
+    memberId: id,
+    generation: id,
+  })
+  .strict();
+
+/** Host-to-Main only. Contains no native IDs, account selectors, env or filesystem paths. */
+export const teamRegistryRecordSchema = z
+  .object({
+    contextId: id,
+    teamId: segment,
+    teamName: segment,
+    displayName: z.string().max(256).optional(),
+    projectContextMode: z.enum(['shared', 'per_project']).optional(),
+    projectContext: teamProjectContextRelationSchema.optional(),
+    description: z
+      .string()
+      .max(64 * 1024)
+      .optional(),
+    color: z.string().max(256).optional(),
+    members: z.array(z.object({ memberId: segment, label: segment }).strict()).max(256),
+    binding: z
+      .object({
+        schemaVersion: z.literal(1),
+        handleId: id,
+        scope: teamRegistryScopeSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
+export const teamRegistryReceiptSchema = z
+  .object({
+    commandId: id,
+    phase: z.enum(['pending', 'published', 'held']),
+    record: teamRegistryRecordSchema,
+  })
+  .strict();
+
+export const teamRegistryListSchema = z
+  .object({
+    teams: z.array(teamRegistryRecordSchema).max(256),
+    held: z.array(teamRegistryReceiptSchema).max(256),
+  })
+  .strict();
+
+/** Read-only Desktop transport; journal records and the legacy small response stay unchanged. */
+export const teamRegistryCursorSchema = z
+  .string()
+  .refine((value) => /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.exec(value)?.[0] === value);
+export const teamRegistryPageSchema = z
+  .object({
+    kind: z.literal('team-registry-page'),
+    teams: z.array(teamRegistryRecordSchema).max(256),
+    held: z.array(teamRegistryReceiptSchema).max(256),
+    totalTeams: z.number().int().min(0).max(256),
+    totalHeld: z.number().int().min(0).max(256),
+    revision: z
+      .string()
+      .length(64)
+      .regex(/^[a-f0-9]{64}$/),
+    nextCursor: teamRegistryCursorSchema.nullable(),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.totalTeams + value.totalHeld > 0 &&
+      value.totalTeams + value.totalHeld <= 256 &&
+      value.teams.length + value.held.length > 0 &&
+      value.teams.length <= value.totalTeams &&
+      value.held.length <= value.totalHeld
+  );
+export const teamRegistryListResponseSchema = z.union([
+  teamRegistryListSchema,
+  teamRegistryPageSchema,
+]);
+
+export type CreateTeamRegistryPayload = z.infer<typeof createTeamRegistryPayloadSchema>;
+export type TeamRegistryRecord = z.infer<typeof teamRegistryRecordSchema>;
+export type TeamRegistryReceipt = z.infer<typeof teamRegistryReceiptSchema>;
+export type TeamRegistryList = z.infer<typeof teamRegistryListSchema>;
+export type TeamRegistryPage = z.infer<typeof teamRegistryPageSchema>;

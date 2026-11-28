@@ -1,0 +1,574 @@
+{
+  "kind": "N608EFB_ORIGINAL_SPI_AUTHOR_EVIDENCE_AUDIT",
+  "reviewedAtUtc": "2026-11-16T04:09:24.687074+00:00",
+  "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+  "runId": 43795234721,
+  "jobId": 133062438603,
+  "artifactId": 14196881617,
+  "conclusion": "Original CI SUCCESS; bounded TEST native Host SPI result, all broad qualification flags remain false.",
+  "job": {
+    "id": 133062438603,
+    "name": "Native V2.0.21 Host SPI instructions (Ubuntu TEST only)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43795234721,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Require immutable PR native source HEAD",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Install pinned Host workspace dependencies",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Build Host V2 SPI with real pinned private driver",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Check native TEST proof syntax",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Test direct-shell HTTP mutation/no-replay diagnostic boundary",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 9
+      },
+      {
+        "name": "Install exact official V2 CLI in isolated runner prefix, without scripts",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 10
+      },
+      {
+        "name": "Confirm native ELF interruption and original process identity",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Exercise real pinned native server against existing Host Session SPI",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Require complete native TEST receipt before success",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 13
+      },
+      {
+        "name": "Preserve exact native TEST proof or HOLD receipt",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 14
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 26
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 27
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 28
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 29
+      }
+    ]
+  },
+  "officialRun": {
+    "id": 43795234721,
+    "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "event": "pull_request",
+    "run_attempt": 1
+  },
+  "officialArtifact": {
+    "id": 14196881617,
+    "name": "opencode-v2-stage1-host-native-instructions-ubuntu",
+    "size_in_bytes": 3152,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196881617",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14196881617/zip",
+    "expired": false,
+    "created_at": "2026-11-16T04:06:34Z",
+    "expires_at": "2026-11-23T04:06:33Z",
+    "updated_at": "2026-11-16T04:06:34Z",
+    "digest": "sha256:9d4cf1e4304883f880f3bba298c1ffeb8c6ec50cf69bf2565d9cb509e141bba3",
+    "workflow_run": {
+      "id": 43795234721,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+    }
+  },
+  "originalResponseUtf8EqualsRawLog": true,
+  "rawLog": {
+    "path": "native-audit-N608efb/spi-linux/job-133062438603.log",
+    "bytes": 68756,
+    "blob": "381569e0fa4c375760443554c40432778fbd9562",
+    "sha256": "ce48caaab559b71709f5a56d64c7953c02baf088819257512ed42c6537f811c3"
+  },
+  "fullLogLines": 804,
+  "archive": {
+    "path": "native-audit-N608efb/spi-linux/artifact-14196881617.zip",
+    "bytes": 3152,
+    "blob": "a5460c380fda8639edcd5f44c612a4c0ac2bc8ef",
+    "sha256": "9d4cf1e4304883f880f3bba298c1ffeb8c6ec50cf69bf2565d9cb509e141bba3"
+  },
+  "members": [
+    {
+      "path": "agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json",
+      "bytes": 3222,
+      "sha256": "103f9147fd72700d2e80b48749b927b04a826841562549a481041702e50ba9c9",
+      "crc32": "09cebdab",
+      "blob": "fbda2f0d82bc84e3494d6cec98cbca0b5aa72e5e"
+    },
+    {
+      "path": "_temp/opencode-v2-host-cli/package-lock.json",
+      "bytes": 6764,
+      "sha256": "8300e598ffc99a2575effe83c6fb504af9698e1effa4947feb6feed94036a550",
+      "crc32": "570e75df",
+      "blob": "9267217bc0c99ae3a1f502bbc7cc33ff7aa0061f"
+    }
+  ],
+  "receiptFile": {
+    "path": "native-audit-N608efb/spi-linux/extracted/agent-teams-ai/agent-teams-ai/opencode-v2-host-native-instructions.json",
+    "bytes": 3222,
+    "blob": "fbda2f0d82bc84e3494d6cec98cbca0b5aa72e5e",
+    "sha256": "103f9147fd72700d2e80b48749b927b04a826841562549a481041702e50ba9c9"
+  },
+  "receipt": {
+    "kind": "TEST_NATIVE_HOST_SPI_INSTRUCTIONS",
+    "version": "2.0.21",
+    "qualified": false,
+    "productQualified": false,
+    "packagedElectronQualified": false,
+    "steps": [
+      "pinned_actual_ELF_measured",
+      "actual_native_PID_start_and_digest",
+      "native_loopback_authenticated_identity",
+      "native_loopback_unauthenticated_request_rejected",
+      "native_TEST_session_created_no_model_call",
+      "native_TEST_session_workspace_and_permissions_attested",
+      "source_preflight_classified_later_allow_as_hold",
+      "real_native_later_allow_resolver_observed_preflight_hold",
+      "real_native_ordered_ask_readback_without_tool_execution",
+      "real_native_ask_permission_rejected_without_tool_execution",
+      "real_native_direct_shell_diagnostic_not_model_turn",
+      "actual_native_instruction_put_and_readback",
+      "Host_existing_Session_SPI_ready_with_real_native_attestation",
+      "Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck",
+      "Host_native_readiness_recheck_no_instruction_replay",
+      "native_foreign_permission_wrong_session_reply_rejected",
+      "Host_unregistered_permission_reference_stale_no_native_change",
+      "real_native_Host_captured_external_deny_resolver_observed",
+      "real_native_fresh_session_durable_log_cursor_read_only",
+      "Host_seal_started_real_native_owned_stop_before_close",
+      "real_native_seal_refused_retained_SPI_mutations_and_checkpoint",
+      "same_TEST_native_owner_closed_without_replay",
+      "native_cold_restart_session_permissions_and_context_read_only",
+      "native_cold_restart_durable_log_cursor_read_only",
+      "same_TEST_native_owner_restart_cleanup_confirmed"
+    ],
+    "cleanup": true,
+    "sourceHead": "608efb78823d7c74b35f8a674fcfb6faea8ecfc5",
+    "binarySha256": "f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7",
+    "pid": 3160,
+    "processStartTicks": "8067",
+    "directShellProbe": {
+      "attempted": true,
+      "outcome": "effect-confirmed",
+      "status": 204,
+      "responseUncertain": false,
+      "modelTurnProven": false,
+      "toolPermissionEnforcementProven": false
+    },
+    "nativeModelReadback": "captured",
+    "hostAdmissionPhase": "spi-opened",
+    "nativeCustodyReadbacks": 4,
+    "nativePermissionReadbacks": 4,
+    "unregisteredPermissionProbe": {
+      "unregisteredReferenceStale": true,
+      "nativeWrongSessionReplyRejected": true,
+      "foreignPendingUnchanged": true,
+      "nativeCleanupRejected": true,
+      "sessionAuthorityProven": false,
+      "toolEnforcementProven": false
+    },
+    "nativePolicyDecisions": {
+      "capturedDeny": "deny",
+      "laterAllow": "allow",
+      "laterAsk": "ask",
+      "askRejected": true,
+      "pendingAfterReject": 0,
+      "resolverOnly": true,
+      "toolEnforcementProven": false
+    },
+    "nativeLogReadback": {
+      "readOnly": true,
+      "synced": true,
+      "watermark": 0,
+      "eventCount": 0,
+      "modelTurnProven": false
+    },
+    "restart": {
+      "priorPid": 3160,
+      "priorStartTicks": "8067",
+      "pid": 3182,
+      "startTicks": "8251",
+      "actualBinarySha256": "f916986543348d7953d8d43aa048516cdbc3f84f4d0dc9c0c5b9d1da3030cea7",
+      "readOnly": true
+    },
+    "restartLogReadback": {
+      "readOnly": true,
+      "synced": true,
+      "watermark": 0,
+      "eventCount": 0,
+      "modelTurnProven": false
+    }
+  },
+  "lockFile": {
+    "path": "native-audit-N608efb/spi-linux/extracted/_temp/opencode-v2-host-cli/package-lock.json",
+    "bytes": 6764,
+    "blob": "9267217bc0c99ae3a1f502bbc7cc33ff7aa0061f",
+    "sha256": "8300e598ffc99a2575effe83c6fb504af9698e1effa4947feb6feed94036a550"
+  },
+  "npmLock": {
+    "version": 3,
+    "entriesIncludingRoot": 14,
+    "cli": {
+      "version": "2.0.21",
+      "resolved": "https://registry.npmjs.org/@opencode/cli/-/cli-2.0.21.tgz",
+      "integrity": "sha512-hXFVQlNX+usWsYR5xYxDl1pYyG525V7p0kAGI0Q/mhrLg/2FpyJwuw0bMVJ+fc4PxHKHPC0tsIwAG/8i3lusKg==",
+      "cpu": [
+        "arm64",
+        "x64"
+      ],
+      "hasInstallScript": true,
+      "license": "MIT",
+      "os": [
+        "darwin",
+        "linux",
+        "win32"
+      ],
+      "bin": {
+        "opencode": "bin/opencode.exe",
+        "opencode2": "bin/opencode.exe"
+      },
+      "optionalDependencies": {
+        "@opencode/cli-darwin-arm64": "2.0.21",
+        "@opencode/cli-darwin-x64": "2.0.21",
+        "@opencode/cli-darwin-x64-baseline": "2.0.21",
+        "@opencode/cli-linux-arm64": "2.0.21",
+        "@opencode/cli-linux-arm64-musl": "2.0.21",
+        "@opencode/cli-linux-x64": "2.0.21",
+        "@opencode/cli-linux-x64-baseline": "2.0.21",
+        "@opencode/cli-linux-x64-baseline-musl": "2.0.21",
+        "@opencode/cli-linux-x64-musl": "2.0.21",
+        "@opencode/cli-windows-arm64": "2.0.21",
+        "@opencode/cli-windows-x64": "2.0.21",
+        "@opencode/cli-windows-x64-baseline": "2.0.21"
+      }
+    },
+    "selectedLinuxX64": {
+      "version": "2.0.21",
+      "resolved": "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-2.0.21.tgz",
+      "integrity": "sha512-intPGPRrEoZk+5Qq2dzYcq3Wv07vWvQrv56WieurupI9jGJSEAfT4a9Pi6YMW4tEW6SapAds/95K0egVS2YwiA==",
+      "cpu": [
+        "x64"
+      ],
+      "license": "MIT",
+      "optional": true,
+      "os": [
+        "linux"
+      ]
+    },
+    "installedElfOrTgzArchived": false
+  },
+  "sourceAudit": {
+    "path": "native-audit-N608efb/spi-linux/source-and-command-audit.json",
+    "bytes": 7561,
+    "blob": "ec855b5c6fe9201b025d8ab1640aee07e947cc24",
+    "sha256": "b03c81ef8570b893c01fd46bc5de7a42111d328e00e0f3778eb075cc4adaca19"
+  },
+  "sourceSemanticsBasis": {
+    "oldSourceAudit": {
+      "path": "native-audit-M0660/spi-linux/source-and-command-audit.json",
+      "bytes": 6570,
+      "blob": "3623d99776928e418e7dcacab405ff06b1404271",
+      "sha256": "8610a2522bebec9ee51ce887f49f3a31e453b86e8fa0573bb213e40453b2abdc"
+    },
+    "oldIndependentReview": {
+      "path": "native-audit-M0660/spi-linux/root-independent-review.json",
+      "bytes": 22212,
+      "blob": "950c939dc506243a9f17706310ee6a9b5e33cd57",
+      "sha256": "c716b21f762db8f53283e14338fb65e8ed7508ce6c3207bc7592edf088557aaf"
+    },
+    "all22InterpretationSourcesReadFromCurrentHeadAndByteIdentical": true,
+    "currentOutcomeNotTransferred": true
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "npm": "11.19.0",
+    "pnpm": "11.22.0",
+    "freshDeclaredHostBuildObserved": true,
+    "hostGitSourceCount": 619,
+    "hostGitSourceDigest": "4a97065f4e44d4dd380638100abb11769cf1290d61eaac64a9e3bf6e956041d9",
+    "runtimeSourceCensusRetained": false,
+    "hostDistDigestRetained": false
+  },
+  "originalCommandHeaders": [
+    {
+      "line": 36,
+      "text": "actions/checkout@v6"
+    },
+    {
+      "line": 170,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 181,
+      "text": "pnpm/action-setup@v6"
+    },
+    {
+      "line": 207,
+      "text": "actions/setup-node@v6"
+    },
+    {
+      "line": 241,
+      "text": "node ./scripts/ci/install-dependencies-with-retry.mjs"
+    },
+    {
+      "line": 609,
+      "text": "pnpm --filter @agent-teams/legacy-agent-host build"
+    },
+    {
+      "line": 622,
+      "text": "node --check packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs"
+    },
+    {
+      "line": 632,
+      "text": "node --test packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.test.mjs"
+    },
+    {
+      "line": 662,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 700,
+      "text": "node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs"
+    },
+    {
+      "line": 724,
+      "text": "node packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs"
+    },
+    {
+      "line": 737,
+      "text": "set -euo pipefail"
+    },
+    {
+      "line": 750,
+      "text": "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+    }
+  ],
+  "exactSourceAndLogCommands": [
+    "pnpm --filter @agent-teams/legacy-agent-host build",
+    "node --check packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs",
+    "node --test packages/legacy-agent-host/tests/opencode-v2-direct-shell-probe.test.mjs",
+    "node --test packages/legacy-agent-host/tests/opencode-v2-http-interrupt-negative.test.mjs",
+    "node packages/legacy-agent-host/tests/opencode-v2-native-instructions.mjs",
+    "node packages/legacy-agent-host/tests/opencode-v2-native-receipt-verify.mjs opencode-v2-host-native-instructions.json"
+  ],
+  "reporters": {
+    "blocks": [
+      {
+        "line": 654,
+        "tests": 12,
+        "pass": 12,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0
+      },
+      {
+        "line": 716,
+        "tests": 4,
+        "pass": 2,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 2
+      }
+    ],
+    "fullCases": [
+      {
+        "line": 642,
+        "text": "2026-11-16T04:06:18.9160057Z ✔ one owned direct shell file effect is not a model/tool authorization certificate (2.617627ms)"
+      },
+      {
+        "line": 643,
+        "text": "2026-11-16T04:06:18.9162717Z ✔ unsupported direct shell endpoint is HOLD with no mutation replay (0.274755ms)"
+      },
+      {
+        "line": 644,
+        "text": "2026-11-16T04:06:18.9164272Z ✔ success without an actual file effect is HOLD, not fabricated proof (0.256866ms)"
+      },
+      {
+        "line": 645,
+        "text": "2026-11-16T04:06:18.9165412Z ✔ uncertain HTTP ACK remains HOLD even if the TEST file was written (0.344142ms)"
+      },
+      {
+        "line": 646,
+        "text": "2026-11-16T04:06:18.9166182Z ✔ foreign-session native readback refuses shell mutation and foreign cleanup (0.476001ms)"
+      },
+      {
+        "line": 647,
+        "text": "2026-11-16T04:06:18.9166988Z ✔ unexpected workspace contents never count as successful direct shell (0.226939ms)"
+      },
+      {
+        "line": 648,
+        "text": "2026-11-16T04:06:18.9167845Z ✔ uncertain cleanup is an error even after native shell success (0.334241ms)"
+      },
+      {
+        "line": 649,
+        "text": "2026-11-16T04:06:18.9168528Z ✔ a preexisting marker cannot counterfeit a fresh native shell effect (0.283699ms)"
+      },
+      {
+        "line": 650,
+        "text": "2026-11-16T04:06:18.9169141Z ✔ post-mutation foreign session never qualifies an observed file effect (0.364043ms)"
+      },
+      {
+        "line": 651,
+        "text": "2026-11-16T04:06:18.9173501Z ✔ post-mutation unreadable session remains HOLD, without retry (0.399114ms)"
+      },
+      {
+        "line": 652,
+        "text": "2026-11-16T04:06:18.9174704Z ✔ identity swap before cleanup blocks DELETE after a successful native effect (0.3092ms)"
+      },
+      {
+        "line": 653,
+        "text": "2026-11-16T04:06:18.9176092Z ✔ unreadable pre-cleanup ownership cannot cause blind DELETE (0.253561ms)"
+      },
+      {
+        "line": 712,
+        "text": "2026-11-16T04:06:26.9863285Z ﹣ SIGINT reaps the owned published HTTP server and emits a HOLD receipt (0.700294ms) # SKIP"
+      },
+      {
+        "line": 713,
+        "text": "2026-11-16T04:06:26.9872818Z ﹣ SIGTERM reaps the owned published HTTP server and emits a HOLD receipt (0.788948ms) # SKIP"
+      },
+      {
+        "line": 714,
+        "text": "2026-11-16T04:06:28.8223566Z ✔ SIGINT reaps the owned native ELF server and emits a HOLD receipt (1838.526278ms)"
+      },
+      {
+        "line": 715,
+        "text": "2026-11-16T04:06:30.1521541Z ✔ SIGTERM reaps the owned native ELF server and emits a HOLD receipt (1331.788798ms)"
+      }
+    ],
+    "total": 16,
+    "pass": 14,
+    "fail": 0,
+    "skip": 2,
+    "cancelled": 0,
+    "skipReason": "Both HTTP interruption cases guard on the absent OPENCODE_V2_TEST_SDK_PREFIX. This job sets NPM_ROOT only; the two original native ELF SIGINT/SIGTERM cases pass.",
+    "negativeReceiptLimits": "Reporter proves original assertions completed; per-negative PID/receipt files are not archived. Original source requires own TEST parent signal, exit130/143 with null signal, interrupted cleanup:true receipt, temporary-root removal and worker-group ESRCH. No reconstructed per-run values are claimed."
+  },
+  "nativeStepProof": {
+    "requiredCount": 25,
+    "exactOrderedSteps": [
+      "pinned_actual_ELF_measured",
+      "actual_native_PID_start_and_digest",
+      "native_loopback_authenticated_identity",
+      "native_loopback_unauthenticated_request_rejected",
+      "native_TEST_session_created_no_model_call",
+      "native_TEST_session_workspace_and_permissions_attested",
+      "source_preflight_classified_later_allow_as_hold",
+      "real_native_later_allow_resolver_observed_preflight_hold",
+      "real_native_ordered_ask_readback_without_tool_execution",
+      "real_native_ask_permission_rejected_without_tool_execution",
+      "real_native_direct_shell_diagnostic_not_model_turn",
+      "actual_native_instruction_put_and_readback",
+      "Host_existing_Session_SPI_ready_with_real_native_attestation",
+      "Host_remeasured_real_ELF_digest_PID_and_start_identity_on_recheck",
+      "Host_native_readiness_recheck_no_instruction_replay",
+      "native_foreign_permission_wrong_session_reply_rejected",
+      "Host_unregistered_permission_reference_stale_no_native_change",
+      "real_native_Host_captured_external_deny_resolver_observed",
+      "real_native_fresh_session_durable_log_cursor_read_only",
+      "Host_seal_started_real_native_owned_stop_before_close",
+      "real_native_seal_refused_retained_SPI_mutations_and_checkpoint",
+      "same_TEST_native_owner_closed_without_replay",
+      "native_cold_restart_session_permissions_and_context_read_only",
+      "native_cold_restart_durable_log_cursor_read_only",
+      "same_TEST_native_owner_restart_cleanup_confirmed"
+    ],
+    "completeVerifierCommandObserved": true,
+    "readiness": "The fresh compiled Host OpenCodeV2MemberProvider is exercised inside the Node TEST harness against an actual pinned detached OpenCode2.0.21 ELF server. This is not a separate Host CLI process or packaged Electron.",
+    "nativeIdentity": "Original pid3160/start8067 and cold pid3182/start8251, same committed f9169865 ELF digest; native info PID/version plus original process/group checks. Sequential /proc/readlink/hash/HTTP observations are not atomic mapped-image or future-consumption proof.",
+    "authenticatedLoopback": "Original and restarted unauthenticated info requests require401. Password/environment/session IDs are not in this sanitized receipt.",
+    "context": "Exactly one initial instructions PUT and its native readback; actual readiness recheck requires four custody reads, four effective-permission reads and three context readbacks, while PUT remains one. These source assertions precede recorded recheck steps.",
+    "policy": "Later allow/ask and captured deny are real native resolver/readback outcomes. Reject-only foreign/wrong-session and Host stale unregistered-reference probes preserve unchanged pending/native session state. They do not prove authorized cross-session grants or model/tool enforcement.",
+    "directShell": "One authenticated direct session.shell POST produced the exact previously absent TEST workspace file with204, fresh owned-session/rules readbacks and one authorized session DELETE. No unknown-response replay or model turn; effect-confirmed remains diagnostic only.",
+    "seal": "provider.seal starts original native group stop before driver.close; retained submit returns unavailable/known-not-sent; permission/interrupt/readiness/checkpoint remain unavailable, without instruction/custody/permission replay.",
+    "cold": "Original pid and group absence precede new native process start. Session rules/context are read back without a new instruction PUT; durable log prefix remains empty at synced watermark0/eventCount0. Empty durable cursors are not observed user/model history.",
+    "cleanup": "stopOwned compares original /proc start/group identity and sends group SIGTERM only through the captured TEST owner; confirmStopped requires both leader and group absence within original bounded polling. Restart is separately stopped, and finally removes the TEST root only after confirmed cleanup. This is process/group absence, not an archived exit-code certificate for either native child.",
+    "readBounds": "Actual network bodies retain the original1MiB limit, original log parser4096-event limit and declared request/poll deadlines. No additional observations/actions were run during audit."
+  },
+  "qualificationLimits": [
+    "The original receipt requires qualified=false, productQualified=false, packagedElectronQualified=false. No PASS status field is invented.",
+    "A Node TEST harness exercises fresh Host provider code with a real pinned2.0.21 ELF; no standalone Host CLI or packaged Electron proof.",
+    "One direct shell file effect with204 is diagnostic, explicitly not a model turn or tool-enforcement certificate; resolver and wrong-session probes retain their original narrower limits.",
+    "Both log cursors are synced at watermark0/eventCount0; no actual model history is inferred.",
+    "Original and cold leader/group absence is distinct from an archived native exit-code certificate; no atomic/future-byte/P09 binding claim.",
+    "No Team177/24 privacy result, complete types/93-path lint, P08 UI, realClaude/Codex/authentication or release qualification transfers.",
+    "No project/test/compiler/install/native/provider execution, signals, source/ref or CI action occurred during this audit."
+  ],
+  "reviewState": "Author readback; pending independent R2."
+}

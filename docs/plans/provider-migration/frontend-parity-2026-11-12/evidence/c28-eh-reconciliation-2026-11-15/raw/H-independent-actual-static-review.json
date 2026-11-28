@@ -1,0 +1,226 @@
+{
+  "verdict": "APPROVE",
+  "stage": "H",
+  "head": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+  "tree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+  "parents": [
+    "387fa7ab81ddd57bdd274f763b8be90cfaaae484"
+  ],
+  "commands": [
+    {
+      "name": "H-host-test-types",
+      "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "packages/legacy-agent-host/tsconfig.test.json"
+      ],
+      "startedAtUTC": "2026-11-15T21:33:43.875672+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:47.124021+00:00",
+      "elapsedSeconds": 3.2483284390036715,
+      "exitCode": 0,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 2699,
+        "blob": "30997970bc716a6962ade85b21369b45cb2f67a8",
+        "sha256": "69e966a51ad48ed5fde3b365235ff137c61df279ee425750fe792395bd029ff0"
+      },
+      "preflight": {
+        "bytes": 23128,
+        "blob": "7122919b550c96d9c639fda6c19343100966bcde",
+        "sha256": "1a42a061e611d77b1cf08a732b307c0246190be508833f2cf5a03b6c5e971262"
+      },
+      "postflightExact": true
+    },
+    {
+      "name": "H-scripts-types",
+      "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/@typescript/native/bin/tsc",
+        "--project",
+        "tsconfig.legacy-agent-host-scripts.json"
+      ],
+      "startedAtUTC": "2026-11-15T21:33:47.884769+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:48.988907+00:00",
+      "elapsedSeconds": 1.1041155849961797,
+      "exitCode": 0,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 2691,
+        "blob": "907793bc9d93d77e396acfa30e2d60bec5a42583",
+        "sha256": "5e07da3045754d1fc843e736870df9fa2e32c21a1db51a3e49634e9bcfdb6466"
+      },
+      "preflight": {
+        "bytes": 23898,
+        "blob": "c368c42f03bafa78d067bc4fddb09d7f86c4d5a7",
+        "sha256": "b1115d15d7463f5dc859e9a596dee1fadf3d341f9aaec58ebfd573264a4ed1ab"
+      },
+      "postflightExact": true
+    },
+    {
+      "name": "H-scoped-fast-lint",
+      "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.fast.config.js",
+        "--cache",
+        "--cache-location",
+        ".eslintcache-fast",
+        "--cache-strategy",
+        "content",
+        "--",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+      ],
+      "startedAtUTC": "2026-11-15T21:33:49.829601+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:52.196814+00:00",
+      "elapsedSeconds": 2.367192542995326,
+      "exitCode": 0,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 3115,
+        "blob": "185ef063f2d715a92e9ec841add4dd547f40814b",
+        "sha256": "18df9491562ebd822fbff88dbe0df191e4189b950cb47200e6513966796d8818"
+      },
+      "preflight": {
+        "bytes": 25095,
+        "blob": "6bcd73b466264a0915ab48bf7cabce571bb5c28a",
+        "sha256": "226c2188ac6eda09788c8f36e61dfcf8fae9be5c252ffdc6356d0f0806a96ab7"
+      },
+      "postflightExact": true
+    },
+    {
+      "name": "H-size",
+      "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-source-file-size.mjs"
+      ],
+      "startedAtUTC": "2026-11-15T21:33:53.417593+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:54.135623+00:00",
+      "elapsedSeconds": 0.718006601993693,
+      "exitCode": 0,
+      "log": {
+        "bytes": 202,
+        "blob": "9e532b2a599bb5da3a6ea6de65a3e6a8db6c3b6b",
+        "sha256": "1eb83c975f69534c70814629b4eb6d3124c0367a12b2463dd9716b6741d1a167"
+      },
+      "metadata": {
+        "bytes": 2619,
+        "blob": "6ba1f16ea58d4d00611e815008929b7fae89877a",
+        "sha256": "12ca53b2ed180e028431456033aedd7a24a266881493836d94861d256851240c"
+      },
+      "preflight": {
+        "bytes": 25378,
+        "blob": "e091f8fcc4e764acd1f762987f81f89a251cc35a",
+        "sha256": "15346f136a55f72264f693f3ac59875c63f31e64ce535b3585cf348c983493e0"
+      },
+      "postflightExact": true
+    },
+    {
+      "name": "H-architecture",
+      "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "argv": [
+        "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+        "./scripts/ci/check-team-provisioning-architecture.mjs"
+      ],
+      "startedAtUTC": "2026-11-15T21:33:55.239502+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:55.333890+00:00",
+      "elapsedSeconds": 0.09436629200354218,
+      "exitCode": 0,
+      "log": {
+        "bytes": 184,
+        "blob": "8cb9d8cb2385eb2e1c022c79e0af379ff3a1c601",
+        "sha256": "0f72f211f9285332305dc9d63650e47a7d741f2216f712df043bdccbc02f473d"
+      },
+      "metadata": {
+        "bytes": 2643,
+        "blob": "fd037edb2ec2d7cd4d2e210fb05ef801467d4683",
+        "sha256": "c2ae8dd4b190ec273c3cf5aa6524948ad7111e1ce40084612bc8c41e70b3a43b"
+      },
+      "preflight": {
+        "bytes": 26147,
+        "blob": "036a6cedd431fb31a50951c946c7f214024dd218",
+        "sha256": "5d735674552a7365d6d140d98ad0ab63473cdcb3d387542ec27934926428bc6e"
+      },
+      "postflightExact": true
+    },
+    {
+      "name": "H-diff",
+      "sourceHead": "4e74d36ba6212938c40a499603ee0419a183fc0a",
+      "sourceTree": "3c02af92462ec6ea2abec9fd982b8978e04efe03",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "da0cf77f42ba92ca17af07f3c8377ef4a27d4614..4e74d36ba6212938c40a499603ee0419a183fc0a",
+        "--",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/completion-2026-11-13.md",
+        "tools/owned-process-broker/nativeEmulatedSourceScenario.ts",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+        "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+        "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+        "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+        ".github/workflows/host-emulated-acceptance.yml"
+      ],
+      "startedAtUTC": "2026-11-15T21:33:56.098335+00:00",
+      "finishedAtUTC": "2026-11-15T21:33:56.108580+00:00",
+      "elapsedSeconds": 0.01022607799677644,
+      "exitCode": 0,
+      "log": {
+        "bytes": 0,
+        "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "metadata": {
+        "bytes": 3122,
+        "blob": "6e95e108ce4986838913e983f5b7c5c1f75d727a",
+        "sha256": "909c9982bf7f3607b06f2fcda9ba604ea3dc227ed9b38ffaf47552b7031c8333"
+      },
+      "preflight": {
+        "bytes": 27399,
+        "blob": "7fc116870ca16d862839d27fd48189d048b10702",
+        "sha256": "991ecded879fba5f950958ea71904dd2b13e26862105d699321774cf159c7e32"
+      },
+      "postflightExact": true
+    }
+  ],
+  "selectedSourceCount": 32,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17,
+  "builtOutputCount": 1446,
+  "newBuildPerformed": false,
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "outstandingIncoming": "a02ab70edfdcb4169627e804f0337c9ad6b52af6",
+  "limits": [
+    "Exact complete Host test type project and legacy scripts compiler plus five-file scoped lint and original guards/diff only.",
+    "Neither compiler is the separate root agent-backend test project or retained-host native target compiler.",
+    "All results local/source-bound; native/UI/current external a02 qualification remains separate.",
+    "Selected dependency identities are preserved, not a full dependency payload census."
+  ],
+  "reviewerProjectExecutions": 0
+}

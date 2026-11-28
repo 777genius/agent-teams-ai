@@ -1,0 +1,1073 @@
+{
+  "schemaVersion": 1,
+  "kind": "independent-current4f-publication-adoption-review",
+  "reviewer": "finite_restart_current",
+  "observedAt": "2026-11-18T21:05:31.555210+00:00",
+  "repository": "777genius/agent-teams-ai",
+  "parent": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+  "parentTree": "b38de5383b881aa47fc38f6ad0a0f783eec0d5b0",
+  "verdict": "PASS_FOUR_SOURCE_POSTIMAGES_STATUS_CLAIMS_AND_SIZE",
+  "sourceReview": {
+    "schemaVersion": 1,
+    "kind": "independent-four-postimage-source-adoption-and-pure-size-evaluation",
+    "reviewer": "finite_restart_current",
+    "observedAt": "2026-11-18T21:02:58.577Z",
+    "repository": "777genius/agent-teams-ai",
+    "parent": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+    "parentTree": "b38de5383b881aa47fc38f6ad0a0f783eec0d5b0",
+    "verdict": "PASS_SOURCE_ADOPTION_AND_SIZE",
+    "sourceChanges": [
+      {
+        "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+        "mode": "100644",
+        "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+        "preimageSha256": "231ad4589a47dc582d00fab686627295cd72d937f7598f84cd58d93cb80a97eb",
+        "gitBlob": "e5044eb33cda7dda3be51415e6f94d6c265d03fa",
+        "sha256": "f0fe5d12f1e5cd0e8069e81e914b6b6a725cf783f346ddb61b0c71e6747e24a1",
+        "bytes": 5289,
+        "beforeLines": 116,
+        "lineCount": 116,
+        "frozenException": false
+      },
+      {
+        "path": "src/features/agent-backend/renderer/index.ts",
+        "mode": "100644",
+        "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+        "preimageSha256": "daf3ed19ed112e48fe0624211b7eb0a0b18ad0b0d5bb9d456537248386c633e3",
+        "gitBlob": "021024bb4890779c3565931391993e08cc577be6",
+        "sha256": "240827e8dcafe4cf846f134c962ae980b8cf788c8112ca5b68b4271951102a70",
+        "bytes": 1804,
+        "beforeLines": 42,
+        "lineCount": 42,
+        "frozenException": false
+      },
+      {
+        "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+        "mode": "100644",
+        "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+        "preimageSha256": "7eb7f824ee83d0ca2a5b27ab73ed16994667f556cab4b35af466f4fb776de5b6",
+        "gitBlob": "b346b22478aafd5f938fecedb15f835378c8305b",
+        "sha256": "0c0df1106d20727d8b5f3405097cebb711ad850319499fa1e69684720ce672d6",
+        "bytes": 7738,
+        "beforeLines": 186,
+        "lineCount": 186,
+        "frozenException": false
+      },
+      {
+        "path": "packages/legacy-agent-host/src/composition/createRuntimeMemberProviderFactory.ts",
+        "mode": "100644",
+        "preimageGitBlob": "6564afa0153446efef60a7dc20e23fcd1f466514",
+        "preimageSha256": "6eddff59c94ed0d9639d7066a0e2ce3aaf2954753f2370496c8cb793620b6e69",
+        "gitBlob": "a47682f91e49ace6ea4dd80d1cd6280a421a6a4e",
+        "sha256": "f92b0a41feaf0de8085b118f1642b514b4340cdcf6551b65fac48f153caaaa38",
+        "bytes": 18591,
+        "beforeLines": 367,
+        "lineCount": 371,
+        "frozenException": false
+      }
+    ],
+    "sourceSize": {
+      "guard": {
+        "path": "scripts/ci/check-source-file-size.mjs",
+        "sha256": "5462ce152af3e3beddabc51ccbb4bf9b74219ebe128664e27e046142382d6bb2",
+        "gitBlob": "65775f7889470056ef7cd91ad6c56d9351e6cdfc"
+      },
+      "policy": {
+        "path": "scripts/ci/source-file-size-baseline.json",
+        "sha256": "e3d651eb260ba35b467dd7b49255af66e290ea58bbd1eb570114afb213aa36e3",
+        "gitBlob": "730dd19fb082ff5f5cb39af3f759e9fdae706506",
+        "maxLines": 800,
+        "legacyCount": 141
+      },
+      "inheritedCountedRecordsSha256": "565224ae1d887b0356aa490a7867febc8190bfa68ebc58b829c20c15585e18a5",
+      "inheritedTupleSha256": "8b7bffe54aef75aaec6347082d60ae82e0047cff4f95ee4ef849b86c98522562",
+      "inheritedRecords": 5161,
+      "externalProductionUpdates": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamHostReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "02e7f6b58b6c6ddf7f98590c49f972faf85c3a5d",
+          "sha256": "7da6b03c063d19c19dfd22ee08dd11684e81e8d0bc49486e608f949cb321e3c4",
+          "bytes": 275,
+          "lineCount": 6,
+          "previousBlob": null
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "53339a2f6987180dc997bf96a67fcd58411705f9",
+          "sha256": "7d40a1bfff068e9a9958d0a38c1204db0a9bfcd54023a9325bf17f41e6e3077d",
+          "bytes": 34984,
+          "lineCount": 720,
+          "previousBlob": "5fc332a08c1170a82d6f32932c57f3b4eb165429"
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "sha256": "a9de6fd64ac4e335d24e2454242454a6214e764374dea3b4903b389830bad645",
+          "bytes": 25230,
+          "lineCount": 389,
+          "previousBlob": "20ff0af5b1d83a4ee48b53e8ac5def8da69f88e5"
+        },
+        {
+          "path": "scripts/lib/desktop-finite-node-options.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "c23a994bc072e57203781e5bd1efa10c2433d658",
+          "sha256": "f09c6f0bf56764227f39841e1793d13ebda032dfb15ce61df100d1f39db93e27",
+          "bytes": 4941,
+          "lineCount": 84,
+          "previousBlob": "3a47e027c6350c24d6b03123012e5f3efb64a8f1"
+        },
+        {
+          "path": "src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts",
+          "mode": "100644",
+          "type": "blob",
+          "gitBlob": "e3c3d71939b220e329d41e149791d2b9ca30e87d",
+          "sha256": "436d8810befc71d7e75bb0fa692d530e24daf1a1cd9a423d071a3e6adef8ab0b",
+          "bytes": 41314,
+          "lineCount": 692,
+          "previousBlob": "3f73c810a03342c9e286b50cbaf1cf3f6637e1c6"
+        }
+      ],
+      "removedProduction": [],
+      "fullProductionJoin": {
+        "records": 5162,
+        "sha256": "92df3dd592e98c2c6c120c9c0f4474e980f0cead9438e1a6255417476873fa81",
+        "bytes": 644696,
+        "fields": [
+          "path",
+          "mode",
+          "type",
+          "Git blob"
+        ],
+        "complete": true
+      },
+      "evaluation": {
+        "checkedFiles": 5162,
+        "legacyFiles": 141,
+        "maxLines": 800,
+        "ratchetCandidates": [
+          {
+            "path": "agent-teams-controller/src/internal/agenda.js",
+            "lineCount": 905,
+            "legacyCap": 914
+          },
+          {
+            "path": "agent-teams-controller/src/internal/taskStore.js",
+            "lineCount": 1296,
+            "legacyCap": 1302
+          },
+          {
+            "path": "agent-teams-controller/src/internal/tasks.js",
+            "lineCount": 1097,
+            "legacyCap": 1149
+          },
+          {
+            "path": "landing/components/sections/ComparisonSection.vue",
+            "lineCount": 1057,
+            "legacyCap": 1081
+          },
+          {
+            "path": "src/features/codex-account/main/composition/createCodexAccountFeature.ts",
+            "lineCount": 981,
+            "legacyCap": 998
+          },
+          {
+            "path": "src/features/member-work-sync/main/infrastructure/JsonMemberWorkSyncStore.ts",
+            "lineCount": 1576,
+            "legacyCap": 2355
+          },
+          {
+            "path": "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts",
+            "lineCount": 2586,
+            "legacyCap": 2642
+          },
+          {
+            "path": "src/features/token-usage/core/domain/snapshotProjection.ts",
+            "lineCount": 894,
+            "legacyCap": 918
+          },
+          {
+            "path": "src/features/token-usage/renderer/ui/TokenUsageDashboard.tsx",
+            "lineCount": 1369,
+            "legacyCap": 1376
+          },
+          {
+            "path": "src/main/index.ts",
+            "lineCount": 3630,
+            "legacyCap": 3677
+          },
+          {
+            "path": "src/main/ipc/config.ts",
+            "lineCount": 1224,
+            "legacyCap": 1230
+          },
+          {
+            "path": "src/main/ipc/configValidation.ts",
+            "lineCount": 1049,
+            "legacyCap": 1050
+          },
+          {
+            "path": "src/main/ipc/teams.ts",
+            "lineCount": 5372,
+            "legacyCap": 5436
+          },
+          {
+            "path": "src/main/services/infrastructure/FileWatcher.ts",
+            "lineCount": 1439,
+            "legacyCap": 1504
+          },
+          {
+            "path": "src/main/services/infrastructure/NotificationManager.ts",
+            "lineCount": 1489,
+            "legacyCap": 1526
+          },
+          {
+            "path": "src/main/services/infrastructure/OpenCodeRuntimeInstallerService.ts",
+            "lineCount": 1001,
+            "legacyCap": 1042
+          },
+          {
+            "path": "src/main/services/runtime/ClaudeMultimodelBridgeService.ts",
+            "lineCount": 1955,
+            "legacyCap": 2010
+          },
+          {
+            "path": "src/main/services/runtime/ProviderConnectionService.ts",
+            "lineCount": 1761,
+            "legacyCap": 1762
+          },
+          {
+            "path": "src/main/services/team/AgentTeamsMcpHttpServer.ts",
+            "lineCount": 1388,
+            "legacyCap": 1410
+          },
+          {
+            "path": "src/main/services/team/ChangeExtractorService.ts",
+            "lineCount": 1737,
+            "legacyCap": 1739
+          },
+          {
+            "path": "src/main/services/team/TaskChangeComputer.ts",
+            "lineCount": 1308,
+            "legacyCap": 1312
+          },
+          {
+            "path": "src/main/services/team/TeamBackupService.ts",
+            "lineCount": 1232,
+            "legacyCap": 1236
+          },
+          {
+            "path": "src/main/services/team/TeamConfigReader.ts",
+            "lineCount": 1150,
+            "legacyCap": 1151
+          },
+          {
+            "path": "src/main/services/team/TeamDataService.ts",
+            "lineCount": 4008,
+            "legacyCap": 4102
+          },
+          {
+            "path": "src/main/services/team/TeamLaunchStateEvaluator.ts",
+            "lineCount": 1023,
+            "legacyCap": 1059
+          },
+          {
+            "path": "src/main/services/team/TeamLogSourceTracker.ts",
+            "lineCount": 974,
+            "legacyCap": 1088
+          },
+          {
+            "path": "src/main/services/team/TeamMemberRuntimeAdvisoryService.ts",
+            "lineCount": 936,
+            "legacyCap": 964
+          },
+          {
+            "path": "src/main/services/team/TeamMessageFeedService.ts",
+            "lineCount": 833,
+            "legacyCap": 871
+          },
+          {
+            "path": "src/main/services/team/TeamTaskActivityIntervalService.ts",
+            "lineCount": 889,
+            "legacyCap": 892
+          },
+          {
+            "path": "src/main/services/team/TeamTranscriptProjectResolver.ts",
+            "lineCount": 1557,
+            "legacyCap": 1558
+          },
+          {
+            "path": "src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts",
+            "lineCount": 897,
+            "legacyCap": 898
+          },
+          {
+            "path": "src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger.ts",
+            "lineCount": 1114,
+            "legacyCap": 1286
+          },
+          {
+            "path": "src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader.ts",
+            "lineCount": 1053,
+            "legacyCap": 1087
+          },
+          {
+            "path": "src/main/services/team/opencode/store/RuntimeStoreManifest.ts",
+            "lineCount": 1202,
+            "legacyCap": 1210
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningInboxRelayPolicy.ts",
+            "lineCount": 862,
+            "legacyCap": 890
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningMemberLifecycle.ts",
+            "lineCount": 2666,
+            "legacyCap": 2678
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeEvidencePolicy.ts",
+            "lineCount": 942,
+            "legacyCap": 964
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningPrepareCoordinator.ts",
+            "lineCount": 941,
+            "legacyCap": 946
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningProviderDiagnostics.ts",
+            "lineCount": 1286,
+            "legacyCap": 1287
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection.ts",
+            "lineCount": 940,
+            "legacyCap": 945
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningRuntimeSnapshot.ts",
+            "lineCount": 2051,
+            "legacyCap": 2062
+          },
+          {
+            "path": "src/main/services/team/provisioning/TeamProvisioningStreamEvents.ts",
+            "lineCount": 1116,
+            "legacyCap": 1178
+          },
+          {
+            "path": "src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter.ts",
+            "lineCount": 1432,
+            "legacyCap": 1591
+          },
+          {
+            "path": "src/main/services/team/taskLogs/stream/OpenCodeTaskLogStreamSource.ts",
+            "lineCount": 1327,
+            "legacyCap": 1364
+          },
+          {
+            "path": "src/main/workers/team-fs-worker.ts",
+            "lineCount": 2143,
+            "legacyCap": 2151
+          },
+          {
+            "path": "src/preload/constants/ipcChannels.ts",
+            "lineCount": 827,
+            "legacyCap": 843
+          },
+          {
+            "path": "src/preload/index.ts",
+            "lineCount": 2063,
+            "legacyCap": 2094
+          },
+          {
+            "path": "src/renderer/components/dashboard/CliStatusBanner.tsx",
+            "lineCount": 2708,
+            "legacyCap": 2835
+          },
+          {
+            "path": "src/renderer/components/runtime/providerConnectionUi.ts",
+            "lineCount": 987,
+            "legacyCap": 989
+          },
+          {
+            "path": "src/renderer/components/settings/sections/CliStatusSection.tsx",
+            "lineCount": 849,
+            "legacyCap": 878
+          },
+          {
+            "path": "src/renderer/components/sidebar/DateGroupedSessions.tsx",
+            "lineCount": 1129,
+            "legacyCap": 1130
+          },
+          {
+            "path": "src/renderer/components/sidebar/GlobalTaskList.tsx",
+            "lineCount": 1299,
+            "legacyCap": 1719
+          },
+          {
+            "path": "src/renderer/components/team/TeamDetailView.tsx",
+            "lineCount": 3738,
+            "legacyCap": 3746
+          },
+          {
+            "path": "src/renderer/components/team/activity/ActivityItem.tsx",
+            "lineCount": 1669,
+            "legacyCap": 1670
+          },
+          {
+            "path": "src/renderer/components/team/activity/ActivityTimeline.tsx",
+            "lineCount": 864,
+            "legacyCap": 870
+          },
+          {
+            "path": "src/renderer/components/team/activity/LeadThoughtsGroup.tsx",
+            "lineCount": 1162,
+            "legacyCap": 1186
+          },
+          {
+            "path": "src/renderer/components/team/dialogs/ProvisioningProviderStatusList.tsx",
+            "lineCount": 1205,
+            "legacyCap": 1206
+          },
+          {
+            "path": "src/renderer/components/team/dialogs/providerPrepareDiagnostics.ts",
+            "lineCount": 1450,
+            "legacyCap": 1452
+          },
+          {
+            "path": "src/renderer/components/team/editor/ProjectEditorOverlay.tsx",
+            "lineCount": 923,
+            "legacyCap": 929
+          },
+          {
+            "path": "src/renderer/components/team/kanban/KanbanBoard.tsx",
+            "lineCount": 899,
+            "legacyCap": 919
+          },
+          {
+            "path": "src/renderer/components/team/members/MemberCard.tsx",
+            "lineCount": 1578,
+            "legacyCap": 1586
+          },
+          {
+            "path": "src/renderer/components/team/members/MemberDraftRow.tsx",
+            "lineCount": 814,
+            "legacyCap": 1001
+          },
+          {
+            "path": "src/renderer/components/team/members/MemberList.tsx",
+            "lineCount": 1347,
+            "legacyCap": 1364
+          },
+          {
+            "path": "src/renderer/components/team/messages/MessageComposer.tsx",
+            "lineCount": 1173,
+            "legacyCap": 1175
+          },
+          {
+            "path": "src/renderer/components/team/messages/MessagesPanel.tsx",
+            "lineCount": 1530,
+            "legacyCap": 1543
+          },
+          {
+            "path": "src/renderer/components/team/review/ChangeReviewDialog.tsx",
+            "lineCount": 5405,
+            "legacyCap": 5441
+          },
+          {
+            "path": "src/renderer/components/team/review/CodeMirrorDiffView.tsx",
+            "lineCount": 956,
+            "legacyCap": 975
+          },
+          {
+            "path": "src/renderer/components/ui/MentionableTextarea.tsx",
+            "lineCount": 1376,
+            "legacyCap": 1431
+          },
+          {
+            "path": "src/renderer/store/index.ts",
+            "lineCount": 2513,
+            "legacyCap": 2537
+          },
+          {
+            "path": "src/renderer/store/slices/changeReviewSlice.ts",
+            "lineCount": 2414,
+            "legacyCap": 2417
+          },
+          {
+            "path": "src/renderer/store/slices/editorSlice.ts",
+            "lineCount": 1224,
+            "legacyCap": 1483
+          },
+          {
+            "path": "src/renderer/store/slices/extensionsSlice.ts",
+            "lineCount": 1277,
+            "legacyCap": 1420
+          },
+          {
+            "path": "src/renderer/store/slices/tabSlice.ts",
+            "lineCount": 882,
+            "legacyCap": 886
+          },
+          {
+            "path": "src/renderer/store/slices/teamSlice.ts",
+            "lineCount": 5003,
+            "legacyCap": 5020
+          },
+          {
+            "path": "src/renderer/utils/memberHelpers.ts",
+            "lineCount": 1628,
+            "legacyCap": 1756
+          },
+          {
+            "path": "src/renderer/utils/openCodeModelRecommendations.ts",
+            "lineCount": 1330,
+            "legacyCap": 1335
+          },
+          {
+            "path": "src/renderer/utils/teamModelAvailability.ts",
+            "lineCount": 982,
+            "legacyCap": 983
+          },
+          {
+            "path": "src/renderer/utils/teamModelCatalog.ts",
+            "lineCount": 863,
+            "legacyCap": 868
+          },
+          {
+            "path": "src/shared/types/api.ts",
+            "lineCount": 1104,
+            "legacyCap": 1158
+          },
+          {
+            "path": "src/shared/types/team.ts",
+            "lineCount": 1824,
+            "legacyCap": 1839
+          }
+        ],
+        "violations": []
+      },
+      "actualPureEvaluatorCalls": 1,
+      "fourChangesWithin800": true,
+      "all141FrozenExceptionsUnchangedByFollowup": true,
+      "frozenMechanismPins": [
+        {
+          "path": "packages/legacy-agent-host/src/composition/RuntimeTeamCoordinator.ts",
+          "gitBlob": "c500e8e7377c600587790dc494ea673381f4791c",
+          "unchanged": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+          "gitBlob": "ae5a20a2800b6725937ff0083838b0c2f9a1edcf",
+          "unchanged": true
+        }
+      ]
+    },
+    "historical22Adoption": {
+      "unchangedOriginal": 21,
+      "extendedOriginal": 1,
+      "exactAll22OriginalClaim": false,
+      "onlyExtension": "One teamHostReadiness.ts entry in the existing supplementary source roster.",
+      "pins": [
+        {
+          "path": "tools/owned-process-broker/nativeEmulatedSourceProfile.ts",
+          "originalPostBlob": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+          "currentBlob": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+          "candidateBlob": "a8f9591cbec7a8b36bc8e4e12549415f6b45c4ef",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "packages/legacy-agent-host/tests/runtime-team-host.test.ts",
+          "originalPostBlob": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+          "currentBlob": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+          "candidateBlob": "6ba2a053de06b1b6f1068cebd56582f0d71c1e43",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/main/services/runtime/AnthropicModelCatalogPicker.safe-e2e.test.ts",
+          "originalPostBlob": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+          "currentBlob": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+          "candidateBlob": "7a484b411fb0912dae6c129c522eb6c2e239f9c6",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "tools/owned-process-broker/fixtures/retainedLegacyBootstrapPeer.mjs",
+          "originalPostBlob": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+          "currentBlob": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+          "candidateBlob": "e9718755874f15e6e34a68d0c6d023a607f0f232",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-authority.ts",
+          "originalPostBlob": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+          "currentBlob": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+          "candidateBlob": "a70c1bc6443f34f4f20bab7864af662ec65e9a6a",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-retained-opencode-coexistence.native.ts",
+          "originalPostBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+          "currentBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+          "candidateBlob": "cbb8fa9df92c73f6aba8ecc34147ec26cd12ce19",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/features/agent-backend/desktopBackendFeature.test.ts",
+          "originalPostBlob": "5ddbca20786812c1506a8d04fe281668dda770ca",
+          "currentBlob": "5ddbca20786812c1506a8d04fe281668dda770ca",
+          "candidateBlob": "5ddbca20786812c1506a8d04fe281668dda770ca",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "originalPostBlob": "20ff0af5b1d83a4ee48b53e8ac5def8da69f88e5",
+          "currentBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "candidateBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "unchangedOriginal": false
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+          "originalPostBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+          "currentBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+          "candidateBlob": "a58d5e94ede5e1385c33646f5ecb8e3ebe01ad68",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-ui-controls-deadline.test.ts",
+          "originalPostBlob": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+          "currentBlob": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+          "candidateBlob": "ec92f7de267420694aa9e0b66b54f3854bba1621",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/renderer/api/httpClient.ts",
+          "originalPostBlob": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+          "currentBlob": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+          "candidateBlob": "d8dd28286d22799642ca35c9806c542ab3ff9822",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/features/review-flow/renderer/http/index.ts",
+          "originalPostBlob": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+          "currentBlob": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+          "candidateBlob": "124519eda6a605c262593fed10e949fcf5fcd0fb",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "eslint.review-flow-boundaries.mts",
+          "originalPostBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "currentBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "candidateBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/main/services/team/TeamDataService.test.ts",
+          "originalPostBlob": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+          "currentBlob": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+          "candidateBlob": "60becfc73eb68c1a661125f77e1d81319ff153bd",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "agent-teams-controller/test/reviewFlow.test.js",
+          "originalPostBlob": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+          "currentBlob": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+          "candidateBlob": "c4f61aeedbfe790e4e036ee645774449ddf8e7e1",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "eslint.config.js",
+          "originalPostBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "currentBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "candidateBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "eslint.fast.config.js",
+          "originalPostBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "currentBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "candidateBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/features/agent-attachments/core/domain/validation.test.ts",
+          "originalPostBlob": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+          "currentBlob": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+          "candidateBlob": "66de3a34ef3cdfb46ac14889162131c8fbc34dd5",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "agent-teams-controller/src/internal/kanban.js",
+          "originalPostBlob": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+          "currentBlob": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+          "candidateBlob": "cd3fd1f6ab9564cc4bd244e1ce0d58c7e6b013a6",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "agent-teams-controller/test/controller.test.js",
+          "originalPostBlob": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+          "currentBlob": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+          "candidateBlob": "36b6bdfc132020f3e14b84d609ba2a9339df0f32",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "src/features/localization/renderer/resources.d.ts",
+          "originalPostBlob": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+          "currentBlob": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+          "candidateBlob": "66c6b12b4c338f8825ffd831839b0ea79a907ed7",
+          "unchangedOriginal": true
+        },
+        {
+          "path": "test/features/agent-backend/hostReviewFlow.test.ts",
+          "originalPostBlob": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+          "currentBlob": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+          "candidateBlob": "74e80e374efe9271bc48f97b9825fc4b508358ae",
+          "unchangedOriginal": true
+        }
+      ]
+    },
+    "externalReadinessPreserved": {
+      "narrowRuntimeValues": [
+        "actualCaptureReadinessCommandId",
+        "localModelReadinessCaptureViewSchema",
+        "parseLiveRosterResponse"
+      ],
+      "pins": [
+        {
+          "path": "packages/legacy-agent-host/package.json",
+          "gitBlob": "6bb3f48b3790bef2099c24e3a5379fbeb047e024",
+          "sha256": "dfcd70e7c5f5d8c8fc00a5396cdfbe920e94f0d69849f3abcdd33b3cf4e3610a",
+          "bytes": 12512,
+          "lines": 308,
+          "unchangedByFollowup": true
+        },
+        {
+          "path": "packages/legacy-agent-host/src/composition/teamHostReadiness.ts",
+          "gitBlob": "02e7f6b58b6c6ddf7f98590c49f972faf85c3a5d",
+          "sha256": "7da6b03c063d19c19dfd22ee08dd11684e81e8d0bc49486e608f949cb321e3c4",
+          "bytes": 275,
+          "lines": 6,
+          "unchangedByFollowup": true
+        },
+        {
+          "path": "src/features/agent-backend/main/infrastructure/CapturedLocalModelReadiness.ts",
+          "gitBlob": "e3c3d71939b220e329d41e149791d2b9ca30e87d",
+          "sha256": "436d8810befc71d7e75bb0fa692d530e24daf1a1cd9a423d071a3e6adef8ab0b",
+          "bytes": 41314,
+          "lines": 692,
+          "unchangedByFollowup": true
+        },
+        {
+          "path": "scripts/legacy-agent-host/desktop-proof-supplementary-sources.ts",
+          "gitBlob": "b42cee83d3526df26ce749e3b7b6c076b48a9257",
+          "sha256": "a9de6fd64ac4e335d24e2454242454a6214e764374dea3b4903b389830bad645",
+          "bytes": 25230,
+          "lines": 389,
+          "unchangedByFollowup": true
+        }
+      ]
+    },
+    "lintEvidenceAdoption": {
+      "executionBase": "9f63bec37c2596676bd1761e74a41b272b0ef956",
+      "adoptedParent": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "evidenceSha256": "e619b5b0662fa52c746c65025f278c2db34a2902cddeb6a4e3aff0c48b30cb09",
+      "unchangedInputs": [
+        {
+          "path": "eslint.fast.config.js",
+          "gitBlob": "417c9b2de448d3c03f971224887e49499c2f2c2d",
+          "sha256": "bf8a72be9244d217ad2e5687bfda735642592430924307bd9ba94666487f1335",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.config.js",
+          "gitBlob": "72ebcd803dd7a3365285f3beb4a06f8fe428bf5e",
+          "sha256": "8c28e3af29eca6659bcef7988af3a3de75101f7960b194f101215172968697a0",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.review-flow-boundaries.mts",
+          "gitBlob": "9b29411a63d3f6114dab09197d7a6b112ca6b5fb",
+          "sha256": "6c79ec2b184bd7f6959a72d38975d6c16495b6796878863859e726a64b1e8c3f",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.feature-overrides.mts",
+          "gitBlob": "9c6450d54b87ce33f7d799f900226c316e367937",
+          "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "eslint.gateway-boundaries.mts",
+          "gitBlob": "4975b20df1353a9687fd479ab043beb025e967ba",
+          "sha256": "0c68ab55ac206b45d8d01a75cd2877fbda9352955df1a687ff17b58cba3171e4",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "package.json",
+          "gitBlob": "1d2d7e8913d17b97176b09ac580ec189da8fe710",
+          "sha256": "eef83d66950dc58d3482924f591815ffb76d6d536060e665e80e24fcf134839e",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "pnpm-lock.yaml",
+          "gitBlob": "0883ef60d1d1dd05785663deed272a557c100923",
+          "sha256": "79c04e3ff0066df4ce4b5c57b25d0b3a9e76fb59ca33600812c3f7cf38573be3",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/review-flow/contracts/index.ts",
+          "gitBlob": "d78f5f6e20217b2fc8c59c43c2b858054fbde62b",
+          "sha256": "d990cccf509a2292ad7ffa69c27aee6b0439676ede4e06b5352263f960e9e420",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/review-flow/contracts/api.ts",
+          "gitBlob": "b2cee674a2970325fdf8e5b7cb150bb3fd509e6a",
+          "sha256": "cdcdbe93a2a112fb22d418aff9f1bcb7a2cb8ca9e05af13f4f9a5368db0759dd",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/review-flow/index.ts",
+          "gitBlob": "3bdf698a163f0df1e5c73dfd6f5d75ad7c79d831",
+          "sha256": "e180aa7f92e28d0da7ddca9013ee04787d4bacbc5183027089bcda46ce504bdd",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/agent-backend/renderer/createHostReviewApi.ts",
+          "gitBlob": "d49b08ecfa8aff382847236bec52633c13e1253c",
+          "sha256": "b9f4cf304c94760aa25e4d2f7ab8a887cd64b92911f59abe628d899a65c79d39",
+          "unchanged9fTo4f": true
+        },
+        {
+          "path": "src/features/member-work-sync/main/infrastructure/memberWorkSyncPreparationDiagnostics.ts",
+          "gitBlob": "a2671abdb373d0e251adf939cb785f8698657de0",
+          "sha256": "a0e0422f4cd75d8cc145b0fff921177fd2fa47bb85fa18e31d34982b68a4312c",
+          "unchanged9fTo4f": true
+        }
+      ],
+      "preimagesAndPostimages": [
+        {
+          "path": "src/features/agent-backend/renderer/createHostReviewFlowApi.ts",
+          "mode": "100644",
+          "preimageGitBlob": "f7d138abec3e44b6ed2cc720e880da2612c0cc56",
+          "preimageSha256": "231ad4589a47dc582d00fab686627295cd72d937f7598f84cd58d93cb80a97eb",
+          "gitBlob": "e5044eb33cda7dda3be51415e6f94d6c265d03fa",
+          "sha256": "f0fe5d12f1e5cd0e8069e81e914b6b6a725cf783f346ddb61b0c71e6747e24a1",
+          "bytes": 5289,
+          "beforeLines": 116,
+          "lineCount": 116,
+          "frozenException": false
+        },
+        {
+          "path": "src/features/agent-backend/renderer/index.ts",
+          "mode": "100644",
+          "preimageGitBlob": "241e69441ad9c944c5b97d31b3cf0a664c5741c5",
+          "preimageSha256": "daf3ed19ed112e48fe0624211b7eb0a0b18ad0b0d5bb9d456537248386c633e3",
+          "gitBlob": "021024bb4890779c3565931391993e08cc577be6",
+          "sha256": "240827e8dcafe4cf846f134c962ae980b8cf788c8112ca5b68b4271951102a70",
+          "bytes": 1804,
+          "beforeLines": 42,
+          "lineCount": 42,
+          "frozenException": false
+        },
+        {
+          "path": "src/features/member-work-sync/main/composition/createMemberWorkSyncPersistence.ts",
+          "mode": "100644",
+          "preimageGitBlob": "24375e09c65253c0fc99b3b0b879b9f02ea88477",
+          "preimageSha256": "7eb7f824ee83d0ca2a5b27ab73ed16994667f556cab4b35af466f4fb776de5b6",
+          "gitBlob": "b346b22478aafd5f938fecedb15f835378c8305b",
+          "sha256": "0c0df1106d20727d8b5f3405097cebb711ad850319499fa1e69684720ce672d6",
+          "bytes": 7738,
+          "beforeLines": 186,
+          "lineCount": 186,
+          "frozenException": false
+        }
+      ],
+      "noNewLintExecution": true
+    },
+    "execution": {
+      "nodeVersion": "v24.22.3",
+      "tests": 0,
+      "typecheck": 0,
+      "lint": 0,
+      "build": 0,
+      "app": 0,
+      "native": 0,
+      "vendor": 0,
+      "CIEndpointCalls": 0,
+      "gitRefWrites": 0,
+      "repositorySourceEdits": 0
+    },
+    "qualification": "Read-only exact4f plus four existing postimages reviewed as a map overlay. The repository pure source-size classifier/counter/evaluator ran once on complete pinned production records with changed blobs counted directly. This is not a candidate Git tree publication or a new runtime/compiled/native/UI result. Root owns later exact candidate-tree validation."
+  },
+  "sourceReviewAttachment": {
+    "sha256": "7244665dcc2898c25e13be3b3bc80999213fc182b3391622b32d3ce1d9c9e997",
+    "bytes": 33231,
+    "scriptSha256": "a1262850adfacee0295d903fe19968cbadc97e09e69ff6cbdadfdbb99fea8216",
+    "scriptBytes": 13795
+  },
+  "statusReview": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/STATUS.md",
+    "baseBlob": "3fcdac53e100c8684fe8e37ce40689664cda80e3",
+    "baseSha256": "2cce8d3aba62ce32196e1cb646d92bb31ec6aa5b9243867a2e2a0ac8688b32ed",
+    "candidateBlob": "623fc969005ae62c2c12955dc9e7379119dae3e5",
+    "candidateSha256": "6df817905528291fdb642e57dd205013ff9d288e5f2742f1e8b6e8a5461aea3a",
+    "candidateBytes": 58894,
+    "editedExistingRows": [
+      {
+        "line": 34,
+        "before": "| E1 | Исходные отказы исправлены; текущий E2E остаётся | Композиция 22 source закрывает HTTP/store cycle, finite metadata, retained authority, trusted input, Kanban и точечные type/test отказы.611 frontend/IPC PASS в 20 файлах по отдельным scoped runs; полный текущий Host/GUI verdict остаётся. | root |",
+        "after": "| E1 | Исправления и scoped contracts готовы; текущий E2E остаётся | К 22 опубликованным изменениям добавлены 3 feature-lint исправления и устранение вложенного Team/launch fence при native Restart. Исходный callback RED→GREEN; 3 negative cases PASS. 611 frontend/IPC PASS в 20 файлах остаются отдельными scoped runs; полный текущий Host/GUI verdict остаётся. | root |"
+      },
+      {
+        "line": 37,
+        "before": "| D1 | Композиция и независимое ревью готовы; CI остаётся | Все 22 postimages связаны с exact c8 parent, внешние изменения сохранены, source-size policy PASS. Получить результат оригинальных обязательных gates опубликованного среза. | root |",
+        "after": "| D1 | Композиция и независимое ревью готовы; CI остаётся | Четыре follow-up postimages привязаны к exact 4f parent; внешний narrow Main readiness export и новый source pin сохранены. Production: 116/42/186 без роста, factory 367→371 при лимите 800. Получить результат оригинальных обязательных gates опубликованного среза. | root |"
+      }
+    ],
+    "otherExistingBytesPreserved": true,
+    "appendSha256": "20e55c24ed6c552cfb6a4dfe1430c71688df04e71a9fdebb6f032fd3024a9d40",
+    "appendBytes": 3983,
+    "appendText": "\n- 18 ноября, E1 feature-lint follow-up: три first refusals из original edited\n  `199fef38` воспроизведены scoped checks на 9f; неизменённые preimages и rules\n  привязаны к exact `4f5ae2dc`. Type-only импорт\n  ReviewFlowElectronApi теперь использует существующий public contracts barrel;\n  два остальных изменения — порядок экспортов agent-backend renderer и импортов\n  member-work-sync. Actual fast config на трёх файлах: 2 errors → 0 errors /\n  0 warnings. Actual review-flow architecture rule: private leaf refused →\n  public barrel accepted. Full typed lint этим scoped результатом не заменяется.\n  Тип, тела функций, production LOC и сами правила линтера сохранены; R2 PASS.\n- 18 ноября, E1 native-created cross-provider Restart: исходный test616\n  воспроизвёл 3 вместо 4 provider contexts на exact 9f source composition.\n  Первый запуск не дошёл до Restart из-за отсутствующего prepared policy asset;\n  его отказ сохранён. После восстановления одного ранее закреплённого JS asset\n  исходный отказ воспроизведён. Passive existing-channel diagnostic локализовал\n  reference inspector до account capture / probe expiry; consumer cutoff имел\n  запас 71659 ms. Обнаружено вложение: Team account-read fence → allocation\n  guard → отдельный TeamLaunchOwner store с тем же authority path. Reentrancy\n  разрешена только для того же store instance; глобальное правило не менялось.\n- 18 ноября, исправление ограничено provider factory: allocation использует\n  существующий небатчированный readiness inspector; captured Team/owner identity\n  проверяется до и после прежних authority и allocation checks. Все ветви\n  own-principal read/control, account/source freshness, reference equality,\n  completion/retirement и expiry проверены независимым R2. Preclaim batching,\n  исходные deadlines и test oracle сохранены. Исходный callback: 1 RED → 1 GREEN;\n  на exact 4f source composition + factory три выбранных negative cases: 3 PASS,\n  0 FAIL. Это finite source execution с ControlledSession / probe doubles,\n  временной файловой системой и loopback MCP, не compiled/native/GUI qualification.\n  GREEN базовый срез 9f и текущая 4f metadata adoption отмечены раздельно;\n  измерения времени не используются как performance-вывод.\n- Полные исходные snapshots, хеши, R2 и границы проверок:\n  [restart/lint evidence index](evidence/parity-restart-lint-followup-20261118.json).\n- 18 ноября, original Teams creation page E2E на `4f5ae2dc`: Windows и Ubuntu\n  jobs завершились SUCCESS. Windows подтвердил Create/Back/Resume/Copy/Launch,\n  восстановление saved draft, Schedules, zh-TW MCP/task dialog и tab, dark/light\n  и native 200% zoom; cleanup подтвердил отсутствие owned Windows processes/CDP\n  и удаление временного профиля. Ubuntu подтвердил отсутствие process group и\n  удаление профиля. В обоих jobs census/teardown unit scope: 28 PASS. Это\n  original GUI scope 4f; Taskboard/ReviewFlow и полная платформенная матрица\n  остаются отдельными gates. Логи получены по одному разу и permanently retired.\n",
+    "newClaimAssessment": [
+      {
+        "claim": "E1 follow-up scope; existing 611 tests remain separate historical scoped runs; full current Host/GUI verdict still pending",
+        "verdict": "PASS",
+        "basis": "Four exact source overlays plus existing run receipts. The historical 611 result is preserved with its original qualification, not rerun or reassigned."
+      },
+      {
+        "claim": "D1 exact4f adoption, external readiness export and new source pin preserved; 116/42/186 and factory367->371 within800",
+        "verdict": "PASS",
+        "basis": "Independent exact preimage/postimage checks and one actual pure repository size evaluation: 5162 paths,141 frozen,0 violations."
+      },
+      {
+        "claim": "Lint actual runs on9f; unchanged preimages/rules adopted to4f; 2errors->0 and private leaf->public barrel",
+        "verdict": "PASS",
+        "basis": "Pinned lint proof plus exact9f/4f config/package/lock/supporting declarations equality; no new4f lint run claimed."
+      },
+      {
+        "claim": "Original restart RED, retained initial isolation failure, passive reference-inspector evidence and71659ms consumer margin",
+        "verdict": "PASS",
+        "basis": "Original reproduction and passive existing-channel immutable receipts; initial resource failure is not counted as restart reproduction."
+      },
+      {
+        "claim": "Factory guard-preserving fix, exact original callback GREEN on9f,3negativePASS on4f source, independentR2",
+        "verdict": "PASS",
+        "basis": "Factory postimage and R2, originalGREEN and negative evidence retain separate source bases, deadlines and oracles."
+      },
+      {
+        "claim": "Finite source only, no compiled/native/GUI or performance qualification from local factory tests",
+        "verdict": "PASS",
+        "basis": "Explicit limits in source, resource, test-loader and execution receipts. One previously prepared JS asset was captured/hashed, never imported by selected paths."
+      },
+      {
+        "claim": "Windows/Ubuntu original4f Teams creation page jobs succeeded;28census tests each; listed scenario andcleanup assertions",
+        "verdict": "PASS_FROM_FROZEN_SIBLING_SUMMARIES",
+        "basis": "Two immutable local CI evidence summaries inspected; no endpoint requests or retired rawlog reads. Screenshots were not reviewed; Taskboard/ReviewFlow and full matrix remain separately gated."
+      }
+    ],
+    "precisionCorrection": "Root corrected lint wording to retain actual9f execution base and make4f adoption explicit; reviewer did not edit STATUS."
+  },
+  "evidenceRefs": {
+    "originalSourceReproduction": {
+      "blob": "b8601a668ab5686dea67213cccbbfd22c3d5fd2f",
+      "sha256": "a0b38d895bf3b67124d527efb793f11697b99876d3c68c5cb5836447196be0c1",
+      "bytes": 258498
+    },
+    "passiveExistingChannel": {
+      "blob": "a007f2749134b1abac66483d63193b3b24f36042",
+      "sha256": "b823a0df85e1136b9cfb5e93b060bc8c8eea9dfacfd7b57bb08369aca7f3f0c2",
+      "bytes": 12709
+    },
+    "originalGreen": {
+      "blob": "e0b88a3f3c5a479b79e7a4a3876aa516c91e84e2",
+      "sha256": "6b38af89b7a57350af366e70d485b9d113a4d94d344ad497c4be41f8319f397e",
+      "bytes": 15485
+    },
+    "negativeBatch": {
+      "blob": "42c3883afb0240d05e8631a70f93c40479c15a67",
+      "sha256": "a81f3264d6c7da6acdff3fc6fb32f483b31b3416ddbd2bc49c956d48f926b8a2",
+      "bytes": 7022
+    },
+    "independentR2": {
+      "blob": "e5491b6ae09b99106b44b7225c554b75aa69fc6c",
+      "sha256": "69c2647b33366ad4ae9582928cbee8f4248bad73a1c90e61c706faa6168feab6",
+      "bytes": 10788,
+      "readbackExactReported": true
+    },
+    "factoryManifest": {
+      "blob": "73594cd741ed5414c78bc8e4210180b7dbb2a17f",
+      "sha256": "ae8fcee7e5283762a8395d3aab3376531396466d1a132cb5ada675e22a3d96ab",
+      "bytes": 3833
+    },
+    "lint": {
+      "blob": "0256fc22a2b2b7d496a6dcd46ca9275d4814d35f",
+      "sha256": "e619b5b0662fa52c746c65025f278c2db34a2902cddeb6a4e3aff0c48b30cb09",
+      "bytes": 11742,
+      "r2": "6b5faf4bc93166a4bc7b5c7e082fb5855e559a9f"
+    }
+  },
+  "teamsGuiEvidence": [
+    {
+      "platform": "Ubuntu",
+      "head": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "runId": 44393169922,
+      "jobId": 135115971473,
+      "blob": "70b4823cd2076740eaba733f021173a768159b07",
+      "sha256": "d38214960ceed5ab313a9bef83c56fc0cd651200eb5c3d25cf490ef3cfcf4848",
+      "bytes": 3343,
+      "jobConclusion": "success",
+      "censusTests": 28,
+      "qualifications": [
+        "Artifact inventory is pending workflow completion.",
+        "Screenshots have not been visually inspected by this reviewer.",
+        "This Ubuntu original job alone does not qualify the full OS/provider matrix."
+      ]
+    },
+    {
+      "platform": "Windows",
+      "head": "4f5ae2dcb10c83fb6b3a3862b8d5065e0c7843ab",
+      "runId": 44393169922,
+      "jobId": 135115972105,
+      "blob": "4e2b6fccf475432570bac3b00fb1e838585281ac",
+      "sha256": "72ad36cbc7467a14bdb2d5c90c69b20d493ed3781f87cec506974e96a12803b6",
+      "bytes": 4103,
+      "jobConclusion": "success",
+      "censusTests": 28,
+      "qualifications": [
+        "Artifact inventory is pending workflow completion.",
+        "Screenshots have not been visually inspected by this reviewer.",
+        "This Windows original job alone does not qualify the full OS/provider matrix."
+      ]
+    }
+  ],
+  "execution": {
+    "repositorySourceEdits": 0,
+    "statusEdits": 0,
+    "commits": 0,
+    "refs": 0,
+    "CIEndpointCalls": 0,
+    "rawCILogReads": 0,
+    "tests": 0,
+    "lint": 0,
+    "typecheck": 0,
+    "build": 0,
+    "app": 0,
+    "native": 0,
+    "vendor": 0,
+    "pureSizeEvaluatorCalls": 1
+  },
+  "limits": [
+    "Review binds exact4f parent plus four map postimages and the stated STATUS bytes. Root still owns actual candidateGitTree composition verification.",
+    "Twenty-one original22 postimages remain byte-identical; supplementary source roster is intentionally externally extended by one readiness source entry. No current all22-byte-identical claim is made.",
+    "Historical runtime results remain tied to their recorded source heads; this review creates no newruntime/type/compiled/native/GUI result.",
+    "The future tracked evidence-index destination is named by STATUS; complete tree/index link resolution is deferred to the requested candidate-tree review."
+  ]
+}

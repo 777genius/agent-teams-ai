@@ -15,7 +15,7 @@ import type {
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementModelsResponse,
 } from '@features/runtime-provider-management/contracts';
-import type { OpenCodeRuntimeStatus } from '@shared/types';
+import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
 import type { ElectronAPI } from '@shared/types/api';
 
 const mountedRoots = new Set<Root>();
@@ -258,7 +258,9 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { TeamModelSelector } from '@renderer/components/team/dialogs/TeamModelSelector';
+import { LeadModelRow } from '@renderer/components/team/members/LeadModelRow';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
+import { getTeamModelSelectionError } from '@renderer/utils/teamModelAvailability';
 
 const PROJECT = '/tmp/keep-unavailable-selection';
 const GO_MODEL = 'opencode-go/space-bunny-free';
@@ -318,7 +320,7 @@ function zenCatalogProvider() {
   };
 }
 
-describe('TeamModelSelector keeps an unavailable OpenCode selection visible', () => {
+describe('TeamModelSelector keeps an unavailable saved selection', () => {
   afterEach(async () => {
     await act(async () => {
       for (const root of [...mountedRoots]) {
@@ -407,5 +409,85 @@ describe('TeamModelSelector keeps an unavailable OpenCode selection visible', ()
       providerModelsResponse('opencode-go', [], { error: 'provider catalog timed out' })
     );
     expect(onValueChange).not.toHaveBeenCalledWith('');
+  });
+
+  it('preserves the saved Claude model when opening the real lead picker across catalog refreshes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.stubGlobal('EventSource', undefined);
+    installLoadModelsApi(async (input) => providerModelsResponse(input.providerId));
+    const savedModel = 'claude-sonnet-4-6';
+    const catalog = (models: string[]): CliProviderStatus => ({
+      providerId: 'anthropic',
+      displayName: 'Claude',
+      supported: true,
+      authenticated: false,
+      authMethod: null,
+      canLoginFromUi: false,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
+        extensions: {
+          plugins: { status: 'unsupported', ownership: 'shared' },
+          mcp: { status: 'unsupported', ownership: 'shared' },
+          skills: { status: 'unsupported', ownership: 'shared' },
+          apiKeys: { status: 'unsupported', ownership: 'provider-scoped' },
+        },
+      },
+      models, modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1, providerId: 'anthropic', source: 'claude-sdk', status: 'ready',
+        fetchedAt: '2026-11-26T12:00:00.000Z', staleAt: '2099-01-01T00:00:00.000Z',
+        defaultModelId: null, defaultLaunchModel: null,
+        models: models.map((model) => ({
+          id: model, launchModel: model, displayName: model, hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high'], defaultReasoningEffort: null,
+          inputModalities: [], supportsPersonality: false, isDefault: false,
+          upgrade: false, source: 'claude-sdk',
+        })),
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    });
+    let provider = catalog(['claude-opus-4-6']);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [provider] };
+    const onModelChange = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () => root.render(React.createElement(LeadModelRow, {
+      providerId: 'anthropic', model: savedModel, effort: 'low', limitContext: true,
+      preserveSelectedModel: true,
+      projectPath: '/TEST/saved-claude-review', syncModelsWithTeammates: true,
+      onProviderChange: vi.fn(), onModelChange, onEffortChange: vi.fn(),
+      onLimitContextChange: vi.fn(), onSyncModelsWithTeammatesChange: vi.fn(),
+      modelIssueText: getTeamModelSelectionError('anthropic', savedModel, provider),
+    }));
+    await act(async () => { render(); });
+    const trigger = host.querySelector<HTMLButtonElement>('button[aria-label*=" provider,"]');
+    expect(trigger?.getAttribute('aria-label')).toContain('Sonnet 4.6');
+    expect(onModelChange).not.toHaveBeenCalled();
+    await act(async () => { trigger!.click(); });
+    await flushFailClosedAuthorityClocks();
+    expect(onModelChange).not.toHaveBeenCalled();
+    expect(trigger?.getAttribute('aria-label')).toContain('Sonnet 4.6');
+    expect(getTeamModelSelectionError('anthropic', savedModel, provider)).not.toBeNull();
+    expect(provider.capabilities.teamLaunch).toBe(false);
+    provider = catalog(['claude-opus-4-6', savedModel]);
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [provider] };
+    await act(async () => { render(); });
+    await flushFailClosedAuthorityClocks();
+    expect(onModelChange).not.toHaveBeenCalled();
+    expect(getTeamModelSelectionError('anthropic', savedModel, provider)).toBeNull();
+    const selected = host.querySelector<HTMLElement>(
+      '[data-testid="team-model-selector-model-option"][aria-pressed="true"]'
+    );
+    expect(selected?.textContent).toContain('Sonnet 4.6');
+    const defaultChoice = Array.from(host.querySelectorAll<HTMLButtonElement>(
+      '[data-testid="team-model-selector-model-option"]'
+    )).find((button) => button.textContent?.includes('Default'));
+    expect(defaultChoice).toBeDefined();
+    await act(async () => { defaultChoice!.click(); });
+    expect(onModelChange).toHaveBeenCalledExactlyOnceWith('');
   });
 });

@@ -7,7 +7,7 @@ import { createPackagedSmokeOwnership } from '../../../scripts/electron-builder/
 // every POSIX host without spawning or signaling real processes. An entry
 // without environ is a same-uid non-dumpable process (EACCES at open).
 const world = vi.hoisted(() => ({
-  processes: new Map<number, { parent: number; birth: number; environ?: string }>(),
+  processes: new Map<number, { parent: number; birth: number; environ?: string; tornStatReads?: number; exitAfterTornStat?: boolean }>(),
   descriptors: new Map<number, { data: Buffer; offset: number }>(),
   nextDescriptor: 1_000_000,
   beforeCensus: [] as (() => void)[],
@@ -42,7 +42,13 @@ vi.mock('node:fs', async () => {
     readFileSync: (path: unknown, ...rest: unknown[]) => {
       const target = procfs(path);
       if (target?.file !== 'stat') return passthrough.readFileSync(path, ...rest);
-      const { parent, birth } = entry(target.pid);
+      const processEntry = entry(target.pid);
+      if ((processEntry.tornStatReads ?? 0) > 0) {
+        processEntry.tornStatReads!--;
+        if (processEntry.exitAfterTornStat) world.processes.delete(target.pid);
+        return ''; // A retiring process can yield a torn procfs snapshot.
+      }
+      const { parent, birth } = processEntry;
       const fields = ['S', parent, target.pid, ...Array<number>(16).fill(0), birth];
       return `${target.pid} (fake) ${fields.join(' ')}`;
     },
@@ -110,6 +116,31 @@ describe.skipIf(process.platform === 'win32')('packaged smoke non-dumpable linea
     world.processes.clear();
     world.descriptors.clear();
     world.beforeCensus.length = 0;
+  });
+
+  it('settles a torn procfs snapshot only after the exact child really exits', async () => {
+    const { ownership, marked } = setup();
+    const leader = FAKE_PID + 41;
+    world.processes.set(leader, { parent: process.pid, birth: 401, environ: marked });
+    expect(ownership.begin(leader).map((entry) => entry.pid)).toEqual([leader]);
+
+    const retiring = world.processes.get(leader)!;
+    retiring.tornStatReads = 1;
+    retiring.exitAfterTornStat = true;
+    expect(await ownership.waitForExit(250)).toBe(true);
+    expect(ownership.finish()).toMatchObject({ remaining: [] });
+  });
+
+  it('refuses a persistently malformed live owner instead of assuming cleanup', () => {
+    const { ownership, marked } = setup();
+    const leader = FAKE_PID + 42;
+    world.processes.set(leader, { parent: process.pid, birth: 402, environ: marked });
+    expect(ownership.begin(leader).map((entry) => entry.pid)).toEqual([leader]);
+
+    world.processes.get(leader)!.tornStatReads = 3;
+    expect(() => ownership.sample()).toThrow(/Unable to verify packaged smoke process identity/);
+    expect(world.processes.has(leader)).toBe(true);
+    // No signal is issued on an unverified birth/marker.
   });
 
   it('never signals marked non-dumpable descendants and forgets unrelated ones', async () => {

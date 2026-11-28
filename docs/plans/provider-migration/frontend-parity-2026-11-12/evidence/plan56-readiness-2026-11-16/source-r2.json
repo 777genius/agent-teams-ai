@@ -1,0 +1,216 @@
+{
+  "review": "Independent actual two-file Plan56 source R2",
+  "status": "ACCEPT_SOURCE_ONLY",
+  "sourceCommit": "1f174b343cc0c01465907d1b316982d006900a4b",
+  "parent": "ae1b50b480d6019ae846dab04585baf5b1a040f3",
+  "planBlob": "8ab3fa8b576038ef80c4eb48cb6449d6c074866b",
+  "bindings": [
+    {
+      "path": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts",
+      "before": {
+        "gitBlob": "561580091cc89067c9a1b2e80b0fa402e8950043",
+        "sha256": "0f7fab05d2be7c9827a6b2d44b8b67ac7772c0766bc93f22b489e0d3101e3d29",
+        "bytes": 48430,
+        "lines": 779,
+        "local": "native-proposal/process-3be-win64-readiness-r1/source/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts"
+      },
+      "after": {
+        "gitBlob": "3de70853104e4c49685d870fc4977458f529bfea",
+        "sha256": "7a7419587a39e8f7473aea264903e0bb02bee694a79a5a3bfe2151953cf2b95c",
+        "bytes": 48528,
+        "lines": 783,
+        "local": "incoming-plan56/after/packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts"
+      }
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts",
+      "before": {
+        "gitBlob": "91c0d5773aa6799636c03c507533914c37b6d996",
+        "sha256": "ba2a4c9db4de32d2bc048a6ac601f41c32ba90b7cf73a2c9b8e163eb2a2f328a",
+        "bytes": 95083,
+        "lines": 1743,
+        "local": "native-proposal/plan47-proposal/after/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts"
+      },
+      "after": {
+        "gitBlob": "11b498579f2fb8a6e54afb7ac2f49438c959a213",
+        "sha256": "6879d6912ffafaa978ffd9fa8894bf7847f394587807bfbda0cd899de14394ad",
+        "bytes": 95108,
+        "lines": 1743,
+        "local": "incoming-plan56/after/packages/legacy-agent-host/tests/saved-team-model-probe.test.ts"
+      }
+    }
+  ],
+  "packetFiles": [
+    {
+      "path": "incoming-plan56/source-readbacks.json",
+      "bytes": 146939,
+      "sha256": "7591778a6972f0327e8db8e2046af55bc71434c13ff50fa281bf114601579bcd"
+    },
+    {
+      "path": "incoming-plan56/source-manifest.json",
+      "bytes": 544,
+      "sha256": "844a231ce74c41023700139b5606323a21cd9faa87789481a9d8899438924768"
+    }
+  ],
+  "dataChecks": [
+    {
+      "name": "exact-two-official-readback-paths",
+      "pass": true
+    },
+    {
+      "name": "exact-two-manifest-paths",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts original blob",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts post blob",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts post SHA256",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts physical lines",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts official exact body",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts official exact blob",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts manifest exact",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/src/composition/prepareTeamModelReadiness.ts newline style preserved",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts original blob",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts post blob",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts post SHA256",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts physical lines",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts official exact body",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts official exact blob",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts manifest exact",
+      "pass": true
+    },
+    {
+      "name": "packages/legacy-agent-host/tests/saved-team-model-probe.test.ts newline style preserved",
+      "pass": true
+    },
+    {
+      "name": "unique-nativeCurrent-replacement",
+      "pass": true
+    },
+    {
+      "name": "all-other-production-bytes-exact",
+      "pass": true
+    },
+    {
+      "name": "production-under800",
+      "pass": true
+    },
+    {
+      "name": "public-options-byte-identical",
+      "pass": true
+    },
+    {
+      "name": "bracket-admission-and-readers-byte-identical",
+      "pass": true
+    },
+    {
+      "name": "original-number-of-Date-now-reads",
+      "pass": true
+    },
+    {
+      "name": "sole-extra-source-isCurrent-token-is-the-new-comment",
+      "pass": true
+    },
+    {
+      "name": "unique-successful-count-change",
+      "pass": true
+    },
+    {
+      "name": "unique-partial-count-change",
+      "pass": true
+    },
+    {
+      "name": "all-other-test-bytes-exact",
+      "pass": true
+    },
+    {
+      "name": "negative-case-roster-retained",
+      "pass": true
+    },
+    {
+      "name": "original-exact-target-error-test-retained",
+      "pass": true
+    },
+    {
+      "name": "original-clock-formulas-retained",
+      "pass": true
+    },
+    {
+      "name": "original-single-outer-rounding-retained",
+      "pass": true
+    },
+    {
+      "name": "original-no-business-allocation-retained",
+      "pass": true
+    },
+    {
+      "name": "previous-plan-R1-exact",
+      "pass": true
+    }
+  ],
+  "dataCheckCount": 34,
+  "semanticFindings": [
+    "Actual patch exactly implements the four callback removals established by R1; no other production bytes change.",
+    "For the declared boolean ownerCurrent contract, non-bracket true/false/throw semantics and call order are preserved by the new early return. Source/optional-configuration/key/file checks remain in their old order and catch boundary.",
+    "Only the existing private V1 configured-key branch skips its outer leading callback. Both source.read full owner callbacks remain before and after every source observation.",
+    "The private retained account.isCurrent closure also uses bracket=true on later calls; every invocation still performs the complete fresh reader checks. This is a trace-count change, not a cached permission result.",
+    "The second explicit bracket owner check and closing policy external owner check alone are removed; memberTarget remains before the closing policy read.",
+    "All cutoff/expiry/completion/credential/owner/source validation and source-witness paths outside those expressions are byte-identical.",
+    "Test change is exactly38-to30 and15-to12 plus the two explanations; all negative cases, timing expressions, target/error identity, clock-failure isolation, source-byte assertions and allocation assertions are byte-identical.",
+    "No imports/new files/rosters/workflows are added by this two-path packet. Root owns independent complete-tree preservation. Existing closure does not require an additional dependency pin for this diff."
+  ],
+  "reviewLimitations": [
+    "No project code, compiler, unit tests, providers, native executable or GUI was executed.",
+    "No CI read/action, Git mutation or redownload was performed.",
+    "Static source acceptance does not establish native speedup or15-second success.",
+    "Original resulting-head contract and process acceptance evidence is still required, including original physical cleanup oracle.",
+    "Windows ARM Codex timely-readiness failure, V2 manual terminal failure and Linux credential cleanup are separate outcomes; no qualification transfer."
+  ],
+  "sourceR1": {
+    "path": "native-proposal/plan56-readonly-r1/review.json",
+    "bytes": 11373,
+    "sha256": "e6654ab4f3d660a59ec5fab27397ba8fa1021f5139e9ac11d567025a2b738e56"
+  }
+}

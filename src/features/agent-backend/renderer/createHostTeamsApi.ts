@@ -1,0 +1,751 @@
+import { captureHostNotification } from '../contracts/hostNotification';
+import { isHostTeamRunId } from '../contracts/teamRunSelection';
+import { readHostProcessCatalog } from '../core/application/readHostProcessCatalog';
+
+import { createHostDefinitionEdits } from './createHostDefinitionEdits';
+import { createHostLaunchDiagnostics } from './createHostLaunchDiagnostics';
+import { createHostLeadApi } from './createHostLeadApi';
+import { createHostLogStatsApi } from './createHostLogStatsApi';
+import { createHostMemberActions } from './createHostMemberActions';
+import { createHostMemberActivityMeta } from './createHostMemberActivityMeta';
+import { createHostMemberSpawnStatuses } from './createHostMemberSpawnStatuses';
+import { createHostMessageAttachmentRead } from './createHostMessageAttachmentRead';
+import { createHostMessageDeliveryStatus } from './createHostMessageDeliveryStatus';
+import { createHostProcessControls } from './createHostProcessControls';
+import { createHostProductLifecycleApi } from './createHostProductLifecycleApi';
+import { readHostProjectContext } from './createHostProjectContextApi';
+import { createHostProjectRuntimeApi } from './createHostProjectRuntimeApi';
+import { createHostSavedMemberMutations } from './createHostSavedMemberMutations';
+import { createHostTaskActivityApi } from './createHostTaskActivityApi';
+import { createHostTaskAttachmentRead } from './createHostTaskAttachmentRead';
+import { createHostTaskReads } from './createHostTaskReads';
+import { createHostTeamChanges } from './createHostTeamChanges';
+import { createHostTeamLaunchSubmission } from './createHostTeamLaunchSubmission';
+import { createHostTeamLifecycle } from './createHostTeamLifecycle';
+import { createHostTeamMutations, HostTeamOperationError } from './createHostTeamMutations';
+import { createHostTeamProvisioning } from './createHostTeamProvisioning';
+import { createHostTeamRoster } from './createHostTeamRoster';
+import { createHostToolApprovals } from './createHostToolApprovals';
+import {
+  hasHostTeamDestination,
+  hostTeamSelectionKey,
+  isHostTeamSelectionKey,
+} from './hostTeamRouting';
+import { projectHostRuntimeMembers } from './projectHostRuntimeMembers';
+import { projectHostSavedTeamRequest } from './projectHostSavedTeamRequest';
+import { projectHostTeamSummaries } from './projectHostTeamSummaries';
+import { projectHostTeamView as view } from './projectHostTeamView';
+import { readHostLaunchConfiguration } from './readHostLaunchConfiguration';
+import { readHostMessagesPage } from './readHostMessagesPage';
+import { HostTeamReadUnavailableError, readHostPagedSnapshot } from './readHostPagedSnapshot';
+import {
+  assertMatchingConfiguration,
+  readHostRosterConfiguration,
+  savedProjectPath,
+} from './readHostRosterConfiguration';
+import { createTeamCreationResultApi } from './readTeamCreationResult';
+import { remapHostCrossTeamMessages } from './remapHostCrossTeamMessages';
+import { TeamProductReadOrder } from './TeamProductReadOrder';
+import {
+  qualifyHostTaskReferenceTeam,
+  storeHostTaskReferenceTeam,
+  translateHostTaskReferences,
+} from './translateHostTaskReferences';
+
+import type { BackendConnectionSnapshot } from '../contracts/connections';
+import type { AgentBackendApi } from '../contracts/operations';
+import type { BackendTeamSnapshot } from '../contracts/teamSnapshot';
+import type { HostActivityReadOptions } from './readHostActivityLogs';
+import type { TeamsAPI } from '@shared/types/api';
+import type { TeamReadUnavailable, TeamTaskWithKanban } from '@shared/types/team';
+
+export { hostTeamSelectionKey, isHostTeamSelectionKey } from './hostTeamRouting';
+
+type Connection = BackendConnectionSnapshot['bindings'][number];
+type CurrentScope = () => boolean;
+
+function current(check: CurrentScope): void {
+  if (!check()) throw new Error('Team context changed');
+}
+function remapSnapshot(
+  snapshot: BackendTeamSnapshot,
+  selection: string,
+  bindings: Connection[] = []
+): BackendTeamSnapshot {
+  const mapTeam = (team?: string) =>
+    qualifyHostTaskReferenceTeam(team, snapshot.teamName, selection, bindings);
+  const refs = <T extends { taskRefs?: { teamName: string }[] }>(entry: T): T => ({
+    ...entry,
+    ...('text' in entry && typeof entry.text === 'string'
+      ? { text: translateHostTaskReferences(entry.text, mapTeam) }
+      : {}),
+    ...('summary' in entry && typeof entry.summary === 'string'
+      ? { summary: translateHostTaskReferences(entry.summary, mapTeam) }
+      : {}),
+    ...(entry.taskRefs
+      ? {
+          taskRefs: entry.taskRefs.map((ref) => ({
+            ...ref,
+            // Cross-team navigation needs a separately captured target. Never interpret a name as legacy authority.
+            teamName: mapTeam(ref.teamName),
+          })),
+        }
+      : {}),
+  });
+  return {
+    ...snapshot,
+    teamName: selection,
+    kanbanState: { ...snapshot.kanbanState, teamName: selection },
+    tasks: snapshot.tasks.map((task) => ({
+      ...task,
+      ...(task.description === undefined
+        ? {}
+        : { description: translateHostTaskReferences(task.description, mapTeam) }),
+      ...(task.prompt === undefined
+        ? {}
+        : { prompt: translateHostTaskReferences(task.prompt, mapTeam) }),
+      ...(task.promptTaskRefs
+        ? { promptTaskRefs: refs({ taskRefs: task.promptTaskRefs }).taskRefs }
+        : {}),
+      ...(task.descriptionTaskRefs
+        ? { descriptionTaskRefs: refs({ taskRefs: task.descriptionTaskRefs }).taskRefs }
+        : {}),
+      ...(task.comments ? { comments: task.comments.map(refs) } : {}),
+      ...(task.sourceMessage
+        ? {
+            sourceMessage: {
+              ...task.sourceMessage,
+              text: translateHostTaskReferences(task.sourceMessage.text, mapTeam),
+            },
+          }
+        : {}),
+    })),
+    messages: remapHostCrossTeamMessages(snapshot.messages, snapshot.teamName, selection, bindings),
+  };
+}
+/** Decorates ordinary Team reads while keeping legacy and captured Host authority disjoint. */
+export function createHostTeamsApi(
+  legacy: TeamsAPI,
+  backend: AgentBackendApi,
+  captureScope: () => CurrentScope = () => () => true,
+  readOrder = new TeamProductReadOrder()
+): TeamsAPI {
+  const lifecycle = createHostTeamLifecycle(backend);
+  const projectRuntime = createHostProjectRuntimeApi({
+    backend,
+    captureScope,
+    readOrder,
+    lifecycle,
+  });
+  const approvals = createHostToolApprovals({ backend, captureScope, readOrder });
+  const provisioning = createHostTeamProvisioning(backend, captureScope, readOrder);
+  const getMemberSpawnStatuses = createHostMemberSpawnStatuses(backend, captureScope, readOrder);
+  const changes = createHostTeamChanges({
+    backend,
+    captureScope,
+    selectionKey: hostTeamSelectionKey,
+    readOrder,
+  });
+  async function connections(
+    check: CurrentScope,
+    unavailable?: TeamReadUnavailable[]
+  ): Promise<Connection[]> {
+    const state = await backend.getConnections();
+    current(check);
+    if (state.state !== 'ready' && state.state !== 'unconfigured')
+      throw new Error('Host teams unavailable');
+    unavailable?.push(...(state.unavailableOwners ?? []));
+    return state.bindings;
+  }
+  async function snapshot(
+    connection: Connection,
+    check: CurrentScope
+  ): Promise<{ data: BackendTeamSnapshot; assertCurrent(): void }> {
+    return readHostPagedSnapshot(backend, connection, check, readOrder);
+  }
+  async function resolveConnection(
+    key: string,
+    check: CurrentScope,
+    captured?: Connection[]
+  ): Promise<Connection> {
+    const rows = captured ?? (await connections(check));
+    current(check);
+    const connection = rows.find(
+      (binding) => hostTeamSelectionKey(binding.handle.handleId) === key
+    );
+    if (!connection) throw new Error('Host team unavailable');
+    return connection;
+  }
+  async function selected(key: string, check: CurrentScope, assertOriginal?: () => void) {
+    assertOriginal?.();
+    const bindings = await connections(check);
+    assertOriginal?.();
+    const connection = await resolveConnection(key, check, bindings);
+    assertOriginal?.();
+    const observed = await snapshot(connection, check);
+    assertOriginal?.();
+    return {
+      connection,
+      snapshot: remapSnapshot(observed.data, key, bindings),
+      canonicalTeamName: observed.data.teamName,
+      remapTasks: (tasks: TeamTaskWithKanban[]) =>
+        remapSnapshot({ ...observed.data, tasks }, key, bindings).tasks,
+      assertCurrent: observed.assertCurrent,
+    };
+  }
+  async function aggregateSnapshot(
+    binding: Connection,
+    check: CurrentScope,
+    observed: (() => void)[],
+    unavailable: TeamReadUnavailable[]
+  ) {
+    try {
+      return await snapshot(binding, check);
+    } catch (error) {
+      if (!(error instanceof HostTeamReadUnavailableError)) throw error;
+      error.assertCurrent();
+      observed.push(error.assertCurrent);
+      unavailable.push({
+        kind: 'team',
+        teamName: hostTeamSelectionKey(binding.handle.handleId),
+        displayName: binding.label,
+        code: error.code,
+        outcome: error.outcome,
+      });
+      return null;
+    }
+  }
+  async function list() {
+    const check = captureScope();
+    const unavailable: TeamReadUnavailable[] = [];
+    const [oldTeams, bindings] = await Promise.all([
+      legacy.list(),
+      connections(check, unavailable),
+    ]);
+    if (!Array.isArray(oldTeams)) throw new Error('Unexpected legacy Team aggregate');
+    const observed: (() => void)[] = [];
+    const hostTeams = [];
+    // Read one captured Team at a time to leave the finite Host control lane available.
+    for (const binding of bindings) {
+      const read = await aggregateSnapshot(binding, check, observed, unavailable);
+      if (!read) continue;
+      const data = remapSnapshot(
+        read.data,
+        hostTeamSelectionKey(binding.handle.handleId),
+        bindings
+      );
+      read.assertCurrent();
+      let description = '',
+        displayName = binding.label,
+        color: string | undefined;
+      let projectPath: string | undefined;
+      let projectContextMode = binding.projectContextMode;
+      try {
+        const configuration = await readHostRosterConfiguration(backend, binding.handle);
+        assertMatchingConfiguration(data, configuration);
+        description = configuration.savedSettings?.description ?? '';
+        displayName = configuration.savedSettings?.displayName ?? binding.label;
+        color = configuration.savedSettings?.color;
+        projectPath = savedProjectPath(configuration);
+        projectContextMode = configuration.savedSettings?.projectContextMode ?? projectContextMode;
+      } catch {
+        // Unavailable saved settings leave ordinary product records readable.
+      }
+      observed.push(read.assertCurrent);
+      hostTeams.push({
+        teamName: data.teamName,
+        ...(projectContextMode === undefined ? {} : { projectContextMode }),
+        ...(binding.ownerResourceRef === undefined
+          ? {}
+          : { ownerResourceRef: binding.ownerResourceRef }),
+        ...(data.lifecycle?.deletedAt ? { deletedAt: data.lifecycle.deletedAt } : {}),
+        displayName,
+        description,
+        ...(color === undefined ? {} : { color }),
+        ...(projectPath === undefined ? {} : { projectPath }),
+        memberCount: data.members.filter((member) => member.role === 'member').length,
+        members: data.members,
+        ...(data.members.find((member) => member.role === 'lead')
+          ? {
+              leadName: data.members.find((member) => member.role === 'lead')!.name,
+            }
+          : {}),
+        taskCount: data.tasks.filter((task) => task.status !== 'deleted').length,
+        lastActivity: data.messages.reduce<string | null>(
+          (latest, message) =>
+            latest === null || message.timestamp > latest ? message.timestamp : latest,
+          null
+        ),
+      });
+    }
+    current(check);
+    for (const assertCurrent of observed) assertCurrent();
+    // Reserved keys cannot be treated as real legacy filesystem team names.
+    const items = [
+      ...oldTeams.filter((team) => !isHostTeamSelectionKey(team.teamName)),
+      ...projectHostTeamSummaries(hostTeams, bindings),
+    ];
+    return unavailable.length ? { items, unavailable } : items;
+  }
+  async function getAllTasks() {
+    const check = captureScope();
+    const unavailable: TeamReadUnavailable[] = [];
+    const [oldTasks, bindings] = await Promise.all([
+      legacy.getAllTasks(),
+      connections(check, unavailable),
+    ]);
+    if (!Array.isArray(oldTasks)) throw new Error('Unexpected legacy Task aggregate');
+    const observed: (() => void)[] = [];
+    const hostTasks = [];
+    for (const binding of bindings) {
+      const read = await aggregateSnapshot(binding, check, observed, unavailable);
+      if (!read) continue;
+      const data = remapSnapshot(
+        read.data,
+        hostTeamSelectionKey(binding.handle.handleId),
+        bindings
+      );
+      observed.push(read.assertCurrent);
+      let displayName = binding.label;
+      let projectPath: string | undefined;
+      try {
+        const configuration = await readHostRosterConfiguration(backend, binding.handle);
+        assertMatchingConfiguration(data, configuration);
+        displayName = configuration.savedSettings?.displayName ?? binding.label;
+        projectPath = savedProjectPath(configuration);
+      } catch {
+        // Product tasks remain readable while their saved presentation is unavailable.
+      }
+      hostTasks.push(
+        data.tasks.map((task) => ({
+          ...task,
+          teamName: data.teamName,
+          teamDisplayName: displayName,
+          ...(binding.ownerResourceRef === undefined
+            ? {}
+            : { ownerResourceRef: binding.ownerResourceRef }),
+          ...(projectPath === undefined ? {} : { projectPath }),
+        }))
+      );
+    }
+    current(check);
+    for (const assertCurrent of observed) assertCurrent();
+    const items = [
+      ...oldTasks.filter((task) => !isHostTeamSelectionKey(task.teamName)),
+      ...hostTasks.flat(),
+    ];
+    return unavailable.length ? { items, unavailable } : items;
+  }
+  const reads = {
+    ...createHostTaskReads(backend, (key) => selected(key, captureScope())),
+    async getSavedRequest(key: string) {
+      const check = captureScope();
+      const connection = await resolveConnection(key, check);
+      readOrder.capture(check);
+      const readFence = readOrder.readFence(connection.handle.handleId);
+      const configuration = await readHostRosterConfiguration(backend, connection.handle);
+      current(check);
+      readFence();
+      return projectHostSavedTeamRequest(key, configuration);
+    },
+    async getData(key: string) {
+      const check = captureScope();
+      const { connection, snapshot, assertCurrent } = await selected(key, check);
+      const handle = { handleId: connection.handle.handleId };
+      const state = await lifecycle.read(connection, check);
+      current(check);
+      assertCurrent();
+      const processes = await readHostProcessCatalog(
+        async (cursor) => {
+          const page = await backend.invoke({
+            handle: { ...handle },
+            commandId: crypto.randomUUID(),
+            operation: 'process.list',
+            payload: cursor === undefined ? {} : { cursor },
+          });
+          if (!page.ok) throw new Error(`Host process read ${page.code}`);
+          return page.value;
+        },
+        () => {
+          current(check);
+          assertCurrent();
+          if (connection.handle.handleId !== handle.handleId)
+            throw new Error('Host process selection changed');
+        }
+      );
+      const result = view(
+        { ...snapshot, processes },
+        connection,
+        state === null && snapshot.runtimeNeverLaunched && !snapshot.lifecycle?.cleanupPending
+          ? false
+          : state?.alive
+      );
+      try {
+        const configuration = await readHostRosterConfiguration(backend, connection.handle);
+        current(check);
+        assertCurrent();
+        assertMatchingConfiguration(snapshot, configuration);
+        const saved = projectHostSavedTeamRequest(key, configuration);
+        const visibleNames = new Set(snapshot.members.map((member) => member.name.toLowerCase()));
+        for (const member of configuration.removedMembers) {
+          const name = member.name.toLowerCase();
+          if (visibleNames.has(name)) throw new Error('Removed team member name conflict');
+          visibleNames.add(name);
+        }
+        const capture = state
+          ? await readHostLaunchConfiguration(
+              backend,
+              connection.handle,
+              state.launch.launchId
+            ).catch(() => null)
+          : null;
+        current(check);
+        assertCurrent();
+        const projected = projectHostRuntimeMembers({
+          result,
+          configuration,
+          saved,
+          state,
+          capture,
+          neverLaunched:
+            snapshot.runtimeNeverLaunched === true && !snapshot.lifecycle?.cleanupPending,
+        });
+        result.config = { ...result.config, members: projected.configMembers };
+        result.members = projected.members;
+        if (projected.unavailable)
+          result.warnings = [
+            ...(result.warnings ?? []),
+            'Captured runtime settings are unavailable for some team members.',
+          ];
+        if (saved) {
+          result.config = {
+            ...result.config,
+            projectPath: saved.cwd,
+            ...(saved.displayName === undefined ? {} : { name: saved.displayName }),
+            ...(saved.description === undefined ? {} : { description: saved.description }),
+            ...(saved.color === undefined ? {} : { color: saved.color }),
+            ...(configuration.savedSettings?.language === undefined
+              ? {}
+              : { language: configuration.savedSettings.language }),
+            ...(saved.projectContextMode === undefined
+              ? {}
+              : { projectContextMode: saved.projectContextMode }),
+          };
+        }
+      } catch {
+        // Product records remain readable; unavailable selected settings are not
+        // reconstructed from a legacy file or current global defaults.
+        result.warnings = [...(result.warnings ?? []), 'Saved launch settings are unavailable.'];
+      }
+      current(check);
+      assertCurrent();
+      if (state?.unknownMembers.length)
+        result.warnings = [
+          ...(result.warnings ?? []),
+          'Some team members have unavailable runtime state.',
+        ];
+      return result;
+    },
+    processAlive: projectRuntime.processAlive,
+    stop: projectRuntime.stop,
+    async getMessagesPage(
+      key: string,
+      options?: { cursor?: string | null; limit?: number; groupChatId?: string }
+    ) {
+      const check = captureScope();
+      const bindings = await connections(check);
+      const connection = await resolveConnection(key, check, bindings);
+      return readHostMessagesPage(backend, connection, bindings, key, options, check, readOrder);
+    },
+  };
+  const mutations = createHostTeamMutations({
+    backend,
+    captureScope,
+    invalidateReads: (handle) => readOrder.invalidateReads(handle.handleId),
+    async resolve(key, check, referenceTeams) {
+      const bindings = await connections(check);
+      const connection = await resolveConnection(key, check, bindings);
+      if (referenceTeams?.some((team) => !storeHostTaskReferenceTeam(team, '', key, bindings)))
+        throw new HostTeamOperationError('unsupported', 'not-dispatched');
+      const read = await snapshot(connection, check);
+      read.assertCurrent();
+      return {
+        handle: { ...connection.handle },
+        teamName: read.data.teamName,
+        members: read.data.members,
+        referenceBindings: bindings,
+      };
+    },
+  });
+  const roster = createHostTeamRoster({
+    backend,
+    captureScope,
+    resolve: (key, check) => {
+      readOrder.capture(check);
+      return resolveConnection(key, check);
+    },
+    invalidateReads: (handle) => readOrder.invalidateReads(handle.handleId),
+  });
+  const productLifecycleOptions = {
+    backend,
+    captureScope,
+    resolve: (key: string, check: CurrentScope) => {
+      readOrder.capture(check);
+      return resolveConnection(key, check);
+    },
+    invalidateReads: (handle: import('../contracts').BackendHandle) =>
+      readOrder.invalidateReads(handle.handleId),
+  };
+  const productLifecycle = createHostProductLifecycleApi(productLifecycleOptions);
+  const savedMembers = createHostSavedMemberMutations(productLifecycleOptions);
+  const definitions = createHostDefinitionEdits(productLifecycleOptions);
+  const attachmentOptions = {
+    backend,
+    captureScope,
+    async resolve(key: string, check: CurrentScope) {
+      const connection = await resolveConnection(key, check);
+      readOrder.capture(check);
+      const fence = readOrder.readFence(connection.handle.handleId);
+      return {
+        handle: connection.handle,
+        assertCurrent: () => {
+          current(check);
+          fence();
+        },
+      };
+    },
+  };
+  const getTaskAttachment = createHostTaskAttachmentRead(attachmentOptions);
+  const getAttachments = createHostMessageAttachmentRead(attachmentOptions);
+  const activityReadOptions: HostActivityReadOptions = {
+    backend,
+    captureScope,
+    async resolve(key, check) {
+      const connection = await resolveConnection(key, check);
+      readOrder.capture(check);
+      const fence = readOrder.readFence(connection.handle.handleId);
+      return {
+        handle: connection.handle,
+        assertCurrent: () => {
+          current(check);
+          fence();
+        },
+      };
+    },
+  };
+  const logStats = createHostLogStatsApi(activityReadOptions);
+  const lead = createHostLeadApi(activityReadOptions);
+  const taskActivity = createHostTaskActivityApi({
+    ...activityReadOptions,
+    readTask: (key, taskId, check, assertOriginal) =>
+      createHostTaskReads(backend, (key) => selected(key, check, assertOriginal)).getTask(
+        key,
+        taskId
+      ),
+  });
+  const killProcess = createHostProcessControls({
+    backend,
+    captureScope,
+    invalidateReads: (handleId) => readOrder.invalidateReads(handleId),
+    async resolve(key, check) {
+      const connection = await resolveConnection(key, check);
+      return { handle: connection.handle, assertCurrent: () => current(check) };
+    },
+  });
+  const memberActions = createHostMemberActions({
+    backend,
+    captureScope,
+    resolve: async (key, check) => {
+      const connection = await resolveConnection(key, check);
+      return { handle: connection.handle, assertCurrent: () => current(check) };
+    },
+    invalidateReads: (handleId) => readOrder.invalidateReads(handleId),
+  });
+  const supported = {
+    setToolActivityTracking: approvals.setToolActivityTracking,
+    getHostMessageDeliveryStatus: createHostMessageDeliveryStatus(backend, captureScope, readOrder),
+    getLaunchFailureDiagnostics: createHostLaunchDiagnostics(backend, captureScope, readOrder),
+    getMemberActivityMeta: createHostMemberActivityMeta(backend, captureScope, readOrder),
+    getTeamAgentRuntime: projectRuntime.getTeamAgentRuntime,
+    getMemberSpawnStatuses,
+    ...memberActions,
+    async showMessageNotification(raw: Parameters<TeamsAPI['showMessageNotification']>[0]) {
+      const data = captureHostNotification(raw),
+        check = captureScope();
+      current(check);
+      // Reuse the Desktop notification transport; Main validates the captured Host destination.
+      await legacy.showMessageNotification.call(legacy, data);
+      current(check);
+    },
+    killProcess,
+    ...reads,
+    ...mutations,
+    ...roster,
+    ...productLifecycle,
+    ...savedMembers,
+    ...definitions,
+    async getProjectContextView(key: string, projectPath?: string | null) {
+      const check = captureScope(),
+        connection = structuredClone(await resolveConnection(key, check));
+      return (await readHostProjectContext(backend, connection, check, projectPath)).view;
+    },
+    ...logStats,
+    ...lead,
+    ...taskActivity,
+    getTaskAttachment,
+    getAttachments,
+  };
+  const launchTeam = createHostTeamLaunchSubmission({
+    backend,
+    captureScope,
+    invalidateReads: (handleId, check) => {
+      readOrder.capture(check);
+      readOrder.invalidateReads(handleId);
+    },
+  });
+  const creation = createTeamCreationResultApi(legacy);
+  // contextBridge freezes its API properties; decorate a mutable copy while keeping the original receiver.
+  return new Proxy(
+    { ...legacy },
+    {
+      get(_target, property) {
+        if (property === 'definitionEdits')
+          return Object.fromEntries(
+            [
+              'updateConfig',
+              'addMember',
+              'replaceMembers',
+              'removeMember',
+              'restoreMember',
+              'updateMemberRole',
+            ].map((method) => [
+              method,
+              (...args: unknown[]) =>
+                isHostTeamSelectionKey(args[0])
+                  ? Reflect.apply(Reflect.get(supported, method), supported, args)
+                  : Reflect.apply(Reflect.get(legacy, method), legacy, args),
+            ])
+          );
+        if (property === 'createTeam' || property === 'createConfig') return creation[property];
+        if (property === 'updateToolApprovalSettings')
+          return (...args: Parameters<TeamsAPI['updateToolApprovalSettings']>) =>
+            isHostTeamSelectionKey(args[0])
+              ? approvals.updateSettings(...args)
+              : legacy.updateToolApprovalSettings(...args);
+        if (property === 'readFileForToolApproval')
+          return (...args: Parameters<TeamsAPI['readFileForToolApproval']>) => {
+            const scope = args[1];
+            if (
+              scope &&
+              (isHostTeamSelectionKey(scope.teamName) || approvals.isHostRequestId(scope.requestId))
+            )
+              return approvals.readPreview(args[0], scope);
+            if (!scope && approvals.isPendingPreviewPath(args[0]))
+              return Promise.reject(
+                new HostTeamOperationError('captured-interaction-required', 'not-dispatched')
+              );
+            return legacy.readFileForToolApproval(args[0]);
+          };
+        if (property === 'onToolApprovalEvent')
+          return (callback: Parameters<TeamsAPI['onToolApprovalEvent']>[0]) => {
+            const stopHost = approvals.subscribe(callback);
+            let stopLegacy: (() => void) | undefined;
+            try {
+              stopLegacy = legacy.onToolApprovalEvent?.call(legacy, (event, request) => {
+                if (!isHostTeamSelectionKey(request.teamName)) callback(event, request);
+              });
+            } catch (error) {
+              stopHost();
+              throw error;
+            }
+            return () => {
+              stopHost();
+              stopLegacy?.();
+            };
+          };
+        if (property === 'respondToToolApproval')
+          return (...args: Parameters<TeamsAPI['respondToToolApproval']>) =>
+            isHostTeamSelectionKey(args[0]) || approvals.isHostRequestId(args[2])
+              ? approvals.respond(...args)
+              : legacy.respondToToolApproval(...args);
+        if (property === 'onProvisioningProgress')
+          return (callback: Parameters<TeamsAPI['onProvisioningProgress']>[0]) => {
+            const stopHost = changes.subscribeProgress(callback);
+            let stopLegacy: (() => void) | undefined;
+            try {
+              stopLegacy = legacy.onProvisioningProgress?.call(legacy, (event, progress) => {
+                if (!isHostTeamSelectionKey(progress.teamName) && !isHostTeamRunId(progress.runId))
+                  callback(event, progress);
+              });
+            } catch (error) {
+              stopHost();
+              throw error;
+            }
+            return () => {
+              stopHost();
+              stopLegacy?.();
+            };
+          };
+        if (property === 'onTeamChange')
+          return (callback: Parameters<TeamsAPI['onTeamChange']>[0]) => {
+            const stopHost = changes.subscribe(callback);
+            const stopActivity = approvals.subscribeActivity(callback);
+            let stopLegacy: (() => void) | undefined;
+            try {
+              stopLegacy = legacy.onTeamChange?.call(legacy, (event, change) => {
+                if (!isHostTeamSelectionKey(change.teamName)) callback(event, change);
+              });
+            } catch (error) {
+              stopHost();
+              stopActivity();
+              throw error;
+            }
+            return () => {
+              stopHost();
+              stopActivity();
+              stopLegacy?.();
+            };
+          };
+        if (property === 'list') return list;
+        if (property === 'getAllTasks') return getAllTasks;
+        if (property === 'aliveList')
+          return async () => {
+            const check = captureScope();
+            const [old, host] = await Promise.all([legacy.aliveList(), projectRuntime.aliveList()]);
+            current(check);
+            return [...old.filter((name) => !isHostTeamSelectionKey(name)), ...host];
+          };
+        const original = Reflect.get(legacy, property) as unknown;
+        if (typeof original !== 'function' && !Object.hasOwn(supported, property)) return original;
+        return (...args: unknown[]) => {
+          if (property === 'getLaunchFailureDiagnostics' && isHostTeamRunId(args[1]))
+            return supported.getLaunchFailureDiagnostics(args[0] as string, args[1]);
+          if (isHostTeamRunId(args[0])) {
+            if (property === 'getProvisioningStatus')
+              return provisioning.getProvisioningStatus(args[0]);
+            if (property === 'cancelProvisioning') return provisioning.cancelProvisioning(args[0]);
+          }
+          if (!hasHostTeamDestination(property, args[0])) {
+            if (property === 'restartMember' && args[3] !== undefined)
+              throw new Error('Captured Host retry requires the original Host Team');
+            if (typeof original !== 'function') throw new Error('Team operation unavailable');
+            return Reflect.apply(original, legacy, args);
+          }
+          if (property === 'launchTeam')
+            return launchTeam(args[0] as Parameters<TeamsAPI['launchTeam']>[0]);
+          if (property === 'showMessageNotification')
+            return supported.showMessageNotification(
+              args[0] as Parameters<TeamsAPI['showMessageNotification']>[0]
+            );
+          if (Object.hasOwn(supported, property))
+            return Reflect.apply(
+              Reflect.get(supported, property) as (...args: unknown[]) => unknown,
+              supported,
+              args
+            );
+          return Promise.reject(new Error('This operation is not supported for Host teams'));
+        };
+      },
+    }
+  );
+}

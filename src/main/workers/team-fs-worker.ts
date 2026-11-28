@@ -15,6 +15,7 @@ import {
 import { compactTeamTaskForSnapshot } from '@main/services/team/teamTaskSnapshotCompaction';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { isTaskReviewLifecycleEventType } from '@shared/utils/taskHistory';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 
@@ -124,14 +125,6 @@ interface TaskReadDiag {
 
 const MAX_LAUNCH_STATE_BYTES = 32 * 1024;
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
-const REVIEW_LIFECYCLE_EVENTS = new Set([
-  'review_requested',
-  'review_changes_requested',
-  'review_approved',
-  'review_completed',
-  'human_approved',
-  'review_started',
-]);
 const REVIEW_RESET_STATUSES = new Set(['in_progress', 'deleted']);
 const TEAM_SUMMARY_CACHE_MAX_ENTRIES = 1000;
 const TASK_FILE_CACHE_MAX_ENTRIES = 512;
@@ -1643,7 +1636,10 @@ function normalizeFallbackReviewState(value: unknown, status: string): string {
   if (status === 'in_progress' || status === 'deleted') return 'none';
   if (status === 'pending') return reviewState === 'needsFix' ? 'needsFix' : 'none';
   if (status === 'completed') {
-    return reviewState === 'review' || reviewState === 'approved' || reviewState === 'reviewed' || reviewState === 'needsFix'
+    return reviewState === 'review' ||
+      reviewState === 'approved' ||
+      reviewState === 'reviewed' ||
+      reviewState === 'needsFix'
       ? reviewState
       : 'none';
   }
@@ -1652,7 +1648,7 @@ function normalizeFallbackReviewState(value: unknown, status: string): string {
 
 function eventReviewState(event: RawHistoryEvent): string | null {
   const type = typeof event.type === 'string' ? event.type : '';
-  if (!REVIEW_LIFECYCLE_EVENTS.has(type)) {
+  if (!isTaskReviewLifecycleEventType(type)) {
     return null;
   }
   return normalizeReviewState(event.to);

@@ -1,0 +1,48 @@
+{
+  "r1Published": {
+    "head": null,
+    "tree": null,
+    "parents": [
+      "7e8e37c282e9cc653efd79799dc862d116310065"
+    ],
+    "planBlob": null,
+    "fullReadbackExact": false,
+    "independentlyReviewed": false
+  },
+  "recorderBlob": "c340b62f3667f76678d4e3049613ac9cdd038ddd",
+  "stages": {
+    "E": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "PUBLISHED_REVIEWED_DOCS_HEAD",
+        "c28f1aa890c909c7b981254c5e30b874cbc84287"
+      ],
+      "independentlyReviewed": false
+    },
+    "F": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "E_HEAD"
+      ],
+      "independentlyReviewed": false
+    },
+    "G": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "F_HEAD"
+      ],
+      "independentlyReviewed": false
+    },
+    "H": {
+      "head": null,
+      "tree": null,
+      "parents": [
+        "G_HEAD"
+      ],
+      "independentlyReviewed": false
+    }
+  }
+}

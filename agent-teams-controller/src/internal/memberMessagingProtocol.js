@@ -5,7 +5,19 @@ function normalizeRuntimeProvider(value) {
   return 'native';
 }
 
-function createMemberMessagingProtocol(runtimeProvider) {
+function createMemberMessagingProtocol(runtimeProvider, bound = false) {
+  if (bound) {
+    const boundTeamToolExample = (tool, payload) => `${tool} ${JSON.stringify({ commandId: "<unique-command-id>", ...payload })}`;
+    return {
+      runtimeProvider: normalizeRuntimeProvider(runtimeProvider),
+      sendToolName: "message_send", sendToolAliases: ["message_send"], sendLeadPhrase: "MCP tool message_send",
+      crossTeamPhrase: "call MCP tool cross_team_send", boundTeamToolExample,
+      buildLeadMessageExample: ({leadName, text}) => boundTeamToolExample("message_send", {to: leadName, text}),
+      buildCrossTeamMessageExample: ({toTeam, text}) => boundTeamToolExample("cross_team_send", {toTeam, text}),
+      visibleMessageRule: "Visible messaging rule: use message_send with commandId, to, text, and optional taskRefs. Team and sender come from the authenticated connection.",
+      taskToolHint: "Call the exposed task tools with a unique commandId for mutations; team, actor, and filesystem root come from the authenticated connection.",
+    };
+  }
   const provider = normalizeRuntimeProvider(runtimeProvider);
 
   if (provider === 'opencode' || provider === 'codex') {

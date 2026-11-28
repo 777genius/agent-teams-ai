@@ -1,0 +1,344 @@
+diff --git a/scripts/legacy-agent-host/desktop-ui-controls.ts b/scripts/legacy-agent-host/desktop-ui-controls.ts
+index c634a6275a18c527d623e3de922634e1e75448ec..1c11809c6458f829bd9bb6995aea2ad60b85511e 100644
+--- a/scripts/legacy-agent-host/desktop-ui-controls.ts
++++ b/scripts/legacy-agent-host/desktop-ui-controls.ts
+@@ -216,7 +216,24 @@
+       pointerEventsNone:getComputedStyle(e).pointerEvents==='none',
+       centerInViewport:x>=0&&y>=0&&x<innerWidth&&y<innerHeight,hitPresent:Boolean(hit)
+     };
+-    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName};
++    const geometry=(() => {
++      try {
++        const rectangle=value => {
++          const numbers=[value.x,value.y,value.width,value.height];
++          return numbers.every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1000000)?numbers:null;
++        };
++        const animations=value => {
++          if(!value||typeof value.getAnimations!=='function')return null;
++          const items=value.getAnimations();
++          return items.length>64?65:items.filter(item=>item.playState==='running'||item.pending===true).length;
++        };
++        const dialog=e.closest('[role="dialog"]'), fonts=document.fonts?.status;
++        return {targetRect:rectangle(r),dialogRect:dialog?rectangle(dialog.getBoundingClientRect()):null,
++          targetAnimations:animations(e),dialogAnimations:animations(dialog),
++          fonts:fonts==='loaded'||fonts==='loading'?fonts:null};
++      } catch { return null; }
++    })();
++    return {x,y,text:e.textContent.trim().slice(0,300),tag:e.tagName,geometry};
+   })()`;
+   const clickExpression = async (
+     expression: string,
+@@ -225,6 +242,36 @@
+     text?: string
+   ): Promise<void> => {
+     await cdp.send('Page.bringToFront');
++    const geometryTrace: { samples: Record<string, unknown>[]; overflow: boolean } = { samples: [], overflow: false };
++    const observeGeometry = (phase: 'initial' | 'after-hover' | 'stable' | 'final', point: Record<string, unknown>): void => {
++      try {
++        if (geometryTrace.samples.length >= 18) { geometryTrace.overflow = true; return; }
++        const own = (value: unknown, key: string): unknown => {
++          if (!value || typeof value !== 'object') return undefined;
++          const descriptor = Object.getOwnPropertyDescriptor(value, key);
++          return descriptor && 'value' in descriptor ? descriptor.value : undefined;
++        };
++        const finite = (value: unknown): number | null =>
++          typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 1_000_000 ? value : null;
++        const rectangle = (value: unknown): number[] | null => {
++          if (!Array.isArray(value) || own(value, 'length') !== 4) return null;
++          const numbers = ['0', '1', '2', '3'].map(key => finite(own(value, key)));
++          return numbers.every(number => number !== null) ? numbers as number[] : null;
++        };
++        const count = (value: unknown): number | null =>
++          typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 65 ? value : null;
++        const geometry = own(point, 'geometry'), tag = own(point, 'tag'), fonts = own(geometry, 'fonts');
++        geometryTrace.samples.push({
++          phase, unavailable: own(point, 'unavailableTarget') === true, x: finite(own(point, 'x')), y: finite(own(point, 'y')),
++          tag: tag === 'BUTTON' || tag === 'INPUT' || tag === 'TEXTAREA' ? tag : null,
++          targetRect: rectangle(own(geometry, 'targetRect')), dialogRect: rectangle(own(geometry, 'dialogRect')),
++          targetAnimations: count(own(geometry, 'targetAnimations')), dialogAnimations: count(own(geometry, 'dialogAnimations')),
++          fonts: fonts === 'loaded' || fonts === 'loading' ? fonts : null,
++        });
++      } catch {
++        // Missing diagnostic data never changes the original target or failure.
++      }
++    };
+     // Reuse the original passive reads and deadline. Retain only closed facts,
+     // never DOM text, attributes, HTML or another request after a failed click.
+     const readPoint = async (phase: string): Promise<Record<string, unknown>> => {
+@@ -257,7 +304,7 @@
+         : expression;
+       let facts: Record<string, boolean | number> | undefined;
+       try {
+-        return record(await waitRead(readExpression, phase, 30_000, value => {
++        const observed = record(await waitRead(readExpression, phase, 30_000, value => {
+           if (value && typeof value === 'object' && !Array.isArray(value)) {
+             const row = value as Record<string, unknown>;
+             if (row.unavailableTarget === true) {
+@@ -286,6 +333,8 @@
+           }
+           return Boolean(value);
+         }));
++        observeGeometry(phase === label ? 'initial' : phase === label + ' after pointer enter' ? 'after-hover' : 'stable', observed);
++        return observed;
+       } catch (error) {
+         if (facts) throw new Error(`UI target read failed: ${phase}; facts=${JSON.stringify(facts)}`, { cause: error });
+         throw error;
+@@ -293,7 +342,7 @@
+     };
+     let point = await readPoint(label);
+     options.assertOwnedRenderer();
+-    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point });
++    step({ action: 'mouseMoved', label: 'hover ' + label, selector, target: point, geometryTrace });
+     await cdp.send('Input.dispatchMouseEvent', {
+       type: 'mouseMoved',
+       x: point.x,
+@@ -317,12 +366,22 @@
+     assert.equal(typeof point.y, 'number');
+     options.assertOwnedRenderer();
+     const finalPoint = record(await cdp.evaluate(expression));
+-    assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
+-    assert.deepEqual(
+-      [finalPoint.x, finalPoint.y, finalPoint.tag],
+-      [point.x, point.y, point.tag],
+-      'Original UI target moved after ownership check'
+-    );
++    observeGeometry('final', finalPoint);
++    try {
++      assert.notEqual(finalPoint.unavailableTarget, true, 'Original UI target unavailable after ownership check');
++      assert.deepEqual(
++        [finalPoint.x, finalPoint.y, finalPoint.tag],
++        [point.x, point.y, point.tag],
++        'Original UI target moved after ownership check'
++      );
++    } catch (error) {
++      try {
++        console.log(JSON.stringify({ kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: geometryTrace }));
++      } catch {
++        // The exact original final-target refusal remains authoritative.
++      }
++      throw error;
++    }
+     options.assertOwnedRenderer();
+     step({
+       action: 'mouseClick',
+diff --git a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+index 5ea26752689cbf9ef4307816ad7c739eb1dd5f4c..2017060db6ca7ef01d17ee3096ac994b288ff1aa 100644
+--- a/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
++++ b/scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts
+@@ -2083,3 +2083,204 @@
+   await assert.rejects(noReady.run(label), assert.AssertionError);
+   assert.equal(noReady.reads(), 1); assert.deepEqual(noReady.trace, ['read']); assert.deepEqual(noReady.delays, []);
+ });
++
++test('final click movement retains five original geometry reads and one closed diagnostic without a press', { timeout: 5000 }, async t => {
++  const expression = 'TEST_originalGeometryTarget()', label = 'TEST original geometry target';
++  const expressions: string[] = [], commands: Record<string, unknown>[] = [];
++  const steps: Record<string, unknown>[] = [], output: string[] = [];
++  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
++  const ui = createDesktopUiControls({
++    async evaluate(actual: string) {
++      expressions.push(actual);
++      return { x: expressions.length === 5 ? 101 : 100, y: 100, tag: 'BUTTON',
++        text: 'TEST-private-original-target', geometry: {
++          targetRect: [90, 90, 20, 20], dialogRect: [20, 30, 400, 300],
++          targetAnimations: 1, dialogAnimations: 0, fonts: 'loaded',
++        } };
++    },
++    async send(method: string, params: Record<string, unknown> = {}) {
++      commands.push({ method, ...params }); return {};
++    },
++  }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
++  await assert.rejects(ui.clickExpression(expression, label),
++    /Original UI target moved after ownership check/);
++  assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression));
++  assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
++    { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
++  assert.equal(steps.length, 1);
++  assert.equal(steps[0]!.action, 'mouseMoved');
++  const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
++  assert.deepEqual(trace.samples.map(row => row.phase), ['initial', 'after-hover', 'stable', 'stable', 'final']);
++  assert.equal(trace.overflow, false);
++  assert.deepEqual(trace.samples.map(row => row.x), [100, 100, 100, 100, 101]);
++  for (const row of trace.samples) {
++    assert.deepEqual(Object.keys(row).sort(), ['dialogAnimations', 'dialogRect', 'fonts', 'phase',
++      'tag', 'targetAnimations', 'targetRect', 'unavailable', 'x', 'y']);
++    assert.deepEqual(row.targetRect, [90, 90, 20, 20]);
++    assert.deepEqual(row.dialogRect, [20, 30, 400, 300]);
++    assert.equal(row.targetAnimations, 1); assert.equal(row.dialogAnimations, 0);
++    assert.equal(row.fonts, 'loaded');
++  }
++  assert.equal(output.length, 1);
++  assert.ok(Buffer.byteLength(output[0]!, 'utf8') <= 8192);
++  assert.deepEqual(JSON.parse(output[0]!) as unknown, { kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: trace });
++  assert.equal(output[0]!.includes('TEST-private'), false);
++});
++
++test('geometry metadata getters cannot replace the original unavailable-target refusal when stdout throws', { timeout: 5000 }, async t => {
++  const secret = 'TEST-private-geometry-value', stdoutFailure = new Error('TEST-geometry-stdout-failure');
++  const expression = 'TEST_originalGeometryAccessors()', expressions: string[] = [];
++  const commands: Record<string, unknown>[] = [], steps: Record<string, unknown>[] = [], output: string[] = [];
++  const descriptors: { fonts: number; rectangle: number[] }[] = [];
++  let diagnosticGetterReads = 0, businessTagReads = 0;
++  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); throw stdoutFailure; });
++  const ui = createDesktopUiControls({
++    async evaluate(actual: string) {
++      expressions.push(actual);
++      if (expressions.length === 5) return {
++        unavailableTarget: true, matches: 1,
++        get geometry() { diagnosticGetterReads++; throw new Error(secret); },
++        get tag() { diagnosticGetterReads++; throw new Error(secret); },
++      };
++      const reads = { fonts: 0, rectangle: [0, 0, 0, 0] };
++      descriptors.push(reads);
++      const targetRect = Object.defineProperty([90, 90, 20, 20], '0', {
++        get() { diagnosticGetterReads++; throw new Error(secret); },
++      });
++      const dialogRect = new Proxy([20, 30, 400, 300], {
++        getOwnPropertyDescriptor(target, key) {
++          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
++          if (typeof key === 'string' && /^[0-3]$/.test(key) && descriptor) {
++            const index = Number(key);
++            reads.rectangle[index] = reads.rectangle[index]! + 1;
++            return { ...descriptor, value: reads.rectangle[index] === 1 ? descriptor.value : secret };
++          }
++          return descriptor;
++        },
++      });
++      const geometry = new Proxy({
++        targetRect, dialogRect,
++        get targetAnimations() { diagnosticGetterReads++; throw new Error(secret); },
++        dialogAnimations: 1, fonts: 'loaded',
++      }, {
++        getOwnPropertyDescriptor(target, key) {
++          const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
++          if (key === 'fonts' && descriptor) {
++            reads.fonts++;
++            return { ...descriptor, value: reads.fonts === 1 ? 'loaded' : secret };
++          }
++          return descriptor;
++        },
++      });
++      return { x: 100, y: 100, text: secret, geometry,
++        get tag() { businessTagReads++; return businessTagReads <= 4 ? 'BUTTON' : secret; } };
++    },
++    async send(method: string, params: Record<string, unknown> = {}) {
++      commands.push({ method, ...params }); return {};
++    },
++  }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
++  await assert.rejects(ui.clickExpression(expression, 'TEST original unavailable geometry'), error => {
++    assert.ok(error instanceof Error);
++    assert.notEqual(error, stdoutFailure);
++    assert.equal(error.name, 'AssertionError');
++    assert.match(error.message, /^Original UI target unavailable after ownership check/);
++    return true;
++  });
++  assert.deepEqual(expressions, Array.from({ length: 5 }, () => expression));
++  assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
++    { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 100, y: 100 }]);
++  assert.equal(diagnosticGetterReads, 0);
++  assert.equal(businessTagReads, 4, 'only the two original stable comparisons read the business tag');
++  assert.deepEqual(descriptors, Array.from({ length: 4 }, () => ({ fonts: 1, rectangle: [1, 1, 1, 1] })));
++  const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
++  assert.equal(steps.length, 1); assert.equal(trace.samples.length, 5); assert.equal(trace.overflow, false);
++  for (const row of trace.samples.slice(0, 4)) {
++    assert.equal(row.tag, null); assert.equal(row.targetRect, null); assert.equal(row.targetAnimations, null);
++    assert.deepEqual(row.dialogRect, [20, 30, 400, 300]); assert.equal(row.fonts, 'loaded');
++  }
++  assert.equal(trace.samples[4]!.unavailable, true);
++  assert.equal(trace.samples[4]!.tag, null); assert.equal(trace.samples[4]!.targetRect, null);
++  assert.equal(output.length, 1);
++  assert.ok(Buffer.byteLength(output[0]!, 'utf8') <= 8192);
++  assert.deepEqual(JSON.parse(output[0]!) as unknown, { kind: 'TEST_DESKTOP_CLICK_GEOMETRY', geometry: trace });
++  assert.equal(output[0]!.includes(secret), false);
++  assert.equal(JSON.stringify(trace).includes(secret), false);
++});
++
++test('the actual generated target expression keeps the same eligible click when optional geometry APIs fail', { timeout: 5000 }, async t => {
++  const output: string[] = [];
++  t.mock.method(console, 'log', (value: unknown) => { output.push(String(value)); });
++  for (const failOptionalGeometry of [false, true]) {
++    const selector = '#TEST-original-geometry-control', visibleText = 'TEST-private-visible-target';
++    const expressions: string[] = [], selectors: string[] = [];
++    const hits: { x: number; y: number }[] = [], commands: Record<string, unknown>[] = [];
++    const steps: Record<string, unknown>[] = [], animationArguments: unknown[][] = [];
++    let targetRectReads = 0, dialogRectReads = 0, fontReads = 0;
++    const child = {};
++    const dialog = {
++      getBoundingClientRect() { dialogRectReads++; return { x: 10, y: 20, width: 300, height: 200 }; },
++      getAnimations(...args: unknown[]) {
++        animationArguments.push(args); return [{ playState: 'running', pending: false }];
++      },
++    };
++    const control = {
++      textContent: visibleText, tagName: 'BUTTON',
++      getBoundingClientRect() { targetRectReads++; return { x: 20, y: 40, width: 100, height: 30 }; },
++      contains: (value: unknown) => value === child,
++      matches(actual: string) { assert.equal(actual, ':disabled'); return false; },
++      closest(actual: string) { assert.equal(actual, '[role="dialog"]'); return dialog; },
++      getAnimations(...args: unknown[]) {
++        animationArguments.push(args);
++        return [{ playState: 'running', pending: false }, { playState: 'finished', pending: false },
++          { playState: 'paused', pending: true }];
++      },
++    };
++    const ui = createDesktopUiControls({
++      async evaluate(expression: string) {
++        expressions.push(expression);
++        return runInNewContext(expression, {
++          innerWidth: 1000, innerHeight: 720,
++          getComputedStyle: () => ({ pointerEvents: 'auto' }),
++          document: {
++            querySelectorAll(actual: string) { selectors.push(actual); return [control]; },
++            elementFromPoint(x: number, y: number) { hits.push({ x, y }); return child; },
++            fonts: { get status() {
++              fontReads++;
++              if (failOptionalGeometry) throw new Error('TEST-private-optional-font-error');
++              return 'loaded';
++            } },
++          },
++        });
++      },
++      async send(method: string, params: Record<string, unknown> = {}) {
++        commands.push({ method, ...params }); return {};
++      },
++    }, { assertOwnedRenderer() {}, step(value) { steps.push(value); } });
++    await ui.click(selector, 'TEST original generated target', visibleText);
++    assert.equal(expressions.length, 5);
++    assert.ok(expressions.every(expression => expression === expressions[0]));
++    assert.deepEqual(selectors, Array.from({ length: 5 }, () => selector));
++    assert.deepEqual(hits, Array.from({ length: 5 }, () => ({ x: 70, y: 55 })));
++    assert.equal(targetRectReads, 10, 'the original eligibility and center reads remain unchanged');
++    assert.equal(dialogRectReads, failOptionalGeometry ? 0 : 5); assert.equal(fontReads, 5);
++    assert.deepEqual(animationArguments, Array.from({ length: failOptionalGeometry ? 0 : 10 }, () => []),
++      'optional animation observations query each original element without a descendant option');
++    assert.deepEqual(commands, [{ method: 'Page.bringToFront' },
++      { method: 'Input.dispatchMouseEvent', type: 'mouseMoved', x: 70, y: 55 },
++      { method: 'Input.dispatchMouseEvent', type: 'mousePressed', x: 70, y: 55, button: 'left', clickCount: 1 },
++      { method: 'Input.dispatchMouseEvent', type: 'mouseReleased', x: 70, y: 55, button: 'left', clickCount: 1 }]);
++    assert.deepEqual(steps.map(step => step.action), ['mouseMoved', 'mouseClick']);
++    const trace = steps[0]!.geometryTrace as { samples: Record<string, unknown>[]; overflow: boolean };
++    assert.deepEqual(trace.samples.map(row => row.phase), ['initial', 'after-hover', 'stable', 'stable', 'final']);
++    for (const row of trace.samples) {
++      assert.equal(row.x, 70); assert.equal(row.y, 55); assert.equal(row.tag, 'BUTTON');
++      assert.deepEqual(row.targetRect, failOptionalGeometry ? null : [20, 40, 100, 30]);
++      assert.deepEqual(row.dialogRect, failOptionalGeometry ? null : [10, 20, 300, 200]);
++      assert.equal(row.targetAnimations, failOptionalGeometry ? null : 2);
++      assert.equal(row.dialogAnimations, failOptionalGeometry ? null : 1);
++      assert.equal(row.fonts, failOptionalGeometry ? null : 'loaded');
++    }
++    assert.equal(JSON.stringify(trace).includes('TEST-private'), false);
++  }
++  assert.deepEqual(output, [], 'a successful original click does not emit a failure diagnostic');
++});
+diff --git a/.github/workflows/host-emulated-acceptance.yml b/.github/workflows/host-emulated-acceptance.yml
+index d53a2fda2f60c12526b0457cf7d25858f43dd8f2..09343faa479855d0425f0649e70db76af3ffdef2 100644
+--- a/.github/workflows/host-emulated-acceptance.yml
++++ b/.github/workflows/host-emulated-acceptance.yml
+@@ -134,6 +134,7 @@
+             scripts/legacy-agent-host/desktop-task-board-ui-smoke.ts \
+             scripts/legacy-agent-host/desktop-task-comment-input-target.ts \
+             scripts/legacy-agent-host/desktop-team-ui-smoke.ts \
++            scripts/legacy-agent-host/desktop-ui-controls.ts \
+             scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts \
+             scripts/legacy-agent-host/packaged-opencode-v2-inputs.ts \
+             scripts/legacy-agent-host/qualify-linux-process-sdk.ts \

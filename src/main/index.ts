@@ -13,7 +13,8 @@ import {
 } from './bootstrapUserDataMigration';
 import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
-import { composeGatewayProviderRuntime } from '@main/services/gateway/composeGatewayProviderRuntime';
+import { captureHostTeamReads } from '@features/agent-backend/main';
+import { OwnerRoutedTeamConfigurationSnapshotAdapter } from '@features/custom-team-templates/main';
 import { cleanupOrphanedDeterministicBootstrapSpecs } from '@main/services/team/provisioning/TeamProvisioningBootstrapSpec';
 
 import {
@@ -45,14 +46,10 @@ import {
 } from '@features/app-close-coordination/main';
 import {
   type CodexAccountFeatureFacade,
-  createCodexAccountFeature,
   registerCodexAccountIpc,
   removeCodexAccountIpc,
 } from '@features/codex-account/main';
-import {
-  type CodexModelCatalogFeatureFacade,
-  createCodexModelCatalogFeature,
-} from '@features/codex-model-catalog/main';
+import { type CodexModelCatalogFeatureFacade } from '@features/codex-model-catalog/main';
 import {
   createMemberLogStreamFeature,
   registerMemberLogStreamIpc,
@@ -82,6 +79,7 @@ import {
   registerOrganizationsIpc,
   removeOrganizationsIpc,
 } from '@features/organizations/main';
+import { selectNativeNextPromptProviders } from '@features/native-prompt-suggestions/main';
 import * as projectFolderFeature from '@features/project-folder/main';
 import {
   createNotificationChannelsRuntime,
@@ -99,18 +97,12 @@ import {
   registerUserAttentionIpc,
   removeUserAttentionIpc,
 } from '@features/user-attention/main';
-import { createOpenCodeInputDeclarationResolver } from '@features/runtime-provider-management';
 import {
-  createRuntimeProviderManagementFeature,
   inspectOpenCodeLocalModelRuntimeReadiness,
   registerRuntimeProviderManagementIpc,
   removeRuntimeProviderManagementIpc,
   type RuntimeProviderManagementFeatureFacade,
 } from '@features/runtime-provider-management/main';
-import {
-  RUNTIME_PROVIDER_COMPANION_PROGRESS,
-  RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS,
-} from '@features/runtime-provider-management/contracts';
 import {
   createTerminalWorkspaceFeature,
   registerTerminalWorkspaceIpc,
@@ -163,7 +155,6 @@ import {
   setTeamWatchScopeChangeListener,
 } from '@main/services/infrastructure/teamWatchScope';
 import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
-import { getOpenCodeRuntimeResolverCacheGeneration } from '@main/services/infrastructure/openCodeRuntimeResolverCache';
 import { createSchedulerService } from '@main/services/schedule/createSchedulerService';
 import { scheduleNotificationFromChange } from '@main/services/schedule/scheduleNotificationFromChange';
 import type { SchedulerService } from '@main/services/schedule/SchedulerService';
@@ -209,13 +200,11 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
-import {
-  createTeamBudgetAdmission,
-  createTeamBudgetControls,
-} from '@main/services/team/budget/createTeamBudgetControls';
+import * as teamBudget from '@main/services/team/budget/createTeamBudgetControls';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
+import { disposeInternalStorageAfterWriterDrains, runShutdownStep } from '@main/utils/shutdownStep';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
   APP_STARTUP_GET_STATUS,
@@ -233,7 +222,6 @@ import {
 import {
   DEFAULT_WINDOW_HEIGHT,
   DEFAULT_WINDOW_WIDTH,
-  DEV_SERVER_PORT,
   getTrafficLightPositionForZoom,
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
 } from '@shared/constants';
@@ -241,7 +229,7 @@ import { shouldSuppressDesktopNotificationForInboxText } from '@shared/utils/idl
 import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import { composeTeamMemberSettings } from './composeTeamMemberSettings';
 import { registerWindowZoomHandler } from '@features/appearance/main';
@@ -254,8 +242,31 @@ import {
 } from './startMemberWorkSyncFeature';
 import { existsSync } from 'fs';
 import { join } from 'path';
+
+import { createDesktopCodexFeatures } from './composition/createDesktopCodexFeatures';
+import {
+  captureDesktopNativeStopWorkSyncFence,
+  createDesktopStoppedImportContext,
+  createDesktopWorkSyncSourceAdmission,
+} from './composition/createDesktopStoppedImportContext';
+import { createDesktopOpenCodeLifecycle } from './composition/createDesktopOpenCodeLifecycle';
+import { createDesktopProviderManagementFeatures } from './composition/createDesktopProviderManagementFeatures';
+import {
+  captureDesktopAgentBackendHttpScope,
+  captureDesktopStatusRequest,
+  desktopHostSchedules,
+  getDesktopProviderStatusPort,
+  isDesktopAgentBackendSelected,
+  configureDesktopBackendPersistence,
+} from './ipc/agentBackend';
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
-import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
+import {
+  initializeAgentBackendConnection,
+  initializeIpcHandlers,
+  removeIpcHandlers,
+  shutdownDesktopAgentBackend,
+} from './ipc/handlers';
+import { getDevRendererLocation, resolveRendererIndexPath } from './utils/rendererLocation';
 import { registerOpenCodeStartupCleanupHandlers } from './ipc/openCodeStartupCleanup';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
 import { setReviewMainWindow } from './ipc/review';
@@ -290,7 +301,6 @@ import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/openc
 import {
   buildOpenCodeProcessOwnershipMarkers,
   cleanupOpenCodeHostProcessFallback,
-  runOpenCodeLifecycleHostCleanup,
   runOpenCodeStartupCleanupMaintenance,
   type OpenCodeLifecycleCleanupTailPorts,
 } from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
@@ -322,6 +332,7 @@ import {
 import { TeamSentMessagesStore } from './services/team/TeamSentMessagesStore';
 import { getAppIconPath } from './utils/appIcon';
 import { configureFatalDiagnosticReport } from './utils/fatalDiagnosticReport';
+import { installMainOutputErrorGuards } from './utils/mainOutputErrorGuards';
 import { installPersistentAppLog } from './utils/persistentAppLog';
 import { readOptionalEnv, readOptionalEnvArgs, readOptionalEnvNumber } from './utils/tokenUsageEnv';
 import {
@@ -402,6 +413,10 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
+
+export { disposeInternalStorageAfterWriterDrains };
+export type { InternalStorageShutdownServices } from '@main/utils/shutdownStep';
+
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
@@ -680,19 +695,19 @@ const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
   logError: (message) => logger.error(message),
 };
 
-async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
-  const bridge = openCodeLifecycleBridge;
-  await runOpenCodeLifecycleHostCleanup({
-    reason,
-    cleanupRegistry: bridge ? (body) => bridge.cleanupOpenCodeHosts(body) : undefined,
-    logRegistryResult: (message) => logger.info(message),
-    appStartedAtMs,
-    managedHostInstanceId: openCodeManagedHostInstanceId,
-    profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
-    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
-    ports: openCodeLifecycleCleanupTailPorts,
-  });
-}
+const {
+  nativeMaintenanceRequired: nativeLegacyMaintenanceRequired,
+  cleanup: cleanupOpenCodeHostsForLifecycle,
+} = createDesktopOpenCodeLifecycle({
+  appStartedAtMs,
+  managedHostInstanceId: openCodeManagedHostInstanceId,
+  getBridge: () => openCodeLifecycleBridge,
+  getUserDataPath: () => app.getPath('userData'),
+  hasTrackedObligations: () => teamProvisioningService?.hasTrackedRuntimeObligations() ?? false,
+  releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+  ports: openCodeLifecycleCleanupTailPorts,
+  logRegistryResult: (message) => logger.info(message),
+});
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
 const TEAM_DISPLAY_NAME_TTL_MS = 30_000;
@@ -913,6 +928,7 @@ async function notifyNewSentMessages(teamName: string): Promise<void> {
   }
 }
 
+installMainOutputErrorGuards(logger.diagnostic.bind(logger));
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled promise rejection in main process:', reason);
 });
@@ -988,7 +1004,6 @@ const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
   platform: process.platform,
 });
 
-const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
 const STARTUP_CLI_WARMUP_DELAY_MS = 90_000;
 const STARTUP_BACKGROUND_SERVICE_DELAY_MS = 5_000;
@@ -1130,7 +1145,6 @@ async function requestWindowCloseReadiness(
   reason: AppCloseReason,
   unsafeActionLabel: string
 ): Promise<boolean> {
-  if (!rendererDidFinishLoad) return true;
   return requestCloseReadiness(
     rendererCloseReadinessCoordinator,
     [window],
@@ -1144,7 +1158,6 @@ async function requestAllWindowsCloseReadiness(
   reason: AppCloseReason,
   unsafeActionLabel: string
 ): Promise<boolean> {
-  if (!rendererDidFinishLoad) return true;
   return requestCloseReadiness(
     rendererCloseReadinessCoordinator,
     BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed()),
@@ -1197,8 +1210,9 @@ async function requestGuardedAppQuit(reason: 'app-quit' | 'relaunch'): Promise<b
       } catch (error) {
         logger.error(`Shutdown failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+      logger.diagnostic('App cleanup finished; draining diagnostic log');
       persistentAppLog?.dispose();
-      await persistentAppLog?.flush();
+      await runShutdownStep('diagnostic log flush', () => persistentAppLog?.flush());
       shutdownComplete = true;
       app.quit();
       return true;
@@ -1343,98 +1357,6 @@ function clearInboxNotifyTimers(): void {
     clearTimeout(timer);
   }
   inboxNotifyTimers.clear();
-}
-
-async function runShutdownStep(
-  label: string,
-  action: () => void | Promise<void>,
-  timeoutMs: number = SHUTDOWN_STEP_TIMEOUT_MS
-): Promise<void> {
-  let timeout: ReturnType<typeof setTimeout> | null = null;
-
-  try {
-    await Promise.race([
-      Promise.resolve().then(action),
-      new Promise<void>((resolve) => {
-        timeout = setTimeout(() => {
-          logger.warn(`Shutdown step timed out after ${timeoutMs}ms: ${label}`);
-          resolve();
-        }, timeoutMs);
-        timeout.unref?.();
-      }),
-    ]);
-  } catch (error) {
-    logger.warn(
-      `Shutdown step failed (${label}): ${error instanceof Error ? error.message : String(error)}`
-    );
-  } finally {
-    if (timeout) {
-      clearTimeout(timeout);
-    }
-  }
-}
-
-export interface InternalStorageShutdownServices {
-  teamDataService?: Pick<TeamDataService, 'stopProcessHealthPolling'>;
-  teamTaskStallMonitor?: Pick<TeamTaskStallMonitor, 'stop'> | null;
-  memberWorkSyncFeature?: Pick<MemberWorkSyncFeatureFacade, 'dispose'> | null;
-  internalStorageFeature?: Pick<InternalStorageFeature, 'dispose'> | null;
-}
-
-function beginShutdownWork(action: () => void | Promise<void>): Promise<void> {
-  try {
-    return Promise.resolve(action());
-  } catch (error) {
-    return Promise.reject(error instanceof Error ? error : new Error(String(error)));
-  }
-}
-
-/**
- * Closes storage-backed polling and writer ingress immediately, then keeps the
- * storage close dependent on the actual writer drains. Each visible shutdown
- * step remains bounded, but a timeout never detaches storage disposal from the
- * underlying work that is still settling.
- */
-export async function disposeInternalStorageAfterWriterDrains(
-  services: InternalStorageShutdownServices,
-  options: { stepTimeoutMs?: number } = {}
-): Promise<void> {
-  const stepTimeoutMs = options.stepTimeoutMs ?? SHUTDOWN_STEP_TIMEOUT_MS;
-
-  // Invoke every stop synchronously before awaiting so all ingress is closed
-  // even when an earlier stop takes a long time to drain.
-  const teamDataPollingStop = beginShutdownWork(() =>
-    services.teamDataService?.stopProcessHealthPolling()
-  );
-  const stallMonitorDrain = beginShutdownWork(() => services.teamTaskStallMonitor?.stop());
-  const memberWorkSyncDrain = beginShutdownWork(() => services.memberWorkSyncFeature?.dispose());
-
-  // Start the dependency now. If a bounded step below times out, this promise
-  // still waits for its real work before it is allowed to close storage.
-  const internalStorageDispose = Promise.allSettled([
-    teamDataPollingStop,
-    stallMonitorDrain,
-    memberWorkSyncDrain,
-  ]).then(() => services.internalStorageFeature?.dispose());
-
-  if (services.teamDataService) {
-    await runShutdownStep('team data polling stop', () => teamDataPollingStop, stepTimeoutMs);
-  }
-  if (services.teamTaskStallMonitor) {
-    await runShutdownStep('team task stall monitor stop', () => stallMonitorDrain, stepTimeoutMs);
-  }
-  if (services.memberWorkSyncFeature) {
-    await runShutdownStep('member work sync dispose', () => memberWorkSyncDrain, stepTimeoutMs);
-  }
-  if (services.internalStorageFeature) {
-    // WAL checkpoint + close inside the worker, then terminate it.
-    await runShutdownStep(
-      'internal storage dispose',
-      () => internalStorageDispose.then(() => undefined),
-      stepTimeoutMs
-    );
-  }
-  await internalStorageDispose.catch(() => undefined);
 }
 
 function getTeamControlApiBaseUrl(): string | null {
@@ -1722,6 +1644,14 @@ function onContextSwitched(context: ServiceContext): void {
   });
 }
 
+const configureStoppedImportContext = createDesktopStoppedImportContext(() => [
+  teamBackupService,
+  teamProvisioningService,
+  teamDataService,
+  contextRegistry,
+  memberWorkSyncFeature,
+]);
+
 /** Rebuilds local context and retires root-bound team reads after a Claude root change. */
 function reconfigureLocalContextForClaudeRoot(): void {
   try {
@@ -1759,6 +1689,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
     }
 
     contextRegistry.replaceContext('local', replacementLocal);
+    configureStoppedImportContext(replacementLocal);
 
     if (wasLocalActive) {
       wireFileWatcherEvents(replacementLocal);
@@ -1773,8 +1704,6 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
-  // An inherited endpoint belongs to a previous process, not this Host's server.
-  await startupStage(clearTeamControlApiState);
   void announcementsLifecycle
     .initialize({
       userDataPath: app.getPath('userData'),
@@ -1808,6 +1737,18 @@ async function initializeServices(): Promise<void> {
   // FileWatcher is deferred to did-finish-load to avoid blocking window creation
   // with fs.watch() setup (especially slow on Windows NTFS with recursive watchers).
   contextRegistry.registerContext(localContext);
+  initializeAgentBackendConnection(contextRegistry, {
+    getMainWindow: () => mainWindow,
+    rendererIndexPath: resolveRendererIndexPath(__dirname),
+    nativeNextPromptProviders: selectNativeNextPromptProviders(
+      configManager.getConfig().providerConnections
+    ),
+    // Fail closed for browser SSE: /api/events broadcasts to every connected
+    // client without per-owner authorization. Never publish private human-DM
+    // follow-ups there until a scoped authenticated SSE transport exists.
+  });
+  // An inherited endpoint belongs to a previous process, not this Host's server.
+  await startupStage(clearTeamControlApiState);
   localContext.startCacheOnly();
   logger.info(`Projects directory: ${localContext.projectScanner.getProjectsDir()}`);
   // Initialize notification manager (singleton, not context-scoped)
@@ -1837,7 +1778,7 @@ async function initializeServices(): Promise<void> {
       shutdownComplete = true;
     }
   });
-  cliInstallerService = new CliInstallerService();
+  cliInstallerService = new CliInstallerService(Date.now, getDesktopProviderStatusPort());
   openCodeRuntimeInstallerService = new OpenCodeRuntimeInstallerService();
   ptyTerminalService = new PtyTerminalService();
   // Transcript lookups and the log tracker write only in teams this profile manages (none yet).
@@ -1902,7 +1843,11 @@ async function initializeServices(): Promise<void> {
   if (process.env.AGENT_TEAMS_PACKAGED_SMOKE?.trim() === '1') {
     void internalStorageFeature.probeBackend();
   }
-  customTeamTemplatesFeature = startCustomTeamTemplatesFeature(internalStorageFeature);
+  const captureHostReads = () => captureHostTeamReads(captureDesktopAgentBackendHttpScope());
+  customTeamTemplatesFeature = startCustomTeamTemplatesFeature(
+    internalStorageFeature,
+    new OwnerRoutedTeamConfigurationSnapshotAdapter(captureHostReads)
+  );
   teamDataService = new TeamDataService();
   void teamDataService
     .listTeams()
@@ -1928,30 +1873,17 @@ async function initializeServices(): Promise<void> {
   );
   const apiKeyService = new ApiKeyService();
   notificationChannelsRuntime = createNotificationChannelsRuntime();
-  const { gatewayProviderRuntime, gatewayProviderConnector, gatewayLaunchRuntime } =
-    composeGatewayProviderRuntime({
-      ipcMain,
-      configuration: teamDataService,
-      apiKeys: apiKeyService,
-      appDataPath: getAppDataPath(),
-    });
-  runtimeProviderManagementFeature = createRuntimeProviderManagementFeature({
+  const providers = createDesktopProviderManagementFeatures({
+    ipcMain,
+    configuration: teamDataService,
+    apiKeys: apiKeyService,
+    appDataPath: getAppDataPath(),
+    getMainWindow: () => mainWindow,
     readOpenCodeDiagnosticStatus: () => openCodeRuntimeInstallerService.getStatus(),
-    localProviderConnector: gatewayProviderConnector,
-    getOpenCodeRuntimeGeneration: getOpenCodeRuntimeResolverCacheGeneration,
-    openExternal: async (url) => {
-      await shell.openExternal(url);
-    },
-    emitOAuthProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_MANAGEMENT_OAUTH_PROGRESS, event);
-    },
-    emitProgress: (event) => {
-      safeSendToRenderer(mainWindow, RUNTIME_PROVIDER_COMPANION_PROGRESS, event);
-    },
   });
-  const resolveOpenCodeInputDeclaration = createOpenCodeInputDeclarationResolver(
-    runtimeProviderManagementFeature.loadModels
-  );
+  const { gatewayProviderRuntime, gatewayLaunchRuntime, resolveOpenCodeInputDeclaration } =
+    providers;
+  runtimeProviderManagementFeature = providers.runtimeProviderManagementFeature;
   await cleanupOrphanedDeterministicBootstrapSpecs().catch(() =>
     console.warn('Could not clean retired bootstrap files')
   );
@@ -1959,7 +1891,8 @@ async function initializeServices(): Promise<void> {
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
     gatewayLaunchRuntime.seams,
-    createTeamBudgetAdmission(() => tokenUsageFeature)
+    teamBudget.createTeamBudgetAdmission(() => tokenUsageFeature),
+    (teamName) => captureDesktopNativeStopWorkSyncFence(() => memberWorkSyncFeature, teamName)
   );
   teamDataService.setTeamProfileOwnership((teamName) =>
     teamProvisioningService.isTeamManagedByThisProfile(teamName)
@@ -2065,6 +1998,7 @@ async function initializeServices(): Promise<void> {
     process.platform === 'win32'
       ? new OpenCodeWindowsStartupCleanup({
           appStartedAtMs,
+          nativeMaintenanceRequired: nativeLegacyMaintenanceRequired,
           profileScope: buildOpenCodeAppProfileScope(app.getPath('userData'), getClaudeBasePath()),
           ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
           maintenance: (canAdmitStartupWork) =>
@@ -2120,6 +2054,7 @@ async function initializeServices(): Promise<void> {
     isManagedByThisProfileSync: (name) =>
       teamProvisioningService.isTeamManagedByThisProfileSync(name),
   }));
+  configureDesktopBackendPersistence(initializedBackupOwner, applicationCommandRunner);
 
   // Cross-team communication service
   const crossTeamConfigReader = new TeamConfigReader();
@@ -2186,6 +2121,7 @@ async function initializeServices(): Promise<void> {
     teamIpcHandlerApis,
     teamDataService,
     teamProvisioningService,
+    desktopHostSchedules,
     createProjectScheduleTargets(teamIpcHandlerApis, teamDataService, teamProvisioningService)
   );
   // Extension Store services
@@ -2322,6 +2258,7 @@ async function initializeServices(): Promise<void> {
 
   teamProvisioningService.setMainWindow(mainWindow);
   userAttentionFeature = createUserAttentionFeature({
+    captureHost: captureHostReads,
     getContextId: () => contextRegistry.getActive().id,
     getTeamDataService: () => teamDataService,
     listGroupNames: async (teamName) =>
@@ -2338,6 +2275,7 @@ async function initializeServices(): Promise<void> {
     memberWorkSyncFeature?.resumeTeam(teamName);
   });
   organizationsFeature = createOrganizationsFeature({
+    captureHost: captureHostReads,
     teamDataService,
     crossTeamService,
     logger: createLogger('Feature:Organizations'),
@@ -2347,7 +2285,7 @@ async function initializeServices(): Promise<void> {
     logger: createLogger('Feature:TerminalWorkspace'),
   });
   const tokenUsageLogger = createLogger('Feature:TokenUsage');
-  const budgetControls = createTeamBudgetControls(
+  const budgetControls = teamBudget.createTeamBudgetControls(
     () => tokenUsageFeature,
     teamProvisioningService,
     () => configManager.getConfig().notifications,
@@ -2584,6 +2522,10 @@ async function initializeServices(): Promise<void> {
       logger: memberWorkSyncLogger,
     });
   const preparedMemberWorkSyncFeature = createMemberWorkSyncFeature({
+    sourceWriteAdmission: createDesktopWorkSyncSourceAdmission(
+      initializedBackupOwner,
+      () => teamBackupService === initializedBackupOwner
+    ),
     lifecycleIdentity: initializedBackupOwner.workSyncIdentity,
     operationGate: workSyncRestoreGate,
     startBackground: false,
@@ -2809,6 +2751,7 @@ async function initializeServices(): Promise<void> {
     },
   });
   assertStartupActive(isShutdownStarted);
+  configureStoppedImportContext(localContext);
   void teamDataService
     .getAllTasks()
     .catch((error: unknown) => logger.warn(`[Init] task list prefetch failed: ${String(error)}`));
@@ -2823,15 +2766,10 @@ async function initializeServices(): Promise<void> {
         logger.warn(`[Init] Member work sync startup scan failed: ${String(error)}`)
       );
   }, STARTUP_RECOVERY_DELAY_MS + 2_000);
-  codexAccountFeature = createCodexAccountFeature({
-    logger: createLogger('Feature:CodexAccount'),
-    configManager,
-  });
+  const codexFeatures = createDesktopCodexFeatures(configManager);
+  codexAccountFeature = codexFeatures.accountFeature;
+  codexModelCatalogFeature = codexFeatures.modelCatalogFeature;
   providerConnectionService.setCodexAccountFeature(codexAccountFeature);
-  codexModelCatalogFeature = createCodexModelCatalogFeature({
-    logger: createLogger('Feature:CodexModelCatalog'),
-    codexAccountFeature,
-  });
   providerConnectionService.setCodexModelCatalogFeature(codexModelCatalogFeature);
 
   // startProcessHealthPolling() is deferred to after window creation
@@ -2909,7 +2847,11 @@ async function initializeServices(): Promise<void> {
   void gatewayProviderRuntime.feature.recoverGatewayDraftBindings().catch(() => {
     logger.warn('Could not recover gateway drafts; their saved ownership is preserved.');
   });
-  registerCodexAccountIpc(ipcMain, codexAccountFeature);
+  registerCodexAccountIpc(
+    ipcMain,
+    codexAccountFeature,
+    codexFeatures.native ? captureDesktopStatusRequest : undefined
+  );
   registerRecentProjectsIpc(ipcMain, recentProjectsFeature);
   registerUserAttentionIpc(ipcMain, userAttentionFeature);
   notificationChannelsRuntime?.start(ipcMain, notificationManager, httpServer);
@@ -2917,7 +2859,11 @@ async function initializeServices(): Promise<void> {
   registerTeamImportIpc(ipcMain, teamImportFeature);
   teamMemberSettings.registerTeamMemberSettingsIpc(ipcMain, teamMemberSettingsFeature);
   registerOrganizationsIpc(ipcMain, organizationsFeature);
-  registerRuntimeProviderManagementIpc(ipcMain, runtimeProviderManagementFeature);
+  registerRuntimeProviderManagementIpc(
+    ipcMain,
+    runtimeProviderManagementFeature,
+    isDesktopAgentBackendSelected() ? captureDesktopStatusRequest : undefined
+  );
   registerTerminalWorkspaceIpc(ipcMain, terminalWorkspaceFeature);
   if (tokenUsageFeature) {
     registerTokenUsageIpc(ipcMain, tokenUsageFeature);
@@ -2972,6 +2918,7 @@ async function startHttpServer(
     }
     const port = await httpServer.start(
       {
+        agentBackend: captureDesktopAgentBackendHttpScope(),
         projectScanner: activeContext.projectScanner,
         sessionParser: activeContext.sessionParser,
         subagentResolver: activeContext.subagentResolver,
@@ -3015,6 +2962,8 @@ async function startHttpServer(
 /** Shuts down all services. */
 async function shutdownServices(): Promise<void> {
   stopAdmittingOpenCodeStartupCleanup();
+  const legacyMaintenanceAtShutdown = nativeLegacyMaintenanceRequired();
+  const backendDrain = shutdownDesktopAgentBackend();
   if (shutdownPromise) {
     return shutdownPromise;
   }
@@ -3046,6 +2995,7 @@ async function shutdownServices(): Promise<void> {
     await runShutdownStep('external connection admission drain', () =>
       externalAgentConnection?.closeAdmission()
     );
+    await runShutdownStep('agent backend cleanup', () => backendDrain, null);
     await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
@@ -3054,13 +3004,15 @@ async function shutdownServices(): Promise<void> {
       teamRuntimeRecoveryFeature = null;
     });
 
-    // Kill all team CLI processes via SIGKILL before anything else.
-    // This must happen before the OS closes stdin pipes on app exit, because
-    // stdin EOF triggers CLI cleanup that can delete team files.
+    // Stop old-owned CLIs before stdin EOF can trigger their file cleanup.
+    logger.diagnostic('Shutdown legacy obligations census wait');
+    await legacyMaintenanceAtShutdown; // Retain legacy inputs before stopAllTeams removes its records.
     // The captured binding is lent to OpenCode Stop children only inside this
     // step, and is released before host cleanup even when the step times out.
     const stopAllTeamsStartedAtMs = Date.now();
     try {
+      if (teamProvisioningService?.hasTrackedRuntimeObligations())
+        await nativeLegacyMaintenanceRequired();
       shutdownStopBridge?.openShutdownStop();
       if (teamProvisioningService) {
         await runShutdownStep(
@@ -3306,7 +3258,8 @@ function runPostRendererStartupTasks(): void {
     void schedulerService?.start();
   }, STARTUP_BACKGROUND_SERVICE_DELAY_MS);
   scheduleStartupTask(() => {
-    void teamProvisioningService.warmup();
+    // Selected Host status is composed separately; legacy warmup invokes the fork CLI.
+    if (!isDesktopAgentBackendSelected()) void teamProvisioningService.warmup();
   }, STARTUP_CLI_WARMUP_DELAY_MS);
 }
 
@@ -3365,12 +3318,8 @@ function createWindow(): void {
   if (isDev) {
     // electron-vite may move the dev server off 5173 if it's already taken.
     // Always prefer the URL it provides via env; fallback to the default port.
-    const envUrl =
-      process.env.ELECTRON_RENDERER_URL ||
-      process.env.VITE_DEV_SERVER_URL ||
-      process.env.ELECTRON_VITE_DEV_SERVER_URL;
-    const devUrl = envUrl?.trim() || `http://localhost:${DEV_SERVER_PORT}`;
-    if (!envUrl) {
+    const { configured, url: devUrl } = getDevRendererLocation(process.env);
+    if (!configured) {
       logger.warn(
         `[dev] renderer dev server URL env not set; falling back to ${devUrl}. ` +
           `If you see "Port 5173 is in use" in the terminal, the UI may appear stuck until this is fixed.`

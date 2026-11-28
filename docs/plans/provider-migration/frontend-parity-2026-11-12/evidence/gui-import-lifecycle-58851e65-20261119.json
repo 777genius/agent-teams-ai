@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "kind": "DERIVED_FINAL_GUI_AGGREGATE",
+  "fullReceipt": false,
+  "qualification": "Original per-run verdicts only; no new overall PASS or cross-source qualification. Raw receipt hashes bind exact evidence. Canonical JSON hashes use sorted keys, compact separators, original arrays and unescaped Unicode. Missing resource observations remain unobserved. Cumulative CPU ticks require the same process birth for deltas; no OOM or kill-sender inference.",
+  "runs": [
+    {
+      "mode": "emulated-import-lifecycle-ui",
+      "originalStatus": "INCOMPLETE",
+      "scope": "Original Electron controls, standalone Host persistence and renderer reload; only separately pinned TEST provider peers permitted",
+      "excluded": [
+        "vendor authentication",
+        "native model execution",
+        "full Stage1/release/default activation"
+      ],
+      "metadataStatus": "INCOMPLETE",
+      "harnessExitCode": 1,
+      "source": {
+        "head": "58851e654b00fecf27f215d6c72bbff7308ad2ad",
+        "tree": "3faa32192809f28185d0ba07a43a2813b4c14085",
+        "dirty": false,
+        "snapshot": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-58851e65-import-lifecycle-derived-20261119/source-snapshot.json",
+          "bytes": 215,
+          "sha256": "f6542189c8c5065f371aad847fce4c170e281c7ad388bd00a0a5bb8c96f7e9d6"
+        },
+        "selectedSourceCount": 1909,
+        "beforeAfterSourceListsEqual": null,
+        "sourceListCanonicalJsonSha256": "2fb1dfd826fa0e0928511c1bb582e996981065c91f1e0ad7ebfa54cebe3564d8"
+      },
+      "profile": null,
+      "modeResourceSelectors": {
+        "LEGACY_DESKTOP_TEST_FINITE_HEAP_1536_UV4": "1",
+        "AGENT_TEAMS_DISABLE_SOURCEMAPS": "1"
+      },
+      "elapsedSeconds": null,
+      "startedAt": "2026-11-19T12:51:50.271160+00:00",
+      "finishedAt": "2026-11-19T12:55:28.214147+00:00",
+      "artifacts": {
+        "finalMetadata": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/58851e654b00fecf27f215d6c72bbff7308ad2ad/emulated-import-lifecycle-ui.result.json",
+          "bytes": 2133,
+          "sha256": "03dfc21de4575c7e9142a7214844ee33b4321a60ae245c1d0563e1abe7b75301"
+        },
+        "postExitObservation": {
+          "path": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/58851e654b00fecf27f215d6c72bbff7308ad2ad/emulated-import-lifecycle-ui.observation.json",
+          "bytes": 1701,
+          "sha256": "d082122dac294c15d5b761668bfca5d9af8b8733a684916e5f3644cbfb012060"
+        },
+        "originalReceipt": {
+          "path": "/tmp/TEST-desktop-backend-cbG4z0/desktop-backend-receipt.json",
+          "bytes": 526772,
+          "sha256": "7ac8a64a7f00a39634e76b80d3e1fa622fb91ff346fe317c9702aae00e6216be"
+        },
+        "originalHarnessLog": "/workspace/scratch/de9d4631e21c/gui-prerequisites-20261118/queued-results-finite1536-uv4/58851e654b00fecf27f215d6c72bbff7308ad2ad/emulated-import-lifecycle-ui.log"
+      },
+      "proofs": {
+        "finiteStoppedProducer": {
+          "status": "INCOMPLETE",
+          "scope": "Current frontend Create/Launch, visible finite reply, original Main Stop/release, UI Task and ordinary Quit",
+          "excluded": [
+            "genuine historical donor frontend",
+            "vendor CLI/inference/auth qualification",
+            "multi-member or Windows source release",
+            "native session adoption"
+          ],
+          "sourceKind": "actual-current-finite-solo",
+          "execution": "finite-legacy-bootstrap-protocol",
+          "canonicalJsonSha256": "51f44669bfb4ece6adb5b13804ba9df666fbed5a05809c1fc5dc48dc0aa52e5e",
+          "stepCount": 36,
+          "failurePhase": "task",
+          "quitRequested": true,
+          "originalRequestedQuitExit": {
+            "initialExitCode": null,
+            "initialSignalCode": null,
+            "exitCode": null,
+            "signalCode": null
+          },
+          "sourcePeerAbsentAfterCleanup": true,
+          "inputsFrozen": true,
+          "failure": {
+            "message": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- true\n",
+            "messageCanonicalJsonSha256": "e771b1cd8c3a3820bc66828130dba8646bdf94d052962937b425da79209ee3f6",
+            "source": null,
+            "sourceFreeze": null
+          },
+          "cleanup": {
+            "remaining": [],
+            "capturedHostAbsent": null
+          },
+          "cleanupCanonicalJsonSha256": "bcade01c8dadceb08fd5a753999d790765949788afeca720a65b8283bbcfd8f1",
+          "beforeHarnessCleanup": {
+            "count": 4,
+            "canonicalJsonSha256": "f20e645f07ce6932426f3db6105d9155ae46f2baa4e2a746f4f147f1ea0aaa69"
+          }
+        }
+      },
+      "ownerRoutingEpochs": [],
+      "screenshots": [
+        {
+          "path": "/tmp/TEST-desktop-backend-cbG4z0/ui-finite-import-source-failure.png",
+          "bytes": 94773,
+          "sha256": "6e28328b187f557a298ccf569e773a0260d0f55f72b2b32f0e36c048f2b69640"
+        },
+        {
+          "path": "/tmp/TEST-desktop-backend-cbG4z0/ui-finite-import-source.png",
+          "bytes": 95690,
+          "sha256": "643dcf6c15cc4c6c74a674d8dff200be6814570c7bcdb7a7c13fc04afb98f9a8"
+        }
+      ],
+      "failure": {
+        "message": "authentic finite producer must finish Stop/Quit and frozen cleanup: {\"phase\":\"task\",\"failure\":\"Expected values to be strictly equal:\\n+ actual - expected\\n\\n+ undefined\\n- true\\n\"}\n+ actual - expected\n\n+ 'INCOMPLETE'\n- 'PASS'\n",
+        "messageCanonicalJsonSha256": "ad8a09156edec32e8406e848cd5bce9efc9ce60c5ce18844589e316bc41cebf6",
+        "source": null,
+        "sourceFreeze": null
+      },
+      "cleanup": null,
+      "cleanupObservation": "unobserved: outer consumer app/cleanup not recorded; nested producer cleanup is separate",
+      "failureQuit": null,
+      "originalRequestedQuitExit": null
+    }
+  ]
+}

@@ -13,9 +13,11 @@ export class AppContextMismatchError extends Error {
 function matches(context: AppConnectionContext, expected: unknown): boolean {
   if (!expected || typeof expected !== 'object') return false;
   const value = expected as Record<string, unknown>;
-  return value.appInstanceId === context.appInstanceId &&
+  return (
+    value.appInstanceId === context.appInstanceId &&
     value.dataRootFingerprint === context.dataRootFingerprint &&
-    value.connectionGeneration === context.connectionGeneration;
+    value.connectionGeneration === context.connectionGeneration
+  );
 }
 
 /** Orders bound requests against root updates; it does not own transport lifecycle. */
@@ -26,7 +28,10 @@ export class BoundControlContext {
   private inFlight = 0;
   private drained: (() => void) | null = null;
 
-  constructor(private readonly appInstanceId: string, root: string) {
+  constructor(
+    private readonly appInstanceId: string,
+    root: string
+  ) {
     this.rootFingerprint = createHash('sha256').update(root).digest('hex');
   }
 
@@ -65,13 +70,17 @@ export class BoundControlContext {
     if (this.inFlight > 0) {
       await new Promise<void>((resolve) => {
         const previous = this.drained;
-        this.drained = () => { previous?.(); resolve(); };
+        this.drained = () => {
+          previous?.();
+          resolve();
+        };
       });
     }
   }
 
   rebind(root: string): void {
-    if (this.inFlight !== 0) throw new Error('Cannot rebind while admitted control requests remain');
+    if (this.inFlight !== 0)
+      throw new Error('Cannot rebind while admitted control requests remain');
     this.rootFingerprint = createHash('sha256').update(root).digest('hex');
     this.admissionOpen = true;
   }

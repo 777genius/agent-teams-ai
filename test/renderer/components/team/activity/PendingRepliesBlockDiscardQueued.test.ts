@@ -168,7 +168,11 @@ describe('PendingRepliesBlock queued-message discard', () => {
     vi.unstubAllGlobals();
   });
 
-  it('reports the discarded rows to the panel without a follow-up dialog', async () => {
+  it('confirms an identity-only inventory and reports discarded rows without a follow-up dialog', async () => {
+    getQueuedUserMessages.mockResolvedValue({
+      member: 'alice',
+      messages: [{ messageId: 'inbox-0' }, { messageId: 'inbox-1' }],
+    });
     discardQueuedUserMessages.mockResolvedValue({ discarded: 2, remainingQueued: 0 });
     await renderBlock();
 

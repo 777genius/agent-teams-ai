@@ -1,0 +1,41 @@
+{
+  "stage": "D",
+  "commandName": "D-original-desktop-helpers",
+  "sourceHead": "7e8e37c282e9cc653efd79799dc862d116310065",
+  "sourceTree": "e77d05767aa3cb4be469e3763b19236601dbc762",
+  "parents": [
+    "3184acb5f000c2ce2e368ff9babc6105c5adc5c1"
+  ],
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+    "scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts",
+    "scripts/legacy-agent-host/test-child-process-trace.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-settings.test.ts",
+    "scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts",
+    "scripts/legacy-agent-host/desktop-resume-records.test.ts",
+    "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+    "scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T20:46:02.852782+00:00",
+  "finishedAtUTC": "2026-11-15T20:46:09.917117+00:00",
+  "elapsedSeconds": 7.064308904999052,
+  "exitCode": 1,
+  "preflightMetadataSHA256": "ab056e02a5bec2b6fd8aefdd2ceca0d4aa9be09cb618f7168601bdf6ad395cc4",
+  "logBytes": 12916,
+  "logSHA256": "013beefb59e7413a3e6653098a321576e242959c899a1398b7a1ab258c4dcd62",
+  "postflightExact": true,
+  "postflightError": null,
+  "nonBuildOutputBytesPreserved": true,
+  "outputInventoryBefore": null,
+  "outputInventoryAfter": null,
+  "builtOutputsCountAfter": 1446,
+  "freshSelectedOutputs": null,
+  "selectedSourceCount": 31,
+  "hostSourceCount": 615,
+  "selectedDependencyCount": 17
+}

@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createOpenCodePromptDeliveryWatchdogCoordinator } from '../../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 import { createDefaultOpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
 import { createOpenCodeBootstrapWakePorts } from '../TeamProvisioningOpenCodeDeliveryComposition';
-import { createOpenCodePromptDeliveryWatchdogSchedulerFromService } from '../TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory';
+import {
+  createOpenCodePromptDeliveryWatchdogSchedulerFromService,
+  type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
+} from '../TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory';
 import { tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery } from '../TeamProvisioningOpenCodeRuntimeRecoveryFlow';
 import { TeamProvisioningRunTrackingDeliveryHelper } from '../TeamProvisioningRunTrackingDelivery';
 
@@ -97,7 +100,9 @@ function createHarness() {
   const recover = vi.fn((member: { teamName: string; memberName: string }) =>
     tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(member, recoveryPorts)
   );
-  const relay = vi.fn(async () => ({
+  const relay = vi.fn<
+    TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost['relayOpenCodeMemberInboxMessages']
+  >(async () => ({
     attempted: 1,
     delivered: 1,
     relayed: 1,
@@ -200,6 +205,7 @@ describe('OpenCode bootstrap delivery while the lead is finalizing', () => {
     expect(h.relay).toHaveBeenCalledExactlyOnceWith(input.teamName, 'oc', {
       onlyMessageId: unread.messageId,
       source: 'watchdog',
+      isCurrent: expect.any(Function),
     });
     expect(h.recoveryPorts.tryRecoverActiveOpenCodeSecondaryLaneFromRuntime).toHaveBeenCalledOnce();
     expect(h.evidencePorts.readCommittedBootstrapSessionEvidence).toHaveBeenCalledWith({
@@ -208,6 +214,8 @@ describe('OpenCode bootstrap delivery while the lead is finalizing', () => {
     });
     expect(h.runtimeProbe).not.toHaveBeenCalled();
     expect(h.runTracking.canDeliverToOpenCodeRuntimeForTeam(input.teamName)).toBe(false);
+    const relayCurrent = h.relay.mock.calls[0]?.[2].isCurrent;
+    expect(relayCurrent?.()).toBe(true);
   });
 
   it.each([

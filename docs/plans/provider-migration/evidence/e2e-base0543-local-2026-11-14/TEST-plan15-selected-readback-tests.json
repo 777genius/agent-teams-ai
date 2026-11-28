@@ -1,0 +1,20 @@
+{
+  "command": [
+    "/workspace/scratch/391e21b06e24/agent-teams-ai/resources/legacy-agent-host/node/v24.21.0/linux-x64/node",
+    "--test",
+    "scripts/legacy-agent-host/desktop-review-fixture.test.ts"
+  ],
+  "exitCode": 0,
+  "seconds": 1.741,
+  "selection": {
+    "manifestPath": "/workspace/scratch/391e21b06e24/TEST-ui-launch-inputs-zs8gamc6/linux-child-exec/manifest.json",
+    "manifestSha256": "505872c5c4aab8179b4bbdeada091dce5d55a8a86e5cc0b689e35ffdb9e73187",
+    "binarySha256": "4e823c9e62038d770804475badca3982ecd630d95d9dd39e6f655f05cffda5e0"
+  },
+  "logSha256": "2e1ced9bc9029f6daf154376534464ece0c3830ec525ec81b09f57089e329b88",
+  "sources": {
+    "scripts/legacy-agent-host/desktop-readback-fixture.ts": "eb37cc1698fe78acaa0a1a4e68339ee621e157d710117ee83c5f1a52950cae30",
+    "scripts/legacy-agent-host/desktop-review-fixture.test.ts": "e5e9fb43c56ed96bbc9815d6057e227af952ba197589b72d2e7139f61af0de8a"
+  },
+  "scope": "finite private fixture/readback only; no Main execution, providers or UI qualification"
+}

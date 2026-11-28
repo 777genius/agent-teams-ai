@@ -1,0 +1,34 @@
+{
+  "source": "9e542899f36c47598a88c764c9e6745589fea3e1",
+  "run": 43776922765,
+  "originalRunUpdatedAt": "2026-11-16T00:28:26Z",
+  "status": "completed",
+  "conclusion": "cancelled",
+  "attempt": 1,
+  "jobs": {
+    "cancelled": 12,
+    "skipped": 3,
+    "allStepsEmpty": true
+  },
+  "evidence": [
+    {
+      "path": "jobs-0035.json",
+      "bytes": 6945,
+      "blob": "4155e95ae82769586a1180034deb6409a0e919e9",
+      "sha256": "7d79374d3cab4d75fd0b5bd68294e12101dd1106d524aeab563a218f930f01d3"
+    },
+    {
+      "path": "run-43776922765-terminal-0036.json",
+      "bytes": 30535,
+      "blob": "5742994c7d22e191a94c656e6cb81fbbdee83241",
+      "sha256": "1717a8049d3bbb065ee5395ca8b05ab5d4e166b5f964d6755d47845ed9d8f7b5"
+    }
+  ],
+  "terminalStop": true,
+  "editedRun43776996041RemainsQueued": true,
+  "noCauseInference": true,
+  "noManualCiAction": true,
+  "noQualificationTransferToM": true,
+  "jobsReadCompletedUtc": "2026-11-16 00:35:44 UTC",
+  "snapshotWrittenUtc": "2026-11-16 00:36:02 UTC"
+}

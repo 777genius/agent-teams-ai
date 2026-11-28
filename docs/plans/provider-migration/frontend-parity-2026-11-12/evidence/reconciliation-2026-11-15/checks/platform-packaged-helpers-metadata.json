@@ -1,0 +1,25 @@
+{
+  "sourceHead": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "sourceTree": "1db97f452abcd5996f061a8a3ed476a44cf33302",
+  "cwd": "/workspace/scratch/82d3f9ba6b85/agent-teams-e2e",
+  "argv": [
+    "/workspace/scratch/82d3f9ba6b85/toolchain/node24/bin/node",
+    "--test",
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs",
+    "scripts/e2e/opencode-diagnostics/packaged.test.mjs"
+  ],
+  "nodeVersion": "v24.21.0",
+  "nodeSHA256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+  "startedAtUTC": "2026-11-15T17:53:56.300810+00:00",
+  "finishedAtUTC": "2026-11-15T17:54:06.035818+00:00",
+  "elapsedSeconds": 9.7350031100068,
+  "exitCode": 0,
+  "logBytes": 7862,
+  "logSHA256": "ded3132945e8898dfecce301ee0fc0b1bf228dab43c2d13dc1a8a75b4d42fdc9",
+  "testSourceBlobs": {
+    "scripts/e2e/opencode-diagnostics/platform.test.mjs": "ae45ccf9f0d168bbe205895c09afbd1b0e22d971",
+    "scripts/e2e/opencode-diagnostics/packaged.test.mjs": "751d80c1ea409d84b42e486e48853cfa1cd2c4a1"
+  },
+  "sourceHeadAfter": "90d09e5873df7b0ab2f033dc5145090b96458e1e",
+  "statusAfter": ""
+}

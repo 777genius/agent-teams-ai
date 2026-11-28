@@ -24,6 +24,12 @@ import { SettingsLoadingSkeleton } from './SettingsLoadingSkeleton';
 
 import type { SettingsSection } from './SettingsTabs';
 
+const GatewayProvidersSettingsSection = lazy(() =>
+  import('@features/gateway-provider/renderer').then((module) => ({
+    default: module.GatewayProvidersSettingsSection,
+  }))
+);
+
 const CliStatusBanner = lazy(() =>
   import('../dashboard/CliStatusBanner').then((module) => ({
     default: module.CliStatusBanner,
@@ -46,6 +52,7 @@ export const SettingsContent = ({
   const { t } = useAppTranslation('settings');
   const { t: commonT } = useAppTranslation('common');
   const [hasVisitedProviders, setHasVisitedProviders] = useState(false);
+  const [hasVisitedGatewayProviders, setHasVisitedGatewayProviders] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const connectionMode = useStore((s) => s.connectionMode);
 
@@ -57,6 +64,12 @@ export const SettingsContent = ({
       setHasVisitedProviders(true);
     }
   }, [activeSection, hasVisitedProviders]);
+  useEffect(() => {
+    if (activeSection === 'gatewayProviders' && !hasVisitedGatewayProviders) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- preserve mounted settings forms
+      setHasVisitedGatewayProviders(true);
+    }
+  }, [activeSection, hasVisitedGatewayProviders]);
   const {
     config,
     safeConfig,
@@ -199,6 +212,24 @@ export const SettingsContent = ({
               </Suspense>
             </div>
           )}
+
+          {(hasVisitedGatewayProviders || activeSection === 'gatewayProviders') &&
+            isElectronMode() && (
+              <div
+                data-testid="gateway-providers-settings-page"
+                className={activeSection === 'gatewayProviders' ? undefined : 'hidden'}
+              >
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-24 items-center justify-center">
+                      <Loader2 className="size-5 animate-spin text-text-muted" />
+                    </div>
+                  }
+                >
+                  <GatewayProvidersSettingsSection />
+                </Suspense>
+              </div>
+            )}
 
           {activeSection === 'externalAgentConnection' && isElectronMode() && (
             <ExternalAgentConnectionSettings

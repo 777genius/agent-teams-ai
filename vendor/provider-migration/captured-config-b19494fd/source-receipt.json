@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "agent-teams-ai/old-provider-implementations",
+  "sourceCommit": "b19494fd2de47538a1c9315e338199ff41bbe497",
+  "sourceTree": "43c3778781815b87269056d3a6ceafb16cb28f08",
+  "qualification": "source-and-packed-consumer-only",
+  "nativeHostQualified": false,
+  "packagedElectronQualified": false,
+  "executionVenue": "existing provider repository pnpm check and original packed-consumer tooling; exact checked source published without post-check edits",
+  "previousConsumer": {
+    "implementationSourceCommit": "aad5c2f8bedc7782f6d5f3746a47b74f0c3735d6",
+    "implementationSha256": "91a1c6f62ccd249868adfa0299ea03d828e50db1ca6821beb9d0a65e26cdc4ca"
+  },
+  "packages": {
+    "agent-teams-provider-implementations-0.0.0.tgz": {
+      "bytes": 191145,
+      "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+      "integrity": "sha512-HchjDstKjTtlCfY6lQSxxboowxBVd93rTQbuNNeia/0FY98Is8kXm+fI6tLdNPH0ToCawPxJWZBmI1wuaoSpXw==",
+      "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3"
+    },
+    "agent-teams-provider-session-contracts-0.0.0.tgz": {
+      "bytes": 6230,
+      "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+      "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+      "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+      "existingPath": "../v2-media-aad5c2f8/agent-teams-provider-session-contracts-0.0.0.tgz"
+    }
+  },
+  "archiveCompatibility": {
+    "addedMembers": [
+      "package/dist/captured-configuration.d.ts",
+      "package/dist/captured-configuration.js",
+      "package/dist/codex-mcp-catalog.d.ts",
+      "package/dist/codex-mcp-catalog.js"
+    ],
+    "deletedMembers": [],
+    "changedMembers": [
+      "package/package.json"
+    ],
+    "allExistingCompiledOutputsUnchanged": true,
+    "sessionContractsArchiveByteIdentical": true,
+    "newRuntimeExports": {
+      "./captured-configuration": [
+        "captureClaudeExtraArgs",
+        "captureCodexConfiguredMcpCatalog",
+        "captureCodexExtraArgs",
+        "captureOpenCodeExtraArgs"
+      ],
+      "./codex-mcp-catalog": [
+        "readCodexConfiguredMcpCatalog"
+      ]
+    }
+  },
+  "checks": [
+    {
+      "command": "pnpm --config.verify-deps-before-run=false check",
+      "node": "24.21.0",
+      "pnpm": "11.18.0",
+      "exitCode": 0,
+      "elapsedSeconds": 143.529,
+      "sourceTests": {
+        "passed": 577,
+        "failed": 0
+      },
+      "packedConsumers": {
+        "passed": 2,
+        "failed": 0
+      },
+      "logFile": "capture-check-restored-20261118.log",
+      "logBytes": 64580,
+      "logSha256": "481878e00eb87136e602a6f01f915c9e62fe98fc1af5d1e0f5d7cf26f84eb8fe"
+    }
+  ],
+  "validationSummary": "Canonical build, typecheck, 577 source tests and both original packed consumers PASS. Fresh installed consumer refuses SDK loads for both new entries, checks closed export sets, validates the original metadata-reader owner ports, and confirms reference identity of all five functions with existing public exports. Existing runtime definitions are unchanged. No new native Host or packaged Electron qualification is claimed.",
+  "executionLimits": "No real Claude/Codex CLI or vendor inference. Existing finite peers and disposable TEST fixtures only. Production launch, custody, currentness, cleanup, transport limits and deadlines unchanged.",
+  "archiveCustody": "Exact archive bytes retained by AGENT_TEAMS_PROVIDER_PACK_TEST_RETAIN_DIR from the passing original packed-consumer gate; copied without editing or repacking.",
+  "builtOutputCensus": {
+    "packages": [
+      {
+        "package": "provider-implementations",
+        "file": "agent-teams-provider-implementations-0.0.0.tgz",
+        "bytes": 191145,
+        "sha256": "ad05bd8c799c4d2c366a6eab72f937466355a5994eac6bd201ee754217cf5aa7",
+        "integrity": "sha512-HchjDstKjTtlCfY6lQSxxboowxBVd93rTQbuNNeia/0FY98Is8kXm+fI6tLdNPH0ToCawPxJWZBmI1wuaoSpXw==",
+        "gitBlob": "34b07f65c71ba13ad0749cdc8a01c4932325d6f3",
+        "distFiles": 256,
+        "distCensusSha256": "70a3f9d4402151d39b834730a24f39fbeb061b7ae46fb1ccfb2943ebcb6b8004",
+        "exactCurrentDist": true,
+        "addedMembers": [
+          "package/dist/captured-configuration.d.ts",
+          "package/dist/captured-configuration.js",
+          "package/dist/codex-mcp-catalog.d.ts",
+          "package/dist/codex-mcp-catalog.js"
+        ],
+        "removedMembers": [],
+        "changedMembers": [
+          "package/package.json"
+        ],
+        "existingCompiledOutputsUnchanged": true
+      },
+      {
+        "package": "provider-session-contracts",
+        "file": "agent-teams-provider-session-contracts-0.0.0.tgz",
+        "bytes": 6230,
+        "sha256": "0ea08bacd3f19a54c065cfaebbe8ae0fb3a8e6770886402f435a96e97867d2bc",
+        "integrity": "sha512-ONExHCowcHR4vsD86pOF3t91KlqkpVt83g43OXNM1tI+8nae32WkTI+UrIuYjg45PuR6KKgfEIHz9pNXPMFC4g==",
+        "gitBlob": "33c2944ff8a52a9c087fba9d3cab1daffe2604d8",
+        "distFiles": 10,
+        "distCensusSha256": "38bf22ad70cc80c85f3418f07adf4784ea5a36ef7cb33d79ba61b73e378a7cf3",
+        "exactCurrentDist": true,
+        "addedMembers": [],
+        "removedMembers": [],
+        "changedMembers": [],
+        "existingCompiledOutputsUnchanged": true
+      }
+    ],
+    "sourceBaseHead": "aad5c2f8bedc7782f6d5f3746a47b74f0c3735d6",
+    "sourceHead": "b19494fd2de47538a1c9315e338199ff41bbe497",
+    "sourceTree": "43c3778781815b87269056d3a6ceafb16cb28f08",
+    "checkedSourcePostimagesMatchPublishedTree": true
+  },
+  "consumerInstallation": {
+    "status": "PASS",
+    "command": [
+      "pnpm",
+      "install",
+      "--frozen-lockfile",
+      "--ignore-scripts",
+      "--prefer-offline"
+    ],
+    "node": "24.21.0",
+    "pnpm": "11.22.0",
+    "exitCode": 0,
+    "elapsedSeconds": 20.415,
+    "supplyChainEntriesVerified": 2533,
+    "logSha256": "6c407c70994d979f3feb5f3e3d1cd3eee604e25cb403386cdcd1fae31144730e"
+  }
+}

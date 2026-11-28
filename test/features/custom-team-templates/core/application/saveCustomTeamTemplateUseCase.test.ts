@@ -1442,4 +1442,44 @@ describe('SaveCustomTeamTemplateUseCase', () => {
       vi.useRealTimers();
     }
   });
+
+  it.each(['revoked', 'unavailable', 'changed'] as const)(
+    'preserves an unknown original write when a later confirmation sees a %s source', async mode => {
+      const fixture = gatewayFixture({
+        create: [new CustomTeamTemplateStorageInterruptedError('TEST lost outcome', 'unknown', Promise.resolve())],
+        getById: [{ status: 'unreadable', templateId: PREVIEW_ID }],
+      });
+      let revoked = false;
+      let source: Parameters<typeof reader>[0];
+      const admission = { identity: 'TEST-original-owner',
+        assertCurrent() { if (revoked) throw new Error('TEST revoked owner'); },
+        async verifyCurrent() { if (revoked) throw new Error('TEST revoked owner'); } };
+      const selectedReader: CustomTeamTemplateSnapshotReader = { async readSnapshot(name) {
+        const read = await reader(source).readSnapshot(name);
+        return read.status === 'available' ? { ...read, sourceAdmission: admission } : read;
+      } };
+      const preview = await preparedPreview({ gateway: fixture.gateway, reader: selectedReader });
+      const save = useCase({ gateway: fixture.gateway, reader: selectedReader }, preview.store);
+      const original = { status: 'unresolvedWriteOutcome', templateId: preview.stateTemplateId };
+      await expect(save.execute({ previewToken: preview.token })).resolves.toEqual(original);
+      const recorded = preview.store.resolve(preview.token);
+      if (recorded.status !== 'found') throw new Error('Expected original save identity');
+      const identity = structuredClone(recorded.state.confirmedSave);
+      if (mode === 'revoked') revoked = true;
+      else source = mode === 'unavailable' ? { outcome: 'sourceUnavailable' } : { teamPrompt: 'TEST changed prompt' };
+      await expect(save.execute({ previewToken: preview.token })).resolves.toEqual(original);
+      const retained = preview.store.resolve(preview.token);
+      expect(retained.status).toBe('found');
+      if (retained.status !== 'found') throw new Error('Original operation was discarded');
+      expect(retained.state.confirmedSave).toEqual(identity);
+      expect(retained.state.hasUnresolvedWrite).toBe(true);
+      expect(fixture.create).toHaveBeenCalledOnce();
+      const stored = storedTemplate(preview.stateTemplateId);
+      fixture.getById.mockResolvedValue({ status: 'found', template: stored });
+      const recheck = new RecheckCustomTeamTemplateSaveUseCase({ gateway: fixture.gateway, hasher,
+        previewStore: preview.store });
+      await expect(recheck.execute({ previewToken: preview.token })).resolves.toEqual({ status: 'saved', template: stored });
+      expect(fixture.create).toHaveBeenCalledOnce();
+    }
+  );
 });

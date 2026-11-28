@@ -1,0 +1,318 @@
+{
+  "kind": "source-bound OpenCode failure cleanup assessment; no execution or source changes",
+  "reviewedAtUtc": "2026-11-16T01:35:53.548985+00:00",
+  "source": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "jobId": 133017915900,
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/extracted/TEST-desktop-backend-DXg4Xj/desktop-backend-receipt.json",
+    "bytes": 756997,
+    "blob": "aeb2650c4ce00e53c7a8b746b506d992eac985e0",
+    "sha256": "189e97065f05e8afba47064b1eb8c63ffc87d97cc6a4b292fd1ca461a092bde3"
+  },
+  "sources": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "bytes": 49613,
+      "blob": "865494ab5f5e45c5158fbf74ac858987fb322608",
+      "sha256": "ce4d59cc5285eb78ed108dae13a44fae21d33cd73c544c720d512134f23b7f73",
+      "lines": 787,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": true,
+      "pinScope": "exact before/after source hash"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "lines": 791,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": true,
+      "pinScope": "exact before/after source hash"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "bytes": 33173,
+      "blob": "ed93d7422ab7a846a568a2b72437ec75931ba03b",
+      "sha256": "79c793a3005c691c367317ea26c12a7629602fa9d46fd920eeccb5579e4faf23",
+      "lines": 690,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": true,
+      "pinScope": "exact before/after source hash"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "bytes": 22082,
+      "blob": "a9d725fbe11278dd98611b49d570c19d80684087",
+      "sha256": "3aa149837f6686e8307ba1803984874b4c673d8211094bd3e8e52b9ddb3d70cd",
+      "lines": 281,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": true,
+      "pinScope": "exact before/after source hash"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "bytes": 52461,
+      "blob": "b7fe4566d34dd638cf5fc7072a3ed6cf9e88fb33",
+      "sha256": "ba8020eff1bc7bf80914b3d32cf7673d7a0ed763bb50e0aba7509b98d15bdcf7",
+      "lines": 996,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": false,
+      "pinScope": "read-only Git source; not claimed in this receipt roster"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "bytes": 2115,
+      "blob": "be1826fce2de43cb6af3b1ca0fb87a683985be99",
+      "sha256": "26da6d6f0ad5e089fb59b6a57e7d102e434ea442cb5a1b9ef089f1362a139f21",
+      "lines": 46,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": true,
+      "pinScope": "exact before/after source hash"
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts",
+      "bytes": 68760,
+      "blob": "1bde37adb7cba710ad77784eedbbe0d6c6e556df",
+      "sha256": "6ca239d1ea242a3ac64323bf28d41b84450fc1d5d7e4ae2324a069d03bff18ad",
+      "lines": 788,
+      "gitSource": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+      "worktreeExact": true,
+      "receiptBeforeAndAfter": true,
+      "pinScope": "exact before/after source hash"
+    }
+  ],
+  "retainedFacts": {
+    "mode": "emulated-opencode-runtime-ui",
+    "status": "INCOMPLETE",
+    "app": {
+      "pid": 4281,
+      "processGroup": 4281,
+      "identity": "Mon Nov 16 01:26:05 2026 /opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/_temp/TEST-emulated-ui-inputs-QEC5M5/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js dev:mcp --remoteDebuggingPort 9222 --noSandbox",
+      "invocation": [
+        "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "/home/runner/work/_temp/TEST-emulated-ui-inputs-QEC5M5/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "dev:mcp",
+        "--remoteDebuggingPort",
+        "9222",
+        "--noSandbox"
+      ]
+    },
+    "failure": "Original UI target moved after ownership check\n+ actual - expected\n\n  [\n    700,\n+   505.75,\n-   494.75,\n    'BUTTON'\n  ]\n",
+    "failureSource": {
+      "kind": "assertion",
+      "frames": [
+        "scripts/legacy-agent-host/desktop-ui-controls.ts:288:12",
+        "scripts/legacy-agent-host/desktop-emulated-runtime-ui.ts:87:37",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:421:12",
+        "scripts/legacy-agent-host/desktop-backend-smoke.ts:781:29"
+      ]
+    },
+    "failureQuit": {
+      "attempted": true,
+      "scope": "Close only the verified TEST window before stopping its dev wrapper",
+      "reply": "acknowledged",
+      "listenerAbsent": true
+    },
+    "quitRequested": true,
+    "requestedQuitExit": {
+      "initialExitCode": null,
+      "initialSignalCode": null,
+      "exitCode": 0,
+      "signalCode": null
+    },
+    "beforeHarnessCleanup": [
+      {
+        "pid": 4354,
+        "ppid": 1,
+        "pgid": 4281
+      }
+    ],
+    "cleanup": {
+      "processGroup": 4281,
+      "remaining": [
+        {
+          "pid": 4354,
+          "ppid": 1,
+          "pgid": 4281
+        }
+      ],
+      "appExitCode": 0,
+      "appSignalCode": null,
+      "cleanupFailure": "captured leader absent; retain cleanup debt without signaling",
+      "capturedHostObserved": false,
+      "capturedHostAbsent": null,
+      "hostExitCode": "not exposed by main-owned transport; no separate Host exit code recorded"
+    },
+    "finitePeers": {
+      "originalPeerPids": [
+        5180,
+        5341
+      ],
+      "remaining": [],
+      "absent": true,
+      "effects": [
+        {
+          "event": "launch",
+          "parentPid": 4604,
+          "argc": 5,
+          "provider": "opencode",
+          "role": "management",
+          "pid": 5180
+        },
+        {
+          "event": "launch",
+          "parentPid": 4604,
+          "argc": 5,
+          "provider": "opencode",
+          "role": "runtime",
+          "pid": 5341
+        },
+        {
+          "event": "input",
+          "marker": "TEST_MODEL_PROBE",
+          "provider": "opencode",
+          "role": "runtime",
+          "pid": 5341
+        },
+        {
+          "event": "terminal",
+          "marker": "TEST_MODEL_PROBE",
+          "outcome": "succeeded",
+          "provider": "opencode",
+          "role": "runtime",
+          "pid": 5341
+        },
+        {
+          "event": "exit",
+          "code": 0,
+          "provider": "opencode",
+          "role": "runtime",
+          "pid": 5341
+        },
+        {
+          "event": "exit",
+          "code": 0,
+          "provider": "opencode",
+          "role": "management",
+          "pid": 5180
+        }
+      ]
+    },
+    "historicalStartupPid4354": {
+      "count": 17,
+      "first": {
+        "elapsedMs": 1033,
+        "row": {
+          "pid": 4354,
+          "ppid": 4341,
+          "pgid": 4281,
+          "executable": "esbuild"
+        }
+      },
+      "last": {
+        "elapsedMs": 17594,
+        "row": {
+          "pid": 4354,
+          "ppid": 4341,
+          "pgid": 4281,
+          "executable": "esbuild"
+        }
+      }
+    },
+    "missingTopLevelRecords": [
+      "hostChild",
+      "hostChildOnFailure",
+      "originalExitedGroup",
+      "originalAppReap",
+      "originalZombieGuard",
+      "originalGroupSignal"
+    ],
+    "uiCommands": []
+  },
+  "orderedSourceFindings": [
+    {
+      "source": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "lines": "311, 364, 421-422, 583-598",
+      "finding": "Ordinary emulated OpenCode starts with hostPid undefined. Its original pre-UI observer is awaited but returns no Host identity. The ordinary Runtime UI call has no onHostObserved callback. The generic exact-command Host capture occurs only after the whole selected UI branch returns successfully. The recorded target-movement exception precedes that suffix."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "lines": "637-681",
+      "finding": "The catch retains the original UI failure, captures its renderer failure state, attempts the existing guarded Quit and rethrows. The existing finally performs source revalidation, disconnect and cleanup; this report does not relabel that cleanup refusal as the first UI error or claim all possible finally failures preserve the original throw."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "lines": "399-413",
+      "finding": "Cleanup first yields once, captures one Date.now()+3000 observation deadline and waits for the original ChildProcess requested-Quit exit only while both exit fields remain null. It then calls settledGroupMembers with that same deadline. Actual receipt proves transition null/null to 0/null, but retains no start/end clock values or remaining budget. No three-second duration/expiry attribution is possible."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "lines": "500-520",
+      "finding": "settledGroupMembers initially performs the original group census. Its bounded loop is conditional on the group leader still being present and checks that leader for Z state. A census already lacking the leader does not enter that loop. It is not a general wait for arbitrary orphan descendants. The receipt retains only the returned census, not the initial census or loop iterations, so it does not prove whether this helper performed any earlier leader-state query."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "lines": "412-426",
+      "finding": "beforeHarnessCleanup receives the returned remaining array. Because hostPid is undefined, the original command scan checks those remaining rows for exact captured node + Host entry. The actual subsequent leader-absent assertion and missing hostChildOnFailure establish that no single exact Host match was adopted; the returned command string, process state, and birth were not retained."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "lines": "427-439",
+      "finding": "The observational original-exited-group branch additionally requires a defined hostPid. Actual capturedHostObserved=false and no originalExitedGroup show it was not invoked. The next nonempty-group guard refuses because the original group leader is absent. This happens before the leader identity query and all signal operations."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-backend-observations.ts",
+      "lines": "578-615",
+      "finding": "observeExitedAppGroup is observational only. Its unchanged contract requires the exact original ChildProcess pid/group, natural exit0/null, a separate positive captured Host PID, nonempty initial same-group descendants and one original deadline. Each fresh census must prove group absence, captured Host absence and absence of every initial descendant PID; leader PID reappearance, unavailable census and late read retain debt. Those negative premises cannot be removed to clear this receipt."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-captured-app.ts",
+      "lines": "434-507",
+      "finding": "Neither observeOriginalAppReap nor the Darwin-specific zombie guard nor process.kill(-group,SIGTERM) was reached. cleanupFailure is caught and projected; capturedHostAbsent remains null because its final observation was not reached and no Host PID was available. The reported final remaining array is the retained census, not proof of a second independently sampled post-cleanup census."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "lines": "215-270",
+      "finding": "The pre-UI observer has an existing bounded full census with Host birth/argv and can see zero or one Host before the first Team read. The per-child loop rechecks Host and child identities when such children exist. These observations are local and the function returns void. Actual evidence only retains noNativeHostChildrenBeforeUi=true; it does not recover whether a Host existed in that particular census, its identity, or the exact observation time."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-emulated-runtime-fixture.ts",
+      "lines": "272-280",
+      "finding": "The later finite-peer cleanup validates original effect entries and checks the union of launch/observed peer PIDs against one current process table. Its absent=true covers the two original finite peers. It does not establish original Host absence or complete app process-group absence."
+    }
+  ],
+  "identityAndCausalityLimits": [
+    "App PID4281 is the captured Node/Corepack dev:mcp launcher/group leader, not a separately recorded Electron Main exit. Quit acknowledgement, vanished CDP listener4428 and app exit0/null do not establish all descendants absent.",
+    "Startup samples from1033 through17594ms record PID4354/PPID4341/PGID4281 with executable label esbuild. The final retained PID4354/PPID1/PGID4281 tuple has no birth, executable/command, state or retained handle. Repeated numeric PID alone does not prove unchanged process identity, a live esbuild, zombie status, or the cause of persistence.",
+    "Effects parentPid4604 links the two finite TEST launch rows to that recorded parent number. It does not provide the missing independently captured Host command/birth/currentness. This report does not retrofit4604 into cleanup hostPid.",
+    "The returned settledGroupMembers census lacks the leader, but its internal initial census and loop iterations were not retained. No claim is made that its initial census already lacked the leader or that it never queried the leader state; the later cleanup identity/zombie/signal branch is separately proven unreached.",
+    "No observation establishes how much of the original three-second cleanup observation budget remained, whether the surviving row would disappear within it, or whether retaining an earlier Host identity would have produced a clean result.",
+    "Business Launch, input/stream/runtime flow and product Team Stop were not reached. The sole finite runtime input is TEST_MODEL_PROBE; its succeeded terminal and peer exits0 do not qualify those absent business boundaries."
+  ],
+  "existingNegativeCoverageReadOnly": [
+    {
+      "source": "scripts/legacy-agent-host/desktop-backend-observations.test.ts",
+      "lines": "808-884",
+      "scope": "Existing tests preserve original child/Host/descendant absence, orphan/moved descendant/Host debt, wrong or live/crashed/signaled child refusal, invalid identities, leader PID reuse, unavailable census and absolute deadline/late-read rejection. They were read, not run."
+    },
+    {
+      "source": "scripts/legacy-agent-host/desktop-captured-app-exit.test.ts",
+      "lines": "1-46",
+      "scope": "The original captured-app exit case accepts no-known-Host cleanup only when actual remaining group is empty; capturedHostAbsent stays null. It does not authorize ignoring a nonempty unknown-Host group. Read only."
+    }
+  ],
+  "disposition": {
+    "established": "The exact cleanup refusal is source-consistent and retains debt. The proven missing operand for the existing natural-drain path is a captured Host PID, not an observed failure of that path.",
+    "repair": "No same-contract cleanup repair is established by these retained observations. Do not relax the leader/Host/descendant/deadline predicates, adopt an effect parent PID, filter the remaining row, signal a leaderless numeric group, or infer benign zombie/drain latency.",
+    "boundedFutureEvidenceSeam": "If a separately reviewed next diagnostic is useful, preserve the zero-or-one exact original Host row already computed in observeDesktopEmulatedRuntimeChildren and its phase at the existing observation boundary. This needs no additional census and would distinguish zero Host from an observed-but-unretained Host in future runs. It is not currently implemented or authorized here, cannot reconstruct this run, and must not automatically confer new signaling or cleanup authority. Any future authority handoff into the original natural-drain branch requires its own explicit source/R1/R2 and unchanged negative tests.",
+    "noNewQueryProposal": "Fresh identity/state for the final surviving row is absent. Existing source does not compute such a complete row at the failed assertion; this report does not silently authorize another process query or claim that a diagnostic-only change repairs the outcome.",
+    "independentScope": "UI/root own the full official artifact and first target-movement failure audit. This report independently joins the exact receipt and seven Git/source leaves for the bounded cleanup source assessment only."
+  }
+}

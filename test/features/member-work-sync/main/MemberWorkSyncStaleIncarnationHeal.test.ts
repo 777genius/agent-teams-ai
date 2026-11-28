@@ -7,6 +7,7 @@ import { InternalStorageBackendSelector } from '@features/internal-storage/main/
 import { InternalStorageJsonReplica } from '@features/internal-storage/main/infrastructure/InternalStorageJsonReplica';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import { BackendSelectingMemberWorkSyncStore } from '@features/member-work-sync/main/infrastructure/BackendSelectingMemberWorkSyncStore';
+import { internalStorageInterruption } from '@features/member-work-sync/main/infrastructure/internalStorageInterruption';
 import { MemberWorkSyncStatusDecodeError } from '@features/member-work-sync/main/infrastructure/decodeMemberWorkSyncStoredStatus';
 import {
   buildPendingReportIntentId,
@@ -196,6 +197,30 @@ describe('verified team directory creation time', () => {
 });
 
 describe('targeted self-heal of status rows left by an earlier team identity', () => {
+  it('never heals or rebinds a SQLite primary owned by a different incarnation', async () => {
+    const h = await setup('sqlite');
+    await h.gateway.importTeam(TEAM, snapshotToRecords(TEAM, snap([mk('alice', FOREIGN)])),
+      { incarnation: FOREIGN });
+    const before = await primary(h);
+    const remove = vi.spyOn(h.gateway, 'statusDeleteMatching');
+    const importRows = vi.spyOn(h.gateway, 'importTeam');
+    const operation = vi.fn();
+    await expect(h.store.withPreparedBackend(identity, operation)).rejects.toThrow();
+    const outcome = await healStaleIncarnationStatuses({ teamName: TEAM, incarnation: CURRENT,
+      backend: 'sqlite', error: new MemberWorkSyncStatusDecodeError('incarnation_mismatch', FOREIGN),
+      gateway: h.gateway, paths: h.paths, replica: h.replica,
+      readTeamRootStats: h.readTeamRootStats, logger: { warn: h.warn } });
+    expect(outcome).toBe('refused');
+    expect(operation).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+    expect(importRows).not.toHaveBeenCalled();
+    expect(await primary(h)).toEqual(before);
+    expect(await h.gateway.readPrimaryIncarnation(TEAM)).toBe(FOREIGN);
+    expect(await quarantineFiles(h)).toEqual([]);
+    expect(h.warn).toHaveBeenCalledWith(expect.any(String),
+      expect.objectContaining({ reason: 'primary_incarnation_mismatch' }));
+  });
+
   it('removes only stale status rows and keeps current rows, other domains and the token secret', async () => {
     const h = await setup('sqlite');
     const value = snap([mk('alice', FOREIGN), mk('bob', CURRENT)]);
@@ -684,6 +709,7 @@ describe('targeted self-heal of status rows left by an earlier team identity', (
           }
         },
       },
+      interruption: internalStorageInterruption,
       withPreparedBackend: (binding, operation) => h.store.withPreparedBackend(binding, operation),
     });
     const read = authority.startRead({ teamName: TEAM, memberName: 'bob' });

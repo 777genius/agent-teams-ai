@@ -60,6 +60,43 @@ export class TaskBoardCommandFacade {
     private readonly options: TaskBoardCommandFacadeOptions = {}
   ) {}
 
+  async readStoppedTeamImportCommandFacts(teamName: string) {
+    if (this.nonDurableTeamQueues.has(teamName)) return { known: true, pending: 1, revision: '' };
+    if (
+      !this.runner ||
+      (this.options.isDurableStorageAvailable && !(await this.options.isDurableStorageAvailable()))
+    )
+      return { known: false, pending: 0, revision: '' };
+    const records = await this.runner.readScope(TASK_BOARD_COMMAND_NAMESPACE, teamName);
+    if (
+      records.length > 4096 ||
+      records.some(
+        (record) =>
+          record.namespace !== TASK_BOARD_COMMAND_NAMESPACE ||
+          record.scopeKey !== teamName ||
+          ![
+            'started',
+            'completed',
+            'failed_retryable',
+            'failed_terminal',
+            'unknown_after_timeout',
+          ].includes(record.status)
+      )
+    )
+      return { known: false, pending: 0, revision: '' };
+    return {
+      known: true,
+      pending: records.filter((record) => !['completed', 'failed_terminal'].includes(record.status))
+        .length,
+      revision: records
+        .map((record) =>
+          JSON.stringify([record.commandId, record.status, record.updatedAt, record.resultHash])
+        )
+        .sort()
+        .join('\n'),
+    };
+  }
+
   async createTask(command: TaskBoardCreateTaskCommand): Promise<TaskBoardCreateTaskCommandResult> {
     if (!looksLikeCanonicalTaskId(command.identity.commandId)) {
       throw new TypeError('Task create commandId must be a UUID');

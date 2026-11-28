@@ -5,12 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   openExternal: vi.fn(),
+  getLaunchFailureDiagnostics: vi.fn(),
   stepperProps: [] as { active?: boolean }[],
 }));
 
 vi.mock('@renderer/api', () => ({
   api: {
     openExternal: hoisted.openExternal,
+    teams: { getLaunchFailureDiagnostics: hoisted.getLaunchFailureDiagnostics },
   },
 }));
 
@@ -61,12 +63,22 @@ vi.mock('lucide-react', () => {
   };
 });
 
+import { formatLaunchFailureArtifactCopy } from '@renderer/components/team/provisioningLaunchDiagnosticsCopy';
 import { ProvisioningProgressBlock } from '@renderer/components/team/ProvisioningProgressBlock';
+
+import { hostTeamRunId } from '../../../../src/features/agent-backend/contracts/teamRunSelection';
+import { hostTeamSelectionKey } from '../../../../src/features/agent-backend/contracts/teamSelection';
+import { createHostTeamsApi } from '../../../../src/features/agent-backend/renderer/createHostTeamsApi';
+
+import type { BackendLaunchConfigurationView } from '../../../../src/features/agent-backend/contracts/launch';
+import type { AgentBackendApi } from '../../../../src/features/agent-backend/contracts/operations';
+import type { TeamsAPI } from '@shared/types/api';
 
 describe('ProvisioningProgressBlock', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     hoisted.openExternal.mockReset();
+    hoisted.getLaunchFailureDiagnostics.mockReset();
     hoisted.stepperProps = [];
     vi.unstubAllGlobals();
   });
@@ -119,9 +131,7 @@ describe('ProvisioningProgressBlock', () => {
           title: 'Launching team',
           currentStepIndex: 1,
           loading: true,
-          warnings: [
-            'Large Codex team launch: 9 primary teammates will bootstrap in one runtime.',
-          ],
+          warnings: ['Large Codex team launch: 9 primary teammates will bootstrap in one runtime.'],
           defaultLiveOutputOpen: false,
         })
       );
@@ -308,7 +318,9 @@ describe('ProvisioningProgressBlock', () => {
     expect(copied).toContain('Title: Launching team');
     expect(copied).toContain('Message: Starting agent runtime process');
     expect(copied).toContain('PID: 321');
-    expect(copied).toContain('Counts: warnings=1; launchDiagnostics=1; memberSnapshots=0; artifactFiles=0');
+    expect(copied).toContain(
+      'Counts: warnings=1; launchDiagnostics=1; memberSnapshots=0; artifactFiles=0'
+    );
     expect(copied).toContain('Large-team signal: Large Codex team launch');
     expect(copied).toContain('## Warnings');
     expect(copied).toContain('- Large Codex team launch');
@@ -330,6 +342,162 @@ describe('ProvisioningProgressBlock', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it.each([false, true])(
+    'copies original Host evidence through the actual API route (partial=%s)',
+    async (partial) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const writeText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+      const configuration: BackendLaunchConfigurationView = {
+        launch: {
+          launchId: 'failed-run',
+          rosterRevision: 'captured-roster',
+          startedAtMs: 1000,
+          observedAtMs: 2000,
+          status: 'failed',
+          ready: 0,
+          expected: 1,
+          retryCapability: 'same-binding-no-allocation-only',
+          members: [
+            {
+              memberId: 'lead',
+              generation: 'captured-generation',
+              attemptId: 'initial',
+              status: 'failed',
+              nativeReady: false,
+              usable: false,
+              controlAvailable: true,
+              noAllocation: false,
+              reason: 'bootstrap-timeout',
+            },
+          ],
+        },
+        members: [{ memberId: 'lead', label: 'Lead', role: 'lead', selected: null }],
+      };
+      const backend: AgentBackendApi = {
+        getConnections: vi.fn<AgentBackendApi['getConnections']>(async () => ({
+          state: 'ready',
+          bindings: [{ handle: { handleId: 'copy-owner' }, label: 'Team', members: [] }],
+        })),
+        invoke: vi.fn<AgentBackendApi['invoke']>(async (request) => {
+          if (request.operation === 'team.launch.configuration.read')
+            return { ok: true, value: structuredClone(configuration) };
+          if (request.operation === 'runtime.read')
+            return partial
+              ? { ok: false, code: 'hold', outcome: 'unknown' }
+              : {
+                  ok: true,
+                  value: {
+                    memberId: 'lead',
+                    generation: 'captured-generation',
+                    phase: 'open-unknown',
+                    sealed: false,
+                    custody: 'unknown',
+                    nativeReady: false,
+                    attached: false,
+                    inputs: [],
+                    interactions: [],
+                    diagnostic: 'Readiness unavailable OPENAI_API_KEY=TEST-private-key',
+                  },
+                };
+          throw new Error('Unexpected operation');
+        }),
+      };
+      const legacy = { getLaunchFailureDiagnostics: vi.fn() } as unknown as TeamsAPI;
+      const teams = createHostTeamsApi(legacy, backend, () => () => true);
+      hoisted.getLaunchFailureDiagnostics.mockImplementation(teams.getLaunchFailureDiagnostics);
+      const teamName = hostTeamSelectionKey('copy-owner');
+      const runId = hostTeamRunId('copy-owner', 'failed-run', 'captured-roster');
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(ProvisioningProgressBlock, {
+            title: 'Launch failed',
+            teamName,
+            runId,
+            tone: 'error',
+            currentStepIndex: -1,
+            loading: false,
+            defaultLiveOutputOpen: false,
+          })
+        );
+      });
+      const button = host.querySelector('[aria-label="Copy diagnostics"]');
+      expect(button).toBeTruthy();
+      await act(async () => {
+        button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      });
+      expect(writeText).toHaveBeenCalledTimes(1);
+      const copied = String(writeText.mock.calls[0][0]);
+      expect(hoisted.getLaunchFailureDiagnostics).toHaveBeenCalledWith(teamName, runId);
+      expect(copied).toContain('source: captured-host (read-only launch/runtime observations)');
+      expect(copied).toContain(`status: ${partial ? 'partial' : 'observed'}`);
+      expect(copied).toContain('"reason": "bootstrap-timeout"');
+      expect(copied).toContain('"generation": "captured-generation"');
+      expect(copied).toContain(partial ? 'issue: hold (unknown)' : 'Readiness unavailable');
+      expect(copied).not.toContain('TEST-private-key');
+      expect(copied).not.toContain('latestPath:');
+      expect(copied).not.toContain('This operation is not supported for Host teams');
+      expect(legacy.getLaunchFailureDiagnostics).not.toHaveBeenCalled();
+      expect(vi.mocked(backend.invoke).mock.calls.map(([r]) => r.operation)).toEqual([
+        'team.launch.configuration.read',
+        'runtime.read',
+        'team.launch.configuration.read',
+      ]);
+      await act(async () => {
+        root.unmount();
+      });
+    }
+  );
+
+  it('preserves the existing legacy artifact copy format', () => {
+    expect(
+      formatLaunchFailureArtifactCopy({
+        teamName: 'legacy-team',
+        runId: 'legacy-run',
+        latestPath: '/TEST/latest.json',
+        artifactDirectory: '/TEST/run',
+        manifestPath: '/TEST/run/manifest.json',
+        classification: { code: 'timeout', confidence: 0.5 },
+        bootstrapTransportBreadcrumb: { bootstrapSubmitted: false },
+        files: [
+          { label: 'Manifest', path: '/TEST/run/manifest.json', content: '  manifest contents\n' },
+          { label: 'Logs', path: '/TEST/run/logs.txt', issue: 'unavailable' },
+        ],
+      })
+    ).toBe(
+      [
+        'teamName: legacy-team',
+        'runId: legacy-run',
+        'latestPath: /TEST/latest.json',
+        'artifactDirectory: /TEST/run',
+        'manifestPath: /TEST/run/manifest.json',
+        '',
+        'classification:',
+        '{\n  "code": "timeout",\n  "confidence": 0.5\n}',
+        '',
+        'bootstrapTransportBreadcrumb:',
+        '{\n  "bootstrapSubmitted": false\n}',
+        '',
+        'files:',
+        '',
+        '--- Manifest',
+        'path: /TEST/run/manifest.json',
+        'issue: (none)',
+        'content:',
+        'manifest contents',
+        '',
+        '--- Logs',
+        'path: /TEST/run/logs.txt',
+        'issue: unavailable',
+        'content:',
+        '(empty)',
+      ].join('\n')
+    );
   });
 
   it('emphasizes the copy diagnostics CTA when launch has failed', async () => {

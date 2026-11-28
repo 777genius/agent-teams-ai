@@ -1,0 +1,285 @@
+{
+  "kind": "INDEPENDENT_PLAN73_FINAL_PROSPECTIVE_R2",
+  "reviewer": "/root/p08_remaining_audit",
+  "decision": "GO_EXACT_PROSPECTIVE_PLAN73_DOCUMENT_PUBLICATION_ONLY",
+  "blockers": [],
+  "baseCommit": "c94e63d68f43393bec42cbaa94826b12b2a9b6cd",
+  "baseTree": "7708e69be7b0242c851616e1f06a88b82868ffd0",
+  "sourceAfterimagesAuthorizedByThisReview": false,
+  "scope": "Review the exact root-owned Plan73, R1 and rebound bindings for six source paths: five existing preimages and one absent helper. Source authoring remains gated on independent actual documentary R2.",
+  "reviewedDocuments": {
+    "plan.md": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/plan.md",
+      "bytes": 28402,
+      "lines": 199,
+      "gitSha": "74694e251c53303e9dffa7d52f44103fe5eed04e",
+      "sha256": "8e7782ced94202c40d6d4c5f56776621455ecdb2fff0fb6f115fd903cb1f46fd"
+    },
+    "prospective-r1.json": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/prospective-r1.json",
+      "bytes": 17327,
+      "lines": 411,
+      "gitSha": "8b9e7f29fbe861bbd2675626fd4f27a8419c4d97",
+      "sha256": "61b51e47c000d79e5a488394b458f28d078272ab6f4e17fda3825ca4540d8a80"
+    },
+    "preimage-bindings.json": {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/preimage-bindings.json",
+      "bytes": 26923,
+      "lines": 574,
+      "gitSha": "f237a29a74f16e9838de81a3e4ea323b73e9c7a2",
+      "sha256": "257d42d141693b43016d4ea9b0112c6ed3113643175e03add556573f3b99bb92"
+    }
+  },
+  "independentDataProof": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/independent-data-proof.json",
+    "bytes": 37492,
+    "lines": 886,
+    "gitSha": "edd377b1640083d5f234677c8405140c658b70fd",
+    "sha256": "afe71a4112811d1cf7d23fe8722d9a32d6a3a3b0786234a28de9cfa78d0d642b"
+  },
+  "inertVerifier": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current/independent-verify-data.py",
+    "bytes": 17566,
+    "lines": 296,
+    "gitSha": "f96a3b36ea05a91a070ff4f3364a582ca7399f19",
+    "sha256": "b648bbeaab8969635877fe9638ea1bd0521641de6f2a4a9e3d0be75f3ac63500"
+  },
+  "officialBasePacket": {
+    "path": "/tmp/e2e-original-artifacts/reviews/plan74-truthful-credential-copy/actual-document/official-packet.json",
+    "bytes": 3826631,
+    "lines": 1,
+    "gitSha": "ac921e2739a26f1086a84e60e65c896a1957c568",
+    "sha256": "b6a4bb24379f1c5002e4f881a071cf4a25405dbeeb59ac8b209d66b0f1fb8dfe"
+  },
+  "methodAndIndependence": {
+    "planOwnership": "The prospective design was prepared by qualification_audit and selected/rebound by root. This reviewer did not author Plan73 or any Plan73 candidate source.",
+    "prior72Authorship": "This reviewer authored the earlier Plan72 source. Plan72 is treated here as a closed prerequisite: its independent p09 actual-source R2 was fully read and its five published source tuples are rejoined to this current tree. This is not a replacement self-review of Plan72.",
+    "fullDocumentReads": "Complete Plan73 199-line plan, 411-line R1 and 574-line bindings were read. The final one-literal R1 cap clarification is independently reconstructed against the previously read a82666c9 SHA.",
+    "boundedSemanticReuse": "Earlier complete and bounded source-seam reads remain applicable: all 33 earlier reference pins AND full local body bytes equal the final current-tree reference bodies. No general survey was repeated.",
+    "dataProcessing": "Only inert Python standard-library JSON, bytes, Git object hashing and list/tree arithmetic. No project imports, compiler, tests, lint, VM, provider, browser, CI or Git/API calls.",
+    "currentTreeNotLivePoll": "The already retained official immutable packet is the evidence source; this task does not claim an independently refreshed remote branch lease.",
+    "rawCommitLimit": "Commit/parent/tree/publication/compare/delivery records are cross-joined. The raw Git commit serialization was not supplied and its object SHA was not independently reconstructed."
+  },
+  "currentBaseAndComposition": {
+    "headParentTreeCrossJoins": "PASS: head c94e63d6, sole parent 26b44d7b, tree 7708e69b agree across manifest/R1 and official records.",
+    "currentMerkle": {
+      "entries": 12872,
+      "leaves": 11162,
+      "explicitNonRootDirectories": 1710,
+      "directoriesIncludingRoot": 1711,
+      "allDirectoryHashesVerified": true,
+      "computedRoot": "7708e69be7b0242c851616e1f06a88b82868ffd0",
+      "truncated": false
+    },
+    "directoryCountMeaning": "1710 verified nonroot subtrees plus the recomputed root = 1711 directories total. R1 subtreeHashesMatched=1710 is correct.",
+    "source72ParentMerkle": {
+      "entries": 12868,
+      "leaves": 11159,
+      "explicitNonRootDirectories": 1709,
+      "directoriesIncludingRoot": 1710,
+      "allDirectoryHashesVerified": true,
+      "computedRoot": "3d634a00803293fcfbd51c58d018d3b7dd7a08bc",
+      "truncated": false
+    },
+    "onlyCurrentParentDelta": {
+      "added": [
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/74-truthful-credential-verification-copy-2026-11-17.md",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan74-truthful-credential-verification-copy-2026-11-17/prospective-r1.json",
+        "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan74-truthful-credential-verification-copy-2026-11-17/prospective-r2.json"
+      ],
+      "modified": [],
+      "removed": [],
+      "allOldLeafTuplesUnchanged": 11159,
+      "addedBodiesMatchCurrentLeaves": true
+    },
+    "closedSourcePins": "All seven actual source71/source72 bodies hash to their original published leaves and exactly match current mode/type/SHA tuples.",
+    "primaryAtRecordedReadback": "75cf2dcbfe2b540325ea50a022cb5195306a8c59; unchanged in the retained official packet.",
+    "source74Limit": "This base contains three reviewed Plan74 documentary additions only. Concurrent Plan74 source preparation is not adopted by this review."
+  },
+  "preimageAndReferenceJoins": {
+    "selectedExisting": 5,
+    "selectedNewAbsent": 1,
+    "readOnlyReferences": 35,
+    "allFortyPresentBodies": "PASS: exact byte counts, physical lines, Git blobs and SHA256 agree with the manifest, mode 100644/blob current tree leaves and own backup copies.",
+    "prior33References": "PASS: both old manifest pins and old full local reference bytes match. Prior semantic reads are reusable without rereading unrelated code.",
+    "addedReadonlyReferences": [
+      "tools/owned-process-broker/nativeEmulatedSourceCold.ts",
+      "tools/owned-process-broker/nativeEmulatedSourceScenario.ts"
+    ],
+    "onlyPreimageRebindChanges": [
+      "tools/owned-process-broker/tsconfig.json",
+      ".github/workflows/host-emulated-acceptance.yml"
+    ],
+    "absence": {
+      "helper": "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+      "plan": "docs/plans/provider-migration/frontend-parity-2026-11-12/73-original-finite-owner-loss-2026-11-16.md",
+      "evidenceDirectory": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/plan73-finite-owner-loss-2026-11-16",
+      "checkedAgainstCompleteCurrentTree": true
+    },
+    "sourceScenario": "Read-only exact actual72 body, 797 lines. Plan64 failure-aware cleanup literal remains exactly once at line 317.",
+    "coldHelper": "Read-only exact actual72 body, 125 lines. Its own source-profile closure, tsconfig exclusion and current fast operand remain preserved."
+  },
+  "sixSelectedPaths": [
+    "tools/owned-process-broker/nativeEmulatedOwnerLossScenario.ts",
+    "tools/owned-process-broker/nativeEmulatedProfile.ts",
+    "tools/owned-process-broker/nativeEmulatedProviderGate.ts",
+    "tools/owned-process-broker/tsconfig.json",
+    ".github/workflows/host-process-acceptance.yml",
+    ".github/workflows/host-emulated-acceptance.yml"
+  ],
+  "resolvedReviewObservation": {
+    "finding": "The older R1 said all six source bodies obey the 800-line cap, although one selected workflow already has 1772 lines.",
+    "resolution": "Root changed only that literal to All touched/new TypeScript bodies stay within the 800-line code cap; workflows retain existing layout and commands.",
+    "exactDeltaChecked": {
+      "previousSha256": "a82666c9aec8167dd950c00b6a0b4664e5e8d6e19ba50e628f5199228b45c789",
+      "oneLiteralRevisionReconstructedExactly": true,
+      "currentSha256": "61b51e47c000d79e5a488394b458f28d078272ab6f4e17fda3825ca4540d8a80",
+      "scope": "Clarifies TypeScript-only 800-line cap; no source-case or validation change."
+    },
+    "meaning": "Aligns R1 with plan line 34. It does not change code, the six-path scope, workflow layout, the TypeScript cap or any oracle."
+  },
+  "semanticFindings": [
+    {
+      "area": "Completed owner-install callback, before first physical resume",
+      "planLines": [
+        63,
+        75
+      ],
+      "result": "NO_CONCRETE_PROSPECTIVE_BLOCKER",
+      "sourceJoin": "HostWindowsLaunch.ts 340-429 retains the installOwner-before-Main-resume ordering. CapturedHostClient.ts 197-203, 429-434, 575-579 and 603-615 provide actual child-close/abort and sealed pending-reply behavior.",
+      "requiredAccounting": "One physical Main, two Host incarnations, one original root allocation/prepare, one intercepted resume, zero forwarded resume/write/input/peer rows, one crash marker. Original root witness is captured before prepare ACK.",
+      "lossAndReconnect": "Crash only after durable opening/UNKNOWN is retained at the selected barrier. Await actual A close and abort before settling the held callback by fixed rejection. B reuses Main, profile, storage and original run identity, with a distinct hello incarnation.",
+      "refusalAndCustody": "Retain four stale/successor resume/write refusals plus the numeric-PID schema refusal, three bounded root-alive observations, original HANDLE wait0 and Main close. Physical absence must not convert UNKNOWN to released.",
+      "limit": "This case is completed-install/before-resume coverage; it is not by itself complete W05 after-effect or genuine vendor qualification."
+    },
+    {
+      "area": "Two completed tool effects followed by lost Runtime/native completion",
+      "planLines": [
+        77,
+        121
+      ],
+      "result": "NO_CONCRETE_PROSPECTIVE_BLOCKER",
+      "sourceJoin": "The existing Main-port callback boundary can hold the original successful stdout read result before Host delivery. RetainedWindowsServices.ts and retained custody provide original capture-ACK and same-handle witnesses; TeamHost/Team command and FileRuntimeStore provide the existing command and durable read surfaces.",
+      "singleOperation": "Exactly one business message.send with TEST-register-services. Keep its actual intent/fingerprint/operationRef/deliveryId. Count one ACKed turn/start over writes; do not assume startup write or chunk counts.",
+      "barrier": "Hold the whole actual read chunk that completes the first matching fixed fixture item/completed or turn/completed, with the original more flag, after the Main port call returns. Use bounded newline-complete frame carry; a paired terminal frame in one chunk remains one barrier.",
+      "effectProof": "Before crash: exactly two completed process_register effects/capture ACKs, one registered peer row, one root and two original leaves, all three HANDLE witnesses captured before the corresponding original ACKs, and one existing read-only process-list join of public processRef/PID to original Main target/root/source captures.",
+      "durablePreLoss": "One durable input remains claimed or consumed, not terminal and not UNKNOWN at the barrier. Do not require an ACK to be lost if it was already delivered; the selected lost response is Runtime/native terminal completion, not a completed MCP effect ACK.",
+      "coldReadAndReconcile": "After actual A close/abort, held stdout rejects and is never delivered. B retains the same physical Main/profile/storage/run. First read is nonmutating and may still expose saved allocated/owned; require same member/generation/input, attached=false and nativeReady=false. One explicit reconcile then requires held/unknown and durable input UNKNOWN.",
+      "noReplay": "Identical completed Team command lookup must preserve the original receipt/deliveryId. TeamHost finally still invokes runtime.kick: this is not described as pure read, and unchanged exact input=1, turn/start=1, completed effects=2, registered row=1, capture/write/allocation counters are mandatory.",
+      "unknownRemainsUnresolved": "No tx.put or journal rewrite, numeric-PID adoption, replacement run/generation or sibling restart to bypass UNKNOWN. Cleanup must not convert unknown history to success/released."
+    },
+    {
+      "area": "Separate clean Codex restart and stale original service capture refusal",
+      "planLines": [
+        123,
+        143
+      ],
+      "result": "NO_CONCRETE_PROSPECTIVE_BLOCKER",
+      "sourceJoin": "Existing createTeamMemberActionMethods/readMemberActions/executeRuntimeMemberAction/executeMemberAction and retained launch APIs supply public restart. RetainedWindowsServices.ts 59-68 rejects an old original capture before querying it under a fresh capability.",
+      "precondition": "Run only after ordinary Codex original scoped Stops/settles and neighbor/root-survival proofs. The UNKNOWN cases do not restart or allocate a successor.",
+      "actualAction": "Read actual retained launch and member action view, with real rosterRevision and original generation. Prepare and execute the same command/payload. Do not close Main before restart.",
+      "newGeneration": "Before second root allocation, original Runtime is closed/released/unattached, provider cleanup completes and endpoint retires. Require distinct real binding/physical capability/provider generation/root pair and the specified numeric config/profile increment; do not equate identity domains by string comparison.",
+      "strictRefusal": "Issue one private existing service-query with the actual new capability and unchanged old capture. Require Original service custody unavailable at the source guard, no new target/action/input, old original HANDLE already absent, and new root still alive.",
+      "accountingAndCleanup": "Two roots total allocate/prepare/resume/release; successor input count zero. Preserve original per-root Stop bounds, original two absent/nonterminable service rows, final Main close, second root wait0, four original witness waits, actual child exit and sentinel proof.",
+      "otherProvider": "Ordinary OpenCode retains its original one root, one input, two effects, two scoped Stops and settles, and three witnesses."
+    }
+  ],
+  "integrationAndNoScopeExpansion": {
+    "fastLint": "Existing 137 operands are unique, exactly equal to manifest and preserve the original 136-prefix plus Cold once. Append only Profile, ProviderGate and OwnerLossScenario in selected order: 140 unique operands. No removal, reorder or native fixture operand.",
+    "fastCommandAndOperandsLines": [
+      139,
+      140,
+      276
+    ],
+    "brokerTsconfig": "Existing ten excludes preserve Cold once. Append only nativeEmulatedOwnerLossScenario.ts to eleven. No nativeRetainedProviderFixture.ts addition.",
+    "retainedCompiler": "Existing retained-host tsconfig already includes nativeEmulatedProviderGate; its transitive selected helper import supplies coverage. No extra compiler target/configuration is needed by this proposal.",
+    "sourceClosure": "Add only the selected existing profile closure entry for the new helper; keep current published Cold/SourceScenario ownership. Do not introduce a new peer, protocol, production API or generic fault framework.",
+    "mainVector": "No main-vector, supplementary-source roster or unrelated arrays are selected. The existing 1783 main vector remains outside this source cut.",
+    "workflow": "Only existing selected Windows x64/ARM64 finite provider wrapper wiring/partial receipts is extended. Preserve six builds, contracts, original Node/Electron broker lanes, provider cases, source A/B plus Cold, freeze, verifier, zero-exit/zero-active requirements and always artifacts.",
+    "cap": "All new/touched TypeScript must remain at most 800 lines without compression or splitting to evade the cap; SourceScenario stays unselected at 797. Workflows preserve their existing layout and commands.",
+    "nativeBoundary": "No import of unqualified W01 native implementation, genuine provider activation, external workflow operands or entire external chain. Finite TEST coverage is not native-first qualification."
+  },
+  "budgetsFailureAndCleanup": {
+    "unchangedBudgets": "Profile 10000/15000/5000/1000 ms, existing 10s helper/Stop, 25ms crash poll, Main 10s stop/3s drain, existing 15s restart request and 30-minute job. No increased readiness/provider/owner budgets.",
+    "afterEffectCutoff": "One absolute 15000ms input cutoff set before the sole business RPC. Public row join and selected observation waits consume the same remainder; no renewed allowance.",
+    "failureReceipts": "Initialize partial outcomes as INCOMPLETE/not-started before invocation, preserve the first failure and every relevant actual identity/counter/barrier observation.",
+    "promiseSettlement": "All intercepted callbacks and original RPCs settle on success or failure. Original A must close/abort before a held result is rejected; no late delivery or retry mutation.",
+    "physicalCleanup": "Close actual Host clients and original Main, wait every captured original HANDLE and retain sentinel proof. Fallback termination is limited to gate-owned witness custody after mandatory cleanup; it does not satisfy UNKNOWN reconciliation.",
+    "sourceReviewMustCheck": "Future afterimages must prove the counter placement, framing, bounded waits, cleanup on every throw and same-owner custody ordering. This prospective decision does not certify code that does not yet exist."
+  },
+  "semanticReadCoverage": {
+    "fullSourceBodiesPreviouslyRead": [
+      "nativeEmulatedProviderGate.ts (231 lines)",
+      "nativeEmulatedProfile.ts (105 lines)",
+      "providerPeer.ts (153 lines)",
+      "executeRuntimeMemberAction.ts (146 lines)",
+      "createTeamMemberActionMethods.ts (62 lines)",
+      "prepareSessionOpen.ts (48 lines)",
+      "transitionRuntimeMember.ts (153 lines)",
+      "readMemberActions.ts (82 lines)",
+      "sessionState.ts (106 lines)",
+      "createRuntimeTeamLaunch.ts (182 lines)",
+      "projectRuntimeMember.ts (77 lines)"
+    ],
+    "boundedSourceWindowsPreviouslyRead": [
+      "HostWindowsLaunch 142-215, 231-255, 340-429",
+      "RetainedWindowsServices 1-94, 142-230",
+      "nativeGateContext 85-159",
+      "RuntimeOwner 131-169, 200-280, 330-425, 520-578, 608-696",
+      "executeMemberAction 1-59, 80-155, 160-195, 217-284",
+      "RetainedWindowsCustody 100-177, 268-285, 303-335, 350-389, 451-467, 481-522",
+      "FileRuntimeStore 185-311",
+      "RuntimeTeamCoordinator 294-354, 390-440, 639-706, 735-799",
+      "TeamHost 385-459",
+      "executeTeamCommand 40-140",
+      "TeamOwner 740-777",
+      "executeCapturedRuntimeControl 180-210, 246-311",
+      "CapturedHostClient 180-206, 411-462, 556-619, 687-800"
+    ],
+    "all35Bodies": "All 35 complete local reference byte streams were hashed and joined. This does not claim that every unrelated line of all 35 bodies was semantically reread.",
+    "scopeReuse": "The complete current body equality to prior pinned references is the basis for retaining earlier source analysis. External proposal code is not treated as authoritative or adopted."
+  },
+  "closedPrerequisiteReports": [
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan71-original-setup-window/actual-source/independent-actual-source-r2.json",
+      "bytes": 17401,
+      "lines": 340,
+      "gitSha": "1aaf22bd1e18c761f47af9a2186418bcb7b196f7",
+      "sha256": "67e0946ae75da8aa45e8729e51ccc20346098e55d660f2fb8c1c5df6280ea6a3"
+    },
+    {
+      "path": "/tmp/e2e-original-artifacts/reviews/plan72-finite-cold-resume-fresh/actual-source/independent-actual-source-r2.json",
+      "bytes": 16921,
+      "lines": 344,
+      "gitSha": "0a6885e60b2b9d9aabb849f03c99919a8e6f1a10",
+      "sha256": "707c128ac9436a34250608ead7f72c29d5bda0276d7577a6045d1a32a94244b4"
+    }
+  ],
+  "remainingMandatoryGates": [
+    "Root full read of this exact final prospective R2 and data proof.",
+    "Publish only the selected Plan73 plan/R1/R2 documents, then independent actual documentary R2 before any source73 afterimage.",
+    "Author only the six selected source paths, against freshly rebound unchanged preimages; retain all closed71/72 and unrelated74 changes.",
+    "Complete frozen-source R1/R2, strict exact patch and full-body/counter/cleanup review, then publication and independent actual-source R2.",
+    "Later authorized resulting-head original CI/runtime qualification; no finite source or documentary gate substitutes for it."
+  ],
+  "qualificationLimits": [
+    "No runtime, Windows physical cleanup, owner loss, cold resume or genuine vendor PASS is newly established here.",
+    "No full W05, native-first Windows, product UI parity, Plan40 contract choice, P09 or whole migration completion claim.",
+    "Exact finite case receipts and all original assertions must survive future source implementation and original execution."
+  ],
+  "taskCounters": {
+    "sourceAfterimagesAuthored": 0,
+    "repositoryFilesChanged": 0,
+    "gitCalls": 0,
+    "apiCalls": 0,
+    "ciCalls": 0,
+    "projectExecution": 0,
+    "nativeOrVendorExecution": 0,
+    "evidenceOnlyWrites": true
+  },
+  "recovery": {
+    "canonicalDirectory": "/tmp/e2e-original-artifacts/reviews/plan73-finite-owner-loss/rebound-current",
+    "exactBackupDirectory": "/workspace/scratch/b87c90489dab/e2e-recovery/plan73/rebound-current",
+    "fullReportAndDataProofStoredInFunctionsStore": true
+  }
+}

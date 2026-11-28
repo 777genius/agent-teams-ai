@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916035,
+  "outcome": "PASS within original captured native V2/finite-model Settings scope",
+  "payloads": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/job-133017916035.log",
+      "bytes": 108881,
+      "blob": "6af62654e11a977fd92b2c835ddcb35f60dcdbb1",
+      "sha256": "20cefcab96008865b435d59eb37923b2ae7e7b16eafe44e7f6d335123e4e7fee"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/artifact-14191785424.zip",
+      "bytes": 1011648,
+      "blob": "7ab6151c0f069b5efbc06e55eb6906ef126a4bbb",
+      "sha256": "da6292a773eb4e7af1a410d730457bec318c35e15c92518b92f0e770d386b9dd"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/archive-audit.json",
+      "bytes": 10267,
+      "blob": "c262d1a35093b9f05916e6fb66c2033f7d04cc34",
+      "sha256": "e177ec4cf78c09ea7c800cd18187d7a169641f444253d2b0d00d070bcf9c9d1b"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/extracted/TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+      "bytes": 731095,
+      "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+      "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/source-pin-audit.json",
+      "bytes": 3952,
+      "blob": "c16e0d2aed256d193f444f1b200b4954f84da66c",
+      "sha256": "519809764fa42830bf3288210d0e21e1f1542d18e6b2d292daac29b6543f6167"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/audit.json",
+      "bytes": 68126,
+      "blob": "bc37513941f528e5cb21d7999706f6a249ee88b6",
+      "sha256": "5f4b4e6df677ffc95952ab1ce8da6f00ae7d93813eae7fb06c4123581c5ab02a"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/v2-management/Plan29-v2-management-appendix.md",
+      "bytes": 6798,
+      "blob": "bbbbcba4d99893bd4b08bdf0b27aebc4b60c7b4f",
+      "sha256": "1f41e3822955bc756fcc318f7bdcb3f42c03619f4988133bdd3616044c9a8f25"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0203.json",
+      "bytes": 15080,
+      "blob": "4a9b4ebd7f7a1410184b5d5df605e574984c67a5",
+      "sha256": "a0ab504afd23015acb2d8677eb0a7be34ee6deb5ce6e9b7a2497f97605a46e49"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0203.json",
+      "bytes": 184637,
+      "blob": "6e46a30c12b354171499b3d07089b1801d32eab7",
+      "sha256": "487fba5cb804d01f5d6cf2c8a82f338535c4c23eb7a98c02d0564791bc7c6bc9"
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  ],
+  "recoverableOriginalMembers": [
+    {
+      "path": "TEST-desktop-backend-n3BzGv/desktop-backend-app.log",
+      "crc32": "50b7e1d7",
+      "bytes": 17085,
+      "blob": "ce8e66caae91321f6700229bd9282e0fb621b71c",
+      "sha256": "32a3d425b56a30cd41831ab873cb1c50925c66114099412029fb7c385c680894"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/desktop-backend-receipt.json",
+      "crc32": "5f7b59bd",
+      "bytes": 731095,
+      "blob": "dd5d95ca4b7baf611d21b9eda4a424c2d2aaa1aa",
+      "sha256": "4c3649898de49bb965d9e6a2c4028c7ca84c1cae96da55c50beb5c881de29597"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/desktop-descriptor.json",
+      "crc32": "1c493ccd",
+      "bytes": 3319,
+      "blob": "0b89da22053866bdf180e20055ca69cda7ff93b5",
+      "sha256": "0fd1d101a1865e985b2a103c06d9ddd00edf4f8668e235a2bb556607874b8db0"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/host-profile.json",
+      "crc32": "da90a503",
+      "bytes": 5011,
+      "blob": "c2b01db7876ac5cb5deabfd466616fd737dc426d",
+      "sha256": "8a0d8fa0a506537f3fa17e5af2837083ba20c831d90d45f80bc035049232337b"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/188e0ca5fd5ac6bd40621401e97426d2d75714c80d3d432625a309a1e1e85d64.json",
+      "crc32": "d95260b6",
+      "bytes": 3216,
+      "blob": "81ea8f961a2a35d4994c853c3c983adc4c12d3cb",
+      "sha256": "d100d06600cf0d99321f523be9869b7873d7f7a6287ce9d314e8c8498d43ea1d"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/1d35e62d9afcabecc54d23fa0d8726b6a463eb8fadc083b96538c3a3bf9fe588.json",
+      "crc32": "16d14b61",
+      "bytes": 1345,
+      "blob": "c52ef4bd67798a0a7922acbcf379fa96f07a8b87",
+      "sha256": "395166a162509f4a7b334ace7e5fa7ccd4378a5894518d603b0c5d552bb8ae47"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/1de194a9d4da7f88ee8245ac0d5b14e66f3bd566fee7c36bb6ac8be515c742ff.json",
+      "crc32": "5aa03bf0",
+      "bytes": 3237,
+      "blob": "e92e78bb1c54319dca56e5d97bb30a666d03b24d",
+      "sha256": "dc23b93c0a59aa5adc121a0d1430625a454c95e3c89d0ea320f769777ed435fe"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/387897222be465245b1c621d8d19acf6e588fbb4e1d93bc935a661698d658204.json",
+      "crc32": "3c3dbdc5",
+      "bytes": 3267,
+      "blob": "06c60e0167ae4b3e61033230e9576e7aaca928d3",
+      "sha256": "b580291f0f938814861bffdac169d289e6721d389382d15503b35d4492a3b721"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/3cd72e9eaa496e1f367f941f2d64fd0004e465564ef0169092a4ee4150ed6224.json",
+      "crc32": "fb3be979",
+      "bytes": 804,
+      "blob": "e772ea607a549cfa49f96864fb92470083716a3e",
+      "sha256": "b8a79dad29218077c76698c7796fe806f7f390030b41333d25cde9c011e0ad64"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/6a4dab2969f303ee469161138fd59a8cbe0ad4612db624fca09b630c947469b4.json",
+      "crc32": "8f46ecd4",
+      "bytes": 2811,
+      "blob": "e0caa70161861ff71ab6f11e48b6481953f3c10c",
+      "sha256": "cc479068d1df26ff2ce4cd38f0cc34f204d5882cea1ab8d3bfda4de7a429dc7e"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/853e7960b1786cf1a8a4a68cbc1fe8958340e3bdc5318e58820801653ded1eb0.json",
+      "crc32": "6d231676",
+      "bytes": 1370,
+      "blob": "640a1cc869a70c54bcb40cedea4091016fd6e244",
+      "sha256": "782fbbf1483593b956df798e92166baf5e6c1580a0f6975b035537066f57e477"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/8cbb340f020c2b09eff4ee2fe40abad7660d2063efeb47472b6d5731372e6247.json",
+      "crc32": "2904f392",
+      "bytes": 2832,
+      "blob": "9c399413559f31210c974116ebe616b7da8ade4d",
+      "sha256": "1dda6fe0df5f8b07a7957f9c0663f54c592b35ff94572938b79bf0fc5af38347"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/9b9a22aa18c7f67ac028ff52d6e44425572f6ba884466dabc00cd260faac8242.json",
+      "crc32": "abaa413b",
+      "bytes": 812,
+      "blob": "e4eace80488be69d8df414ae0832f75cd475aabe",
+      "sha256": "8d18193f44f329b58969459814d5ee99fcb268fe6a6a6c344d13fe30e0bf9f5f"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/ab7a4405139097711a68735e0a40e2d1c7123aaebe2d1f199105ca978ab22b01.json",
+      "crc32": "34c7fddc",
+      "bytes": 812,
+      "blob": "530d56a8d06cae03557b502e373e6298263d2c3f",
+      "sha256": "448419e4a0a32300920e4a586117c1eb0abafd6d0587ae0e3f05c455a95100ea"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/d19d0f344ea662f18302754d3e5f55551ccabe017a11bfbe08924ea075b9f475.json",
+      "crc32": "475858bb",
+      "bytes": 3245,
+      "blob": "327171cb9071bbb3874bab7cf43082be64c21155",
+      "sha256": "47d64609aea6fa4d3fb254511e2bd6fb2554cee2d547f299f8744d9d591a3326"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/management-commands/ded973d826635e14459c6e5b1aa95404545536f25ba4d4fbdb241683663cbd0e.json",
+      "crc32": "3c5337ea",
+      "bytes": 3237,
+      "blob": "e32ca45c31706133a35a67055d832e07676b2f3c",
+      "sha256": "052614beb90a8fb6a05bc2a1116e4d5fe2eb043b4c1f3ddd8f018e421297162b"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/hoststore/runtime-sources/index.json",
+      "crc32": "7f6a3f92",
+      "bytes": 15919,
+      "blob": "c2ea7f7ddf6daa99741b04459e08b494fccb9c39",
+      "sha256": "bc51bb3119df7d80aeeabcc54ca6289df9c46da0c5c11a40fbf4cc089d6dcc82"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/preferences/global/global-runtime-preferences.json",
+      "crc32": "dec4c3b5",
+      "bytes": 142,
+      "blob": "e25d1b2d66ad660821605f4a0ec1712029972629",
+      "sha256": "cac5d9be2ad49793b423ac2e4b18eb9f6991083f4faa92d227ce14bbb0a1ab14"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/preferences/workspace/agent-teams-runtime-preferences.json",
+      "crc32": "1722e86a",
+      "bytes": 123,
+      "blob": "ec2ab78f62f443285d02373e7840796a47e05eba",
+      "sha256": "2994a15037107281f14c901bba5999e42d1d31541c690f7a8410eee4ce8846cf"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/sentinel-invocations.ndjson",
+      "crc32": "e60f1fd1",
+      "bytes": 686,
+      "blob": "11f58ef0fcba4ace4844ef7b6e5163b9443facf8",
+      "sha256": "22f07046b2d6f9156c8345612fe82234eb4057899a9424d22ebad0a36d56e2fd"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/ui-v2-management-connected.png",
+      "crc32": "1e2efeac",
+      "bytes": 104089,
+      "blob": "424513eea137744e58f872018302b493c1a99799",
+      "sha256": "0332e54ff70eef0d81c8de9f6722334906ef5352910d46a67aaa3f7ca5e3f5df"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/ui-seed-receipt.json",
+      "crc32": "fa9b5d54",
+      "bytes": 2037,
+      "blob": "f0b55e1af7f9cec351aee138c032155e7361de46",
+      "sha256": "bfaa0c1957d444e35a77989db2db8bb251bd1fea694958e709d80f16bbb0102f"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/ui-v2-management-inherited.png",
+      "crc32": "3cf98143",
+      "bytes": 73947,
+      "blob": "f8ab5ead3bc11ecb2ea0e08c8f0468d199eaa441",
+      "sha256": "3f26be4db8199a5155583c0218e040d20c65c9f6e9c4003c8d872079061ac037"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/ui-v2-management-project-override.png",
+      "crc32": "7661cd6e",
+      "bytes": 75402,
+      "blob": "76da20056b91199f4901730d50faf87c33c2e6d7",
+      "sha256": "637a6dc16bb24455ff910f8b77e328d025ce4acd1a651ad6c85d523f47c88051"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/ui-v2-management-rejected-key.png",
+      "crc32": "59b25af6",
+      "bytes": 123027,
+      "blob": "61076f8cd1b956d93fc8f5988f75a015b147108d",
+      "sha256": "748b96fcc1e445fef56e45541e9f44569df7a66f2e70132641bc14da37a48241"
+    },
+    {
+      "path": "TEST-desktop-backend-n3BzGv/ui-v2-management-reloaded.png",
+      "crc32": "8abb9cb8",
+      "bytes": 74122,
+      "blob": "f76380d956d70f6e229268281c93a7c16becf980",
+      "sha256": "215c56f2683536753acf51d3439c2c4d4f64284844727846b511556407f0637c"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-pgAW7E/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-pgAW7E/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "990f7494",
+      "bytes": 1838,
+      "blob": "5321c3f48b31288bf55516b0631bf2cdb751c390",
+      "sha256": "1c431709442542e47919c59e8dd136c0a4e79d432fa26cdf7e5e040702609ccc"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "9a6a5880",
+      "bytes": 271,
+      "blob": "a449a9594c55faf43761c4532b752e6633732abe",
+      "sha256": "c3892ff622df5b2101290d4475e0c9e78db31a8cb10c529b1cf71f90ab0829cb"
+    },
+    {
+      "path": "host-emulated-opencode-v2-inputs.json",
+      "crc32": "7f1e866a",
+      "bytes": 783,
+      "blob": "fe2c55107e7b754335c1d8834843478fb18f2b87",
+      "sha256": "65e44d0af912fc29331080ef6a38c5558e74751995c9ab1e797b391be35d077a"
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui-verified.json",
+      "crc32": "7e5c021b",
+      "bytes": 402,
+      "blob": "b0b9b79ed0ed54521ee8a8515fe8c731fcbb0f04",
+      "sha256": "1f7cd378a6018a5a2c204592c629931443ad4c4a071767dd97ceeee70956777f"
+    },
+    {
+      "path": "host-emulated-opencode-v2-management-ui.log",
+      "crc32": "cb5e4efb",
+      "bytes": 260,
+      "blob": "52f4be9bba1bb43e32a91803a120f0b17a0a2d6c",
+      "sha256": "6c50b8b9b27724261a41ea41ee1351fa73d51fc91b75dfdb89c3e53ce2c54246"
+    }
+  ],
+  "actuallyViewedPngCount": 5,
+  "qualification": "Original Electron Settings route with captured native OpenCode V2/Bun and exactly five finite localhost model intents; no vendor authentication/inference, runtime Team, OAuth/forget, privacy GREEN or aggregate qualification.",
+  "limits": [
+    "Five TEST requests are one refusal and four successes, not five successful authentications.",
+    "The rejected-key screenshot says new credential was not kept, while the original source/proof asserts rejected key retention until explicit replacement; the mismatch is preserved, not repaired or hidden.",
+    "Connected/inherited/reloaded screenshots contain loading/spinner/dimmed states; no all-idle or latency claim.",
+    "Seventeen captured native children and five absence witnesses are not independently retained exit-code callbacks for every child.",
+    "Original close and final absence are retained separately from native executable/source identity.",
+    "No historical6626 cause attribution, real vendor inference, Claude/Codex execution, OAuth/forget, runtime Team, privacy GREEN or aggregate readiness."
+  ]
+}

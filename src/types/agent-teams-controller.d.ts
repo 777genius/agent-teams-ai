@@ -1,4 +1,11 @@
 declare module 'agent-teams-controller' {
+  export function buildTaskCommentForwardNotificationText(
+    task: { id: string; displayId?: string; subject?: string },
+    comment: { text: string; author: string },
+    isUserAnswer?: boolean,
+    taskLabel?: string
+  ): string;
+  export function validateKanbanSafetyState(value: unknown, teamName: string): void;
   export interface TaskFieldUpdates {
     subject?: string;
     description?: string;
@@ -165,10 +172,13 @@ declare module 'agent-teams-controller' {
   }
 
   export interface ControllerReviewWriteApi {
+    disapproveReview(taskId: string, flags: { from: 'user' }): unknown;
     requestReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveReview(taskId: string, flags?: Record<string, unknown>): unknown;
     completeReview(taskId: string, flags?: Record<string, unknown>): unknown;
     approveAsHuman(taskId: string): unknown;
+    approveReviewFromUser(taskId: string, flags?: Record<string, unknown>): unknown;
+    requestChangesFromUser(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChangesAsHuman(taskId: string, flags?: Record<string, unknown>): unknown;
     requestChanges(taskId: string, flags?: Record<string, unknown>): unknown;
     startReview(taskId: string, flags?: Record<string, unknown>): unknown;
@@ -298,6 +308,30 @@ declare module 'agent-teams-controller' {
 
   /** Context-free protocol text builders, shared across lead and member prompts. */
   export interface ProtocolsApi {
+    buildTaskStartNotification(
+      teamName: string,
+      task: {
+        id: string;
+        subject: string;
+        owner?: string;
+        description?: string;
+        prompt?: string;
+        descriptionTaskRefs?: { taskId: string; displayId: string; teamName: string }[];
+      },
+      taskLabel: string,
+      notification: 'legacy' | 'user',
+      leadName?: string,
+      toolProtocol?: 'legacy' | 'captured-team'
+    ): {
+      member: string;
+      from: string;
+      text: string;
+      taskRefs?: { taskId: string; displayId: string; teamName: string }[];
+      summary: string;
+      source: 'system_notification';
+    };
+    buildActionModeProtocol(): string;
+    buildActionModeAgentBlock(mode: 'do' | 'ask' | 'delegate' | undefined): string;
     buildChatVisualizationProtocolText(): string;
     buildChatVisualizationRefreshInstruction(): string;
     buildActionModeProtocolText(delegateDescription: string): string;

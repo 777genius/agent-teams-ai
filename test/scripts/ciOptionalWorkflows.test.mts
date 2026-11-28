@@ -4,10 +4,16 @@ import { matchesGlob } from 'node:path';
 import { test } from 'node:test';
 
 import {
+  evaluateWorkflowValue,
+  HOST_EMULATED_SUPERSESSION_GROUP,
   RUN_SUPERSESSION_POLICY,
   SUPERSESSION_CANCEL,
   SUPERSESSION_GROUP,
 } from '../workflows/runSupersession.mts';
+import type { ExpressionContext } from '../workflows/runSupersession.mts';
+import { supplementalNativeJobs, withoutProvenNativeJobs } from '../../scripts/ci/ci-feedback-native-jobs.mts';
+import type { NativeProofMode } from '../../scripts/ci/ci-feedback-native-jobs.mts';
+import { nativeProofFixture } from './ciNativeProofFixture.mts';
 
 const deferredJobs = {
   codeql: 'analyze',
@@ -33,10 +39,10 @@ for (const [name, job] of Object.entries(deferredJobs)) {
     const trigger = source.split('\njobs:')[0];
     assert.match(
       trigger,
-      /pull_request:\n    types: \[opened, synchronize, reopened, ready_for_review, converted_to_draft\]/
+      /pull_request:\n {4}types: \[opened, synchronize, reopened, ready_for_review, converted_to_draft\]/
     );
     assert.match(trigger, /workflow_dispatch:/);
-    const body = source.split(`\n  ${job}:\n`)[1]?.split(/\n  [\w-]+:\n/)[0];
+    const body = source.split(`\n  ${job}:\n`)[1]?.split(/\n {2}[\w-]+:\n/)[0];
     assert.ok(body, `Missing ${job}`);
     assert.match(
       body,
@@ -92,9 +98,9 @@ test('native packaged dispatch guards remain intact', () => {
 });
 
 test('security schedules and main push triggers remain available', () => {
-  assert.match(workflow('codeql'), /schedule:\n    - cron:/);
+  assert.match(workflow('codeql'), /schedule:\n {4}- cron:/);
   for (const name of ['codeql', 'codex-runtime-smoke', 'runtime-bootstrap-smoke', 'windows-teammate-console-native']) {
-    assert.match(workflow(name), /push:\n    branches: \[main\]/);
+    assert.match(workflow(name), /push:\n {4}branches: \[main\]/);
   }
 });
 
@@ -109,6 +115,15 @@ test('automatic checks use the canonical run supersession policy verbatim', () =
   }
 });
 
+test('only Host Desktop retains its exact isolated v2 namespace and canonical cancellation', () => {
+  assert.deepEqual(RUN_SUPERSESSION_POLICY.isolatedV2, ['host-emulated-acceptance']);
+  const trigger = workflow('host-emulated-acceptance').split('\njobs:')[0]
+    .replace(/^ {2}#[^\n]*\n/gm, '');
+  const isolatedConcurrency = `\nconcurrency:\n  group: ${HOST_EMULATED_SUPERSESSION_GROUP}\n  cancel-in-progress: ${SUPERSESSION_CANCEL}\n`;
+  assert.ok(trigger.includes(isolatedConcurrency), 'Host Desktop must retain the one exact migrated namespace');
+  assert.ok(!trigger.includes(canonicalConcurrency), 'the obsolete v1 group must not be restored');
+});
+
 test('policy tests run before main CI planning, without dependency installation', () => {
   const source = workflow('ci').split('\n  feedback:')[0];
   assert.match(source, /node --test test\/scripts\/ciOptionalWorkflows.test.mts/);
@@ -118,15 +133,189 @@ test('policy tests run before main CI planning, without dependency installation'
   assert.doesNotMatch(source, /Install dependencies/);
 });
 
+for (const [name, dispatchInput] of [
+  ['stage1-desktop', 'stage1_desktop'],
+  ['stage1-process-qualification', 'stage1_process_qualification'],
+] as const) {
+  test(`${name}: native qualification follows the authenticated CI plan`, () => {
+    const body = workflow('ci').split(`\n  ${name}:\n`)[1]?.split(/\n {2}[\w-]+:\n/)[0];
+    const condition = body?.match(/\n {4}if: >-\n([\s\S]*?)\n {4}runs-on:/)?.[1];
+    assert.ok(body && condition, `Missing original ${name} selection`);
+    const repository = '777genius/agent-teams-ai';
+    const pull = {
+      draft: false,
+      base: { ref: 'feat/provider-migration-stage-1' },
+      head: { ref: 'fix/stage1-proof', repo: { full_name: repository } },
+    };
+    const github = {
+      repository,
+      event_name: 'pull_request',
+      event: { action: 'synchronize', pull_request: pull },
+    };
+    const full = { full: 'true', metadata: 'false' };
+    const selected = (
+      outputs: Record<string, string> = full,
+      context: ExpressionContext = {}
+    ) => evaluateWorkflowValue(`\${{ ${condition} }}`, {
+      github, inputs: {}, needs: { plan: { result: 'success', outputs } }, ...context,
+    });
+    const edit = (changes: ExpressionContext) => ({
+      github: { ...github, event: { ...github.event, action: 'edited', changes } },
+    });
+    assert.equal(selected({ full: 'false', metadata: 'true' }, edit({ body: { from: 'Old body' } })),
+      false, 'authenticated metadata must not duplicate original native qualification');
+    assert.equal(selected({ full: 'true', metadata: 'true' }), false);
+    assert.equal(selected({ full: 'false', metadata: 'false' }), false);
+    assert.equal(selected({}), false, 'missing planning output cannot admit native work');
+    assert.match(body, /^ {4}needs: plan$/m, 'selection must wait for the actual plan');
+    for (const action of ['opened', 'synchronize', 'reopened', 'ready_for_review', 'labeled']) {
+      assert.equal(selected(full, {
+        github: { ...github, event: { ...github.event, action } },
+      }), true, `ready ${action} retains original native selection`);
+    }
+    for (const changes of [
+      { base: { ref: { from: 'main' } } },
+      { body: { from: 'Old body' }, unknown: {} },
+      { body: { from: 'Old body' } },
+    ]) {
+      assert.equal(selected(full, edit(changes)), true,
+        'retarget, unknown edit and rejected-producer full fallback still qualify code');
+    }
+    const withPull = (value: typeof pull) => ({
+      github: { ...github, event: { ...github.event, pull_request: value } },
+    });
+    assert.equal(selected(full, withPull({ ...pull, draft: true })), false);
+    assert.equal(selected(full, withPull({ ...pull, base: { ref: 'main' } })), false);
+    const integration = { ...pull, base: { ref: 'main' },
+      head: { ...pull.head, ref: 'feat/provider-migration-stage-1' } };
+    assert.equal(selected(full, withPull(integration)), true);
+    assert.equal(selected(full, withPull({ ...integration,
+      head: { ...integration.head, repo: { full_name: 'contributor/agent-teams-ai' } } })), false);
+    const dispatch = { github: { ...github, event_name: 'workflow_dispatch' } };
+    assert.equal(selected(full, dispatch), false);
+    assert.equal(selected(full, { ...dispatch, inputs: { [dispatchInput]: false } }), false);
+    assert.equal(selected(full, { ...dispatch, inputs: { [dispatchInput]: true } }), true);
+  });
+}
+
+test('native proof roster matches actual PR selectors and original receipt steps', () => {
+  const repository = '777genius/agent-teams-ai';
+  const stage1 = 'feat/provider-migration-stage-1';
+  const frontend = 'feat/provider-host-frontend-parity-20261112';
+  const cases: [string, string, string, number, boolean][] = [
+    ['ordinary', 'main', 'fix/ci', 12, true],
+    ['integration child', stage1, 'fix/ci', 1310, true],
+    ['integration fork', stage1, 'fix/ci', 1310, false],
+    ['integration to main', 'main', stage1, 982, true],
+    ['integration fork to main', 'main', stage1, 982, false],
+    ['frontend base', frontend, 'fix/ci', 1220, true],
+    ['frontend head', 'feature/other', frontend, 1186, true],
+    ['explicit primary Codex route', 'feature/other', stage1, 982, true],
+    ['retained draft exception', frontend, 'fix/frontend-parity-completion-20261113', 1192, true],
+    ['retained draft wrong number', frontend, 'fix/frontend-parity-completion-20261113', 1193, true],
+    ['retained draft wrong base', 'feature/other', 'fix/frontend-parity-completion-20261113', 1192, true],
+    ['retained draft wrong head', frontend, 'fix/other', 1192, true],
+    ['retained draft fork', frontend, 'fix/frontend-parity-completion-20261113', 1192, false],
+  ];
+  const run = { id: 100, run_attempt: 1, head_sha: 'a'.repeat(40), updated_at: '2026-11-26T02:00:00Z' };
+  for (const mode of ['full', 'draft', 'metadata'] as NativeProofMode[]) {
+    for (const [label, base, head, number, sameRepository] of cases) {
+      const pr = { number, draft: mode === 'draft', base: { ref: base },
+        head: { ref: head, repo: { full_name: sameRepository ? repository : 'contributor/agent-teams-ai' } } };
+      const actual = nativeProofFixture(pr, run, mode);
+      const expected = supplementalNativeJobs(pr, repository, mode);
+      assert.deepEqual(actual.jobs.map(({ name, conclusion }) => ({ name, conclusion })),
+        expected.map(({ name, conclusion }) => ({ name, conclusion })), `${mode}: ${label}`);
+      for (const selected of expected) {
+        const actualJob = actual.jobs.find((job) => job.name === selected.name)!;
+        const steps = actualJob.steps as { name: string }[];
+        for (const name of selected.requiredSteps) {
+          assert.equal(steps.filter((step) => step.name === name).length, 1,
+            `${selected.name}: mandatory original step must be unconditional or always(): ${name}`);
+        }
+      }
+      const gate = { name: 'Full qualification', conclusion: mode === 'draft' ? 'failure' : 'success',
+        steps: [...actual.gateSteps, { name: 'Require complete current-code qualification',
+          status: 'completed', conclusion: mode === 'draft' ? 'failure' : mode === 'metadata' ? 'skipped' : 'success' }] };
+      assert.deepEqual(withoutProvenNativeJobs([...actual.jobs, gate], run, pr, repository, mode, true),
+        [gate], `${mode}: ${label}: native normalization preserves the original core gate outcome`);
+    }
+  }
+});
+
+test('selected native Desktop acceptance is required by the existing Full qualification', () => {
+  const source = workflow('ci');
+  const job = source.split('\n  retained-opencode-coexistence:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
+  const gate = source.split('\n  full-qualification:\n')[1];
+  assert.ok(job && gate);
+  const selectedJob = job.match(/\n {4}if: >-\n([\s\S]*?)\n {4}runs-on:/)?.[1].trim();
+  const selectedGate = gate.match(/Require selected retained V1 and Host V2 native Desktop qualification\n {8}if: >-\n([\s\S]*?)\n {8}env:/)?.[1].trim();
+  assert.ok(selectedJob && selectedGate);
+  assert.equal(selectedJob.replace(/\s+/g, ' '), selectedGate.replace(/\s+/g, ' '),
+    'job selection and required-outcome selection cannot diverge');
+  assert.match(selectedJob, /needs\.plan\.outputs\.full == 'true'/);
+  assert.match(selectedJob, /needs\.plan\.outputs\.reuse == 'false'/);
+  assert.match(selectedJob, /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/);
+  assert.match(gate, /needs: \[[^\]]*retained-opencode-coexistence[^\]]*\]/);
+  assert.match(gate, /RETAINED_COEXISTENCE_RESULT: \$\{\{ needs\.retained-opencode-coexistence\.result \}\}/);
+  assert.match(gate, /run: test "\$RETAINED_COEXISTENCE_RESULT" = success/);
+  assert.doesNotMatch(job.split('\n    steps:\n')[0], /\$\{\{\s*runner\./,
+    'runner context is unavailable before a job is allocated');
+  assert.match(job, /printf 'TMPDIR=%s\\n' "\$RUNNER_TEMP" >> "\$GITHUB_ENV"/);
+  assert.doesNotMatch(job, /continue-on-error:/);
+  assert.match(job, /OPENCODE_V1_V2_COEXISTENCE_GO: '1'/);
+  assert.match(job, /node --test scripts\/legacy-agent-host\/desktop-retained-opencode-coexistence\.native\.ts/);
+  assert.match(job, /assert\.equal\(r\.status, 'PASS'\); assert\.equal\(r\.cleanup, true\)/);
+  assert.match(job, /path: \.runtime-download\/TEST-retained-runtime-source/);
+  assert.match(job, /repository: 777genius\/agent_teams_orchestrator\n {10}ref: f5c69c2e9024ffc36a5db5eafe30f53539b52f62/);
+  assert.match(job, /assert\.equal\(commit, 'f5c69c2e9024ffc36a5db5eafe30f53539b52f62'\)/);
+  assert.match(job, /assert\.equal\(commit, lock\.opencodeV2Delivery\['linux-x64'\]\.sourceCommit\)/);
+  assert.doesNotMatch(job, /steps\.retained-source\.outputs\./,
+    'the stock helper checkout must never accept a source-derived repository or ref');
+  const sqlite = job.split('      - name: Rebuild original SQLite for the pinned Electron ABI\n')[1]?.split('\n      - name:')[0];
+  assert.ok(sqlite);
+  assert.match(sqlite, /require\('electron\/package\.json'\)\.version, '44\.10\.1'/);
+  assert.match(sqlite, /pnpm exec electron-rebuild --module-dir \. --force --only better-sqlite3 --version 44\.10\.1/);
+  assert.doesNotMatch(sqlite, /--input-type/, 'node-gyp file children cannot inherit a stdin-only Node input type');
+  const account = source.split('\n  codex-login-desktop:\n')[1]?.split(/\n {2}[\w-]+:\n/)[0];
+  const selectedAccount = account?.match(/\n {4}if: >-\n([\s\S]*?)\n {4}runs-on:/)?.[1].trim();
+  const requiredAccount = gate.match(/Require selected Codex login and protocol-peer schedule qualification\n {8}if: >-\n([\s\S]*?)\n {8}env:/)?.[1].trim();
+  assert.ok(selectedAccount && requiredAccount);
+  assert.equal(selectedAccount.replace(/\s+/g, ' '), requiredAccount.replace(/\s+/g, ' '),
+    'every selected Codex login/protocol-peer schedule run must succeed for the aggregate gate');
+  assert.match(selectedAccount, /github\.event_name == 'workflow_dispatch' && inputs\.stage1_desktop/);
+  assert.match(selectedAccount, /github\.event\.pull_request\.number == 982/);
+  assert.match(selectedAccount, /github\.event\.pull_request\.head\.ref == 'feat\/provider-migration-stage-1'/);
+  assert.match(selectedAccount, /github\.event\.pull_request\.draft == false/);
+  assert.match(selectedAccount, /github\.event\.pull_request\.head\.repo\.full_name == github\.repository/);
+  assert.match(gate, /needs: \[[^\]]*codex-login-desktop[^\]]*\]/);
+  assert.match(gate, /CODEX_LOGIN_RESULT: \$\{\{ needs\.codex-login-desktop\.result \}\}/);
+  assert.match(gate, /run: test "\$CODEX_LOGIN_RESULT" = success/);
+  assert.doesNotMatch(account!, /continue-on-error:/);
+  assert.match(account!, /uses: \.\/\.github\/actions\/prepare-host-emulated-inputs/);
+  assert.match(account!, /emulated-codex-login-ui emulated-claude-runtime-ui emulated-codex-runtime-ui/);
+  assert.doesNotMatch(account!, /LEGACY_DESKTOP_CODEX_PATH|LEGACY_DESKTOP_PROOF_MODE: ['"]codex-login-ui['"]|codex-account-auth/,
+    'native schedule qualification must not enable native Desktop vendor authentication');
+  const schedules = account!.split('      - name: Verify finite native Claude and Codex scheduled runs\n')[1]?.split('\n      - name:')[0];
+  assert.ok(schedules, 'the original P04/P10 native schedule proof remains mandatory when this job is selected');
+  assert.match(schedules, /spawnSync\(process\.execPath, \['--test', 'packages\/legacy-agent-host\/tests\/scheduled-run-host\.native\.ts'\]/);
+  assert.match(schedules, /LEGACY_SCHEDULE_NATIVE_GO: '1', LEGACY_SCHEDULE_SOURCE_HEAD: process\.env\.CODEX_LOGIN_SOURCE_HEAD/);
+  assert.match(schedules, /assert\.equal\(run\.error, undefined\); assert\.equal\(run\.status, 0\)/);
+  assert.match(schedules, /for \(const provider of \['claude', 'codex'\]\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.status, 'PASS'\); assert\.equal\(receipt\.provider, provider\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.sourceHead, process\.env\.CODEX_LOGIN_SOURCE_HEAD\)/);
+  assert.match(schedules, /assert\.equal\(receipt\.cleanup, true\); assert\.equal\(receipt\.frozen, true\)/);
+});
+
 test('GitHub Pages: production deployment requires the main branch', () => {
   const source = workflow('landing');
   const mainOnly = "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'";
-  assert.match(source, /  workflow_dispatch:\n/);
+  assert.match(source, / {2}workflow_dispatch:\n/);
   for (const location of [
     /- uses: actions\/configure-pages@v6\n\s+if: ([^\n]+)/,
     /- uses: actions\/upload-pages-artifact@v5\n\s+if: ([^\n]+)/,
-    /\n  deploy:\n[\s\S]*?\n    if: ([^\n]+)/,
-    /\n  smoke:\n[\s\S]*?\n    if: ([^\n]+)/,
+    /\n {2}deploy:\n[\s\S]*?\n {4}if: ([^\n]+)/,
+    /\n {2}smoke:\n[\s\S]*?\n {4}if: ([^\n]+)/,
   ]) {
     assert.equal(source.match(location)?.[1], mainOnly);
   }

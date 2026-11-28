@@ -54,6 +54,8 @@ export interface MemberSettingsTarget {
   agentId: string | null;
   joinedAt: number | string | null;
   settings: EditableMemberSettings;
+  /** Original captured owner token; legacy editors continue hashing their configured DTO. */
+  configuredSettingsFingerprint?: string;
 }
 
 export interface GetMemberSettingsTargetRequest {

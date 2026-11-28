@@ -1,0 +1,2365 @@
+{
+  "schemaVersion": 1,
+  "sourceHead": "0660c748f88675063e3051fb0f8b2022e8f6f056",
+  "runId": 43780997237,
+  "jobId": 133017916249,
+  "status": "PASS original controlled Processes cold-owner and one original-ref Stop only",
+  "originalLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/job-133017916249.log",
+    "bytes": 190813,
+    "blob": "460580f199bf039429246336b1414ee80e93f2a0",
+    "sha256": "3e59c50e608f7b1edacdca2126460dedabb8d43cb0dc8d575dc412ac9ff8ce24"
+  },
+  "originalZip": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/artifact-14192315246.zip",
+    "bytes": 725322,
+    "blob": "d1af3576ca463471e811759baf57be528467f145",
+    "sha256": "7428ac649238a7d82f29790dabf29d08305a4c8d50c23d815916443a3f98c17b"
+  },
+  "receipt": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-desktop-backend-mcR37P/desktop-backend-receipt.json",
+    "bytes": 723028,
+    "blob": "5cfb8a99043fda84d2bd831db40707832caf5eb6",
+    "sha256": "b476ebdd201e97dadc6357bbb17c2943340ff64a333e0e29b14de920255f6e75"
+  },
+  "officialArtifact": {
+    "id": 14192315246,
+    "name": "host-emulated-linux-x64-0660c748f88675063e3051fb0f8b2022e8f6f056-processes",
+    "size_in_bytes": 725322,
+    "url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192315246",
+    "archive_download_url": "https://api.github.com/repos/777genius/agent-teams-ai/actions/artifacts/14192315246/zip",
+    "expired": false,
+    "created_at": "2026-11-16T02:04:54Z",
+    "expires_at": "2026-11-30T02:04:52Z",
+    "updated_at": "2026-11-16T02:04:54Z",
+    "digest": "sha256:7428ac649238a7d82f29790dabf29d08305a4c8d50c23d815916443a3f98c17b",
+    "workflow_run": {
+      "id": 43780997237,
+      "repository_id": 1163183284,
+      "head_repository_id": 1163183284,
+      "head_branch": "fix/frontend-parity-completion-20261113",
+      "head_sha": "0660c748f88675063e3051fb0f8b2022e8f6f056"
+    }
+  },
+  "officialApiFile": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/official-artifacts-0215.json",
+    "bytes": 19753,
+    "blob": "699d3f9f470c9aba779664f159cefac43cbc4861",
+    "sha256": "f434f1a38fce2695c3e828119cd6424c0a986afbf95406a147c2eadfca87416e"
+  },
+  "terminalJob": {
+    "id": 133017916249,
+    "name": "Offline Host Desktop (linux-x64, processes)",
+    "status": "completed",
+    "conclusion": "success",
+    "run_id": 43780997237,
+    "logs_url": null,
+    "steps": [
+      {
+        "name": "Set up job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 1
+      },
+      {
+        "name": "Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 2
+      },
+      {
+        "name": "Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 3
+      },
+      {
+        "name": "Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 4
+      },
+      {
+        "name": "Verify original checkout and runner tuple",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 5
+      },
+      {
+        "name": "Prepare private Linux display",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 6
+      },
+      {
+        "name": "Install frozen workspace and Electron",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 7
+      },
+      {
+        "name": "Build existing Desktop prerequisites and verify admission",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 8
+      },
+      {
+        "name": "Verify original Runtime and Team conversation contracts",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 9
+      },
+      {
+        "name": "Verify complete workspace types and original typed lint scopes",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 10
+      },
+      {
+        "name": "Capture package-manager and Host inputs without vendor executables",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 11
+      },
+      {
+        "name": "Capture original controlled Linux process input without a provider",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 12
+      },
+      {
+        "name": "Exercise ordinary Team controls and renderer reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 13
+      },
+      {
+        "name": "Exercise ordinary Taskboard controls and persistence",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 14
+      },
+      {
+        "name": "Exercise original Skills and cross-Team controls",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 15
+      },
+      {
+        "name": "Exercise model, effort and credential controls with the pinned TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 16
+      },
+      {
+        "name": "Exercise original collaboration, Extensions and saved-import controls through finite peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 17
+      },
+      {
+        "name": "Exercise original Codex browser and device login controls through the finite TEST peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 18
+      },
+      {
+        "name": "Exercise original cold Claude Resume and active Quit with the finite SDK peer",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 19
+      },
+      {
+        "name": "Exercise original provider conversations and schedules through pinned TEST peers",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 20
+      },
+      {
+        "name": "Exercise original Review Keep, Reject, Undo, Redo and reload",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 21
+      },
+      {
+        "name": "Exercise original Review after a cold Host and app restart",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 22
+      },
+      {
+        "name": "Exercise saved next-launch selection while the original Team remains live",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 23
+      },
+      {
+        "name": "Exercise original cold Processes Stop with an independently retained neighbor",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 24
+      },
+      {
+        "name": "Exercise stock Codex Update while the original Team retains its captured source",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 25
+      },
+      {
+        "name": "Stage checksum-pinned OpenCode base without executing the legacy CLI",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 26
+      },
+      {
+        "name": "Prepare exact OpenCode V2 Bun and engine graph",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 27
+      },
+      {
+        "name": "Exercise original OpenCode V2 credential and scoped model Settings",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 28
+      },
+      {
+        "name": "Verify original OpenCode V2 UI receipts and physical cleanup",
+        "status": "completed",
+        "conclusion": "skipped",
+        "number": 29
+      },
+      {
+        "name": "Verify exact source, original screenshots, receipts and cleanup",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 30
+      },
+      {
+        "name": "Preserve original Desktop evidence, including failures",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 31
+      },
+      {
+        "name": "Post Run actions/setup-node@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 60
+      },
+      {
+        "name": "Post Run pnpm/action-setup@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 61
+      },
+      {
+        "name": "Post Run actions/checkout@v6",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 62
+      },
+      {
+        "name": "Complete job",
+        "status": "completed",
+        "conclusion": "success",
+        "number": 63
+      }
+    ]
+  },
+  "terminalApiFile": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/full-api-jobs-0225.json",
+    "bytes": 210964,
+    "blob": "73e6774f138b77b61aff42522ccf9e8065b1762f",
+    "sha256": "d51bd60401a56507c6cd36408e6c60fc62cf736a39405a61fda9df11e383d7a5"
+  },
+  "archiveSafeUniqueCrcAndExtractedByteEquality": true,
+  "archiveEntries": [
+    {
+      "path": "TEST-desktop-backend-mcR37P/controlled-process-cold-ui-receipt.json",
+      "crc32": "b4b7db28",
+      "bytes": 18263,
+      "blob": "5f789aea40f7eea95f10aba0d09b35b0c9428ba1",
+      "sha256": "feb74ece2f093b54c86681d372dbc216042726920ec73d1058f45028700ef12e"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/controlled-process-root-result.json",
+      "crc32": "15e1952e",
+      "bytes": 415,
+      "blob": "2cb00b29601cadf06491464378cbe2f4f1f7c609",
+      "sha256": "dabc7072c510763aff9fbe0a91bd6e80b6b264b209678514f36b78611c111294"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/controlled-process-before-restart.json",
+      "crc32": "20c6b9c1",
+      "bytes": 10983,
+      "blob": "02e6ef5815e0de7e05e651425af88b3355802c7a",
+      "sha256": "b849ca3f124f994d53ed2046d187ab0dd2ceb5d2c125750a0f81f906b4ba652f"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/desktop-app.log",
+      "crc32": "1cac1ed5",
+      "bytes": 14230,
+      "blob": "f473188f34fbc8647fe0ed17f94095014f1b274e",
+      "sha256": "95c84469319862d5be52ad051c68f8ae492acbc2b13af35838ce4ae96d2df638"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/desktop-backend-receipt.json",
+      "crc32": "b8f14c21",
+      "bytes": 723028,
+      "blob": "5cfb8a99043fda84d2bd831db40707832caf5eb6",
+      "sha256": "b476ebdd201e97dadc6357bbb17c2943340ff64a333e0e29b14de920255f6e75"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/desktop-descriptor.json",
+      "crc32": "7730c551",
+      "bytes": 1895,
+      "blob": "eea9f983ce6fae0c28407ce777c76e16cbde9eed",
+      "sha256": "05c75a69ca7ecae48ea12368ea8e4aebd654ed90a83a6ec0b151a337e0a03c24"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/host-profile.json",
+      "crc32": "be83064a",
+      "bytes": 1288,
+      "blob": "5b6bfe2c0a07a5e7b866cb8bca8f2230acda53eb",
+      "sha256": "dd7479f52cab06a6b9f08952a1ad30e43e9cbac3b2603d0854cf85533d054fd7"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/process-ui-seed.json",
+      "crc32": "24f47df9",
+      "bytes": 269,
+      "blob": "264f97dd99addc08eef401ca4f2cfe29a2d09c51",
+      "sha256": "44117705e424b539607050a7c3830dc22297f38e8c1d115e28332ea84c4ddb7f"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/sentinel-invocations.ndjson",
+      "crc32": "9fc3bdb4",
+      "bytes": 96,
+      "blob": "6364a862f901e4ca8d4ecccb4d90cdd842a44162",
+      "sha256": "4c23d75324f12a8f316a659a7eb9c203f1f38ef27793dd974a30ba59a8963253"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-original-native-process-after-stop.png",
+      "crc32": "71f2ab2d",
+      "bytes": 73540,
+      "blob": "b1c15e570866fe68ad94084a4cac8994f89a76b0",
+      "sha256": "f88478b2736e71d8ffc99f0e56a94c3ae48919b5d9917374df615d9a10edcfbf"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-original-native-process-before-stop.png",
+      "crc32": "ad1d12f0",
+      "bytes": 73412,
+      "blob": "88ae78cd875f3cf982b264b084894d533c39602c",
+      "sha256": "b383ffa2807ebf59af14d804ee35c3b59f6d141eddadfd23691e04d27ace2557"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-original-process-stop-attempted.json",
+      "crc32": "1d2ad9cf",
+      "bytes": 239,
+      "blob": "829dd20eed7d2bef4702424e18a9e7727a3b7581",
+      "sha256": "d6cd809f766f5976ffbbf58bb96bb6f880448cf99874347949b5d2c308f0bc6a"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/ui-seed-receipt.json",
+      "crc32": "663c41c0",
+      "bytes": 2070,
+      "blob": "a3cc936f230fb6618b04bcb6fd423de5329f851d",
+      "sha256": "b5b74fc7c419b5a1f0bfc2616d6deb743e30ae3f03dc882f5e8dcfe8ec0aa6fa"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-neighbor-lifecycle.ndjson",
+      "crc32": "71f589e3",
+      "bytes": 372,
+      "blob": "3accf89513e77754f67cae9fad64affa145e2e4e",
+      "sha256": "407861e9cdcfb342debc9a8d733214089f7b28548b030a077cc7923d9d14ed9d"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-neighbor.json",
+      "crc32": "6bd8f376",
+      "bytes": 168,
+      "blob": "a4808a51614486e2d3f2fbf4d4025c574c33cdcb",
+      "sha256": "e016685a761df0416d07c25a700c94edf48166a6bf6159a4fc48f77095624ad2"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-primary-lifecycle.ndjson",
+      "crc32": "71e9f75b",
+      "bytes": 369,
+      "blob": "c04942edd96a27ff787a0f7e997f1b187e1a2462",
+      "sha256": "c2ff3825fc8c884275057e3c77f472e4f5703f1a474047c5c29bf6b2a2d99e6b"
+    },
+    {
+      "path": "TEST-desktop-backend-mcR37P/workspace/process-primary.json",
+      "crc32": "81378490",
+      "bytes": 167,
+      "blob": "5a7f1ccc0e911bd9b7121d1e6282e628ecd66ec2",
+      "sha256": "1b69df028020b9ac92f265d6a5d92278dcee1f070fa378a1fdbb2b63342e6948"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/linux-child-exec/linux-child-exec",
+      "crc32": "ed0ca14b",
+      "bytes": 790608,
+      "blob": "5cfafbff2cdf51422a2eebbb4f3c143e7c7bc807",
+      "sha256": "8fc3e5a748a55218d0b9eff7a7a7db6f249b246a6be940464da26456fe511c45"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/linux-child-exec/manifest.json",
+      "crc32": "e06f2443",
+      "bytes": 2408,
+      "blob": "f83d4686d6bbdb2273c73eb4b4489e0a163e6517",
+      "sha256": "e67ba493cc10e1fd124f6c7437b6f86e1eba46746ce73e51088d67eb095b2734"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/process-custody/manifest.json",
+      "crc32": "09a593f5",
+      "bytes": 1170,
+      "blob": "5c34a107e9c30e8095c69896f38dddabc0d30dab",
+      "sha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/process-custody/registered-process.node",
+      "crc32": "5a16e350",
+      "bytes": 35304,
+      "blob": "f617887b54fa3c77ed601e5308641ecb1c0105e3",
+      "sha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01"
+    },
+    {
+      "path": "TEST-emulated-ui-inputs-crhuPD/process-ui-capture.json",
+      "crc32": "ee1c049e",
+      "bytes": 1646,
+      "blob": "1f608cedb7c64d6b8d343646d5372ac7383fbda3",
+      "sha256": "fb521f3ff28d400048b6f251b8440ff46ef1f9625ee9b13caa56dc057cff99f3"
+    },
+    {
+      "path": "host-emulated-inputs.json",
+      "crc32": "b82b9e14",
+      "bytes": 2429,
+      "blob": "10eb2b91f1296ff572764c6ebda0ed5054cae36f",
+      "sha256": "7e8ee4637eb75bb916728442bd676d3a0ba943da8f1e43419d35a17e81e904c9"
+    },
+    {
+      "path": "host-emulated-linux-child-exec-selection.json",
+      "crc32": "6fefc396",
+      "bytes": 271,
+      "blob": "02d3080641af175ddad7ea7627d39498748de4bb",
+      "sha256": "76f22e13e4252182cd6e9b1a6091ff5336132d299c109f6f83f877f217ce56cd"
+    },
+    {
+      "path": "host-emulated-process-cold-ui.log",
+      "crc32": "dd25f790",
+      "bytes": 225,
+      "blob": "79989ca6f8c9639a80fd0d522fe14a05a62581ee",
+      "sha256": "62702e776ee3d9f108ce23e7efc0d2af9e69c69054d0685f3f2454324907062c"
+    },
+    {
+      "path": "host-emulated-summary.json",
+      "crc32": "efb881d3",
+      "bytes": 664,
+      "blob": "26e4f911ae0765a0b7c6e38fda46d10f3ff17967",
+      "sha256": "95a339b022930b62f270ce2c2f760f749160ca0ab0426b0a36262939472658fa"
+    }
+  ],
+  "sourcePins": {
+    "count": 1757,
+    "orderedBeforeEqualsAfter": true,
+    "equalsPriorCompleteGitLfCensus": true,
+    "gitLfBytes": 20308016,
+    "census": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/opencode/source-pin-audit.json",
+      "bytes": 583301,
+      "blob": "1c01b40f08d6ae98228dff19b84ce19b4f94a735",
+      "sha256": "d52ff557a2797f355e51af8449ae66cc7d55e4d4c9e5f7d35f6cfecb8dcc628d"
+    }
+  },
+  "relevantSourceJoins": [
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.ts",
+      "bytes": 22604,
+      "lines": 426,
+      "blob": "12f4a7b122843acea95e8c37f876917331842a4a",
+      "sha256": "ebb52ab95cdbf0ddc86ce44b534a3c7255c7e8454e5cadb2cbb83278daa53a0f",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-controlled-process-fixture.ts",
+      "bytes": 22578,
+      "lines": 291,
+      "blob": "b504e2d8f31020ba3de19f808f0ac026da0da132",
+      "sha256": "6125e6a5f52ca5db258b9022525b29b5ddb57c0fa7f4611b96176ebb6e2dc3de",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-fixture.ts",
+      "bytes": 9256,
+      "lines": 232,
+      "blob": "7acc5dd937358391b7df6ad45fa614b296a0472a",
+      "sha256": "e4f4ba8a9908a6a3effa277a3c8520846f3dddd3a912aaa4368944c33b339172",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-model.ts",
+      "bytes": 22522,
+      "lines": 514,
+      "blob": "8b7cd469cf6b9416b8ea171f83f8fdacaceff006",
+      "sha256": "0514b3c4eb087bf03f4bb3521c3563b3629277599b4a86bc3154717276d0f79e",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-process-root-oracle.ts",
+      "bytes": 3614,
+      "lines": 61,
+      "blob": "d796918f95dd4a85461d24239d526a3173b97de2",
+      "sha256": "96dd885f5212f6e6cd495117d905a4fb4a3062b1895ffba85be30c983654efcf",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-native-process-ui.test.ts",
+      "bytes": 25185,
+      "lines": 352,
+      "blob": "217b189f231af2ea39b290d70568a1ae42379a53",
+      "sha256": "d63879ef91fc767f1d5633cdce509308e9fecafaa4bc880ae4e1307be77650b6",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-backend-smoke.ts",
+      "bytes": 54778,
+      "lines": 791,
+      "blob": "7f9bac54d2cccf8f5b1226c147e91d14b7473a8e",
+      "sha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/desktop-ui-controls.ts",
+      "bytes": 25052,
+      "lines": 456,
+      "blob": "2ea000d33b7c872a4a1bcd5f2a510c8418924fe5",
+      "sha256": "9e9d4115a2216bee4f1f6bd5cdec6c0ceef5f0aef9b3968ac4611a7955a2e0c7",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/fixtures/process-controlled-root.ts",
+      "bytes": 2604,
+      "lines": 51,
+      "blob": "8b3e837bf9f24c61f5df03607719b8c4a93d2198",
+      "sha256": "7d64405508701a0a43a4b2944dea40a15e522beb8dee474623afd11ffb20fbb1",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "scripts/legacy-agent-host/fixtures/process-foreground-service.ts",
+      "bytes": 3293,
+      "lines": 94,
+      "blob": "ad7bf398667ce9b5cb8cf90801f46fce553048eb",
+      "sha256": "a50b891a95f1a23b4ebba5bc64a348542dfb204dd56a2b39cc75c1fd1b957dd4",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "packages/legacy-agent-host/tests/fixtures/native-host.ts",
+      "bytes": 15303,
+      "lines": 389,
+      "blob": "bea17f976f5db7e9d6b471751ff7d871cd8ebcd5",
+      "sha256": "ea11710ab1833e4cad906bad58def351b852c89ba1dee834c69849b3a1995d01",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "packages/legacy-agent-host/native/registered-process-linux.c",
+      "bytes": 23627,
+      "lines": 429,
+      "blob": "841cda775caf1f7618dea59e89267d85c888d158",
+      "sha256": "f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667",
+      "inCommonBeforeAfterCensus": true
+    },
+    {
+      "path": "src/main/utils/testChildProcessTrace.ts",
+      "bytes": 9633,
+      "lines": 185,
+      "blob": "b3d2ec4b410de5df6d63075955fa8f89fc7c9b88",
+      "sha256": "bff51a48a14cc0d77f8c7233c034c1bbe0eb79b0f5f5270c9540faf70e6472eb",
+      "inCommonBeforeAfterCensus": true
+    }
+  ],
+  "hostSourceTreeRecomputed": {
+    "algorithm": "sorted relative .ts path + NUL + raw bytes + NUL",
+    "files": 619,
+    "bytes": 4111147,
+    "sha256": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+    "matchesOriginalCapture": true
+  },
+  "controlledInputPinJoins": [
+    {
+      "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-ui-capture.json",
+      "sha256": "fb521f3ff28d400048b6f251b8440ff46ef1f9625ee9b13caa56dc057cff99f3",
+      "verification": "exact original archived bytes",
+      "retained": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-emulated-ui-inputs-crhuPD/process-ui-capture.json",
+        "bytes": 1646,
+        "blob": "1f608cedb7c64d6b8d343646d5372ac7383fbda3",
+        "sha256": "fb521f3ff28d400048b6f251b8440ff46ef1f9625ee9b13caa56dc057cff99f3"
+      }
+    },
+    {
+      "path": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "verification": "original frozen pin and source verification record only; executable/package payload not separately archived"
+    },
+    {
+      "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "verification": "original frozen pin and source verification record only; executable/package payload not separately archived"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+      "sha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+      "verification": "original frozen pin and source verification record only; executable/package payload not separately archived"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+      "sha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+      "verification": "original frozen pin and source verification record only; executable/package payload not separately archived"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+      "sha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+      "verification": "original frozen pin and source verification record only; executable/package payload not separately archived"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-custody/manifest.json",
+      "sha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c",
+      "verification": "exact original archived bytes",
+      "retained": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-emulated-ui-inputs-crhuPD/process-custody/manifest.json",
+        "bytes": 1170,
+        "blob": "5c34a107e9c30e8095c69896f38dddabc0d30dab",
+        "sha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c"
+      }
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-custody/registered-process.node",
+      "sha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01",
+      "verification": "exact original archived bytes",
+      "retained": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-emulated-ui-inputs-crhuPD/process-custody/registered-process.node",
+        "bytes": 35304,
+        "blob": "f617887b54fa3c77ed601e5308641ecb1c0105e3",
+        "sha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01"
+      }
+    },
+    {
+      "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/native/registered-process-linux.c",
+      "sha256": "f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667",
+      "verification": "exact Git source at original head"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/host-profile.json",
+      "sha256": "dd7479f52cab06a6b9f08952a1ad30e43e9cbac3b2603d0854cf85533d054fd7",
+      "verification": "exact original archived bytes",
+      "retained": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-desktop-backend-mcR37P/host-profile.json",
+        "bytes": 1288,
+        "blob": "5b6bfe2c0a07a5e7b866cb8bca8f2230acda53eb",
+        "sha256": "dd7479f52cab06a6b9f08952a1ad30e43e9cbac3b2603d0854cf85533d054fd7"
+      }
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/desktop-descriptor.json",
+      "sha256": "05c75a69ca7ecae48ea12368ea8e4aebd654ed90a83a6ec0b151a337e0a03c24",
+      "verification": "exact original archived bytes",
+      "retained": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-desktop-backend-mcR37P/desktop-descriptor.json",
+        "bytes": 1895,
+        "blob": "eea9f983ce6fae0c28407ce777c76e16cbde9eed",
+        "sha256": "05c75a69ca7ecae48ea12368ea8e4aebd654ed90a83a6ec0b151a337e0a03c24"
+      }
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/workspace/process-controlled-root.ts",
+      "sha256": "7d64405508701a0a43a4b2944dea40a15e522beb8dee474623afd11ffb20fbb1",
+      "verification": "exact Git fixture source; copied workspace file not archived",
+      "source": "scripts/legacy-agent-host/fixtures/process-controlled-root.ts"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/workspace/process-foreground-service.ts",
+      "sha256": "a50b891a95f1a23b4ebba5bc64a348542dfb204dd56a2b39cc75c1fd1b957dd4",
+      "verification": "exact Git fixture source; copied workspace file not archived",
+      "source": "scripts/legacy-agent-host/fixtures/process-foreground-service.ts"
+    },
+    {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/process-ui-seed.json",
+      "sha256": "44117705e424b539607050a7c3830dc22297f38e8c1d115e28332ea84c4ddb7f",
+      "verification": "exact original archived bytes",
+      "retained": {
+        "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-desktop-backend-mcR37P/process-ui-seed.json",
+        "bytes": 269,
+        "blob": "264f97dd99addc08eef401ca4f2cfe29a2d09c51",
+        "sha256": "44117705e424b539607050a7c3830dc22297f38e8c1d115e28332ea84c4ddb7f"
+      }
+    }
+  ],
+  "capture": {
+    "schemaVersion": 1,
+    "kind": "TEST-controlled-process-no-provider-v1",
+    "platform": "linux-x64",
+    "node": {
+      "path": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+    },
+    "host": {
+      "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+      "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+      "sourceSha256": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+      "distSha256": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0"
+    },
+    "corepack": {
+      "entry": {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "sha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+      },
+      "package": {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+        "sha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+      },
+      "library": {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+        "sha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      }
+    },
+    "processArtifact": {
+      "directory": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-custody",
+      "manifestSha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c"
+    }
+  },
+  "processCustodyManifest": {
+    "schemaVersion": 1,
+    "abi": "napi-8",
+    "platform": "linux",
+    "architecture": "x64",
+    "kernelCapability": "pidfd-live-v1",
+    "buildKernelRelease": "7.0.0-1019-azure",
+    "libc": {
+      "family": "glibc",
+      "minimumVersion": "2.33"
+    },
+    "library": "registered-process.node",
+    "sourceSha256": "f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667",
+    "binarySha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01",
+    "compilerSha256": "864711037b900acdb7a449cf48d912cefa935b527fb60c767ccb956779e66136",
+    "inspectorSha256": "2cd76fc8d9bdddc84a7eb1c4f0e80717a7475b95e047e1f67d2203a5f4ecdffd",
+    "headers": [
+      {
+        "file": "node_api.h",
+        "sha256": "2d4560831e525b47b060ec8a0864ab73993df9e20215ce9f0fe7b24cd31af32a"
+      },
+      {
+        "file": "node_api_types.h",
+        "sha256": "a25356630d3058f0a0c8937d9f297e9471e037fda58c2696d8a505c2bd99cb00"
+      },
+      {
+        "file": "js_native_api.h",
+        "sha256": "8808ef8899a1691411928ef5dd7dae0537aedc93d3a34e223b2d89692e79c788"
+      },
+      {
+        "file": "js_native_api_types.h",
+        "sha256": "4f19cb90d240765cc0961d92a1ee20f65fdc50db7de1ab0a5cb6bc227224e1a0"
+      }
+    ]
+  },
+  "receiptPins": {
+    "nodeSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+    "hostEntrySha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add",
+    "corepackPackageSha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714",
+    "corepackLibrarySha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e",
+    "pnpmStubSha256": "e26f5a81e7aedf63e0298b308c8e44d07f611910f48fa069087fee388468dc65",
+    "profileSha256": "dd7479f52cab06a6b9f08952a1ad30e43e9cbac3b2603d0854cf85533d054fd7",
+    "descriptorSha256": "05c75a69ca7ecae48ea12368ea8e4aebd654ed90a83a6ec0b151a337e0a03c24",
+    "sentinelSha256": "b7fa1c48a66ca9c4d1c5af12a95412e811ecd7ed70b848290fdd729e2f0b92fc",
+    "shellProbeSha256": "dfbf4804473851ebbd7f62e112b1a052a58d08ac653d27867cdfd7826cb3549b",
+    "providerArchiveSha256": "24040cc82613d8472bbead0643bd6eb1a8132227019a825bf0815af396c56267",
+    "pnpmSha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb",
+    "electronSha256": "7722b3b95b0a31e24906f8046c1bf29cb03c1b99f67058b0b9a4c0e8681c0d87",
+    "smokeSourceSha256": "dd9e4dfb052bb75f1f14188bc3a6e634a67f5ce461c1019f9c0d10a8b934f9bc",
+    "fixtureSourceSha256": "58279362c05f6645881e4850807f78183eee5dc51dfb32f355ff4ded7e7c3589",
+    "uiSourceSha256": "9ea0a2063cae525d80b8a79eac4fcb79062d47fe81f9f2b72d843662a3e92abf"
+  },
+  "compiledBundleHashesAfterStartup": [
+    {
+      "path": "main/chunks/index-D9GX0Q6a.cjs",
+      "sha256": "89c988b7be61f7f30f0effaed6a2626a2279b0ed753228360e77e227884d0a92"
+    },
+    {
+      "path": "main/chunks/index-yaJFGvjB.cjs",
+      "sha256": "ec64b11e28a53961fd7846392857a0167886b8b086d14f54e20041ddc9927155"
+    },
+    {
+      "path": "main/chunks/memberWorkSyncTeamIdentity-BKWiAXQn.cjs",
+      "sha256": "7babbc9bd69c863a2210647b3d5f589d96437a9a80fd794b54196387849217f6"
+    },
+    {
+      "path": "main/chunks/TaskBoundaryParser-Zk2WZzJg.cjs",
+      "sha256": "c14cfc36aeec6fd7103c507f258097aaeccf552dbbf608fea43f9e3c7a7ef3b3"
+    },
+    {
+      "path": "main/chunks/taskChangeState-rZolvpL6.cjs",
+      "sha256": "f40557112189b351692a4b0f19244d7845a4dfe754f468326a21c36386efa1cd"
+    },
+    {
+      "path": "main/chunks/taskHistory-2kbwfqIg.cjs",
+      "sha256": "1d336b6cea5aa5c4768954541a24347fe89bb46a83faddaf8b26fd6e0afb7f85"
+    },
+    {
+      "path": "main/chunks/TeamDataService-DySh5-O-.cjs",
+      "sha256": "ed455bf2423e0511bf1fb8e30069280fe99b505e8e4968df3705309a7131556e"
+    },
+    {
+      "path": "main/chunks/teamTaskSnapshotCompaction-mUovQwio.cjs",
+      "sha256": "2915a9af73772eda67fa92bd4499976d75724d9605cc947e356bd1dc1cee600c"
+    },
+    {
+      "path": "main/index.cjs",
+      "sha256": "c451aecd5463c127c7e72bc238a802912304a21eafb255acb547f38e8851b771"
+    },
+    {
+      "path": "main/internal-storage-worker.cjs",
+      "sha256": "3433cb94575a5748d3133174952698af2a98ac2afb348cb159fcb1110e0b284f"
+    },
+    {
+      "path": "main/task-change-worker.cjs",
+      "sha256": "f8fcc24dd4dc9842cd0f70ffe02891d39eef84019d4aab4ed21b529ba9326446"
+    },
+    {
+      "path": "main/team-data-worker.cjs",
+      "sha256": "dc145e9f1fb5fdfa2e5f51ca6d6f2db8e22e89cb3ab34dae2745ccfd4e6f3823"
+    },
+    {
+      "path": "main/team-fs-worker.cjs",
+      "sha256": "6e6410a44a3d1b97065085259858215045ed137b5bd0dd27bf70f797091c9c83"
+    },
+    {
+      "path": "preload/index.js",
+      "sha256": "4f02e5f1659bb0373f5515d81c7edf5f9bc7af8b67a39f1600171f8acb291406"
+    }
+  ],
+  "bundleProvenance": "Actual compiled main/preload JS bytes hashed after owned app startup; no claim of reproducible source-to-bundle rebuild",
+  "prerequisites": {
+    "node": "24.21.0",
+    "literalOriginalNodeTestCommands": [
+      "node --test scripts/legacy-agent-host/desktop-backend-observations.test.ts scripts/legacy-agent-host/desktop-team-ui-smoke.test.ts scripts/legacy-agent-host/test-child-process-trace.test.ts scripts/legacy-agent-host/desktop-emulated-settings.test.ts scripts/legacy-agent-host/desktop-emulated-codex-catalog.test.ts scripts/legacy-agent-host/desktop-resume-records.test.ts scripts/legacy-agent-host/desktop-captured-app-exit.test.ts scripts/legacy-agent-host/desktop-opencode-v2-management-records.test.ts",
+      "node --test test/scripts/installDependenciesWithRetry.test.mjs",
+      "node --test scripts/legacy-agent-host/desktop-native-process-ui.test.ts"
+    ],
+    "eightHelpers": {
+      "pass": 115,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 9360.424752
+    },
+    "installerHelper": {
+      "pass": 7,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 207.938611
+    },
+    "nativeProcessUiWholeFile": {
+      "pass": 6,
+      "fail": 0,
+      "skip": 0,
+      "durationMs": 2721.069582,
+      "allSixOriginalCaseNamesPresentInLog": [
+        "post-Stop observer continues past stale original and pending alternate to fresh stopped props",
+        "initial original-ref observation remains exact and cannot select a replacement ref",
+        "background acceptance waits for atomic service publication without masking corrupt readiness",
+        "captured no-provider Processes fixture rejects mixed inputs before allocating and seeds no Runtime",
+        "original same-Main Retry retains a bounded first UI refusal without changing the read or its error",
+        "original first failure retains one bounded stdout prefix before the unchanged cleanup boundary"
+      ],
+      "nativeCaptureConditionalCaseActuallyExecuted": true
+    },
+    "TeamPrivacyContractExecuted": false
+  },
+  "nativeProcessUi": {
+    "status": "PASS",
+    "steps": [
+      {
+        "at": 1794794679857,
+        "action": "mouseMoved",
+        "label": "hover sidebar row before measuring click",
+        "subject": "TEST native process cold-owner sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 215
+        }
+      },
+      {
+        "at": 1794794680125,
+        "action": "mouseClick",
+        "label": "sidebar task",
+        "subject": "TEST native process cold-owner sidebar seed",
+        "target": {
+          "x": 1261,
+          "y": 215
+        },
+        "state": "attempted"
+      },
+      {
+        "at": 1794794680155,
+        "observation": "passive input delivery after sidebar click",
+        "value": {
+          "focused": true,
+          "visibility": "visible",
+          "events": [
+            {
+              "type": "pointerdown",
+              "timeMs": 32250,
+              "x": 1261,
+              "y": 215,
+              "button": 0,
+              "buttons": 1,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 32251,
+              "trusted": true,
+              "buttonClass": null,
+              "target": {
+                "tag": "INPUT",
+                "id": "",
+                "ariaLabel": null,
+                "className": "min-w-0 flex-1 bg-transparent text-base text-text outline-none placeholder:text-text-muted"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 32253,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "pointerup",
+              "timeMs": 32254,
+              "x": 1261,
+              "y": 215,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "click",
+              "timeMs": 32254,
+              "x": 1261,
+              "y": 215,
+              "button": 0,
+              "buttons": 0,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "SPAN",
+                "id": "",
+                "ariaLabel": null,
+                "className": "text-[calc(13px*var(--appearance-text-scale,1))] font-medium leading-tight line-clamp-2 break-words"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "taskClarification": null,
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusout",
+              "timeMs": 32273,
+              "trusted": true,
+              "buttonClass": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "flex w-full min-w-0 cursor-pointer flex-col justify-center overflow-hidden text-left"
+              },
+              "focusBefore": {
+                "tag": "BODY",
+                "id": "",
+                "ariaLabel": null,
+                "className": ""
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            },
+            {
+              "type": "focusin",
+              "timeMs": 32274,
+              "trusted": true,
+              "buttonClass": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--",
+              "target": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "focusBefore": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedBefore": false,
+              "sidebarRow": false,
+              "taskId": null,
+              "activeSortable": [],
+              "dragAnnouncement": [
+                ""
+              ],
+              "defaultPreventedAfterMicrotask": false,
+              "focusAfterMicrotask": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              },
+              "defaultPreventedAfterDispatch": false,
+              "focusAfterDispatch": {
+                "tag": "BUTTON",
+                "id": "",
+                "ariaLabel": null,
+                "className": "absolute right-3 top-3 z-10 rounded-full bg-[var(--color-surface-raised)] p-1.5 opacity-70 shadow-sm ring-1 ring-[var(--"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "at": 1794794680772,
+        "action": "mouseMoved",
+        "label": "hover Open team",
+        "selector": "[role=\"dialog\"] button",
+        "target": {
+          "x": 1052.6955261230469,
+          "y": 201.46908569335938,
+          "text": "Open team",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "at": 1794794681220,
+        "action": "mouseClick",
+        "label": "Open team",
+        "selector": "[role=\"dialog\"] button",
+        "expectedText": "Open team",
+        "target": {
+          "x": 1055.3125,
+          "y": 199.625,
+          "text": "Open team",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      },
+      {
+        "at": 1794794687208,
+        "action": "mouseWheel",
+        "label": "visible original registered process label",
+        "selector": "[data-section-id=\"processes\"] span.font-medium",
+        "deltaY": 600
+      },
+      {
+        "at": 1794794687702,
+        "action": "mouseWheel",
+        "label": "actual original Stop button",
+        "selector": "[data-section-id=\"processes\"] button",
+        "deltaY": 405
+      },
+      {
+        "at": 1794794688129,
+        "action": "mouseMoved",
+        "label": "hover one original ProcessesSection Stop",
+        "selector": "[data-section-id=\"processes\"] button",
+        "target": {
+          "x": 839.53125,
+          "y": 859,
+          "text": "Kill",
+          "tag": "BUTTON"
+        }
+      },
+      {
+        "at": 1794794688645,
+        "action": "mouseClick",
+        "label": "one original ProcessesSection Stop",
+        "selector": "[data-section-id=\"processes\"] button",
+        "expectedText": "Kill",
+        "target": {
+          "x": 839.53125,
+          "y": 859,
+          "text": "Kill",
+          "tag": "BUTTON"
+        },
+        "state": "attempted"
+      }
+    ],
+    "original": {
+      "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+      "pid": 4322,
+      "label": "TEST native-owned primary service",
+      "registeredAt": "2026-11-16T02:03:42.533Z",
+      "registeredBy": "user",
+      "port": 40323,
+      "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+      "command": "TEST finite controlled original service",
+      "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+      "observation": "same-live",
+      "canTerminate": true
+    },
+    "selection": "host-team:TEST-desktop-handle-TEST-desktop-backend-mcR37P",
+    "scope": "Controlled native kernel/canonical owner registration, real Host restart, existing UI original-ref Stop; no SDK session",
+    "excluded": [
+      "whole process tree stop",
+      "provider native-root cleanup qualification",
+      "teammate readiness from process state",
+      "PID/group signal fallback",
+      "automatic uncertain stop retry"
+    ],
+    "runtimeCustody": "NOT_ALLOCATED",
+    "nativeRuntimeAllocation": {
+      "providerSessions": 0,
+      "inputs": 0,
+      "modelServers": 0
+    },
+    "coldOwnerProps": {
+      "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-mcR37P",
+      "process": {
+        "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+        "pid": 4322,
+        "label": "TEST native-owned primary service",
+        "registeredAt": "2026-11-16T02:03:42.533Z",
+        "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+        "canTerminate": true,
+        "observation": "same-live",
+        "registeredBy": "user",
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "command": "TEST finite controlled original service",
+        "port": 40323
+      },
+      "isTeamAlive": false
+    },
+    "coldOwnerRead": {
+      "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-mcR37P",
+      "config": {
+        "name": "TEST private backend",
+        "members": [
+          {
+            "name": "alice",
+            "role": "member",
+            "agentType": "general-purpose",
+            "configuredSettingsFingerprint": "c4c8063f1dc8e948fcfa38da4406297e423f0803d462351ae58b37c30133f577",
+            "configuredRuntimeSettings": {}
+          }
+        ]
+      },
+      "tasks": [
+        {
+          "id": "7c2c8006-1132-517d-9a6e-0cc677d7d754",
+          "subject": "TEST native process cold-owner sidebar seed",
+          "status": "pending",
+          "displayId": "7c2c8006",
+          "description": "TEST native process cold-owner sidebar seed",
+          "createdBy": "user",
+          "createdAt": "2026-11-16T02:03:41.106Z",
+          "updatedAt": "2026-11-16T02:03:41.106Z",
+          "blocks": [],
+          "blockedBy": [],
+          "historyEvents": [
+            {
+              "id": "f18bd346-a5c2-4ea2-9bd1-2f5a6ea73322",
+              "timestamp": "2026-11-16T02:03:41.106Z",
+              "actor": "user",
+              "type": "task_created",
+              "status": "pending"
+            }
+          ],
+          "reviewState": "none"
+        }
+      ],
+      "members": [
+        {
+          "name": "alice",
+          "role": "member",
+          "runtimeOwner": "captured-host",
+          "agentType": "general-purpose",
+          "taskCount": 0,
+          "currentTaskId": null,
+          "configuredSettingsFingerprint": "c4c8063f1dc8e948fcfa38da4406297e423f0803d462351ae58b37c30133f577",
+          "configuredRuntimeSettings": {}
+        }
+      ],
+      "kanbanState": {
+        "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-mcR37P",
+        "reviewers": [],
+        "tasks": {}
+      },
+      "processes": [
+        {
+          "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+          "pid": 4322,
+          "label": "TEST native-owned primary service",
+          "registeredAt": "2026-11-16T02:03:42.533Z",
+          "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+          "canTerminate": true,
+          "observation": "same-live",
+          "registeredBy": "user",
+          "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+          "command": "TEST finite controlled original service",
+          "port": 40323
+        }
+      ],
+      "isAlive": false,
+      "warnings": []
+    },
+    "originalRenderedRow": {
+      "label": "TEST native-owned primary service",
+      "pidText": "PID4322",
+      "geometry": {
+        "x": 356,
+        "y": 874,
+        "width": 738,
+        "height": 34
+      },
+      "stoppedStyle": false,
+      "stoppedIndicator": false,
+      "killCount": 1
+    },
+    "beforeScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/ui-original-native-process-before-stop.png",
+      "sha256": "b383ffa2807ebf59af14d804ee35c3b59f6d141eddadfd23691e04d27ace2557"
+    },
+    "initialStopReceipt": {
+      "schemaVersion": 1,
+      "family": "process",
+      "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+      "operation": "terminate",
+      "requestDigest": "5be26696e156cbaaf869596a22ebcb7dd9f44796b98c484f669d19fb4edd66d6",
+      "principalId": "TEST-human",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "authorityRevision": 1,
+      "fingerprint": "31100bc379f6caa14d74b29a49e434ff380ac987eecfcbe9ab2d480344b144d4",
+      "phase": "held",
+      "state": {
+        "phase": "requested",
+        "native": "accepted"
+      },
+      "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+      "original": {
+        "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+        "label": "TEST native-owned primary service",
+        "pid": 4322,
+        "port": 40323,
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "registeredBy": "user",
+        "command": "TEST finite controlled original service",
+        "registeredAt": "2026-11-16T02:03:42.533Z",
+        "capturedNative": {
+          "version": 3,
+          "platform": "linux",
+          "registrar": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+            "teamId": "TEST-desktop-team",
+            "runId": "TEST-controlled-service-run",
+            "memberId": "TEST-controlled-service-registrar",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4311,
+            "sessionId": 4311,
+            "pidfdId": "5228",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          },
+          "target": {
+            "pid": 4322,
+            "sessionId": 4311,
+            "pidfdId": "1171",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          }
+        },
+        "capturedByCommand": "TEST-controlled-process-register-original"
+      },
+      "capture": {
+        "version": 3,
+        "platform": "linux",
+        "registrar": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-controlled-service-run",
+          "memberId": "TEST-controlled-service-registrar",
+          "generation": "1"
+        },
+        "root": {
+          "pid": 4311,
+          "sessionId": 4311,
+          "pidfdId": "5228",
+          "pidNamespaceId": "4026531836",
+          "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+        },
+        "target": {
+          "pid": 4322,
+          "sessionId": 4311,
+          "pidfdId": "1171",
+          "pidNamespaceId": "4026531836",
+          "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+        }
+      }
+    },
+    "terminalStop": {
+      "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+      "operation": "terminate",
+      "phase": "completed",
+      "originalProcessRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+      "state": {
+        "phase": "completed",
+        "native": "observed-absent",
+        "signalAccepted": true
+      },
+      "result": {
+        "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+        "pid": 4322,
+        "label": "TEST native-owned primary service",
+        "registeredAt": "2026-11-16T02:03:42.533Z",
+        "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:a9dd831804693fedf39f3e5396d5eab3ace3521329422b6563daa52d2c698b33",
+        "canTerminate": false,
+        "observation": "absent",
+        "stoppedAt": "2026-11-16T02:04:48.770Z",
+        "registeredBy": "user",
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "command": "TEST finite controlled original service",
+        "port": 40323,
+        "pendingStop": {
+          "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+          "originalProcessRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+          "native": "accepted"
+        }
+      }
+    },
+    "ownerHistory": [
+      {
+        "schemaVersion": 1,
+        "family": "process",
+        "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+        "operation": "terminate",
+        "requestDigest": "5be26696e156cbaaf869596a22ebcb7dd9f44796b98c484f669d19fb4edd66d6",
+        "principalId": "TEST-human",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "authorityRevision": 1,
+        "fingerprint": "31100bc379f6caa14d74b29a49e434ff380ac987eecfcbe9ab2d480344b144d4",
+        "phase": "completed",
+        "state": {
+          "phase": "completed",
+          "native": "observed-absent",
+          "signalAccepted": true
+        },
+        "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+        "original": {
+          "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+          "label": "TEST native-owned primary service",
+          "pid": 4322,
+          "port": 40323,
+          "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+          "registeredBy": "user",
+          "command": "TEST finite controlled original service",
+          "registeredAt": "2026-11-16T02:03:42.533Z",
+          "capturedNative": {
+            "version": 3,
+            "platform": "linux",
+            "registrar": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+              "teamId": "TEST-desktop-team",
+              "runId": "TEST-controlled-service-run",
+              "memberId": "TEST-controlled-service-registrar",
+              "generation": "1"
+            },
+            "root": {
+              "pid": 4311,
+              "sessionId": 4311,
+              "pidfdId": "5228",
+              "pidNamespaceId": "4026531836",
+              "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+            },
+            "target": {
+              "pid": 4322,
+              "sessionId": 4311,
+              "pidfdId": "1171",
+              "pidNamespaceId": "4026531836",
+              "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+            }
+          },
+          "capturedByCommand": "TEST-controlled-process-register-original"
+        },
+        "capture": {
+          "version": 3,
+          "platform": "linux",
+          "registrar": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+            "teamId": "TEST-desktop-team",
+            "runId": "TEST-controlled-service-run",
+            "memberId": "TEST-controlled-service-registrar",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4311,
+            "sessionId": 4311,
+            "pidfdId": "5228",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          },
+          "target": {
+            "pid": 4322,
+            "sessionId": 4311,
+            "pidfdId": "1171",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          }
+        },
+        "result": {
+          "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+          "pid": 4322,
+          "label": "TEST native-owned primary service",
+          "registeredAt": "2026-11-16T02:03:42.533Z",
+          "stoppedAt": "2026-11-16T02:04:48.770Z",
+          "registeredBy": "user",
+          "port": 40323,
+          "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+          "command": "TEST finite controlled original service",
+          "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:a9dd831804693fedf39f3e5396d5eab3ace3521329422b6563daa52d2c698b33",
+          "observation": "absent",
+          "canTerminate": false,
+          "pendingStop": {
+            "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+            "originalProcessRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+            "native": "accepted"
+          }
+        }
+      }
+    ],
+    "primaryLifecycle": [
+      {
+        "at": "2026-11-16T02:03:42.453Z",
+        "pid": 4322,
+        "ppid": 4311,
+        "role": "primary",
+        "event": "listening",
+        "port": 40323,
+        "ttlMs": 300000,
+        "startedAt": 1794794622442
+      },
+      {
+        "at": "2026-11-16T02:04:48.661Z",
+        "pid": 4322,
+        "ppid": 4311,
+        "role": "primary",
+        "event": "closing",
+        "reason": "SIGTERM"
+      },
+      {
+        "at": "2026-11-16T02:04:48.661Z",
+        "pid": 4322,
+        "ppid": 4311,
+        "role": "primary",
+        "event": "closed",
+        "reason": "SIGTERM"
+      }
+    ],
+    "neighborLifecycleBeforeStop": "{\"at\":\"2026-11-16T02:03:42.446Z\",\"pid\":4323,\"ppid\":4311,\"role\":\"neighbor\",\"event\":\"listening\",\"port\":42893,\"ttlMs\":300000,\"startedAt\":1794794622439}\n",
+    "neighborLifecycleAfterStop": "{\"at\":\"2026-11-16T02:03:42.446Z\",\"pid\":4323,\"ppid\":4311,\"role\":\"neighbor\",\"event\":\"listening\",\"port\":42893,\"ttlMs\":300000,\"startedAt\":1794794622439}\n",
+    "qualificationScope": "controlled-native-kernel-real-Host-restart-original-UI-stop",
+    "stopQualification": "COMPLETED_ORIGINAL_REF_STOP",
+    "coldReconciliation": "ORIGINAL_CAPTURE_SAME_LIVE_STOP_COMPLETED",
+    "nativeCleanupClaim": false,
+    "stoppedOwnerProps": {
+      "teamName": "host-team:TEST-desktop-handle-TEST-desktop-backend-mcR37P",
+      "process": {
+        "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+        "pid": 4322,
+        "label": "TEST native-owned primary service",
+        "registeredAt": "2026-11-16T02:03:42.533Z",
+        "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:a9dd831804693fedf39f3e5396d5eab3ace3521329422b6563daa52d2c698b33",
+        "canTerminate": false,
+        "observation": "absent",
+        "stoppedAt": "2026-11-16T02:04:48.770Z",
+        "registeredBy": "user",
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "command": "TEST finite controlled original service",
+        "port": 40323
+      },
+      "isTeamAlive": false
+    },
+    "stoppedOwnerRead": {
+      "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+      "pid": 4322,
+      "label": "TEST native-owned primary service",
+      "registeredAt": "2026-11-16T02:03:42.533Z",
+      "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:a9dd831804693fedf39f3e5396d5eab3ace3521329422b6563daa52d2c698b33",
+      "canTerminate": false,
+      "observation": "absent",
+      "stoppedAt": "2026-11-16T02:04:48.770Z",
+      "registeredBy": "user",
+      "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+      "command": "TEST finite controlled original service",
+      "port": 40323
+    },
+    "stoppedRenderedRow": {
+      "label": "TEST native-owned primary service",
+      "pidText": "PID4322",
+      "geometry": {
+        "x": 356,
+        "y": 842,
+        "width": 738,
+        "height": 34
+      },
+      "stoppedStyle": true,
+      "stoppedIndicator": true,
+      "killCount": 0
+    },
+    "afterScreenshot": {
+      "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/ui-original-native-process-after-stop.png",
+      "sha256": "f88478b2736e71d8ffc99f0e56a94c3ae48919b5d9917374df615d9a10edcfbf"
+    },
+    "signalEvidence": "One admitted UI stop command, one accepted original native request, one observed TEST service SIGTERM; no syscall tracing claim"
+  },
+  "controlledProcessColdUi": {
+    "status": "PASS",
+    "scope": "Controlled native kernel/canonical owner registration, real Host restart, existing UI original-ref Stop; no SDK session",
+    "sourcePins": [
+      {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-ui-capture.json",
+        "sha256": "fb521f3ff28d400048b6f251b8440ff46ef1f9625ee9b13caa56dc057cff99f3"
+      },
+      {
+        "path": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+        "sha256": "7ff0d33309b54969f7a5c5f88935d4593596e68670db21f08ee694c9d0c27add"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/pnpm.js",
+        "sha256": "7c2a67995976b5b592b611d8b236e3b0633bd654fb49aedd96c6eb7ce04c9cbb"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/package.json",
+        "sha256": "6f431b9a91afe6b4757f4b5a3855e2f79e2f366dd4242fd397713932aa3a2714"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/corepack/node_modules/.pnpm/corepack@0.36.0/node_modules/corepack/dist/lib/corepack.cjs",
+        "sha256": "abd6f0e7b4e2af310243e202fd908ea64cda545786222f0a3d3f62426e8ad66e"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-custody/manifest.json",
+        "sha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-custody/registered-process.node",
+        "sha256": "7720b1a21fd5650834abf4fad9dbfc8b0c72636454fe1b87b6d2b515fb3bed01"
+      },
+      {
+        "path": "/home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/native/registered-process-linux.c",
+        "sha256": "f5d00c04919f9d8bdd36a1482bd96849488d54552a55f9daebeb03739db7c667"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/host-profile.json",
+        "sha256": "dd7479f52cab06a6b9f08952a1ad30e43e9cbac3b2603d0854cf85533d054fd7"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/desktop-descriptor.json",
+        "sha256": "05c75a69ca7ecae48ea12368ea8e4aebd654ed90a83a6ec0b151a337e0a03c24"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/workspace/process-controlled-root.ts",
+        "sha256": "7d64405508701a0a43a4b2944dea40a15e522beb8dee474623afd11ffb20fbb1"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/workspace/process-foreground-service.ts",
+        "sha256": "a50b891a95f1a23b4ebba5bc64a348542dfb204dd56a2b39cc75c1fd1b957dd4"
+      },
+      {
+        "path": "/home/runner/work/_temp/TEST-desktop-backend-mcR37P/process-ui-seed.json",
+        "sha256": "44117705e424b539607050a7c3830dc22297f38e8c1d115e28332ea84c4ddb7f"
+      }
+    ],
+    "hostSourceSha256": "802af77294547c258a7306e17598978305b6edf86705d0884196b98bc095cd39",
+    "hostDistSha256": "2e9a3d32128d0659c02af024bc096dd56f1df28af8ddecb1fe5a0ad5ef1f22a0",
+    "captureKind": "TEST-controlled-process-no-provider-v1",
+    "providersConfigured": false,
+    "processArtifact": {
+      "directory": "/home/runner/work/_temp/TEST-emulated-ui-inputs-crhuPD/process-custody",
+      "manifestSha256": "8e056eb13cfed21c1667c20ac0ffddef07edd64fddf2e5279bd1b897303dbf3c"
+    },
+    "runtimeCustody": "NOT_ALLOCATED",
+    "original911Unchanged": true,
+    "originalRootExecutable": {
+      "executablePath": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node",
+      "executableSha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c",
+      "pid": 4311,
+      "startIdentity": "c79089a3-25d5-4baf-9d7c-c10851813627:4026531836:5228"
+    },
+    "originalLinuxRoot": {
+      "pid": 4311,
+      "sessionId": 4311,
+      "pidfdId": "5228",
+      "pidNamespaceId": "4026531836",
+      "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+    },
+    "registration": {
+      "schemaVersion": 1,
+      "family": "process",
+      "commandId": "TEST-controlled-process-register-original",
+      "operation": "register",
+      "requestDigest": "55468468fc6eb08d225355f4041294064e13702db062543a86c71174d9632e64",
+      "principalId": "TEST-human",
+      "binding": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+        "teamId": "TEST-desktop-team",
+        "teamName": "test-desktop-backend"
+      },
+      "authorityRevision": 1,
+      "fingerprint": "5c26f23a86793d1e548a66a42061a393472d6a6ef5af15205f94665c5d7836c7",
+      "phase": "completed",
+      "state": {
+        "phase": "completed",
+        "native": "not-requested"
+      },
+      "capture": {
+        "version": 3,
+        "platform": "linux",
+        "registrar": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-controlled-service-run",
+          "memberId": "TEST-controlled-service-registrar",
+          "generation": "1"
+        },
+        "root": {
+          "pid": 4311,
+          "sessionId": 4311,
+          "pidfdId": "5228",
+          "pidNamespaceId": "4026531836",
+          "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+        },
+        "target": {
+          "pid": 4322,
+          "sessionId": 4311,
+          "pidfdId": "1171",
+          "pidNamespaceId": "4026531836",
+          "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+        }
+      },
+      "original": {
+        "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+        "label": "TEST native-owned primary service",
+        "pid": 4322,
+        "port": 40323,
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "registeredBy": "user",
+        "command": "TEST finite controlled original service",
+        "registeredAt": "2026-11-16T02:03:42.533Z",
+        "capturedNative": {
+          "version": 3,
+          "platform": "linux",
+          "registrar": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+            "teamId": "TEST-desktop-team",
+            "runId": "TEST-controlled-service-run",
+            "memberId": "TEST-controlled-service-registrar",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4311,
+            "sessionId": 4311,
+            "pidfdId": "5228",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          },
+          "target": {
+            "pid": 4322,
+            "sessionId": 4311,
+            "pidfdId": "1171",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          }
+        },
+        "capturedByCommand": "TEST-controlled-process-register-original"
+      },
+      "result": {
+        "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+        "pid": 4322,
+        "label": "TEST native-owned primary service",
+        "registeredAt": "2026-11-16T02:03:42.533Z",
+        "registeredBy": "user",
+        "port": 40323,
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "command": "TEST finite controlled original service",
+        "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+        "observation": "same-live",
+        "canTerminate": true
+      }
+    },
+    "original": {
+      "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+      "pid": 4322,
+      "label": "TEST native-owned primary service",
+      "registeredAt": "2026-11-16T02:03:42.533Z",
+      "registeredBy": "user",
+      "port": 40323,
+      "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+      "command": "TEST finite controlled original service",
+      "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+      "observation": "same-live",
+      "canTerminate": true
+    },
+    "originalProcessRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+    "canonicalPrimary": {
+      "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+      "label": "TEST native-owned primary service",
+      "pid": 4322,
+      "port": 40323,
+      "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+      "registeredBy": "user",
+      "command": "TEST finite controlled original service",
+      "registeredAt": "2026-11-16T02:03:42.533Z",
+      "capturedNative": {
+        "version": 3,
+        "platform": "linux",
+        "registrar": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+          "teamId": "TEST-desktop-team",
+          "runId": "TEST-controlled-service-run",
+          "memberId": "TEST-controlled-service-registrar",
+          "generation": "1"
+        },
+        "root": {
+          "pid": 4311,
+          "sessionId": 4311,
+          "pidfdId": "5228",
+          "pidNamespaceId": "4026531836",
+          "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+        },
+        "target": {
+          "pid": 4322,
+          "sessionId": 4311,
+          "pidfdId": "1171",
+          "pidNamespaceId": "4026531836",
+          "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+        }
+      },
+      "capturedByCommand": "TEST-controlled-process-register-original"
+    },
+    "neighborCapture": {
+      "version": 3,
+      "platform": "linux",
+      "registrar": {
+        "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+        "teamId": "TEST-desktop-team",
+        "runId": "TEST-controlled-service-run",
+        "memberId": "TEST-controlled-service-registrar",
+        "generation": "1"
+      },
+      "root": {
+        "pid": 4311,
+        "sessionId": 4311,
+        "pidfdId": "5228",
+        "pidNamespaceId": "4026531836",
+        "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+      },
+      "target": {
+        "pid": 4323,
+        "sessionId": 4311,
+        "pidfdId": "1172",
+        "pidNamespaceId": "4026531836",
+        "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+      }
+    },
+    "services": {
+      "primary": {
+        "role": "primary",
+        "nonce": "TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+        "pid": 4322,
+        "port": 40323,
+        "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2"
+      },
+      "neighbor": {
+        "role": "neighbor",
+        "nonce": "TEST-572969b3-1a41-4ed9-b391-af242ea95125",
+        "pid": 4323,
+        "port": 42893,
+        "url": "http://127.0.0.1:42893/TEST-572969b3-1a41-4ed9-b391-af242ea95125"
+      }
+    },
+    "hostA": {
+      "pid": 4346,
+      "exitCode": 0,
+      "signalCode": null,
+      "stdoutValid": true,
+      "diagnosticBytes": 0,
+      "frames": [
+        {
+          "id": 1,
+          "method": "host.handshake",
+          "ok": true
+        },
+        {
+          "id": 2,
+          "method": "team.process.list",
+          "ok": true
+        }
+      ],
+      "writerLockReleased": true
+    },
+    "hostB": {
+      "pid": 4733,
+      "distinctFromHostA": true
+    },
+    "neighborHealthyBeforeCleanup": true,
+    "stoppedHistory": {
+      "canonical": [
+        {
+          "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+          "label": "TEST native-owned primary service",
+          "pid": 4322,
+          "port": 40323,
+          "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+          "registeredBy": "user",
+          "command": "TEST finite controlled original service",
+          "registeredAt": "2026-11-16T02:03:42.533Z",
+          "capturedNative": {
+            "version": 3,
+            "platform": "linux",
+            "registrar": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+              "teamId": "TEST-desktop-team",
+              "runId": "TEST-controlled-service-run",
+              "memberId": "TEST-controlled-service-registrar",
+              "generation": "1"
+            },
+            "root": {
+              "pid": 4311,
+              "sessionId": 4311,
+              "pidfdId": "5228",
+              "pidNamespaceId": "4026531836",
+              "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+            },
+            "target": {
+              "pid": 4322,
+              "sessionId": 4311,
+              "pidfdId": "1171",
+              "pidNamespaceId": "4026531836",
+              "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+            }
+          },
+          "capturedByCommand": "TEST-controlled-process-register-original",
+          "stoppedAt": "2026-11-16T02:04:48.770Z"
+        }
+      ],
+      "stop": {
+        "schemaVersion": 1,
+        "family": "process",
+        "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+        "operation": "terminate",
+        "requestDigest": "5be26696e156cbaaf869596a22ebcb7dd9f44796b98c484f669d19fb4edd66d6",
+        "principalId": "TEST-human",
+        "binding": {
+          "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+          "teamId": "TEST-desktop-team",
+          "teamName": "test-desktop-backend"
+        },
+        "authorityRevision": 1,
+        "fingerprint": "31100bc379f6caa14d74b29a49e434ff380ac987eecfcbe9ab2d480344b144d4",
+        "phase": "completed",
+        "state": {
+          "phase": "completed",
+          "native": "observed-absent",
+          "signalAccepted": true
+        },
+        "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+        "original": {
+          "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+          "label": "TEST native-owned primary service",
+          "pid": 4322,
+          "port": 40323,
+          "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+          "registeredBy": "user",
+          "command": "TEST finite controlled original service",
+          "registeredAt": "2026-11-16T02:03:42.533Z",
+          "capturedNative": {
+            "version": 3,
+            "platform": "linux",
+            "registrar": {
+              "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+              "teamId": "TEST-desktop-team",
+              "runId": "TEST-controlled-service-run",
+              "memberId": "TEST-controlled-service-registrar",
+              "generation": "1"
+            },
+            "root": {
+              "pid": 4311,
+              "sessionId": 4311,
+              "pidfdId": "5228",
+              "pidNamespaceId": "4026531836",
+              "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+            },
+            "target": {
+              "pid": 4322,
+              "sessionId": 4311,
+              "pidfdId": "1171",
+              "pidNamespaceId": "4026531836",
+              "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+            }
+          },
+          "capturedByCommand": "TEST-controlled-process-register-original"
+        },
+        "capture": {
+          "version": 3,
+          "platform": "linux",
+          "registrar": {
+            "backendId": "TEST-desktop-owner-TEST-desktop-backend-mcR37P",
+            "teamId": "TEST-desktop-team",
+            "runId": "TEST-controlled-service-run",
+            "memberId": "TEST-controlled-service-registrar",
+            "generation": "1"
+          },
+          "root": {
+            "pid": 4311,
+            "sessionId": 4311,
+            "pidfdId": "5228",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          },
+          "target": {
+            "pid": 4322,
+            "sessionId": 4311,
+            "pidfdId": "1171",
+            "pidNamespaceId": "4026531836",
+            "bootId": "c79089a3-25d5-4baf-9d7c-c10851813627"
+          }
+        },
+        "result": {
+          "id": "f5f43254-b6e1-4d92-b66c-31da0cfd3d9e",
+          "pid": 4322,
+          "label": "TEST native-owned primary service",
+          "registeredAt": "2026-11-16T02:03:42.533Z",
+          "stoppedAt": "2026-11-16T02:04:48.770Z",
+          "registeredBy": "user",
+          "port": 40323,
+          "url": "http://127.0.0.1:40323/TEST-52fde205-8140-4870-a67e-9bc5e9cbc1f2",
+          "command": "TEST finite controlled original service",
+          "processRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:a9dd831804693fedf39f3e5396d5eab3ace3521329422b6563daa52d2c698b33",
+          "observation": "absent",
+          "canTerminate": false,
+          "pendingStop": {
+            "commandId": "fc4b7a0d-60f2-4d1d-94b7-e6f642133226",
+            "originalProcessRef": "p1:f5f43254-b6e1-4d92-b66c-31da0cfd3d9e:9b2c2a810bb766a8ee8520c04907e32b4841c7b56bb865b8cac07f0c4c03079f",
+            "native": "accepted"
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "status": "PASS",
+      "rootExitCode": 0,
+      "rootSignalCode": null,
+      "primaryCleanupSignals": 0,
+      "neighborCleanupSignals": 1,
+      "originalTargetObservation": "absent",
+      "originalNeighborObservation": "absent",
+      "originalRootObservation": "absent",
+      "primaryLifecycle": [
+        {
+          "at": "2026-11-16T02:03:42.453Z",
+          "pid": 4322,
+          "ppid": 4311,
+          "role": "primary",
+          "event": "listening",
+          "port": 40323,
+          "ttlMs": 300000,
+          "startedAt": 1794794622442
+        },
+        {
+          "at": "2026-11-16T02:04:48.661Z",
+          "pid": 4322,
+          "ppid": 4311,
+          "role": "primary",
+          "event": "closing",
+          "reason": "SIGTERM"
+        },
+        {
+          "at": "2026-11-16T02:04:48.661Z",
+          "pid": 4322,
+          "ppid": 4311,
+          "role": "primary",
+          "event": "closed",
+          "reason": "SIGTERM"
+        }
+      ],
+      "neighborLifecycle": [
+        {
+          "at": "2026-11-16T02:03:42.446Z",
+          "pid": 4323,
+          "ppid": 4311,
+          "role": "neighbor",
+          "event": "listening",
+          "port": 42893,
+          "ttlMs": 300000,
+          "startedAt": 1794794622439
+        },
+        {
+          "at": "2026-11-16T02:04:51.177Z",
+          "pid": 4323,
+          "ppid": 4311,
+          "role": "neighbor",
+          "event": "closing",
+          "reason": "SIGTERM"
+        },
+        {
+          "at": "2026-11-16T02:04:51.178Z",
+          "pid": 4323,
+          "ppid": 4311,
+          "role": "neighbor",
+          "event": "closed",
+          "reason": "SIGTERM"
+        }
+      ],
+      "result": {
+        "rootPid": 4311,
+        "children": [
+          {
+            "role": "primary",
+            "pid": 4322,
+            "exitCode": 0,
+            "signalCode": null,
+            "cleanupSignals": 0
+          },
+          {
+            "role": "neighbor",
+            "pid": 4323,
+            "exitCode": 0,
+            "signalCode": null,
+            "cleanupSignals": 1
+          }
+        ],
+        "scope": "Original retained TEST ChildProcess handles only; no numeric/group lookup, adoption or Stop replay"
+      }
+    }
+  },
+  "screenshots": [
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-desktop-backend-mcR37P/ui-original-native-process-after-stop.png",
+      "bytes": 73540,
+      "blob": "b1c15e570866fe68ad94084a4cac8994f89a76b0",
+      "sha256": "f88478b2736e71d8ffc99f0e56a94c3ae48919b5d9917374df615d9a10edcfbf",
+      "actuallyViewed": true
+    },
+    {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-desktop-m0660/processes/extracted/TEST-desktop-backend-mcR37P/ui-original-native-process-before-stop.png",
+      "bytes": 73412,
+      "blob": "88ae78cd875f3cf982b264b084894d533c39602c",
+      "sha256": "b383ffa2807ebf59af14d804ee35c3b59f6d141eddadfd23691e04d27ace2557",
+      "actuallyViewed": true
+    }
+  ],
+  "coldProcessHost": {
+    "pid": 4733,
+    "ppid": 4484,
+    "pgid": 4359,
+    "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+    "observedBeforeShutdown": true
+  },
+  "hostChild": {
+    "pid": 4733,
+    "ppid": 4484,
+    "pgid": 4359,
+    "command": "/opt/hostedtoolcache/node/24.21.0/x64/bin/node /home/runner/work/agent-teams-ai/agent-teams-ai/packages/legacy-agent-host/dist/cli.js",
+    "observedBeforeShutdown": true
+  },
+  "originalRequestedQuitExit": {
+    "initialExitCode": 0,
+    "initialSignalCode": null,
+    "exitCode": 0,
+    "signalCode": null
+  },
+  "beforeHarnessCleanup": [
+    {
+      "pid": 4434,
+      "ppid": 1,
+      "pgid": 4359
+    }
+  ],
+  "originalExitedGroup": {
+    "settled": true,
+    "reason": "original-natural-exit-and-fresh-absence",
+    "initialMembers": [
+      {
+        "pid": 4434,
+        "ppid": 1,
+        "pgid": 4359
+      }
+    ],
+    "remaining": [],
+    "capturedHostAbsent": true,
+    "capturedDescendantsAbsent": true,
+    "appExitCode": 0,
+    "appSignalCode": null
+  },
+  "cleanup": {
+    "processGroup": 4359,
+    "remaining": [],
+    "appExitCode": 0,
+    "appSignalCode": null,
+    "capturedHostObserved": true,
+    "capturedHostAbsent": true,
+    "hostExitCode": "controlled cold Host app shutdown; no provider Runtime allocation; first standalone Host separately observed exit0/null"
+  },
+  "passiveOriginalHostTrace": [
+    {
+      "line": 89,
+      "record": {
+        "mainPid": 4484,
+        "event": "async-spawn",
+        "pid": 4733,
+        "requestedCommand": "linux-child-exec",
+        "linuxChildExecTarget": "node",
+        "versionOnly": false,
+        "observedBirth": {
+          "startTicks": "18787",
+          "parentPid": 4484,
+          "processGroupId": 4359
+        },
+        "atomic": false,
+        "observedAtMs": 1794794650523
+      }
+    },
+    {
+      "line": 122,
+      "record": {
+        "mainPid": 4484,
+        "event": "async-exit",
+        "pid": 4733,
+        "status": 0,
+        "signal": null,
+        "observedAtMs": 1794794690722
+      }
+    },
+    {
+      "line": 131,
+      "record": {
+        "mainPid": 4484,
+        "event": "trace-summary",
+        "rows": 18,
+        "droppedObservations": 0,
+        "observedChildren": 8,
+        "unobservedChildren": 0,
+        "observationFailures": 0,
+        "limited": false,
+        "coverage": "node-async-and-unix-process-table-only"
+      }
+    }
+  ],
+  "sentinel": {
+    "invocations": [
+      {
+        "executable": "claude-multimodel",
+        "allowed": true,
+        "argc": 1,
+        "command": null,
+        "flags": [
+          "--version"
+        ]
+      }
+    ],
+    "preQuitCount": 1,
+    "postQuitOrCleanupInvocations": [],
+    "refusedInvocations": [],
+    "qualification": "Only finite sentinel version checks and the isolated shell-environment fixture are admitted; any native/control fallback before or after Quit makes this provider-emulation proof incomplete."
+  },
+  "limits": [
+    "Controlled Linux native kernel process-custody and real Host A-to-B restart only. No provider Runtime/session/input/model server was allocated; no SDK-root cleanup, native provider or vendor authentication qualification.",
+    "One accepted Stop plus observed original absence and one TEST service SIGTERM is not syscall tracing or general process-tree termination proof. The neighbor is intentionally terminated by original fixture cleanup only after its healthy-after-primary-Stop checks.",
+    "All 1757 ordered common source pins match the prior complete exact-head Git census. The Host source tree digest is independently recomputed; generated Host dist and complete Node/corepack payloads are not in the ZIP, so their recorded freezes are not an audit-time reproducible build.",
+    "Of the 14 controlled-input pins, six map to archived bytes, three to exact Git source bytes, and five retain original source-checked hashes without the executable/package payload in this archive.",
+    "The two original screenshots are separate non-atomic observations; renderer owner/read/physical checks precede or follow them. The visible CLI Processes badge reads 0 in both retained frames; the original oracle concerns the exact captured row and Kill state, not that aggregate label.",
+    "No general Host custody certificate is inferred from the passive Main callback. Original Host A has its own EOF exit result; Host B also has a separate bounded original ChildProcess exit callback and fresh process absence checks.",
+    "The complete six-case helper was actually run with capture enabled in this lane. It is separate from the Team ten-file privacy contract, which this lane did not run; no privacy GREEN or overall merge/release qualification transfers."
+  ],
+  "auditExecution": "Read-only saved artifacts, exact Git sources, hashes and two original PNGs. No project, compiler, test, provider, native or CI execution; no source/ref changes."
+}

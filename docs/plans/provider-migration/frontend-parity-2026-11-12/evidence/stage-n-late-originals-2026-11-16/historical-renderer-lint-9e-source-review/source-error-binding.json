@@ -1,0 +1,364 @@
+{
+  "schema": "historical-renderer-lint-original-error-source-binding/v1",
+  "reviewer": "/root/native_failures",
+  "reviewedUTC": "2026-11-16T03:01:29.823697+00:00",
+  "result": "Concrete historical typed-lint error bound to unchanged current source; no patch or execution",
+  "originalRunId": 43776996041,
+  "originalJobId": 133026000887,
+  "originalJobName": "lint (renderer)",
+  "originalOutcome": "FAIL exit1 in original typed renderer lint",
+  "rawLog": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-renderer-original.log",
+    "bytes": 813705,
+    "blob": "6ef3bb2a385b54da8114f767ff316a859047c557",
+    "sha256": "1dc0b94aada3975157fd18f625ab1d1502b7831d8d8723c62078a942a0c8f115"
+  },
+  "rawLogResponse": {
+    "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-edited9e-lint-renderer-original-response.json",
+    "bytes": 819661,
+    "blob": "2341e3154de771ef27efd34d4774263f3c1b21cd",
+    "sha256": "8acb89ecc95f284c944b70d2f8da6937b35d87b0b3551ff04802ccd599bbc5a5"
+  },
+  "fullResponseDecodesToExactLogBytes": true,
+  "lineCount": 5297,
+  "savedEarlierJobIdentity": {
+    "record": {
+      "path": "/workspace/scratch/82d3f9ba6b85/ci-m-0660/general-9e-edited-jobs-023946.json",
+      "bytes": 21984,
+      "blob": "5b5fad6eef05e9a1cf5b7ebd3ded9177184b7c66",
+      "sha256": "4db2ed352f74d91b5439de860e9be5c74592fcb0840d9d947dd2e1291f363993"
+    },
+    "job": {
+      "id": 133026000887,
+      "name": "lint (renderer)",
+      "status": "queued",
+      "conclusion": null,
+      "run_id": 43776996041,
+      "logs_url": null,
+      "steps": null
+    },
+    "limit": "The023946 job snapshot was queued, before the original02:47 execution; the actual later failure is established by the complete retained log. No API repoll performed."
+  },
+  "actualCheckout": {
+    "commit": "7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf",
+    "tree": "dc7e07838cef3f0b6bf83ffce8b5a34f6e7484e4",
+    "parents": [
+      "def734338f13bcc3209e78079a0cedbc48f05a5b",
+      "9e542899f36c47598a88c764c9e6745589fea3e1"
+    ],
+    "immutableApi": {
+      "path": "/workspace/scratch/82d3f9ba6b85/historical-renderer-lint-9e-source-review/actual-merge-immutable-api.json",
+      "bytes": 2653,
+      "blob": "ef866594aca5b5e1508c45eac8372ecb09f93cdd",
+      "sha256": "fca04f15e204a0dfde01b6896c97b26f093fbca514b8fbe0370f80cc379a97f6"
+    },
+    "wholeMergeTreeEquals9eGitTree": true,
+    "localMergeCommitObjectAbsent": true,
+    "limit": "Original log checks out GitHub test merge7d5c, not raw9eHEAD. Exact immutable merge-tree equality joins its entire source to9e; no unrequested fetch/ref mutation used."
+  },
+  "comparedRefs": [
+    "9e542899f36c47598a88c764c9e6745589fea3e1",
+    "0660c748f88675063e3051fb0f8b2022e8f6f056",
+    "608efb78823d7c74b35f8a674fcfb6faea8ecfc5"
+  ],
+  "selectedSourceAndConfigIdentities": [
+    {
+      "path": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+      "bytes": 8708,
+      "blob": "8299f9f9589810c106c328840b2c0d3640113811",
+      "sha256": "96511a26aaf8ead7ebdaeec018d79d4f9568ff29ee85f8b4eef46adbc2a4a954",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "eslint.config.js",
+      "bytes": 37840,
+      "blob": "7ca4b71fe3a357c00c110c9b75d3034e06e4b22c",
+      "sha256": "d9f0cf7c33672b9304fc524bbc028e07939bcab4583bb1e7c94b99fd773eb597",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "eslint.feature-overrides.mts",
+      "bytes": 657,
+      "blob": "9c6450d54b87ce33f7d799f900226c316e367937",
+      "sha256": "a90a4b08c1d5f56021c50fe5f5ababa70c3de0732acec173624da51254dc883e",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "eslint.gateway-boundaries.mts",
+      "bytes": 3786,
+      "blob": "4975b20df1353a9687fd479ab043beb025e967ba",
+      "sha256": "0c68ab55ac206b45d8d01a75cd2877fbda9352955df1a687ff17b58cba3171e4",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 1235,
+      "blob": "568952f5025a88c16b0568c7279d8e85a4288b43",
+      "sha256": "43729cf95a74178589329b25cdcecbcccf43e55e23a547d21b7df8fede77948a",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "tsconfig.node.json",
+      "bytes": 824,
+      "blob": "c94c942012bef62695dc3b22b1a2b7229d047f59",
+      "sha256": "b2dc91e021bf19673321d5e5f0e6ab6793e658e28d0ea83f52f0f912b71d2bfa",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "package.json",
+      "bytes": 26839,
+      "blob": "f80ec83172d0aec0dec8a8ab055426b4fca4a1f7",
+      "sha256": "c92407a9a5dad6f9d6a6eb8ea7c456195d396679bb4b9dfd15b6c06b726d1084",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 956788,
+      "blob": "924e9bb82bc94fc35d6eb0e1ab4fd6ab5804dca2",
+      "sha256": "3c41aa40c691b866401ca7c83b5cec0530df97aebe5b601a318efa25b258427c",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "bytes": 6946,
+      "blob": "3999f1f503fc23c84db89cf9e964bcc3164122e5",
+      "sha256": "c3801a0cb971ad1c31e7236a61c328ff55c9c91d63b7b7042de8562ff39f00ea",
+      "sameExactBytesAtAllThreeRefs": true
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "bytes": 175238,
+      "blob": "de7e1b4d8388065a15345cca434f1868ec694fc5",
+      "sha256": "cf3fe1c70142669f97143a354b178e55c07cad9dd0a534de885280fe0cec7dce",
+      "sameExactBytesAtAllThreeRefs": true
+    }
+  ],
+  "selectedCount": 10,
+  "allTenSourceConfigLeavesIdenticalAcrossThreeRefs": true,
+  "command": {
+    "outer": "pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer",
+    "expanded": "node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/renderer --cache-location .eslintcache-renderer",
+    "node": "26.12.1",
+    "npm": "11.20.0",
+    "pnpm": "11.22.0",
+    "eslint": "9.39.4",
+    "typescriptEslint": "8.54.0",
+    "typescript": "5.9.3",
+    "separateHostBuildCompilerAlias": "@typescript/native -> typescript7.0.2",
+    "cache": "Original renderer cache lookup missed; no successful cached-current-source result is invented.",
+    "config": "Root eslint.config.js recommendedTypeChecked + stylisticTypeChecked, projectService:true. Root tsconfig.json strict/noEmit includes src/**/*; imported feature/gateway configs and lock/package are unchanged. No explicit local override of the reported rule was found."
+  },
+  "exactOriginalRows": [
+    {
+      "line": 118,
+      "text": "2026-11-16T02:47:06.2499320Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf:refs/remotes/pull/1192/merge"
+    },
+    {
+      "line": 120,
+      "text": "2026-11-16T02:47:10.9510494Z  * [new ref]         7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf -> pull/1192/merge"
+    },
+    {
+      "line": 145,
+      "text": "2026-11-16T02:47:11.6019908Z HEAD is now at 7d5c2e0 Merge 9e542899f36c47598a88c764c9e6745589fea3e1 into def734338f13bcc3209e78079a0cedbc48f05a5b"
+    },
+    {
+      "line": 148,
+      "text": "2026-11-16T02:47:11.6090073Z 7d5c2e0b8b541eaae9e94495a76e67db0c0cafcf"
+    },
+    {
+      "line": 200,
+      "text": "2026-11-16T02:47:21.6144958Z node: v26.12.1"
+    },
+    {
+      "line": 201,
+      "text": "2026-11-16T02:47:21.6145208Z npm: 11.20.0"
+    },
+    {
+      "line": 432,
+      "text": "2026-11-16T02:47:38.1929108Z + @typescript/native <- typescript 7.0.2"
+    },
+    {
+      "line": 440,
+      "text": "2026-11-16T02:47:38.1931461Z + eslint 9.39.4"
+    },
+    {
+      "line": 467,
+      "text": "2026-11-16T02:47:38.1939231Z + typescript 5.9.3"
+    },
+    {
+      "line": 468,
+      "text": "2026-11-16T02:47:38.1939508Z + typescript-eslint 8.54.0"
+    },
+    {
+      "line": 484,
+      "text": "2026-11-16T02:47:38.6540993Z Done in 10.8s using pnpm v11.22.0"
+    },
+    {
+      "line": 515,
+      "text": "2026-11-16T02:47:43.7522847Z Cache not found for input keys: eslint-v3-Linux-renderer-06e80c3f4aed0f74c133475fb471f493bc1a70f0d63b02d4db109e8b843aed78"
+    },
+    {
+      "line": 516,
+      "text": "2026-11-16T02:47:43.7614199Z ##[group]Run pnpm lint:ci:files src/renderer --cache-location .eslintcache-renderer"
+    },
+    {
+      "line": 525,
+      "text": "2026-11-16T02:47:44.1037714Z $ node --max-old-space-size=8192 node_modules/eslint/bin/eslint.js --cache --cache-strategy content src/renderer --cache-location .eslintcache-renderer"
+    },
+    {
+      "line": 5147,
+      "text": "2026-11-16T02:52:07.8581149Z /home/runner/work/agent-teams-ai/agent-teams-ai/src/renderer/store/team/teamRuntimeRunAdoption.ts"
+    },
+    {
+      "line": 5148,
+      "text": "2026-11-16T02:52:07.8583159Z ##[error]  201:12  error  This assertion is unnecessary since it does not change the type of the expression  @typescript-eslint/no-unnecessary-type-assertion"
+    },
+    {
+      "line": 5258,
+      "text": "2026-11-16T02:52:07.8631636Z ✖ 1417 problems (1 error, 1416 warnings)"
+    },
+    {
+      "line": 5262,
+      "text": "2026-11-16T02:52:08.3472718Z ##[error]Process completed with exit code 1."
+    }
+  ],
+  "actualDiagnostics": {
+    "errors": 1,
+    "warnings": 1416,
+    "problems": 1417,
+    "errorFile": "src/renderer/store/team/teamRuntimeRunAdoption.ts",
+    "errorLine": 201,
+    "errorColumn": 12,
+    "rule": "@typescript-eslint/no-unnecessary-type-assertion",
+    "message": "This assertion is unnecessary since it does not change the type of the expression",
+    "failedStatement": "          [previousRunId!]: teamName,",
+    "laterProcessExit": 1,
+    "otherBangAssertionsUntouched": [
+      192,
+      193
+    ]
+  },
+  "sourceReasoning": {
+    "excerpt": [
+      {
+        "line": 181,
+        "text": "  const previousRunId = prev.currentRuntimeRunIdByTeam[teamName];"
+      },
+      {
+        "line": 182,
+        "text": "  const hostCurrent = hostMemberSpawnSnapshotCurrentness(snapshot, teamName);"
+      },
+      {
+        "line": 183,
+        "text": "  const hostRevision ="
+      },
+      {
+        "line": 184,
+        "text": "    typeof previousRunId === 'string' &&"
+      },
+      {
+        "line": 185,
+        "text": "    typeof snapshot.runId === 'string' &&"
+      },
+      {
+        "line": 186,
+        "text": "    isSameHostLaunchRevision(teamName, previousRunId, snapshot.runId);"
+      },
+      {
+        "line": 187,
+        "text": "  if (hostCurrent === false || (hostRevision && hostCurrent !== true)) return {};"
+      },
+      {
+        "line": 188,
+        "text": "  if ("
+      },
+      {
+        "line": 189,
+        "text": "    hostRevision &&"
+      },
+      {
+        "line": 190,
+        "text": "    [previousRunId, snapshot.runId].some("
+      },
+      {
+        "line": 191,
+        "text": "      (runId) =>"
+      },
+      {
+        "line": 192,
+        "text": "        prev.ignoredRuntimeRunIds[runId!] === teamName ||"
+      },
+      {
+        "line": 193,
+        "text": "        prev.ignoredProvisioningRunIds?.[runId!] === teamName"
+      },
+      {
+        "line": 194,
+        "text": "    )"
+      },
+      {
+        "line": 195,
+        "text": "  )"
+      },
+      {
+        "line": 196,
+        "text": "    return {};"
+      },
+      {
+        "line": 197,
+        "text": "  const retired = hostRevision"
+      },
+      {
+        "line": 198,
+        "text": "    ? {"
+      },
+      {
+        "line": 199,
+        "text": "        ignoredRuntimeRunIds: {"
+      },
+      {
+        "line": 200,
+        "text": "          ...prev.ignoredRuntimeRunIds,"
+      },
+      {
+        "line": 201,
+        "text": "          [previousRunId!]: teamName,"
+      },
+      {
+        "line": 202,
+        "text": "        },"
+      },
+      {
+        "line": 203,
+        "text": "      }"
+      },
+      {
+        "line": 204,
+        "text": "    : {};"
+      }
+    ],
+    "capturedPreviousType": "IncomingMemberSpawnProjectionState.currentRuntimeRunIdByTeam: Record<string,string|null>; previousRunId is a const local capture.",
+    "narrowing": "The const hostRevision condition includes typeof previousRunId === string before the same-launch check. Its true ternary branch constructs the retired map. The original typed lint independently diagnoses that the non-null assertion at this exact key changes no inferred type.",
+    "minimalFutureDirection": "Remove only the ! token from the computed key at line201, leaving [previousRunId]: teamName and every runtime condition/read/map operation intact. This is a source-level direction, not a prepared patch or applied candidate.",
+    "unneededBroaderChanges": "No type cast replacement, rule suppression, terminal guard change, source authority change, deadline/read change or deletion of the two callback runId! assertions is suggested."
+  },
+  "sequencingAndLimits": [
+    "No source patch or R1 publication before the original privacy177/24GREEN gate, per root instruction.",
+    "Historical9e lint FAIL remains FAIL; equal source/config does not create an observed608efb lint failure or future PASS.",
+    "The one recorded type-only assertion error does not diagnose any P08/P09/renderer business failure.",
+    "Warnings remain as original output. No broad warning cleanup or new coverage claim.",
+    "No new test is proposed for this one-token type annotation removal. Any future approved edit still needs the original appropriate CI lint/type qualification; no local substitute, install, compiler or retry was run."
+  ],
+  "performedActions": [
+    "Read-only existing original log/API files",
+    "Immutable local Git source/config reads",
+    "One read-only immutable old test-merge GitHub API call",
+    "Pure Python byte/JSON comparison"
+  ],
+  "projectExecutions": 0,
+  "ciPollsOrMutations": 0,
+  "nativeProviderExecutions": 0,
+  "sourceRefMutations": 0,
+  "sourcePatchPrepared": false,
+  "R1Published": false
+}

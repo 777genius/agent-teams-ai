@@ -45,12 +45,12 @@ jobs:
       AGENT_TEAMS_INSTALL_PROFILE: node-ci
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
       - name: Enable Windows long paths
         if: runner.os == 'Windows'
         shell: pwsh
         run: git config --global core.longpaths true
+      - name: Checkout
+        uses: actions/checkout@v6
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
       - name: Setup Node.js
@@ -60,6 +60,9 @@ jobs:
           cache: pnpm
       - name: Install frozen dependencies
         run: node ./scripts/ci/install-dependencies-with-retry.mjs
+      # Host workspace exports are built artifacts; pnpm install does not create them.
+      - name: Build isolated Host for profile migration tests
+        run: pnpm --filter @agent-teams/legacy-agent-host build
       - name: Validate isolated profile and legacy migration
         run: >-
           pnpm exec vitest run --maxWorkers=1

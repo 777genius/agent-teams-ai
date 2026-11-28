@@ -5,6 +5,17 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const getDoctorInvokedCandidatesMock = vi.hoisted(() =>
+  vi.fn(() => {
+    throw new Error('Connection environment tests must not run native doctor probes');
+  })
+);
+
+// These scenarios select a connection route and environment, without native CLI discovery.
+vi.mock('@main/services/team/ClaudeDoctorProbe', () => ({
+  getDoctorInvokedCandidates: getDoctorInvokedCandidatesMock,
+}));
+
 const configState = vi.hoisted(() => ({
   authMode: 'auto' as 'auto' | 'oauth' | 'api_key',
   compatibleEndpoint: { enabled: false, baseUrl: '' },
@@ -44,6 +55,7 @@ describe('Anthropic connection mode safe e2e', () => {
 
   beforeEach(async () => {
     vi.resetModules();
+    getDoctorInvokedCandidatesMock.mockClear();
     configState.authMode = 'auto';
     configState.compatibleEndpoint = { enabled: false, baseUrl: '' };
     tempHome = await mkdtemp(path.join(os.tmpdir(), 'anthropic-connection-mode-e2e-'));
@@ -51,6 +63,7 @@ describe('Anthropic connection mode safe e2e', () => {
 
   afterEach(async () => {
     await rm(tempHome, { recursive: true, force: true });
+    expect(getDoctorInvokedCandidatesMock).not.toHaveBeenCalled();
   });
 
   it('keeps explicit API key mode on the direct Anthropic route despite Bedrock shell env', async () => {

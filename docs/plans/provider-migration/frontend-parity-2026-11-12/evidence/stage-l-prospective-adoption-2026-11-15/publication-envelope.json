@@ -1,0 +1,30 @@
+{
+  "kind": "Self-manifest envelope for prospective docs-only L publication",
+  "parentHead": "e3b661974cb7131cd3b1f7b6eaf6ede647b326f4",
+  "parentTree": "de63f46beda4d0aba7c0ff79e8b3f0b330a377f0",
+  "inventory": {
+    "path": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/publication-inventory.json",
+    "bytes": 45629,
+    "blob": "4ef16f16d02692db93ea3d663f0a9d0c90f63bb7",
+    "sha256": "7cffa9224d75d18fd7c68431dfee7d3cc6b0dcbae27e940bba446ad63de08ab2"
+  },
+  "inventoryPayloadFiles": 47,
+  "finalChangedPathsIncludingInventoryAndThisEnvelope": 49,
+  "modifiedExistingPaths": [
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/29-reconciled-acceptance-and-custody-followups-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/32-host-log-view-parity-2026-11-15.md",
+    "docs/plans/provider-migration/frontend-parity-2026-11-12/33-member-stderr-log-parity-2026-11-15.md"
+  ],
+  "newEvidencePaths": 46,
+  "thisEnvelopePath": "docs/plans/provider-migration/frontend-parity-2026-11-12/evidence/stage-l-prospective-adoption-2026-11-15/publication-envelope.json",
+  "selfHashPolicy": "This envelope intentionally does not contain its own hash or the final tree, avoiding a recursive hash claim. Its exact bytes/hash and the complete final tree are included in the external upload-manifest.json and later Git tree readback.",
+  "externalReviewArtifacts": [
+    "upload-manifest.json",
+    "full-tree.json",
+    "unchanged-parent-leaves.json"
+  ],
+  "allOtherParentLeavesUnchanged": 9934,
+  "sourceTestWorkflowChanges": 0,
+  "sourcePreviewsNotApplied": true,
+  "originalEvidenceUnmodified": true
+}

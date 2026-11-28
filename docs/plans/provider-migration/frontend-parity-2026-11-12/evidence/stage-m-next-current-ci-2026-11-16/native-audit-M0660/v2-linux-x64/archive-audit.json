@@ -1,0 +1,63 @@
+{
+  "archive": {
+    "path": "artifact-14190847461.zip",
+    "bytes": 23381,
+    "blob": "31f3054bfbd2240d4e9f572acbe400a43dbb5951",
+    "sha256": "83ca24eef71341586fe1b6f4de73d5f8ae2137517b66e6055eea63d1fbd84143"
+  },
+  "apiDigestAndSizeMatch": true,
+  "crcAllValid": true,
+  "safeUniqueNonsymlinkNames": true,
+  "members": [
+    {
+      "name": "opencode-v2-embedded-inputs.json",
+      "crc32": "7f1e866a",
+      "bytes": 783,
+      "blob": "fe2c55107e7b754335c1d8834843478fb18f2b87",
+      "sha256": "65e44d0af912fc29331080ef6a38c5558e74751995c9ab1e797b391be35d077a"
+    },
+    {
+      "name": "opencode-v2-embedded-host.json",
+      "crc32": "382f7d19",
+      "bytes": 95684,
+      "blob": "b766391d7957ea1357146f4d6e7f5b0de5e366c2",
+      "sha256": "0dd8f76623c1b5f21221cec768763daf0bf049291e8e1fcc1a8db77525057998"
+    },
+    {
+      "name": "opencode-v2-model-probe.json",
+      "crc32": "29f340a6",
+      "bytes": 88479,
+      "blob": "de9828353a6a8a98cd0e88a3113785d2c0ed25de",
+      "sha256": "f2699936f5bca36443d9218781b91bbf42902aacf8611f6d8c9b35da884db700"
+    },
+    {
+      "name": "opencode-v2-credentials.json",
+      "crc32": "dd7aabfa",
+      "bytes": 203324,
+      "blob": "b5ba412eb8e847ddd3f47560335ef5bf36b60f65",
+      "sha256": "5f1678e612108eb0be639b12299768edbc29d883b941fe01f6683801d4b835a4"
+    },
+    {
+      "name": "opencode-v2-permission-lifecycle.json",
+      "crc32": "3fe36bd9",
+      "bytes": 2577,
+      "blob": "f253d2969933b080a62ec8c9a5f98629176c1640",
+      "sha256": "3b5856e619eab93a4f2893f5ba535169a1b7440142d1914ad0646e9a7c227e8e"
+    },
+    {
+      "name": "opencode-v2-posix-exec.json",
+      "crc32": "e0733211",
+      "bytes": 11351,
+      "blob": "4e4188005904698533b38d4d959ccf771e87e884",
+      "sha256": "5870673026158f2ac5a13e493532c4f5a57f64d20b78b7136f9391bd45d6f788"
+    },
+    {
+      "name": "opencode-v2-captured-mcp.json",
+      "crc32": "91c4fe89",
+      "bytes": 1981,
+      "blob": "262c9cfe6330567e17de90e5e58a91e732b3a0c5",
+      "sha256": "b29bdf7cb6cd9d5ada54a78ee16927033df4838c71598efd4f016ccd30ee5638"
+    }
+  ],
+  "signedUrlRetained": false
+}

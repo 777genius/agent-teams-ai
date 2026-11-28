@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { setClaudeBasePathOverride } from '../../../../utils/pathDecoder';
 import { TeamInboxReader } from '../../TeamInboxReader';
+import { TeamMetaStore } from '../../TeamMetaStore';
 import {
   createOpenCodeTeamThroughRuntimeAdapterFlow,
   launchOpenCodeTeamThroughRuntimeAdapterFlow,
@@ -191,6 +192,67 @@ function createPorts(
 }
 
 describe('OpenCode runtime adapter team flow', () => {
+  it.each([
+    { name: 'fresh explicit selection', requested: 1, stored: undefined, expected: 1 },
+    {
+      name: 'fresh legacy selection',
+      requested: undefined,
+      stored: undefined,
+      expected: undefined,
+    },
+    { name: 'existing explicit selection', requested: undefined, stored: 1, expected: 1 },
+  ] as const)('preserves $name through persisted creation and cold read', async (selection) => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'TEST-opencode-create-selection-'));
+    setClaudeBasePathOverride(root);
+    const request = createRequest({
+      teamName: 'TEST-opencode-selection',
+      cwd: root,
+      model: 'test-legacy/TEST-model',
+      skipPermissions: true,
+      runtimeSelectionVersion: selection.requested,
+    });
+    const store = new TeamMetaStore();
+    try {
+      if (selection.stored) {
+        await fs.mkdir(path.join(root, 'teams', request.teamName), { recursive: true });
+        await store.writeMeta(request.teamName, {
+          cwd: root,
+          runtimeSelectionVersion: selection.stored,
+          createdAt: 1,
+        });
+      }
+      await expect(
+        createOpenCodeTeamThroughRuntimeAdapterFlow(
+          request,
+          vi.fn(),
+          createPorts([], {
+            getTeamsBasePathsToProbe: () => [
+              { location: 'configured', basePath: path.join(root, 'teams') },
+            ],
+            getTeamsBasePath: () => path.join(root, 'teams'),
+            getTasksBasePath: () => path.join(root, 'tasks'),
+            mkdir: (directoryPath) => fs.mkdir(directoryPath, { recursive: true }),
+            writeTeamMeta: (teamName, data) => store.writeMeta(teamName, data),
+          })
+        )
+      ).resolves.toEqual({ runId: 'adapter-run' });
+      const persisted = JSON.parse(
+        await fs.readFile(path.join(root, 'teams', request.teamName, 'team.meta.json'), 'utf8')
+      ) as Record<string, unknown>;
+      expect(persisted.runtimeSelectionVersion).toBe(selection.expected);
+      expect(await new TeamMetaStore().getMeta(request.teamName)).toMatchObject({
+        cwd: root,
+        providerId: 'opencode',
+        model: 'test-legacy/TEST-model',
+        skipPermissions: true,
+        runtimeSelectionVersion: selection.expected,
+      });
+    } finally {
+      setClaudeBasePathOverride(null);
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
   it.each([false, true])(
     'initializes only fresh inbox history before OpenCode metadata (existing=%s)',
     async (existing) => {

@@ -4,7 +4,7 @@
 
 import type {
   InboxMessage,
-  MemberLogSummary,
+  LegacyMemberLogSummary,
   MessagesPage,
   TeamGetDataOptions,
   TeamMemberActivityMeta,
@@ -85,7 +85,12 @@ export type TeamDataWorkerResponse =
   | {
       id: string;
       ok: true;
-      result: TeamViewSnapshot | MessagesPage | TeamMemberActivityMeta | MemberLogSummary[] | null;
+      result:
+        | TeamViewSnapshot
+        | MessagesPage
+        | TeamMemberActivityMeta
+        | LegacyMemberLogSummary[]
+        | null;
       diag?: TeamDataWorkerDiag;
     }
   | { id: string; ok: false; error: string };

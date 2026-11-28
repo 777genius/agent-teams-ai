@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "status": "HOST_OAUTH_SYNTHETIC_PASS_DESKTOP_CUTOVER_PARTIAL",
+  "proofs": [
+    {
+      "status": "PASS",
+      "archive": "docs/plans/provider-migration/evidence/p5-oauth-host-synthetic-v1.tar.gz",
+      "archiveSha256": "fd713cd9e087e30a873574b3a40e793b2859c68d51769eb680df4e6114812370",
+      "receiptSha256": "a0dbbd0ac3af1eedd540cf6bf5743d2ed536b690e8273b2bb98dd01cff325f1e",
+      "artifacts": {
+        "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "sourceSha256": "7933fef2e2f69b1aaf5150dc51b4c48404b98d73bcf7aab140639190956afb7c",
+        "distSha256": "3afa0025396d65049320fb6b0bc1f32ff80c9e4dbbd9d0379574c7e60424f9fb",
+        "controllerSourceSha256": "78b0fde82e011523caaae6d6d71b3a8e3483a3cc8a704ae9ad7679df98796449",
+        "harnessSha256": "05654a47f887474c254059f2b99f0a247f73ac263da49e114da789c000f34d37",
+        "helperSha256": "fa3ee22a674ad32560e4b861a2da2117a1cd836ca065c9fa9c849a9bdc55260d",
+        "fixtureSourceSha256": "88adc0730205f53a8a6d66d5350a4815efbf3484d0aa2eb7805388f5be9fe21e",
+        "providerSha256": "64df7bcfed0e7e58d709cf79ab3723677461fd5ab1a76cc96fe96e7cdc85346b"
+      },
+      "hosts": [
+        {
+          "pid": 95494,
+          "exitCode": 0
+        },
+        {
+          "pid": 95568,
+          "exitCode": 0
+        }
+      ],
+      "scope": "Actual standalone Host/D/physical TEST OpenCode-shaped HTTP process; synthetic OAuth only. Code and auto callback, private authorization, cancellation, reconnect, secret-free journal/progress, restart/replay without reallocation or credential resurrection. No vendor OAuth, account/model or Electron UI qualification."
+    },
+    {
+      "status": "PASS",
+      "archive": "docs/plans/provider-migration/evidence/p5-oauth-global-host-synthetic-v1.tar.gz",
+      "archiveSha256": "87fca1ab51d2e8c0f594f29477747da0d3843e14797f305d13b34223b23bcec6",
+      "receiptSha256": "4f1bc2c319930676bc5d60883820bbac83939e96727452e95b6b2a360469fb75",
+      "artifacts": {
+        "nodeSha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+        "sourceSha256": "09e7349a77d3519faff6f7aa97ebcdff4173311944d795cbc3f2733dbe4773d6",
+        "distSha256": "0e36d560b074b836a1c4dc9201e7b3a013e7be6209d3f264917b3808ee1ab32c",
+        "controllerSourceSha256": "78b0fde82e011523caaae6d6d71b3a8e3483a3cc8a704ae9ad7679df98796449",
+        "harnessSha256": "de90e9c3e6df14050acd9113fe3fee6279d709f611691d69e79bc3c7aaaa58bc",
+        "helperSha256": "fa3ee22a674ad32560e4b861a2da2117a1cd836ca065c9fa9c849a9bdc55260d",
+        "fixtureSourceSha256": "88adc0730205f53a8a6d66d5350a4815efbf3484d0aa2eb7805388f5be9fe21e",
+        "providerSha256": "64df7bcfed0e7e58d709cf79ab3723677461fd5ab1a76cc96fe96e7cdc85346b"
+      },
+      "hosts": [
+        {
+          "pid": 84735,
+          "exitCode": 0
+        },
+        {
+          "pid": 84820,
+          "exitCode": 0
+        }
+      ],
+      "scope": "Actual standalone Host/D/physical TEST OpenCode-shaped HTTP process; synthetic OAuth only. Code and auto callback, private authorization, cancellation, reconnect, secret-free journal/progress, restart/replay without reallocation or credential resurrection. No vendor OAuth, account/model or Electron UI qualification."
+    }
+  ],
+  "globalManagement": "The second proof uses teams:[] and allocates no Team state. Global management never creates a fake Team.",
+  "controlledHostSuite": {
+    "status": "PASS",
+    "tests": 202,
+    "jobId": "6527a77f9d7af377237d781fe24f66a0",
+    "phaseLog": ".artifacts/provider-migration/p5-oauth-qualification-host-tests.log",
+    "scope": "One actual top-level Host plus model-oracles invocation. Aggregate qualification job exit1 later from Desktop TEST fixture newline escaping; do not label the whole job PASS."
+  },
+  "originalFeatureFailure": {
+    "jobId": "6527a77f9d7af377237d781fe24f66a0",
+    "phaseLog": ".artifacts/provider-migration/p5-oauth-qualification-feature-tests.log",
+    "repairLog": ".artifacts/provider-migration/p5-oauth-desktop-feature-repair.log",
+    "result": "Capture5 and router7 passed in original invocation; Desktop feature file3 fixture failures preserved. Only affected file rerun8/8 passed after generated newline escape repair."
+  },
+  "remaining": [
+    "Main OAuth intent persistence/restore and native setup metadata",
+    "Full management OAuth/auto/code/cancel UI",
+    "Default/model-test/config parity and CLI companion/local-provider cutover",
+    "Claude/Codex statuses and prior12 strict-sentinel refusals",
+    "All remaining M01-M19/P0-P8 scope"
+  ]
+}

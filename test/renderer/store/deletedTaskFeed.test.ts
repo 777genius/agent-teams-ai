@@ -130,4 +130,64 @@ describe('deletedTaskFeed', () => {
 
     expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-beta']);
   });
+
+  it('reads every physical history without overflowing the captured Host capacity', async () => {
+    const teams = Array.from({ length: 10 }, (_, index) => ({
+      ...team('TEST-team-' + index),
+      projectHistoryContexts: Array.from({ length: 3 }, (_, history) => ({
+        executionTeamName: `TEST-team-${index}-history-${history}`,
+        projectPath: `/TEST/project-${history}`,
+      })),
+    }));
+    const expected = teams.flatMap((entry) => [entry.teamName,
+      ...entry.projectHistoryContexts.map((history) => history.executionTeamName)]);
+    let active = 0, maximum = 0;
+    getDeletedTasks.mockImplementation(async (name: string) => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      try {
+        if (active > 32) throw new Error('TEST captured Host capacity exceeded');
+        await new Promise<void>((resolve) => queueMicrotask(resolve));
+        return [deletedTask('task-' + name)];
+      } finally { active -= 1; }
+    });
+    const store = createFeedStore(teams);
+    await store.getState().fetchAllDeletedTasks();
+    expect(getDeletedTasks).toHaveBeenCalledTimes(40);
+    expect(maximum).toBeLessThanOrEqual(8);
+    expect(store.getState().globalDeletedTasks.map((task) => task.teamName)).toEqual(expected);
+    expect(store.getState().globalDeletedTasks.map((task) => task.id))
+      .toEqual(expected.map((name) => 'task-' + name));
+  });
+
+  it('stops queued old-context histories without delaying the visible context', async () => {
+    const stale = createDeferred<TeamTask[]>();
+    getDeletedTasks.mockImplementation((name: string) => name.startsWith('TEST-old-')
+      ? stale.promise : Promise.resolve([deletedTask('task-new')]));
+    const store = createFeedStore(Array.from({ length: 40 }, (_, index) => team('TEST-old-' + index)));
+    const oldRefresh = store.getState().fetchAllDeletedTasks();
+    store.setState({ activeContextId: 'TEST-new-context', teams: [team('TEST-new')] });
+    await store.getState().fetchAllDeletedTasks();
+    expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-new']);
+    stale.resolve([deletedTask('task-old')]);
+    await oldRefresh;
+    expect(getDeletedTasks.mock.calls.filter(([name]) => name.startsWith('TEST-old-'))).toHaveLength(8);
+    expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-new']);
+  });
+
+  it('does not coalesce a new epoch with a hung refresh under the same context ID', async () => {
+    const stale = createDeferred<TeamTask[]>();
+    getDeletedTasks.mockImplementation((name: string) => name === 'alpha'
+      ? stale.promise : Promise.resolve([deletedTask('task-beta')]));
+    const store = createFeedStore([team('alpha')]);
+    const oldRefresh = store.getState().fetchAllDeletedTasks();
+    invalidateContextScopedRequestEpoch();
+    store.setState({ teams: [team('beta')] });
+    const newRefresh = store.getState().fetchAllDeletedTasks();
+    const startedBeforeOldSettled = getDeletedTasks.mock.calls.some(([name]) => name === 'beta');
+    stale.resolve([deletedTask('task-alpha')]);
+    await Promise.all([oldRefresh, newRefresh]);
+    expect(startedBeforeOldSettled).toBe(true);
+    expect(store.getState().globalDeletedTasks.map((task) => task.id)).toEqual(['task-beta']);
+  });
 });
