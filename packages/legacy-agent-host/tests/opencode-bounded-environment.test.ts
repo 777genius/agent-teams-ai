@@ -78,6 +78,7 @@ async function assertAccountValue(f: ReturnType<typeof fixture>, consumer: Consu
   } else {
     const probe = f.readiness();
     assert.equal(await probe.run(new AbortController().signal, Date.now() + 5000), false);
+    assert.ok(probe.readiness);
     const evidence = probe.readiness();
     assert.ok(evidence);
     assert.equal(evidence.accountDigest, expected);
@@ -155,6 +156,7 @@ test('a valid Unicode URL keeps the existing UTF16 URL policy', async (t) => {
   await assertAccountValue(f, 'account', 'TEST-key');
   const probe = f.readiness();
   assert.equal(await probe.run(new AbortController().signal, Date.now() + 5000), false);
+  assert.ok(probe.readiness);
   assert.equal(probe.readiness()?.routeDigest, managementDigest({
     providerId, modelId, baseUrl: new URL(url).toString(), effort: null, limits: null,
   }));
