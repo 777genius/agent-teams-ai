@@ -277,16 +277,37 @@ export class ModelProbeOwner {
   /** Writer-only cleanup survives sealed work admission and revoked operator grants. */
   async cancelRetained(commandId: string, context: string): Promise<void> {
     this.options.assertWriter();
-    const saved = this.options.store.read(id.parse(commandId));
-    if (!saved || saved.kind !== 'model.probe' || saved.context !== context)
-      throw new ManagementCommandError('conflict');
-    this.options.store.write({ ...saved, readinessRetired: true });
-    const entry = this.active.get(commandId);
-    if (entry) entry.saved = { ...entry.saved, readinessRetired: true };
+    const command = id.parse(commandId),
+      entry = this.active.get(command);
+    if (entry && entry.saved.context !== context) throw new ManagementCommandError('conflict');
+    let retired: StoredModelProbe;
+    try {
+      if (entry) this.assertOriginal(entry);
+      const saved = entry?.saved ?? this.options.store.read(command);
+      if (!saved || saved.kind !== 'model.probe' || saved.context !== context)
+        throw new ManagementCommandError('conflict');
+      retired = { ...saved, readinessRetired: true };
+      this.options.store.write(retired);
+      if (entry) entry.saved = retired;
+    } catch (error) {
+      if (!entry) throw error;
+      // The matching original still owns cleanup, never a replacement receipt.
+      entry.originalLost = true;
+      await this.finish(entry, 'held', false);
+      throw new ManagementCommandError('held');
+    }
     if (entry) await this.finish(entry, 'cancelled', false);
     this.options.assertWriter();
-    const original = this.options.store.read(commandId);
-    if (!original || original.kind !== 'model.probe' || original.context !== context || original.resourceHeld)
+    const original = this.options.store.read(command);
+    if (
+      !original ||
+      original.kind !== 'model.probe' ||
+      original.context !== context ||
+      !original.readinessRetired ||
+      original.resourceHeld ||
+      entry?.originalLost ||
+      !managementValuesEqual(original, entry?.saved ?? retired)
+    )
       throw new ManagementCommandError('held');
   }
 

@@ -66,5 +66,5 @@ export function teamSessionWindow(
   const index = legacy.findIndex((row) => row.id === selectedId);
   return index < 0
     ? null
-    : { start: legacy[index]!.createdAt, end: legacy[index + 1]?.createdAt ?? Infinity };
+    : { start: legacy[index].createdAt, end: legacy[index + 1]?.createdAt ?? Infinity };
 }

@@ -120,7 +120,7 @@ export function projectTeamSessionHistory(
             { kind: 'team-activity-logs', logs: [source.log] },
             event,
             { memberName: text(value.memberName, 256) }
-          ).logs[0]!;
+          ).logs[0];
         })();
   const messages = list(source.messages, 64).map((raw) => {
     const value = row(raw);

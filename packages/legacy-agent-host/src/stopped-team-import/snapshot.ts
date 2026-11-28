@@ -167,14 +167,15 @@ export function snapshotJson(file: SnapshotFile): unknown {
   if (values.length !== 1) return hold();
   return values[0];
 }
+type FreshSnapshotFile = Extract<StoppedTeamSnapshot, { schemaVersion: 2 }>['files'][number];
 function captureFiles(source: StoppedTeamSource): {
   roots: StoppedTeamSnapshot['roots'];
-  files: SnapshotFile[];
+  files: FreshSnapshotFile[];
   identities: unknown[];
 } {
   let total = 0,
     entries = 0;
-  const files: SnapshotFile[] = [],
+  const files: FreshSnapshotFile[] = [],
     identities: unknown[] = [],
     roots: StoppedTeamSnapshot['roots'] = [];
   for (const root of source.roots) {
@@ -251,14 +252,15 @@ function captureFiles(source: StoppedTeamSource): {
             after.ctimeMs,
             sha(bytes),
           ]);
-          files.push({
-            category: root.category,
-            path: relativePath,
-            sha256: sha(bytes),
-            size: bytes.length,
-            disposition: selected,
-            ...(selected === 'excluded' ? {} : { base64: bytes.toString('base64') }),
-          });
+          const file = { category: root.category, path: relativePath, size: bytes.length };
+          if (selected === 'excluded') files.push({ ...file, disposition: selected });
+          else
+            files.push({
+              ...file,
+              disposition: selected,
+              sha256: sha(bytes),
+              base64: bytes.toString('base64'),
+            });
         } finally {
           closeSync(fd);
         }
@@ -426,7 +428,7 @@ export async function exportStoppedTeam(source: StoppedTeamSource): Promise<Stop
         )
           hold();
       const body = {
-        schemaVersion: 1 as const,
+        schemaVersion: 2 as const,
         header,
         roots: first.roots,
         files: first.files,
@@ -444,11 +446,53 @@ export async function exportStoppedTeam(source: StoppedTeamSource): Promise<Stop
   }
 }
 
+function snapshotRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return hold();
+  return value as Record<string, unknown>;
+}
+function onlySnapshotFields(value: unknown, fields: readonly string[]): void {
+  const keys = Object.keys(snapshotRecord(value));
+  if (keys.length !== fields.length || keys.some((key) => !fields.includes(key))) hold();
+}
+/** V2 has no alternate metadata channel for excluded content. V1 retains its exact decoder. */
+function validateV2Shape(raw: Extract<StoppedTeamSnapshot, { schemaVersion: 2 }>): void {
+  onlySnapshotFields(raw, [
+    'schemaVersion',
+    'header',
+    'roots',
+    'files',
+    'blobs',
+    'references',
+    'digest',
+  ]);
+  for (const values of [raw.roots, raw.files, raw.blobs, raw.references])
+    if (!Array.isArray(values)) hold();
+  if (
+    raw.files.length > STOPPED_IMPORT_LIMITS.files ||
+    raw.roots.length !== importCategories.length
+  )
+    hold();
+  for (const root of raw.roots) onlySnapshotFields(root, ['category', 'exists', 'identity']);
+  for (const value of raw.files) {
+    const file = snapshotRecord(value);
+    onlySnapshotFields(
+      file,
+      file.disposition === 'excluded'
+        ? ['category', 'path', 'size', 'disposition']
+        : ['category', 'path', 'size', 'disposition', 'sha256', 'base64']
+    );
+  }
+  for (const blob of raw.blobs) onlySnapshotFields(blob, ['originalPath', 'category', 'path']);
+  for (const reference of raw.references)
+    onlySnapshotFields(reference, ['taskId', 'displayId', 'teamName', 'target']);
+}
+
 /** Host rechecks every detached byte rather than trusting a caller's snapshot hash. */
 function validateDetachedSnapshot(raw: StoppedTeamSnapshot): StoppedTeamSnapshot {
+  if (raw.schemaVersion === 2) validateV2Shape(raw);
   const { digest: expected, ...body } = raw;
   if (
-    raw.schemaVersion !== 1 ||
+    (raw.schemaVersion !== 1 && raw.schemaVersion !== 2) ||
     digest(body) !== expected ||
     raw.files.length > STOPPED_IMPORT_LIMITS.files
   )
@@ -489,6 +533,12 @@ function validateDetachedSnapshot(raw: StoppedTeamSnapshot): StoppedTeamSnapshot
       )
     )
       hold();
+  if (raw.schemaVersion === 1) {
+    for (const file of raw.files) if (!/^[a-f0-9]{64}$/.test(file.sha256)) hold();
+  } else {
+    for (const file of raw.files)
+      if (file.disposition !== 'excluded' && !/^[a-f0-9]{64}$/.test(file.sha256)) hold();
+  }
   let total = 0;
   const seen = new Set<string>();
   for (const file of raw.files) {
@@ -497,7 +547,6 @@ function validateDetachedSnapshot(raw: StoppedTeamSnapshot): StoppedTeamSnapshot
     if (
       !importCategories.includes(file.category) ||
       !raw.roots.find((root) => root.category === file.category)?.exists ||
-      !/^[a-f0-9]{64}$/.test(file.sha256) ||
       seen.has(key) ||
       file.disposition !== disposition(file.category, file.path) ||
       !Number.isSafeInteger(file.size) ||

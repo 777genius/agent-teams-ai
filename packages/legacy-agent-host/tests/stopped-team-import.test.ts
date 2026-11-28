@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import {
   existsSync,
   mkdirSync,
@@ -280,8 +281,12 @@ test('saved project context mode survives publication and a cold import catalog 
     const f = fixture(t);
     if (projectContextMode) f.header.savedSettings.projectContextMode = projectContextMode;
     const snapshot = await exportStoppedTeam(f.source);
-    const request = { contextId: 'TEST-context', sourceId: f.header.sourceId,
-      snapshotDigest: snapshot.digest, teamName: 'TEST-imported-mode' };
+    const request = {
+      contextId: 'TEST-context',
+      sourceId: f.header.sourceId,
+      snapshotDigest: snapshot.digest,
+      teamName: 'TEST-imported-mode',
+    };
     const published = f.importer.import('TEST-import-project-mode', request, snapshot);
     assert.equal(published.phase, 'published');
     const cold = new FileStoppedTeamImport(f.options);
@@ -440,7 +445,8 @@ test('canonical Main source artifacts stay censused without transferring ownersh
     const file = snapshot.files.find((entry) => entry.category === 'team' && entry.path === path)!;
     assert.equal(file.disposition, 'excluded');
     assert.equal(file.base64, undefined);
-    assert.ok(file.size > 0 && /^[a-f0-9]{64}$/.test(file.sha256));
+    assert.ok(file.size > 0);
+    assert.deepEqual(Object.keys(file).sort(), ['category', 'disposition', 'path', 'size']);
   }
   assert.equal(JSON.stringify(snapshot).includes(marker), false);
   const history = snapshot.files.find(
@@ -781,4 +787,442 @@ test('import publication requires the exact new-owner bootstrap proof and never 
     originalState,
     'retry never manufactures the missing proof or resets grants'
   );
+});
+
+test('fresh excluded metadata stays private through actual staging, intent and published census', async (t) => {
+  const f = fixture(t);
+  const secret = readFileSync(f.path('team', 'auth.json'));
+  const secretHash = createHash('sha256').update(secret).digest('hex');
+  const snapshot = await exportStoppedTeam(f.source);
+  const request = requestFor(snapshot);
+  const snapshots = new FileStoppedSnapshotResolver({
+    ...f.options,
+    assertCurrent: f.options.assertWriter,
+  });
+  snapshots.stage(request, snapshot);
+  const staging = join(f.destination, '.host-team-registry/snapshots');
+  const names = readdirSync(staging);
+  assert.equal(names.length, 1);
+  const stagedText = readFileSync(join(staging, names[0]!), 'utf8');
+  const staged = JSON.parse(stagedText) as { snapshot: { files: Record<string, unknown>[] } };
+  const commandId = 'TEST-excluded-metadata';
+  const receipt = f.importer.import(commandId, request, snapshots.read(request));
+  assert.equal(receipt.phase, 'published');
+  const intentText = readFileSync(
+    join(f.destination, '.host-team-registry/imports', digest(commandId) + '.json'),
+    'utf8'
+  );
+  const intent = JSON.parse(intentText) as { snapshot: { files: Record<string, unknown>[] } };
+  const censusText = readFileSync(
+    join(f.destination, 'teams/TEST-imported/.host-owner/import/source.json'),
+    'utf8'
+  );
+  const census = JSON.parse(censusText) as { census: Record<string, unknown>[] };
+  const expected = {
+    category: 'team',
+    path: 'auth.json',
+    size: secret.length,
+    disposition: 'excluded',
+  };
+  for (const [name, text, rows] of [
+    ['staging', stagedText, staged.snapshot.files],
+    ['intent', intentText, intent.snapshot.files],
+    ['published census', censusText, census.census],
+  ] as const) {
+    // This is the meaningful original-exporter RED: real persisted metadata carried this hash.
+    assert.equal(text.includes(secretHash), false, name + ' retained an excluded-content verifier');
+    assert.equal(text.includes(secret.toString('utf8')), false, name + ' retained excluded bytes');
+    assert.deepEqual(
+      rows.find((row) => row.category === 'team' && row.path === 'auth.json'),
+      expected
+    );
+  }
+  assert.equal(snapshot.schemaVersion, 2);
+  assert.deepEqual(
+    snapshot.files.find((row) => row.category === 'team' && row.path === 'auth.json'),
+    expected
+  );
+  assert.equal(existsSync(join(f.destination, 'teams/TEST-imported/auth.json')), false);
+  assert.deepEqual(
+    new FileStoppedSnapshotResolver({
+      ...f.options,
+      assertCurrent: f.options.assertWriter,
+    }).read(request),
+    snapshot
+  );
+  assert.deepEqual(new FileStoppedTeamImport(f.options).lookup(commandId, 'TEST-context'), receipt);
+  assert.deepEqual(readFileSync(f.path('team', 'auth.json')), secret);
+});
+
+test('independent equal-size excluded changes do not change fresh transported snapshot identity', async (t) => {
+  const f = fixture(t);
+  const first = await exportStoppedTeam(f.source);
+  const before = readFileSync(f.path('team', 'auth.json'));
+  const after = Buffer.from(
+    before.toString('utf8').replace('TEST-secret-never-copy', 'TEST-secret-never-copz')
+  );
+  assert.equal(after.length, before.length);
+  assert.notDeepEqual(after, before);
+  writeFileSync(f.path('team', 'auth.json'), after);
+  const second = await exportStoppedTeam(f.source);
+  assert.equal(first.schemaVersion, 2);
+  assert.deepEqual(second, first);
+  assert.equal(f.captures(), 4);
+  assert.deepEqual(readdirSync(f.destination), []);
+});
+
+test('equal-size excluded mutation inside the original fenced export remains a refusal', async (t) => {
+  const f = fixture(t);
+  const before = readFileSync(f.path('team', 'auth.json'));
+  const after = Buffer.from(
+    before.toString('utf8').replace('TEST-secret-never-copy', 'TEST-secret-never-copz')
+  );
+  assert.equal(after.length, before.length);
+  assert.notDeepEqual(after, before);
+  let descriptions = 0;
+  f.source.describe = async () => {
+    if (++descriptions === 2) writeFileSync(f.path('team', 'auth.json'), after);
+    return structuredClone(f.header);
+  };
+  await assert.rejects(exportStoppedTeam(f.source), { code: 'hold' });
+  assert.equal(descriptions, 2);
+  assert.deepEqual(readdirSync(f.destination), []);
+});
+
+test('strict fresh snapshot metadata rejects alternate verifiers and malformed copied authority', async (t) => {
+  const f = fixture(t);
+  const snapshot = await exportStoppedTeam(f.source);
+  assert.equal(snapshot.schemaVersion, 2);
+  const secret = readFileSync(f.path('team', 'auth.json'));
+  const secretHash = createHash('sha256').update(secret).digest('hex');
+  const snapshots = new FileStoppedSnapshotResolver({
+    ...f.options,
+    assertCurrent: f.options.assertWriter,
+  });
+  type Row = Record<string, unknown>;
+  type Mutation = { name: string; change(raw: Row, excluded: Row, copied: Row): void };
+  const cases: Mutation[] = [
+    {
+      name: 'real excluded verifier',
+      change(_raw, file) {
+        file.sha256 = secretHash;
+      },
+    },
+    {
+      name: 'synthetic excluded verifier',
+      change(_raw, file) {
+        file.sha256 = '0'.repeat(64);
+      },
+    },
+    {
+      name: 'own undefined verifier',
+      change(_raw, file) {
+        file.sha256 = undefined;
+      },
+    },
+    {
+      name: 'excluded bytes',
+      change(_raw, file) {
+        file.base64 = secret.toString('base64');
+      },
+    },
+    {
+      name: 'alternate excluded verifier',
+      change(_raw, file) {
+        file.checksum = secretHash;
+      },
+    },
+    {
+      name: 'root verifier',
+      change(raw) {
+        raw.checksum = secretHash;
+      },
+    },
+    {
+      name: 'root-row verifier',
+      change(raw) {
+        (raw.roots as Row[])[0]!.checksum = secretHash;
+      },
+    },
+    {
+      name: 'blob-row verifier',
+      change(raw) {
+        (raw.blobs as Row[])[0]!.checksum = secretHash;
+      },
+    },
+    {
+      name: 'reference-row verifier',
+      change(raw) {
+        (raw.references as Row[])[0]!.checksum = secretHash;
+      },
+    },
+    {
+      name: 'copied-row verifier',
+      change(_raw, _file, copied) {
+        copied.checksum = secretHash;
+      },
+    },
+    {
+      name: 'missing copied checksum',
+      change(_raw, _file, copied) {
+        delete copied.sha256;
+      },
+    },
+    {
+      name: 'missing copied bytes',
+      change(_raw, _file, copied) {
+        delete copied.base64;
+      },
+    },
+    {
+      name: 'changed copied bytes',
+      change(_raw, _file, copied) {
+        copied.base64 = Buffer.from('TEST-corrupt').toString('base64');
+      },
+    },
+    {
+      name: 'unknown version',
+      change(raw) {
+        raw.schemaVersion = 99;
+      },
+    },
+    {
+      name: 'V2 rows relabelled V1',
+      change(raw) {
+        raw.schemaVersion = 1;
+      },
+    },
+    {
+      name: 'excluded file relabelled archive',
+      change(_raw, file) {
+        file.disposition = 'archive';
+        file.sha256 = secretHash;
+        file.base64 = secret.toString('base64');
+      },
+    },
+  ];
+  for (const [index, mutation] of cases.entries()) {
+    const raw = structuredClone(snapshot) as unknown as Row;
+    const files = raw.files as Row[];
+    const excluded = files.find((file) => file.category === 'team' && file.path === 'auth.json')!;
+    const copied = files.find((file) => file.disposition !== 'excluded')!;
+    mutation.change(raw, excluded, copied);
+    const { digest: _previous, ...body } = raw;
+    raw.digest = digest(body);
+    const changed = raw as unknown as Awaited<ReturnType<typeof exportStoppedTeam>>;
+    const request = requestFor(changed);
+    assert.throws(() => validateStoppedSnapshot(changed), { code: 'hold' }, mutation.name);
+    assert.throws(() => snapshots.stage(request, changed), { code: 'hold' }, mutation.name);
+    assert.throws(
+      () => f.importer.import('TEST-strict-v2-' + index, request, changed),
+      { code: 'hold' },
+      mutation.name
+    );
+    assert.deepEqual(readdirSync(f.destination), [], mutation.name);
+  }
+});
+
+// Genuine V1 capture: pristine 617b15d65e3d1e40d94ee3470eb5fc8399836b68, Node 24.21.0.
+// Original source removed before capture output; exact exported JSON SHA256 3a85867873246991dd7de7c4f63edb3e81730c4682643626c3d77dac2d4ed106.
+const stoppedSnapshotV1Original = {
+  json: '{"schemaVersion":1,"header":{"sourceOwnerId":"TEST-legacy-owner","sourceId":"TEST-source","sourceTeamName":"TEST-old-team","sourceRevision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","savedSettings":{"cwd":"/TEST/workspace","model":"TEST-model","fastMode":"off","syncModelsWithLead":false,"skipPermissions":false},"members":[{"memberId":"TEST-lead","name":"captain","role":"lead","settings":{"model":"TEST-model"}}],"obligations":{"launch":"released","bootstrap":"released","lane":"released","session":"released","stop":"released","command":"released","delivery":"released","custody":"released","background":"released"},"gaps":[]},"roots":[{"category":"team","exists":true,"identity":"94cab3a835dc52b2aa37a1df07e4fc70ff7eac7442925ce3578d1b48c27a2590"},{"category":"tasks","exists":true,"identity":"1f2b5999658c30fe3e13632b8fd303c4f39e4fbe2e843248a2d822a580e53a66"},{"category":"attachments","exists":true,"identity":"5239151f5a5dc6175d3eab2b2654415bb9652a9e5a18252d11b9da5bbbe0da1b"},{"category":"task-attachments","exists":true,"identity":"cc0753e7269f37d02ffd275612d5c78d8397a0deb07fba7169b08cb4a31cf51f"},{"category":"history","exists":true,"identity":"02576b3dae3cf2763f0dbf83ec0bc99e8b8f8a26a1a24fb3d7ecca65b9bd35dc"},{"category":"evidence","exists":true,"identity":"cabcfa005fa7fb80984881a70007520e3852596fba011effd40da705e70c2adb"}],"files":[{"category":"team","path":"auth.json","sha256":"be05e9cbeac1442d74f4b5636b4853a9de1894de365faa6ea2aeca0f2989b1c7","size":43,"disposition":"excluded"},{"category":"team","path":"config.json","sha256":"9d4634d511bbe33666e23ee91a29ff68b04518d49b359497ba5cd67f6589f301","size":55,"disposition":"archive","base64":"eyJuYW1lIjoiVEVTVC1vbGQtdGVhbSIsIm1lbWJlcnMiOlt7Im5hbWUiOiJjYXB0YWluIn1dfQ=="}],"references":[],"blobs":[],"digest":"b79259ede0bf4b3283498e02b959119fb1b6015e4597f6b7f439a4688f9e679f"}',
+  digest: 'b79259ede0bf4b3283498e02b959119fb1b6015e4597f6b7f439a4688f9e679f',
+} as const;
+
+function assertRetainedStoppedV1Compatibility(
+  t: TestContext,
+  original: Readonly<{ json: string; digest: string }>
+): void {
+  const parsed = JSON.parse(original.json) as Parameters<typeof validateStoppedSnapshot>[0];
+  assert.equal(parsed.schemaVersion, 1);
+  const snapshot = validateStoppedSnapshot(parsed);
+  assert.equal(snapshot.schemaVersion, 1);
+  assert.equal(snapshot.digest, original.digest);
+  assert.equal(JSON.stringify(snapshot), original.json);
+  assert.deepEqual(
+    snapshot.roots.map((root) => root.category),
+    importCategories
+  );
+  assert.ok(snapshot.roots.every((root) => root.exists));
+  assert.deepEqual(
+    snapshot.files.map((file) => file.category + '/' + file.path),
+    ['team/auth.json', 'team/config.json']
+  );
+  assert.deepEqual(snapshot.blobs, []);
+  assert.deepEqual(snapshot.references, []);
+  const excluded = snapshot.files[0]!;
+  assert.equal(excluded.disposition, 'excluded');
+  assert.match(excluded.sha256!, /^[a-f0-9]{64}$/);
+  assert.equal(Object.hasOwn(excluded, 'base64'), false);
+  const originalConfig = Buffer.from(snapshot.files[1]!.base64!, 'base64');
+  assert.equal(
+    originalConfig.toString('utf8'),
+    '{"name":"TEST-old-team","members":[{"name":"captain"}]}'
+  );
+
+  // Existing fixture supplies destination authority and an actual attach fault.
+  // Its source is a decoy: no export/describe is allowed in this compatibility test.
+  // The real baseline source was already removed by the capture script.
+  const f = fixture(t);
+  const request = requestFor(snapshot);
+  const commandId = 'TEST-retained-v1-original-import';
+  const authority = { ...f.options, assertCurrent: f.options.assertWriter };
+  const staged = new FileStoppedSnapshotResolver(authority);
+  const sourceIdentity = {
+    sourceId: request.sourceId,
+    snapshotDigest: original.digest,
+  };
+  assert.deepEqual(staged.stage(request, snapshot), sourceIdentity);
+  const stagingDirectory = join(f.destination, '.host-team-registry', 'snapshots');
+  const key = {
+    ownerId: f.options.ownerId,
+    profileId: f.options.profileId,
+    principalId: f.options.principalId,
+    contextId: request.contextId,
+    sourceId: request.sourceId,
+    snapshotDigest: request.snapshotDigest,
+  };
+  const stagePath = join(stagingDirectory, digest(key) + '.json');
+  const stageBytes = readFileSync(stagePath);
+  assert.deepEqual(stageBytes, Buffer.from(JSON.stringify({ key, snapshot })));
+  const coldStaged = new FileStoppedSnapshotResolver(authority);
+  assert.equal(JSON.stringify(coldStaged.read(request)), original.json);
+  assert.deepEqual(coldStaged.stage(request, snapshot), sourceIdentity);
+  assert.deepEqual(readFileSync(stagePath), stageBytes);
+
+  f.faults.attach = true;
+  const initialRoutes = stoppedTeamImportRoutes(f.importer, coldStaged);
+  const held = initialRoutes.publish(commandId, request);
+  assert.equal(held.phase, 'held');
+  assert.equal(held.commandId, commandId);
+  assert.deepEqual(held.source, sourceIdentity);
+  assert.deepEqual(f.importer.records(), []);
+  assert.equal(f.attached.length, 0);
+  const intentPath = join(
+    f.destination,
+    '.host-team-registry',
+    'imports',
+    digest(commandId) + '.json'
+  );
+  const readIntent = (): Record<string, unknown> => {
+    const value: unknown = JSON.parse(readFileSync(intentPath, 'utf8'));
+    assert.ok(value && typeof value === 'object' && !Array.isArray(value));
+    return value as Record<string, unknown>;
+  };
+  const heldIntentBytes = readFileSync(intentPath);
+  const heldIntent = readIntent();
+  assert.equal(heldIntent.schemaVersion, 1);
+  // Proves this is the deliberate real attach failure after installation,
+  // rather than an unrelated earlier failure that happened to return held.
+  assert.equal(heldIntent.phase, 'installed');
+  assert.equal(heldIntent.commandId, commandId);
+  assert.equal(JSON.stringify(heldIntent.snapshot), original.json);
+  assert.deepEqual(heldIntent.request, request);
+  assert.deepEqual(heldIntent.record, held.record);
+  assert.match(String(heldIntent.fingerprint), /^[a-f0-9]{64}$/);
+
+  const censusPath = join(
+    f.destination,
+    'teams',
+    request.teamName,
+    '.host-owner',
+    'import',
+    'source.json'
+  );
+  const censusBytes = readFileSync(censusPath);
+  const census = JSON.parse(censusBytes.toString('utf8')) as {
+    schemaVersion: unknown;
+    snapshotDigest: unknown;
+    census: unknown;
+  };
+  assert.equal(census.schemaVersion, 1);
+  assert.equal(census.snapshotDigest, original.digest);
+  assert.deepEqual(
+    census.census,
+    snapshot.files.map(({ base64: _base64, ...file }) => file)
+  );
+  const archiveConfigPath = join(
+    f.destination,
+    'teams',
+    request.teamName,
+    '.host-owner',
+    'import',
+    'archive',
+    'team',
+    'config.json'
+  );
+  assert.deepEqual(readFileSync(archiveConfigPath), originalConfig);
+  assert.equal(existsSync(join(f.destination, 'teams', request.teamName, 'auth.json')), false);
+  assert.equal(
+    existsSync(
+      join(
+        f.destination,
+        'teams',
+        request.teamName,
+        '.host-owner',
+        'import',
+        'archive',
+        'team',
+        'auth.json'
+      )
+    ),
+    false
+  );
+
+  rmSync(stagingDirectory, { recursive: true });
+  rmSync(f.sourceRoot, { recursive: true });
+  const cold = new FileStoppedTeamImport(f.options);
+  const missingStage = new FileStoppedSnapshotResolver(authority);
+  assert.throws(() => missingStage.read(request), { code: 'hold' });
+  const coldRoutes = stoppedTeamImportRoutes(cold, missingStage);
+  assert.deepEqual(cold.lookup(commandId, request.contextId), held);
+  assert.deepEqual(coldRoutes.lookup(commandId, { contextId: request.contextId }), held);
+  assert.deepEqual(coldRoutes.lookup(commandId, request), held);
+  cold.attachPublished();
+  assert.equal(f.attached.length, 0);
+  assert.deepEqual(readFileSync(intentPath), heldIntentBytes);
+  assert.deepEqual(readFileSync(censusPath), censusBytes);
+
+  f.faults.attach = false;
+  const published = coldRoutes.retry(commandId, request);
+  assert.deepEqual(published, { ...held, phase: 'published' });
+  assert.equal(f.attached.length, 1);
+  const publishedIntent = readIntent();
+  assert.equal(JSON.stringify(publishedIntent.snapshot), original.json);
+  assert.deepEqual(publishedIntent, { ...heldIntent, phase: 'published' });
+  assert.deepEqual(readFileSync(censusPath), censusBytes);
+  assert.deepEqual(readFileSync(archiveConfigPath), originalConfig);
+  assert.equal(
+    cold.readOrigin(held.record.teamId, request.contextId)!.snapshotDigest,
+    original.digest
+  );
+
+  const publishedIntentBytes = readFileSync(intentPath);
+  const reopened = new FileStoppedTeamImport(f.options);
+  const originalRoutes = stoppedTeamImportRoutes(
+    reopened,
+    new FileStoppedSnapshotResolver(authority)
+  );
+  assert.deepEqual(originalRoutes.lookup(commandId, request), published);
+  assert.deepEqual(originalRoutes.publish(commandId, request), published);
+  assert.deepEqual(originalRoutes.retry(commandId, request), published);
+  assert.throws(
+    () =>
+      originalRoutes.publish(commandId, {
+        ...request,
+        teamName: 'TEST-changed-v1-import',
+      }),
+    { code: 'conflict' }
+  );
+  assert.deepEqual(readFileSync(intentPath), publishedIntentBytes);
+  assert.deepEqual(readFileSync(censusPath), censusBytes);
+  assert.equal(JSON.stringify(readIntent().snapshot), original.json);
+  assert.equal(existsSync(stagingDirectory), false);
+  assert.equal(existsSync(f.sourceRoot), false);
+  assert.equal(existsSync(join(f.destination, 'teams', 'TEST-changed-v1-import')), false);
+  assert.equal(f.captures(), 0);
+}
+
+test('retained V1 bytes survive stage/cold held retry without source or staging', (t) => {
+  assertRetainedStoppedV1Compatibility(t, stoppedSnapshotV1Original);
 });

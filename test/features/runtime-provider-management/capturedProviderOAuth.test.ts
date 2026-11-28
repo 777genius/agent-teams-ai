@@ -919,6 +919,87 @@ it('joins exact pending Main starts, rejects different fields, and cancels witho
   }
 });
 
+it.each(['synchronous throw', 'rejected promise'] as const)(
+  'captures preparation immediately and retires a %s after the original read settles',
+  async (failure) => {
+    const f = await fixture();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const read = vi.spyOn(f.store, 'read').mockImplementationOnce(async (operationId) => {
+      expect(operationId).toBe(f.input.operationId);
+      entered.resolve();
+      await release.promise;
+      return null;
+    });
+    const create = vi.spyOn(f.store, 'create');
+    const error = new Error('TEST original preparation failed');
+    const input = {
+      runtimeId: 'opencode' as const,
+      providerId: f.input.providerId,
+      method: 'oauth' as const,
+      authOptionId: f.input.authOptionId,
+      oauthOperationId: f.input.operationId,
+    };
+    const prepare = vi.fn((assertCurrent: () => void): Promise<null> => {
+      expect(read).not.toHaveBeenCalled();
+      assertCurrent();
+      if (failure === 'synchronous throw') throw error;
+      return Promise.reject(error);
+    });
+    const duplicatePrepare = vi.fn(() => Promise.resolve(null));
+    const pending: Promise<unknown>[] = [];
+    try {
+      const first = f.oauth.connectPrepared(input, prepare);
+      const duplicate = f.oauth.connectPrepared({ ...input }, duplicatePrepare);
+      const settled = Promise.allSettled([first, duplicate]);
+      pending.push(settled);
+      let observed = false;
+      void first.then(
+        () => {
+          observed = true;
+        },
+        () => {
+          observed = true;
+        }
+      );
+      expect(prepare).toHaveBeenCalledOnce();
+      expect(duplicatePrepare).not.toHaveBeenCalled();
+      expect(duplicate).toBe(first);
+      await entered.promise;
+      expect(observed).toBe(false);
+      expect(create).not.toHaveBeenCalled();
+      expect(f.calls).toEqual([]);
+      expect(f.openExternal).not.toHaveBeenCalled();
+      expect(f.deps.restore).not.toHaveBeenCalled();
+
+      release.resolve();
+      for (const result of await settled) {
+        expect(result.status).toBe('rejected');
+        if (result.status !== 'rejected') throw new Error('Expected TEST preparation failure');
+        expect(result.reason).toBe(error);
+      }
+      const retryPrepare = vi.fn(() => Promise.resolve(null));
+      const retry = f.oauth.connectPrepared(input, retryPrepare);
+      pending.push(retry);
+      await expect(retry).resolves.toBeNull();
+      expect(retryPrepare).toHaveBeenCalledOnce();
+      expect(read).toHaveBeenCalledTimes(2);
+      expect(create).not.toHaveBeenCalled();
+      expect(await readdir(f.directory)).toEqual([]);
+      expect(f.calls).toEqual([]);
+      expect(f.openExternal).not.toHaveBeenCalled();
+      expect(f.deps.restore).not.toHaveBeenCalled();
+      expect(f.progress).toEqual([]);
+    } finally {
+      release.resolve();
+      await Promise.allSettled(pending);
+      read.mockRestore();
+      create.mockRestore();
+      await rm(f.directory, { recursive: true, force: true });
+    }
+  }
+);
+
 it('rejects failed Main crypto without a fast fallback and releases the settled admission', async () => {
   const f = await fixture('auto'),
     controlled = controlledStartCrypto();

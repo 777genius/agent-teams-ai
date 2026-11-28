@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { constants } from 'node:fs';
-import { open } from 'node:fs/promises';
+import { type BigIntStats, constants } from 'node:fs';
+import { lstat, open } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 
 import {
@@ -77,6 +77,19 @@ function capture(value: unknown): ProviderOAuthIntent {
   }) as unknown as ProviderOAuthIntent;
 }
 
+// Atomic publication can unlink a temporary hardlink while this original is being read.
+function sameIntentFile(original: BigIntStats, current: BigIntStats): boolean {
+  return (
+    current.isFile() &&
+    !current.isSymbolicLink() &&
+    current.dev === original.dev &&
+    current.ino === original.ino &&
+    current.size === original.size &&
+    current.mtimeNs === original.mtimeNs &&
+    (process.platform === 'win32' || (current.mode & 0o077n) === 0n)
+  );
+}
+
 /** Immutable original routing only. Fields, codes, credentials and browser URLs are never stored. */
 export class FileProviderOAuthIntentStore implements ProviderOAuthIntentStore {
   constructor(private readonly directory: string) {
@@ -88,14 +101,22 @@ export class FileProviderOAuthIntentStore implements ProviderOAuthIntentStore {
     return join(this.directory, createHash('sha256').update(operationId).digest('hex') + '.json');
   }
   async read(operationId: string): Promise<ProviderOAuthIntent | null> {
+    let observed = false;
     try {
-      const file = await open(
-        this.path(operationId),
-        constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0)
-      );
+      const path = this.path(operationId);
+      const original = await lstat(path, { bigint: true });
+      observed = true;
+      if (
+        !original.isFile() ||
+        original.isSymbolicLink() ||
+        original.size < 0n ||
+        original.size > 16384n ||
+        (process.platform !== 'win32' && (original.mode & 0o077n) !== 0n)
+      )
+        throw new Error('OAuth intent unavailable');
+      const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
       try {
-        const stat = await file.stat();
-        if (!stat.isFile() || stat.size > 16384 || (stat.mode & 0o077) !== 0)
+        if (!sameIntentFile(original, await file.stat({ bigint: true })))
           throw new Error('OAuth intent unavailable');
         const bytes = Buffer.alloc(16385);
         let length = 0;
@@ -104,7 +125,15 @@ export class FileProviderOAuthIntentStore implements ProviderOAuthIntentStore {
           if (!read.bytesRead) break;
           length += read.bytesRead;
         }
-        if (length > 16384) throw new Error('OAuth intent unavailable');
+        const after = await file.stat({ bigint: true });
+        const named = await lstat(path, { bigint: true });
+        if (
+          length > 16384 ||
+          BigInt(length) !== original.size ||
+          !sameIntentFile(original, after) ||
+          !sameIntentFile(original, named)
+        )
+          throw new Error('OAuth intent unavailable');
         const record = capture(
           JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes.subarray(0, length)))
         );
@@ -114,7 +143,7 @@ export class FileProviderOAuthIntentStore implements ProviderOAuthIntentStore {
         await file.close();
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      if (!observed && (error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw new Error('OAuth intent unavailable');
     }
   }
