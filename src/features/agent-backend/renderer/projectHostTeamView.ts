@@ -26,6 +26,10 @@ export function projectHostTeamView(
   const hostMemberIds = hostMemberIdsByName(connection);
   return {
     teamName: snapshot.teamName,
+    ...(snapshot.autonomousGoal === undefined ? {} : { autonomousGoal: snapshot.autonomousGoal }),
+    ...(snapshot.autonomousGoalAvailable === undefined
+      ? {}
+      : { autonomousGoalAvailable: snapshot.autonomousGoalAvailable }),
     config: {
       name: connection.label,
       ...(snapshot.lifecycle?.deletedAt ? { deletedAt: snapshot.lifecycle.deletedAt } : {}),

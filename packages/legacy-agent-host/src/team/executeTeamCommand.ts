@@ -26,6 +26,8 @@ import type { OwnerState } from './ownerState.js';
 import type { TaskRecovery } from './TaskRecovery.js';
 import type { TeamStore, TeamPolicyPort, TeamInputPreflight } from './ports.js';
 import type { TeamBinding, TeamGrant, TeamCommand, CommandReceipt } from './contracts.js';
+import type { TeamGoals } from './TeamGoals.js';
+import type { GoalCommandPreparation } from './goalContracts.js';
 
 interface TeamCommandExecution {
   binding: TeamBinding;
@@ -38,6 +40,7 @@ interface TeamCommandExecution {
   authorize(principalId: string, permission: TeamGrant['permissions'][number]): TeamGrant;
   crossTeamOriginalAuthorized(intent: CapturedCrossTeamIntent): boolean;
   invalidate(): void;
+  goals?: TeamGoals;
 }
 
 /** One synchronous Team-fenced command transition, including private physical group delivery. */
@@ -48,7 +51,8 @@ export function executeTeamCommand(
   crossTeam?: CapturedCrossTeamIntent,
   group?: CapturedGroupIntent,
   prepareHostCost?: PrepareHostCost,
-  prepareWorkSyncNudge?: PrepareWorkSyncNudge
+  prepareWorkSyncNudge?: PrepareWorkSyncNudge,
+  goalPreparation?: GoalCommandPreparation
 ): CommandReceipt {
   validateTeamCommand(rawCommand);
   const command = structuredClone(rawCommand);
@@ -118,6 +122,7 @@ export function executeTeamCommand(
       if (digest(messageRecipient?.delivery) !== digest(deliveryBinding))
         throw new TeamOwnerError('hold');
     }
+    const goal = receipt ? receipt.goal : options.goals?.prepare(principalId, command, deliveryBinding, goalPreparation);
     const fingerprint = teamCommandFingerprint({
       binding: options.binding,
       principalId,
@@ -130,6 +135,7 @@ export function executeTeamCommand(
       ...(group ? { group } : {}),
       ...(hostCommand ? { hostCommand } : {}),
       ...(workSyncNudge ? { workSyncNudge } : {}),
+      ...(goal ? { goal } : {}),
     });
     if (receipt) {
       if (
@@ -182,6 +188,7 @@ export function executeTeamCommand(
         ...(group ? { group: structuredClone(group) } : {}),
         ...(hostCommand ? { hostCommand } : {}),
         ...(workSyncNudge ? { workSyncNudge } : {}),
+        ...(goal ? { goal } : {}),
         ...(taskStartLeadName ? { taskStartLeadName } : {}),
         ...(messageRecipientRole ? { messageRecipientRole } : {}),
         effects: {
@@ -219,6 +226,7 @@ export function executeTeamCommand(
         preflightTeamMessage(receipt, grant.memberName, options.inputPreflight);
       options.store.write(location, receipt);
     }
+    options.goals?.acceptReceipt(receipt);
     receipt.phase = 'applying';
     options.store.write(location, receipt);
     const before = options.store.productFingerprint(options.binding.teamName);

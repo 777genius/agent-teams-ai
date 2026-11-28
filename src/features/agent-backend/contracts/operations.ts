@@ -5,6 +5,11 @@ import type {
   BackendMessageAttachmentsRead,
   BackendTaskAttachmentRead,
 } from './attachments';
+import type {
+  AutonomousGoalControl,
+  AutonomousGoalOptions,
+  AutonomousGoalStatus,
+} from './autonomousGoal';
 import type { BackendMemberCheckpoints } from './checkpoints';
 import type { AgentBackendConnectionsApi } from './connections';
 import type {
@@ -187,7 +192,9 @@ export interface BackendOperationPayloads
     taskRefs?: BackendTaskRef[];
     attachments?: AttachmentReference[];
   };
+  'goal.control': AutonomousGoalControl;
   'message.send': {
+    autonomousGoal?: AutonomousGoalOptions;
     to: string;
     text: string;
     taskRefs?: BackendTaskRef[];
@@ -533,6 +540,7 @@ export type BackendOperationResult =
         | BackendLeadActivity
         | BackendLeadContext
         | BackendTeamSnapshot
+        | AutonomousGoalStatus
         | import('./projectContext').BackendProjectContextSnapshot
         | import('./projectContext').BackendProjectLaunchSource
         | BackendReviewFlowView

@@ -198,6 +198,70 @@ test('queued opening retains its original proof when an equal competing continua
   assert.equal(f.progress, 1);
 });
 
+test('historical native Restart permits own retirement but never renews the original readiness', async t => {
+  const f = await fixture(t), entry = f.entries.get('A')!;
+  f.install(entry);
+  const opening = f.launch.startMember('A'); assert.ok(opening); await opening;
+  const selected = f.selected(entry), before = f.launch.readModelReadinessSource(selected);
+  assert.equal(before?.consumer.disposition, 'consumed');
+  const assertCurrent = f.options(entry).assertCurrent;
+  const isCurrent = () => { try { assertCurrent(); return true; } catch { return false; } };
+  const options = { management: f.management, launch: f.launch, entry, isCurrent, cutoff: Date.now() + 30000 };
+  const nativeSource = await captureNativeRestartReadiness(options);
+  const originalProbe = f.records.read(nativeSource.reference.commandId);
+  assert.ok(originalProbe?.kind === 'model.probe');
+  assert.equal(originalProbe.readinessRetired, undefined);
+  captureActionModelReadiness({ management: f.management, launch: f.launch,
+    targets: [{ entry, profile: entry.profile, binding: entry.binding }], commandId: 'TEST-original-restart',
+    payload: { memberId: 'A' }, actorDigest: digest('TEST-native'), nativeSource, assertCurrent });
+  assert.deepEqual(f.launch.readModelReadinessSource(selected), {
+    ...before, consumer: { ...before!.consumer, disposition: 'retired' },
+  });
+  assert.doesNotThrow(nativeSource.assertCurrent, 'the original consumer may become historical');
+  await f.management.probes.cancelRetained(nativeSource.reference.commandId, nativeSource.reference.context);
+  const retiredProbe = f.records.read(nativeSource.reference.commandId);
+  assert.ok(retiredProbe?.kind === 'model.probe');
+  assert.deepEqual(retiredProbe, { ...originalProbe, readinessRetired: true });
+  assert.doesNotThrow(nativeSource.assertCurrent, 'physical cleanup may retire the original probe');
+  await assert.rejects(capturePreparedModelReference({ management: f.management, profile: entry.profile,
+    commandId: nativeSource.reference.commandId, context: nativeSource.reference.context,
+    kind: 'native', isCurrent }), { code: 'held' });
+  const retiredSource = await captureNativeRestartReadiness(options);
+  assert.doesNotThrow(retiredSource.assertCurrent);
+
+  await t.test('other selected consumer metadata still holds after retirement', t => {
+    const read = f.launch.readModelReadinessSource.bind(f.launch);
+    const changed = t.mock.method(f.launch, 'readModelReadinessSource',
+      (input: Parameters<TeamLaunchOwner['readModelReadinessSource']>[0]) => {
+        const source = read(input); assert.ok(source);
+        return { ...source, consumer: { ...source.consumer, actorDigest: digest('TEST-other-actor') } };
+      });
+    try { assert.throws(retiredSource.assertCurrent, { code: 'held' }); }
+    finally { changed.mock.restore(); }
+    assert.doesNotThrow(retiredSource.assertCurrent);
+  });
+  await t.test('an originally retired consumer cannot become active again', t => {
+    const read = f.launch.readModelReadinessSource.bind(f.launch);
+    const changed = t.mock.method(f.launch, 'readModelReadinessSource',
+      (input: Parameters<TeamLaunchOwner['readModelReadinessSource']>[0]) => {
+        const source = read(input); assert.ok(source);
+        return { ...source, consumer: { ...source.consumer, disposition: 'consumed' as const } };
+      });
+    try { assert.throws(retiredSource.assertCurrent, { code: 'held' }); }
+    finally { changed.mock.restore(); }
+    assert.doesNotThrow(retiredSource.assertCurrent);
+  });
+  await t.test('an originally retired probe cannot lose its retirement flag', () => {
+    const { readinessRetired: _retired, ...active } = retiredProbe;
+    f.records.write(active);
+    try { assert.throws(retiredSource.assertCurrent, { code: 'held' }); }
+    finally { f.records.write(retiredProbe); }
+    assert.doesNotThrow(retiredSource.assertCurrent);
+  });
+  assert.equal(f.contexts.length, 1, 'historical inspections never allocate another provider');
+  assert.equal([...f.records.list()].length, 2, 'historical inspections never create another probe');
+});
+
 test('all-target reservation refuses before changing an earlier member and never overwrites equal proof', async t => {
   const f = await fixture(t), a = f.entries.get('A')!, b = f.entries.get('B')!;
   const original = f.install(a), beforeB = f.launch.readModelReadiness(f.selected(b));

@@ -12,6 +12,7 @@ export interface TeamMcpWorkSyncPort {
       taskIds?: string[];
       note?: string;
       leaseTtlMs?: number;
+      wait?: import('../work-sync/policy/core/domain/GoalWaitPolicy.js').GoalWaitReport;
     }
   ): Promise<JsonValue>;
 }

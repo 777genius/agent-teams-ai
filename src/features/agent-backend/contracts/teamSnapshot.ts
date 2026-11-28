@@ -1,3 +1,4 @@
+import type { AutonomousGoalStatus } from './autonomousGoal';
 import type { BackendCrossTeamOutboxRow } from './crossTeam';
 import type { BackendProcess } from './processes';
 import type { BackendTeamConversation, BackendTeamPosition } from './teamChanges';
@@ -19,6 +20,8 @@ export interface BackendTeamMessagesPage {
 }
 
 export interface BackendTeamSnapshot {
+  autonomousGoal?: AutonomousGoalStatus;
+  autonomousGoalAvailable?: boolean;
   teamName: string;
   revision: string;
   /** Authenticated Owner continuation; never expose a partial team to consumers. */

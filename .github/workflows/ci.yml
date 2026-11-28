@@ -2661,6 +2661,7 @@ jobs:
         env:
           LEGACY_NATIVE_MIXED_HOST_GO: '1'
           LEGACY_NATIVE_MIXED_RESTORE_GO: '1'
+          LEGACY_NATIVE_MIXED_GOALS_GO: '1'
         run: |
           set -euo pipefail
           unset LEGACY_NATIVE_MIXED_PEERS_GO LEGACY_NATIVE_MIXED_CROSS_TEAM_GO
@@ -2701,8 +2702,45 @@ jobs:
           assert.equal(receipt.artifacts.dist, process.env.LEGACY_NATIVE_HOST_DIST_SHA256);
           assert.equal(receipt.artifacts.executables.opencode.sha256, '417af53923f3d529759ab85ce3e8dd09116f742efcd332de591d2da6ebae696b');
           assert.ok(receipt.excluded.includes('Desktop controls'));
+          const goalMatches = [...log.matchAll(/TEST native goal receipt: (\/private\/tmp\/TEST-native-goal-matrix-[^/\s]+\/receipt\.json)/g)];
+          assert.equal(goalMatches.length, 1, 'one separately bounded native goal attempt after baseline');
+          const goalPath = realpathSync(goalMatches[0][1]);
+          const goals = JSON.parse(readFileSync(goalPath, 'utf8'));
+          assert.equal(goals.status, 'PASS');
+          assert.equal(goals.platform, 'darwin'); assert.equal(goals.arch, 'arm64');
+          assert.equal(goals.scriptedInference, true);
+          assert.equal(goals.genuineModelInference, false); assert.equal(goals.overnightQualification, false);
+          assert.equal(goals.baselineReceipt, path);
+          for (const key of ['source', 'dist', 'entry', 'providerSha256', 'executables'])
+            assert.deepEqual(goals.artifacts[key], receipt.artifacts[key], 'same original native inputs: ' + key);
+          assert.deepEqual(goals.rows.map(row => row.leadProvider + ':' + row.actionMode).sort(),
+            ['claude:delegate', 'claude:do', 'codex:delegate', 'codex:do', 'opencode:delegate', 'opencode:do']);
+          for (const row of goals.rows) {
+            assert.equal(row.status, 'PASS'); assert.equal(row.cleanupConfirmed, true);
+            assert.equal(row.happy.status, 'PASS');
+            assert.equal(row.happy.goal.disposition, 'accepted'); assert.equal(row.happy.goal.published, true);
+            assert.equal(row.happy.goal.attemptLimit, 24);
+            assert.ok(row.happy.goal.attemptsUsed > 0 && row.happy.goal.attemptsUsed < row.happy.goal.attemptLimit);
+            assert.equal(row.happy.originalIntake.command.payload.actionMode, row.actionMode);
+            assert.equal(row.stop.status, 'PASS'); assert.equal(row.stop.goal.disposition, 'stopped');
+            assert.notEqual(row.happy.goal.goalId, row.stop.goal.goalId);
+            assert.equal(row.stop.originalIntake.command.payload.actionMode, row.actionMode);
+            assert.equal(row.stop.noFinalPublication, true);
+            assert.equal(row.stop.automaticAttemptsUnchanged, true); assert.equal(row.stop.nativeRequestsUnchanged, true);
+            assert.ok(row.stop.originalInputs.length > 0 &&
+              row.stop.originalInputs.every(input => ['claimed', 'consumed'].includes(input.phase) && input.operationRef));
+            if (row.leadProvider === 'claude' && row.actionMode === 'delegate')
+              assert.deepEqual(row.stop.originalInputs.map(input => input.actor).sort(), ['alice', 'bob', 'carol']);
+            assert.equal(row.coldReadback.status, 'PASS'); assert.equal(row.coldReadback.noNativeReplay, true);
+            assert.ok(row.modelFailures.length === 3 && row.modelFailures.every(failures => failures.length === 0));
+          }
+          const { fileHash } = await import('./packages/legacy-agent-host/tests/fixtures/native-host.ts');
+          assert.equal(Object.keys(goals.helpers).length, 6);
+          for (const [helper, sha256] of Object.entries(goals.helpers))
+            assert.equal(await fileHash(helper), sha256, 'exact native goal test helper: ' + helper);
           writeFileSync(join(process.env.RUNNER_TEMP, 'stage1-native-restore-inputs.json'), JSON.stringify({
-            receipt: path, providerScope: 'Claude/Codex/OpenCode V1 1.19.4 native history only; Desktop controls separate',
+            receipt: path, goalReceipt: goalPath,
+            providerScope: 'Original Claude/Codex/OpenCode V1 1.19.4 native history plus separate six-row Do/Delegate goal happy and Stop wiring; finite inference; Desktop and genuine model qualification separate',
             sourceSha256: process.env.LEGACY_NATIVE_HOST_SOURCE_SHA256,
             distSha256: process.env.LEGACY_NATIVE_HOST_DIST_SHA256,
             artifacts: receipt.artifacts,
@@ -2772,6 +2810,8 @@ jobs:
             /private/tmp/TEST-desktop-backend-*/native-codex/config/sessions/**
             /private/tmp/TEST-desktop-backend-*/providers/opencode/data/opencode/log/opencode.log
             /private/tmp/TEST-native-mixed-host-*/**
+            /private/tmp/TEST-native-goal-matrix-*/receipt.json
+            /private/tmp/TEST-native-goal-matrix-*/*/receipt.json
 
   stage1-process-diagnostic:
     name: Stage 1 process tuple diagnostic (unqualified)

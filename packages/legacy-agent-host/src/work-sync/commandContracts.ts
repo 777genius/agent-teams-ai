@@ -4,10 +4,20 @@ import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import type { JsonValue } from '../contracts.js';
 import type { TeamBinding } from '../team/contracts.js';
+import type { GoalAssociation } from '../team/goalContracts.js';
+import type { captureOriginalNativeInput } from '../composition/captureNativeInputAuthority.js';
+
+/** WorkSync-only scope for an actual goal input, including the lead's original Delegate input. */
+export interface GoalWorkSyncAuthorityProof extends Omit<NativeMcpAuthorityProof, 'mode' | 'cause'> {
+  readonly mode: 'goal';
+  readonly goal: Readonly<GoalAssociation>;
+}
+export type WorkSyncTeamProof = NativeMcpAuthorityProof | GoalWorkSyncAuthorityProof;
+export type WorkSyncInputAuthority = ReturnType<typeof captureOriginalNativeInput<WorkSyncTeamProof>>;
 
 /** Private proof copied from the admitted original connection before any feature I/O. */
 export interface NativeWorkSyncInputProof {
-  team: NativeMcpAuthorityProof;
+  team: WorkSyncTeamProof;
   /** Absent only on older status/report-only receipts; such rows cannot authorize deferred delivery. */
   runtime?: {
     profileId: string;
@@ -85,9 +95,11 @@ export function validateWorkSyncCommandReceipt(
     !value.nativeInput.original ||
     !value.nativeInput.team.source ||
     !value.nativeInput.team.original ||
-    !value.nativeInput.team.cause ||
-    !value.nativeInput.team.cause.binding ||
-    value.nativeInput.team.mode !== 'do' ||
+    (value.nativeInput.team.mode === 'do'
+      ? !value.nativeInput.team.cause || !value.nativeInput.team.cause.binding
+      : value.nativeInput.team.mode !== 'goal' ||
+        !value.nativeInput.team.goal?.goalId || !Number.isSafeInteger(value.nativeInput.team.goal.revision) ||
+        value.nativeInput.team.goal.revision < 1) ||
     value.nativeInput.team.principalId !== value.principalId ||
     value.nativeInput.team.authorityRevision !== value.authorityRevision ||
     value.nativeInput.team.source.backendId !== value.binding.backendId ||

@@ -116,16 +116,19 @@ export interface RuntimeOwnerOptions {
   };
   profileId: string;
   hostIncarnation: string;
-  /** Trusted synchronous authority check under the member fence, including lookup disclosure. */
+  /** Synchronous authority under the member fence; optional history is read only within that same fence. */
   authorize(
     binding: RuntimeBinding,
     action: 'read' | 'admit' | 'dispatch' | 'control',
-    intent?: RuntimeDelivery
+    intent?: RuntimeDelivery,
+    readMemberHistory?: () => readonly RuntimeSessionRecord[]
   ): boolean;
   /** Fresh immutable input only, after original lookup and before admission writes; never await. */
   inputPreflight?(intent: RuntimeDelivery): boolean;
   /** Current mandatory dependency/bootstrap proof; absence safely holds work dispatch. */
   canDispatch?(binding: RuntimeBinding, intent: RuntimeDelivery): boolean;
+  /** Keeps the original Team authority fence around the synchronous Runtime claim; no async work. */
+  withDispatchAuthority?(binding: RuntimeBinding, intent: RuntimeDelivery, commitClaim: () => void): void;
   /** Synchronous private composition callbacks under the existing member fence; never await. */
   prepareInput?(binding: RuntimeBinding, request: InputPreparationRequest): { prefix: string; epochIds: readonly string[]; teamProof: string } | undefined;
   inputPrepared?(binding: RuntimeBinding, proof: PreparedInputProof): undefined;

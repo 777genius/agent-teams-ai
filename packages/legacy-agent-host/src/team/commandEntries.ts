@@ -18,6 +18,7 @@ import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js'
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import { validateHostCostCommand } from './hostCostCommand.js';
 import { validateWorkSyncNudge } from './workSyncNudge.js';
+import { validateGoalOrigin } from './validateGoal.js';
 import type { CommandReceipt } from './contracts.js';
 import type { ReviewCommandReceipt } from './reviewCommandContracts.js';
 import type { TeamStore } from './ports.js';
@@ -134,6 +135,7 @@ export function validateCommandEntry(value: TeamCommandEntry): TeamCommandEntry 
     validateTeamCommand(value.command);
     validateHostCostCommand(value);
     validateWorkSyncNudge(value);
+    validateGoalOrigin(value.goal);
     if (value.commandId !== value.command.commandId ||
       value.fingerprint !== teamCommandFingerprint(value)) throw new TeamOwnerError('hold');
     return value;

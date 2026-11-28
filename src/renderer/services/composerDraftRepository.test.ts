@@ -115,6 +115,110 @@ describe('IndexedDbComposerDraftRepository', () => {
     database.prefixScans = 0;
   });
 
+  it.each([
+    { label: 'cleared duration', autonomousGoal: { durationHours: 0, maxAttempts: 100 } },
+    { label: 'cleared attempts', autonomousGoal: { durationHours: 12, maxAttempts: 0 } },
+    { label: 'fractional limits', autonomousGoal: { durationHours: 1.5, maxAttempts: 2.5 } },
+    { label: 'excessive limits', autonomousGoal: { durationHours: 25, maxAttempts: 1001 } },
+  ])('keeps an editable goal draft after reopening with $label', async ({ autonomousGoal }) => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const plain = { ...attempt('goal-draft').snapshot.content, text: 'Keep this unfinished draft' };
+    const draft = { ...plain, autonomousGoal };
+    expect(
+      await repository.saveWorking(alice, '0', 'goal-editing', draft, { kind: 'plain' })
+    ).toEqual(
+      expect.objectContaining({ kind: 'saved', status: 'durable', workingRevision: 'goal-editing' })
+    );
+
+    const reopened = new IndexedDbComposerDraftRepository();
+    const loaded = await reopened.loadWorking(alice);
+    expect(loaded.status).toBe('durable');
+    expect(loaded.writeBlocked).not.toBe(true);
+    expect(loaded.readError).toBeUndefined();
+    expect(loaded.working.workingRevision).toBe('goal-editing');
+    expect(loaded.working.content).toEqual(draft);
+
+    const corrected = { ...plain, autonomousGoal: { durationHours: 12, maxAttempts: 100 } };
+    expect(
+      await reopened.saveWorking(
+        alice,
+        loaded.working.workingRevision,
+        'goal-corrected',
+        corrected,
+        { kind: 'plain' }
+      )
+    ).toEqual(expect.objectContaining({ kind: 'saved', status: 'durable' }));
+
+    const nextSession = new IndexedDbComposerDraftRepository();
+    const correctedRead = await nextSession.loadWorking(alice);
+    expect(correctedRead.working.content).toEqual(corrected);
+    expect(
+      await nextSession.saveWorking(
+        alice,
+        correctedRead.working.workingRevision,
+        'goal-disabled',
+        plain,
+        { kind: 'plain' }
+      )
+    ).toEqual(expect.objectContaining({ kind: 'saved', status: 'durable' }));
+
+    const disabled = await new IndexedDbComposerDraftRepository().loadWorking(alice);
+    expect(disabled.status).toBe('durable');
+    expect(disabled.writeBlocked).not.toBe(true);
+    expect(disabled.working.workingRevision).toBe('goal-disabled');
+    expect(disabled.working.content).toEqual(plain);
+    expect(disabled.working.content?.autonomousGoal).toBeUndefined();
+  });
+
+  it('restores a displaced draft with unfinished goal limits and allows disabling them', async () => {
+    const repository = new IndexedDbComposerDraftRepository();
+    const plain = { ...attempt('goal-displaced').snapshot.content, text: 'Keep the displaced draft' };
+    const draft = { ...plain, autonomousGoal: { durationHours: 0, maxAttempts: 0 } };
+    expect(
+      await repository.saveWorking(alice, '0', 'goal-editing', draft, { kind: 'plain' })
+    ).toEqual(expect.objectContaining({ kind: 'saved', status: 'durable' }));
+    expect(await repository.stashWorking(alice, 'goal-editing', 'goal-displaced')).toEqual(
+      expect.objectContaining({ kind: 'restored', status: 'durable' })
+    );
+
+    const reopened = new IndexedDbComposerDraftRepository();
+    const recovery = await reopened.loadRecovery('context-a', 'team-a', 'goal-displaced');
+    expect(recovery?.reason).toBe('displaced-draft');
+    expect(recovery?.snapshot.content).toEqual(draft);
+    const empty = await reopened.loadWorking(alice);
+    expect(empty.working.content).toBeNull();
+    expect(
+      await reopened.restoreRecovery(
+        'context-a',
+        'team-a',
+        'goal-displaced',
+        alice,
+        empty.working.workingRevision
+      )
+    ).toEqual(expect.objectContaining({ kind: 'restored', status: 'durable' }));
+    expect(database.values.has(composerRecoveryKey(alice, 'goal-displaced'))).toBe(false);
+
+    const nextSession = new IndexedDbComposerDraftRepository();
+    const restored = await nextSession.loadWorking(alice);
+    expect(restored.status).toBe('durable');
+    expect(restored.writeBlocked).not.toBe(true);
+    expect(restored.working.content).toEqual(expect.objectContaining(draft));
+    expect(restored.working.content?.restoredOrigin).toBeUndefined();
+    expect(
+      await nextSession.saveWorking(
+        alice,
+        restored.working.workingRevision,
+        'goal-restored-disabled',
+        plain,
+        { kind: 'plain' }
+      )
+    ).toEqual(expect.objectContaining({ kind: 'saved', status: 'durable' }));
+    const disabled = await new IndexedDbComposerDraftRepository().loadWorking(alice);
+    expect(disabled.writeBlocked).not.toBe(true);
+    expect(disabled.working.workingRevision).toBe('goal-restored-disabled');
+    expect(disabled.working.content).toEqual(plain);
+  });
+
   it('atomically clears matching working and writes recovery plus its index', async () => {
     const repository = new IndexedDbComposerDraftRepository();
     await repository.saveWorking(

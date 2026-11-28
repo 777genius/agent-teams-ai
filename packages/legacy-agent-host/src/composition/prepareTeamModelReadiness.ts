@@ -496,10 +496,16 @@ export async function captureNativeRestartReadiness(options: {
   if (profile.provider !== 'opencode' || entry.profile.provider !== 'opencode' ||
       modelReadinessMechanismDigest(profile) !== reference.mechanismDigest) held();
   const providerId = entry.profile.nativeOptions.providerId, model = entry.profile.model;
+  // Historical source facts survive only monotonic retirement by the admitted action.
+  const sameSource = (latest: ReturnType<typeof readSource>) => latest !== undefined &&
+    (latest.consumer.disposition === source.consumer.disposition || latest.consumer.disposition === 'retired') &&
+    managementValuesEqual(source, {
+      ...latest, consumer: { ...latest.consumer, disposition: source.consumer.disposition },
+    });
   const current = () => options.isCurrent() && Date.now() < options.cutoff &&
     selected.configurationDigest === runtimeDigest(entry.profile) &&
     runtimeDigest(selected.binding) === runtimeDigest(entry.binding) &&
-    source.consumer.baseConfigurationDigest === runtimeDigest(entry.baseProfile) && managementValuesEqual(source, readSource() ?? null);
+    source.consumer.baseConfigurationDigest === runtimeDigest(entry.baseProfile) && sameSource(readSource());
   const readOriginal = () => management.probes.readRetainedProbe(reference.commandId, reference.context);
   const initial = readOriginal();
   const fileKey = await prepareOpenCodeProbeFileKey({ profile, original: initial, readOriginal, isCurrent: current });
@@ -518,8 +524,12 @@ export async function captureNativeRestartReadiness(options: {
       ...(account ? { accountDigest: account.digest } : {}) };
   });
   const original = read();
-  if (!managementValuesEqual(initial, original)) held();
-  return { reference, original, assertCurrent: () => { if (!managementValuesEqual(original, read())) held(); } };
+  if (!managementValuesEqual(initial, original) || !managementValuesEqual(source, readSource())) held();
+  return { reference, original, assertCurrent: () => {
+    const latest = read();
+    if (original.readinessRetired === true && latest.readinessRetired !== true ||
+        !managementValuesEqual(original, { ...latest, readinessRetired: original.readinessRetired })) held();
+  } };
 }
 
 /** One explicit action attachment in the existing launch record, before Stop or workspace awaits. */

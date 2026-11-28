@@ -149,10 +149,12 @@ test('HTTP MCP preserves lossless comment, task and board continuations and capt
     commandId: 'TEST-http-detail-task', operation: 'task.create',
     payload: { subject: 'HTTP paged task', owner: 'alice' },
   }).effects.taskId;
-  const commentId = f.human.execute({
+  const comment = f.alice.execute({
     commandId: 'TEST-http-detail-comment', operation: 'task.comment',
     payload: { taskId, text: '漢'.repeat(90_000) },
-  }).effects.commentId;
+  });
+  assert.equal(comment.phase, 'completed');
+  const commentId = comment.effects.commentId;
   const smallId = f.human.execute({
     commandId: 'TEST-http-detail-small', operation: 'task.create',
     payload: { subject: 'Small original task', owner: 'alice' },

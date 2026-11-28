@@ -1,4 +1,5 @@
 import { normalizeMemberName } from '../policy/core/domain/memberName.js';
+import { isGoalWaitReport } from '../policy/core/domain/GoalWaitPolicy.js';
 import { readMemberWorkSyncRecoveryHealth } from '../policy/core/domain/MemberWorkSyncRecoveryHealth.js';
 import { readMemberWorkSyncReportReceipt } from '../policy/core/domain/MemberWorkSyncReportReceipt.js';
 import { readMemberWorkSyncStatusRevision } from '../policy/core/domain/MemberWorkSyncStatusRevision.js';
@@ -104,6 +105,7 @@ function report(value: unknown): boolean {
         expiresAt: timestamp,
         taskIds: value.accepted === false ? strings : ids,
         note: text,
+        wait: isGoalWaitReport,
         source: oneOf('mcp', 'app', 'test'),
         rejectionCode: text,
       }

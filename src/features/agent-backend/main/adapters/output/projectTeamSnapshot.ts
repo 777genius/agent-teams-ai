@@ -1,6 +1,7 @@
 import { hasGroupChatEnvelopeMarker } from '@agent-teams/legacy-agent-host/group-chats/contracts';
 import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 
+import { readAutonomousGoalStatus } from '../../../contracts/autonomousGoal';
 import { readBackendProcesses } from '../../../contracts/processes';
 
 import { projectAttachmentMetadata } from './projectAttachmentMetadata';
@@ -477,11 +478,22 @@ export function projectTeamSnapshot(value: unknown): BackendTeamSnapshot {
     throw new Error('Invalid configuration revision');
   if (source.runtimeNeverLaunched !== undefined && source.runtimeNeverLaunched !== true)
     throw new Error('Invalid runtime history');
+  if (
+    source.autonomousGoalAvailable !== undefined &&
+    typeof source.autonomousGoalAvailable !== 'boolean'
+  )
+    throw new Error('Invalid goal availability');
   const kanbanState = kanban(source.kanbanState, teamName);
   return {
     teamName,
     revision,
     ...(nextCursor === undefined ? {} : { nextCursor }),
+    ...(source.autonomousGoal === undefined
+      ? {}
+      : { autonomousGoal: readAutonomousGoalStatus(source.autonomousGoal) }),
+    ...(source.autonomousGoalAvailable === undefined
+      ? {}
+      : { autonomousGoalAvailable: source.autonomousGoalAvailable as boolean }),
     ...projectTaskParts(source),
     ...projectMessageParts(source),
     ...(processTotal === undefined ? {} : { processTotal: processTotal as number }),

@@ -717,12 +717,16 @@ class CdpClient {
       ${observation}
       return target;
     })()`;
-    await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
-    let prepared;
+    let prepared, target;
     try {
-      if (scheduleTeam !== null)
-        prepared = await prepareScheduleOptionClick(this, expression, scheduleTeam, cutoff, scheduleObservation);
-      const target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
+      do {
+        await this.waitFor(hitTarget(), `settled exact E2E click target: ${expression}`, remaining());
+        if (scheduleTeam !== null)
+          prepared = await prepareScheduleOptionClick(this, expression, scheduleTeam, cutoff, scheduleObservation);
+        target = prepared ? prepared.target : await this.evaluate(hitTarget(taskTabObservation + scheduleObservation));
+        // Layout may change between the wait and final sample. Only re-observe
+        // before any press, within this click's original deadline.
+      } while (!prepared && target === null && Date.now() < cutoff);
       try { if (taskTab) this.taskTabObservationInstalled = target?.taskTabObserved === true; } catch { /* Diagnostic only. */ }
       assert(Date.now() < cutoff, `E2E click target deadline: ${expression}`);
       assert(target, `Missing/disabled/hidden E2E click target: ${expression}`);

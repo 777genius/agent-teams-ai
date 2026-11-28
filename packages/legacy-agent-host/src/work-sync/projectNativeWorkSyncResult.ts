@@ -154,7 +154,7 @@ const kinds = ['work', 'review', 'clarification', 'blocked_dependency'] as const
 const statusFields = ['teamName', 'memberName', 'state', 'evaluatedAt', 'providerId',
   'reportToken', 'reportTokenExpiresAt'] as const;
 const agendaFields = ['teamName', 'memberName', 'generatedAt', 'fingerprint'] as const;
-const reportFields = ['state', 'agendaFingerprint', 'reportedAt', 'expiresAt', 'source', 'accepted'] as const;
+const reportFields = ['state', 'agendaFingerprint', 'reportedAt', 'expiresAt', 'source', 'accepted', 'wait'] as const;
 const keysOnly = (value: Record<string, unknown>, allowed: readonly string[]) =>
   Object.keys(value).every(key => allowed.includes(key));
 const countValue = (value: unknown): value is number =>

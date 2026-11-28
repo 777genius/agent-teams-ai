@@ -12,7 +12,7 @@ import type { WorkSyncCommandReceipt } from './commandContracts.js';
 import type { JsonValue } from '../contracts.js';
 import type { TeamBinding } from '../team/contracts.js';
 import type { TeamStore } from '../team/ports.js';
-import type { captureNativeInputAuthority } from '../composition/captureNativeInputAuthority.js';
+import type { WorkSyncInputAuthority } from './commandContracts.js';
 
 /** Existing Team command namespace; exact original-input authority is fixed before any awaited effect. */
 export function createTeamWorkSyncCommands(options: {
@@ -59,7 +59,7 @@ export function createTeamWorkSyncCommands(options: {
       commandId: string,
       operation: WorkSyncCommandReceipt['operation'],
       payload: JsonValue,
-      authority: ReturnType<typeof captureNativeInputAuthority>,
+      authority: WorkSyncInputAuthority,
       effect: (original: Readonly<WorkSyncCommandReceipt>) => Promise<JsonValue>
     ) {
       authority.assertCurrent();

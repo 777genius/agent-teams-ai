@@ -34,6 +34,9 @@ export function buildMemberWorkSyncReportRequestDigest(
       reportedAt: request.reportedAt ?? '',
       leaseTtlMs: request.leaseTtlMs ?? 0,
       source: request.source ?? '',
+      ...(request.wait ? { wait: [request.wait.kind, request.wait.repository, request.wait.runId,
+        request.wait.expectedCommit, request.wait.taskId ?? null, request.wait.horizonAt, request.wait.status,
+        ...(request.wait.supersedes ? [[request.wait.supersedes.runId, request.wait.supersedes.expectedCommit]] : [])] } : {}),
     })
   );
 }

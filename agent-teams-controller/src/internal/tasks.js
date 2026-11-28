@@ -231,7 +231,7 @@ function maybeNotifyTaskOwnerOnComment(context, task, comment, options = {}) {
     member: owner,
     from: sender,
     text: buildCommentNotificationMessage(context, task, comment),
-    taskRefs: Array.isArray(comment.taskRefs) ? comment.taskRefs : undefined,
+    taskRefs: mergeTaskRefs(buildTaskRef(context, task), comment.taskRefs),
     summary: `Comment on #${task.displayId || task.id}`,
     source: 'system_notification',
     ...(leadSessionId ? { leadSessionId } : {}),

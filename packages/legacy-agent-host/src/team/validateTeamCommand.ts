@@ -7,6 +7,7 @@ import { isGroupUuid } from '../group-chats/model.js';
 import { TeamOwnerError } from './contracts.js';
 import { validateExpectedTaskRecipient } from './expectedTaskRecipient.js';
 import { parseNativeSessionCommand } from './nativeSessionCommand.js';
+import { validateGoalOptions } from './validateGoal.js';
 import { safeSegment, stableJson } from './identity.js';
 import type { TeamCommand, TaskRef } from './contracts.js';
 
@@ -188,6 +189,10 @@ export function validateTeamCommand(command: TeamCommand): void {
       validateTeamText(command.payload.text);
       break;
     case 'message.send':
+      if (command.payload.autonomousGoal !== undefined) {
+        validateGoalOptions(command.payload.autonomousGoal);
+        if (command.payload.actionMode !== 'do' && command.payload.actionMode !== 'delegate') throw new TeamOwnerError('invalid');
+      }
       if (command.payload.attachments !== undefined)
         messageAttachmentReferencesSchema.parse(command.payload.attachments);
       validateRefs(command.payload.taskRefs);
@@ -256,7 +261,7 @@ export function validateTeamCommand(command: TeamCommand): void {
       'comment',
       'taskRefs',
     ],
-    'message.send': ['to', 'text', 'taskRefs', 'messageId', 'summary', 'actionMode', 'nativeCommand', 'attachments'],
+    'message.send': ['to', 'text', 'taskRefs', 'messageId', 'summary', 'actionMode', 'nativeCommand', 'attachments', 'autonomousGoal'],
   };
   if (
     Object.keys(command).some((key) => !['commandId', 'operation', 'payload'].includes(key)) ||

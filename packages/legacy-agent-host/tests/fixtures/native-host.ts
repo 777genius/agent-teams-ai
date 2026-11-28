@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { delimiter, dirname, isAbsolute, join } from 'node:path';
@@ -15,10 +15,12 @@ const requireFromFixture = createRequire(import.meta.url);
 const attachmentContracts = () => requireFromFixture('../../dist/attachments/contracts.js') as
   typeof import('../../dist/attachments/contracts.js');
 
-export const fileHash = async (path: string) =>
-  createHash('sha256')
-    .update(await readFile(path))
-    .digest('hex');
+export const fileHash = async (path: string) => {
+  const hash = createHash('sha256');
+  // Native CLI images are hundreds of MiB; preserve exact hashes with bounded reads.
+  for await (const bytes of createReadStream(path)) hash.update(bytes);
+  return hash.digest('hex');
+};
 export const tick = () => new Promise<void>((done) => setTimeout(done, 25));
 const record = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value)

@@ -156,6 +156,7 @@ export class MemberWorkSyncReporter {
       activeMemberNames: source.activeMemberNames,
       tokenValidation,
       leaseOriginIso: receivedAt,
+      allowGoalWait: this.deps.goalWaitEnabled === true,
     });
 
     if (!validation.ok) {
@@ -183,6 +184,7 @@ export class MemberWorkSyncReporter {
       ...(validation.expiresAt ? { expiresAt: validation.expiresAt } : {}),
       ...(request.taskIds ? { taskIds: [...request.taskIds] } : {}),
       ...(request.note ? { note: request.note } : {}),
+      ...(request.wait ? { wait: structuredClone(request.wait) } : {}),
       source: request.source ?? 'app',
       accepted: true,
     };

@@ -146,6 +146,58 @@ test('report preserves its accepted outcome while omitting oversized nested stat
   assert.equal(object(nested.agenda).fingerprint, value.agenda.fingerprint);
 });
 
+test('bounded status and report retain distinct current and accepted CI wait facts', () => {
+  const value = status(6, '任'.repeat(30_000));
+  const report: NonNullable<MemberWorkSyncStatus['report']> = {
+    teamName: identity.teamName, memberName: identity.memberName, state: 'blocked',
+    agendaFingerprint: value.agenda.fingerprint, reportedAt: now, accepted: true, source: 'mcp',
+    wait: { kind: 'ci', repository: 'TEST/project', runId: '2', expectedCommit: 'b'.repeat(40),
+      taskId: 'TEST-task-0', horizonAt: now, status: 'pending',
+      supersedes: { runId: '1', expectedCommit: 'a'.repeat(40) } },
+  };
+  value.report = { ...report, accepted: false, rejectionCode: 'stale_token',
+    wait: { ...report.wait!, runId: '3', expectedCommit: 'c'.repeat(40) } };
+  value.lastAcceptedReport = structuredClone(report);
+  for (const operation of ['status', 'report'] as const) {
+    const original = wire(operation === 'status' ? prescribed(value) : {
+      accepted: false, code: 'stale_token', message: 'The original report token is stale.', status: value,
+    });
+    const before = wire(original);
+    assert.ok(Buffer.byteLength(JSON.stringify(original)) > 512 * 1024);
+    const result = projectNativeWorkSyncResult({ commandId, operation, value: original, identity });
+    const projected = operation === 'status' ? object(result) : object(object(result).status);
+    assert.deepEqual(object(projected.report).wait, value.report.wait);
+    assert.deepEqual(object(projected.lastAcceptedReport).wait, report.wait);
+    assert.equal(object(projected.report).accepted, false);
+    assert.equal(object(projected.lastAcceptedReport).accepted, true);
+    assert.equal(projected.reportToken, value.reportToken);
+    assert.equal(object(projected.agenda).fingerprint, value.agenda.fingerprint);
+    assert.ok(Buffer.byteLength(JSON.stringify(result)) <= 240 * 1024);
+    assert.deepEqual(projectNativeWorkSyncResult({ commandId, operation, value: result, identity }), result,
+      'completed compact readback preserves the exact bounded result');
+    const invalid = object(wire(result));
+    const invalidStatus = operation === 'status' ? invalid : object(invalid.status);
+    object(object(invalidStatus.report).wait).runId = 'not-a-run';
+    assert.throws(() => projectNativeWorkSyncResult({ commandId, operation, value: wire(invalid), identity }),
+      'strict compact readback still validates every retained wait field');
+    assert.deepEqual(original, before, 'projection never rewrites the original facts');
+  }
+  const maximalWait: NonNullable<typeof report.wait> = {
+    kind: 'ci', repository: `${'a'.repeat(127)}/${'b'.repeat(128)}`,
+    runId: '9'.repeat(24), expectedCommit: 'b'.repeat(64), taskId: 'T'.repeat(128),
+    horizonAt: `2026-11-28T10:00:00.${'0'.repeat(43)}Z`, status: 'pending',
+    supersedes: { runId: '8'.repeat(24), expectedCommit: 'a'.repeat(64) },
+  };
+  value.report.wait = maximalWait;
+  value.lastAcceptedReport.wait = structuredClone(maximalWait);
+  assert.doesNotThrow(() => assertNativeWorkSyncStatusBudget({
+    operation: 'status', status: value, identity, budget: 96 * 1024,
+  }));
+  const maximal = projectNativeWorkSyncResult({ commandId, operation: 'status', value: wire(prescribed(value)), identity });
+  assert.ok(Buffer.byteLength(JSON.stringify(maximal)) < 16 * 1024,
+    'both maximum-size wait fields fit the unchanged generated-response reserve');
+});
+
 test('over 200 item prescription omits optional IDs without changing full-agenda authority', () => {
   const original = wire(prescribed(status(201)));
   const result = projectNativeWorkSyncResult({ commandId,

@@ -1,4 +1,5 @@
 import { normalizeRuntimeDelivery, findRuntimeInput, runtimeAdmission } from './runtimeDelivery.js';
+import { commitRuntimeInput } from './commitRuntimeInput.js';
 import { prepareSessionOpen } from './prepareSessionOpen.js';
 import { preparedInputProof, prepareRuntimeInput, recordContextEpoch } from './inputPreparation.js';
 import { randomUUID } from 'node:crypto';
@@ -279,7 +280,7 @@ export class RuntimeOwner {
   async admitDelivery(raw: RuntimeDelivery): Promise<RuntimeAdmission> {
     const intent = normalizeRuntimeDelivery(raw, this.maxBytes);
     return this.activity.fenced(intent.binding, (tx) => {
-      this.authorize(intent.binding, 'admit', intent);
+      this.authorize(intent.binding, 'admit', intent, () => tx.siblings());
       const record = tx.get() ?? this.empty(intent.binding);
       const existing = findRuntimeInput(record, intent);
       if (existing) return runtimeAdmission(existing);
@@ -317,23 +318,21 @@ export class RuntimeOwner {
     });
   }
 
-  async cancelDelivery(raw: RuntimeDelivery): Promise<RuntimeAdmission> {
+  async cancelDelivery(raw: RuntimeDelivery, withAuthority?: (commit: () => void) => void): Promise<RuntimeAdmission> {
     const intent = normalizeRuntimeDelivery(raw, this.maxBytes);
     return this.activity.fenced(intent.binding, (tx) => {
       this.authorize(intent.binding, 'control', intent);
       const record = tx.get() ?? this.empty(intent.binding);
       let input = findRuntimeInput(record, intent);
       const unseen = !input;
-      if (!input) {
-        input = {
-          intent,
-          fingerprint: deliveryFingerprint(intent),
-          operationRef: randomUUID(),
-          phase: 'cancelled',
-        };
-        record.inputs.push(input);
-      } else if (input.phase === 'admitted') input.phase = 'cancelled';
-      tx.put(record, unseen ? 'growth' : undefined); // Includes unseen delivery IDs: a late outbox admission cannot resurrect them.
+      commitRuntimeInput(() => {
+        if (!input) {
+          input = { intent, fingerprint: deliveryFingerprint(intent), operationRef: randomUUID(), phase: 'cancelled' };
+          record.inputs.push(input);
+        } else if (input.phase === 'admitted') input.phase = 'cancelled';
+        tx.put(record, unseen ? 'growth' : undefined); // Retain unseen IDs against late admission.
+      }, withAuthority);
+      if (!input) throw new RuntimeOwnerError('hold');
       return active(input)
         ? { inputId: input.intent.inputId, outcome: 'unknown' }
         : runtimeAdmission(input);
@@ -345,11 +344,11 @@ export class RuntimeOwner {
     const claimed = this.activity.fenced(binding, (tx) => {
       const record = this.record(tx);
       const next = record.inputs.find((item) => item.phase === 'admitted');
-      if (!this.options.authorize(normalizeBinding(binding), 'dispatch', next?.intent)) {
+      if (!this.options.authorize(normalizeBinding(binding), 'dispatch', next?.intent, () => tx.siblings())) {
         for (const input of record.inputs) {
           if (
             input.phase === 'admitted' &&
-            !this.options.authorize(normalizeBinding(binding), 'dispatch', input.intent)
+            !this.options.authorize(normalizeBinding(binding), 'dispatch', input.intent, () => tx.siblings())
           )
             input.phase = 'rejected';
         }
@@ -377,9 +376,11 @@ export class RuntimeOwner {
         priorProofs: record.inputs.flatMap(value => value.preparation ? [preparedInputProof(value.preparation)] : []),
       });
       if (selected) input.preparation = prepareRuntimeInput(binding, input, selected, this.maxBytes);
-      input.phase = 'claimed';
-      tx.put(record); // The only submit claim; exact native supplement is durable before handoff.
-      if (input.preparation) this.options.inputPrepared?.(binding, preparedInputProof(input.preparation));
+      commitRuntimeInput(() => {
+        input.phase = 'claimed';
+        tx.put(record); // The only submit claim; exact native supplement is durable before handoff.
+        if (input.preparation) this.options.inputPrepared?.(binding, preparedInputProof(input.preparation));
+      }, this.options.withDispatchAuthority && (commit => this.options.withDispatchAuthority!(binding, input.intent, commit)));
       return { record, driver, input };
     });
     const input = claimed.input;
@@ -754,9 +755,10 @@ export class RuntimeOwner {
   private authorize(
     binding: RuntimeBinding,
     action: 'read' | 'admit' | 'dispatch' | 'control',
-    intent?: RuntimeDelivery
+    intent?: RuntimeDelivery,
+    readMemberHistory?: () => readonly RuntimeSessionRecord[]
   ): void {
-    if (!this.options.authorize(normalizeBinding(binding), action, intent))
+    if (!this.options.authorize(normalizeBinding(binding), action, intent, readMemberHistory))
       throw new RuntimeOwnerError('forbidden');
   }
   private ownedDriver(record: RuntimeSessionRecord): Session {

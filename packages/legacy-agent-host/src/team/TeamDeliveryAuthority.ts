@@ -6,6 +6,7 @@ import { verifiedHumanDirectSuggestionSource } from './verifiedHumanDirectSugges
 import { deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
 import { readProductCommand } from './commandEntries.js';
 import { formatTeamMessage } from './formatTeamMessage.js';
+import { teamCommandFingerprint } from './teamCommandFingerprint.js';
 import type { TeamStore, TeamRuntimeBindings } from './ports.js';
 import type { JsonValue } from '../contracts.js';
 import type { OwnerState } from './ownerState.js';
@@ -213,17 +214,7 @@ export function createTeamDeliveryAuthority(options: {
         !receipt.deliveryBinding ||
         digest(receipt.deliveryBinding) !== digest(intent.binding) ||
         receipt.authorityRevision !== intent.authorityRevision ||
-        receipt.fingerprint !==
-          digest({
-            binding: options.binding,
-            principalId: receipt.principalId,
-            command: receipt.command,
-            deliveryBinding: receipt.deliveryBinding,
-            messageRecipientRole: receipt.messageRecipientRole,
-            ...(receipt.crossTeam ? { crossTeam: receipt.crossTeam } : {}),
-            ...(receipt.group ? { group: receipt.group } : {}),
-            ...(receipt.workSyncNudge ? { workSyncNudge: receipt.workSyncNudge } : {}),
-          })
+        receipt.fingerprint !== teamCommandFingerprint(receipt)
       )
         return false;
       const member = options

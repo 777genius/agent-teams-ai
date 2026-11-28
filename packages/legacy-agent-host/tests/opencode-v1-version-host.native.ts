@@ -455,6 +455,7 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     if (coordination?.evidence.status === 'INCOMPLETE' && coordination.evidence.cleanup !== true)
       cleanupErrors.push(new Error('Original coordination cleanup unconfirmed'));
     cleanup = cleanupErrors.length === 0;
+    const qualified = passed && cleanup && !failure;
     const runtimeOpenFailure = diagnostics.entries.find(row =>
       row.epoch === 1 && row.event === 'runtime-open-failed');
     const initialRuntimeOpen = runtimeOpenFailure ? {
@@ -465,14 +466,14 @@ test('selected stable V1 executes native tools through Host and retains cold rec
     try {
       await writeFile(receiptPath, JSON.stringify({
         kind: 'TEST_NATIVE_V1_VERSION_HOST', sourceHead, platform: `${process.platform}-${process.arch}`,
-        status: passed && cleanup && !failure ? 'PASS' : 'INCOMPLETE', cleanup,
+        status: qualified ? 'PASS' : 'INCOMPLETE', cleanup,
         selectedCliVersion: version, nativeVersion, nativeDigest, nativeIntegrity,
         wireProtocolRevision: '1.19.4', nodeVersion: process.version, nodeDigest,
         providerDigest, hostSourceDigest, hostDistDigest, steps,
         hosts: hosts.map(({ exitCode, signalCode, stdoutValid, diagnosticBytes }) =>
-          ({ exitCode, signalCode, stdoutValid, diagnosticBytes })),
-        ...(initialRuntime ? { initialRuntime } : {}),
-        ...(initialRuntimeOpen ? { initialRuntimeOpen } : {}),
+          ({ exitCode, signalCode, stdoutValid, ...(!qualified ? { diagnosticBytes } : {}) })),
+        ...(!qualified && initialRuntime ? { initialRuntime } : {}),
+        ...(!qualified && initialRuntimeOpen ? { initialRuntimeOpen } : {}),
         modelOrigin: 'localhost-scripted', modelRequests: model?.observations.length ?? 0,
         coordination: coordination?.evidence ?? { status: 'unqualified', cleanup: null },
         preferencesSelection: { defaultModelId: 'TEST-local/TEST-model-B', contextTokens: 64000, outputTokens: 1024 },

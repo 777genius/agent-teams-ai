@@ -4,7 +4,7 @@ import { normalizeMemberName } from './policy/core/domain/memberName.js';
 
 import type { TeamOwner } from '../team/TeamOwner.js';
 import type { TeamTask } from '../team/ports.js';
-import type { captureNativeInputAuthority } from '../composition/captureNativeInputAuthority.js';
+import type { WorkSyncInputAuthority } from './commandContracts.js';
 import type { MemberWorkSyncTaskLike } from './policy/core/domain/ActionableWorkAgenda.js';
 import type { ReviewHistoryEventLike } from './policy/core/domain/currentReviewCycle.js';
 import type { MemberWorkSyncProviderId } from './policy/contracts/index.js';
@@ -14,7 +14,7 @@ import type { MemberWorkSyncAgendaSourcePort } from './policy/core/application/p
 export function createNativeMemberWorkSyncAgendaSource(options: {
   owner: Pick<TeamOwner, 'connect' | 'withLaunchAuthority'>;
   authority: Pick<
-    ReturnType<typeof captureNativeInputAuthority>,
+    WorkSyncInputAuthority,
     'team' | 'fingerprint' | 'assertCurrent' | 'assertTeamCurrent'
   >;
   teamName: string;
@@ -41,7 +41,7 @@ export function createNativeMemberWorkSyncAgendaSource(options: {
         );
         if (!member || member.name !== memberName) throw new TeamOwnerError('forbidden');
         const tasks = connection.listTasks();
-        const kanban = readKanbanProjection(
+        const kanban = readWorkSyncKanbanProjection(
           connection.readQueries.getKanbanState({ strict: true })
         );
         return {
@@ -50,7 +50,7 @@ export function createNativeMemberWorkSyncAgendaSource(options: {
             agentType: current.role === 'lead' ? 'team-lead' : 'general-purpose',
             ...(current.settings.providerId ? { providerId: current.settings.providerId } : {}),
           })),
-          tasks: tasks.map((task) => projectTask(task, kanban.columns[task.id])),
+          tasks: tasks.map((task) => projectWorkSyncTask(task, kanban.columns[task.id])),
           reviewers: kanban.reviewers,
         };
       });
@@ -81,7 +81,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 /** The controller's strict canonical read has already validated the schema; this selects only agenda fields. */
-function readKanbanProjection(value: unknown) {
+export function readWorkSyncKanbanProjection(value: unknown) {
   if (!record(value) || !record(value.tasks)) throw new TeamOwnerError('hold');
   const columns: Record<string, string> = {};
   const reviewers: Record<string, string | null> = {};
@@ -95,7 +95,7 @@ function readKanbanProjection(value: unknown) {
 }
 
 /** Typed projection of canonical board JSON; invalid optional safety facts are held rather than discarded. */
-function projectTask(task: TeamTask, column: string | undefined): MemberWorkSyncTaskLike {
+export function projectWorkSyncTask(task: TeamTask, column: string | undefined): MemberWorkSyncTaskLike {
   const projected: MemberWorkSyncTaskLike = { id: task.id, status: task.status };
   for (const key of ['displayId', 'subject', 'owner', 'reviewState', 'deletedAt'] as const) {
     const value = task[key];

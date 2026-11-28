@@ -27,7 +27,7 @@ export function createWorkSyncMcpTools(port: TeamMcpWorkSyncPort): BoundTool[] {
     {
       ...defineTool(
         'member_work_sync_report',
-        'Report your work-sync state for the original agenda/token. This does not complete or approve Tasks. Large results explicitly omit details; use task_briefing and task_get for the full current work.',
+        'Report your work-sync state for the original agenda/token. This does not complete or approve Tasks. Large results explicitly omit details; use task_briefing and task_get for the full current work. The lead or original observer may use wait.supersedes to explicitly replace one failed/cancelled check in the same task scope; it never cancels CI or authorizes rerun. Keep its original horizon.',
         z.strictObject({
           commandId,
           state: z.enum(['still_working', 'blocked', 'caught_up']),
@@ -36,6 +36,17 @@ export function createWorkSyncMcpTools(port: TeamMcpWorkSyncPort): BoundTool[] {
           taskIds: z.array(z.string().min(1).max(256)).max(200).optional(),
           note: z.string().max(4000).optional(),
           leaseTtlMs: z.number().int().min(60_000).max(3_600_000).optional(),
+          wait: z.strictObject({
+            kind: z.literal('ci'), repository: z.string().max(256).regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/),
+            runId: z.string().regex(/^[0-9]{1,24}$/), expectedCommit: z.string().regex(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/),
+            taskId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/).optional(),
+            horizonAt: z.string().max(64).refine(value => Number.isFinite(Date.parse(value))),
+            status: z.enum(['pending', 'succeeded', 'failed', 'cancelled']),
+            supersedes: z.strictObject({
+              runId: z.string().regex(/^[0-9]{1,24}$/),
+              expectedCommit: z.string().regex(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/),
+            }).optional(),
+          }).optional(),
         }),
         ({ commandId, ...input }) =>
           port.report(commandId, {
@@ -45,6 +56,12 @@ export function createWorkSyncMcpTools(port: TeamMcpWorkSyncPort): BoundTool[] {
             ...(input.taskIds ? { taskIds: input.taskIds } : {}),
             ...(input.note !== undefined ? { note: input.note } : {}),
             ...(input.leaseTtlMs !== undefined ? { leaseTtlMs: input.leaseTtlMs } : {}),
+            ...(input.wait !== undefined ? { wait: {
+              kind: input.wait.kind, repository: input.wait.repository, runId: input.wait.runId,
+              expectedCommit: input.wait.expectedCommit, horizonAt: input.wait.horizonAt, status: input.wait.status,
+              ...(input.wait.taskId === undefined ? {} : { taskId: input.wait.taskId }),
+              ...(input.wait.supersedes === undefined ? {} : { supersedes: input.wait.supersedes }),
+            } } : {}),
           })
       ),
       asynchronous: true,

@@ -12,6 +12,7 @@ export interface OwnerState {
   members: TeamMember[];
   grants: TeamGrant[];
   ready: boolean;
+  autonomousGoal?: import('./goalContracts.js').GoalRecord;
   /** Creation-only proof, removed before any native binding publication; absent old states stay UNKNOWN. */
   runtimeNeverLaunched?: true;
   lifecycle?: TeamLifecycleState;

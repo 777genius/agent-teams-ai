@@ -162,6 +162,7 @@ export type TeamCommand = { commandId: string } & (
         actionMode?: 'do' | 'ask' | 'delegate';
         /** Explicit raw native format; the captured Host separately proves actor and capability. */
         nativeCommand?: true;
+        autonomousGoal?: import('./goalContracts.js').AutonomousGoalOptions;
         attachments?: readonly AttachmentReference[];
       };
     }
@@ -175,6 +176,8 @@ export interface PreparedEffects {
 }
 
 export interface CommandReceipt {
+  /** Original goal/input provenance, supplied only by the authenticated Host composition. */
+  goal?: import('./goalContracts.js').GoalCommandOrigin;
   /** Original trusted self-nudge classification; never accepted from public command input. */
   workSyncNudge?: true;
   /** Private prepared Host output; never accepted in a public command or native delivery. */
@@ -245,7 +248,7 @@ export interface TeamRuntimeDeliveryPort {
   /** Official Runtime proof fingerprint, shared by its persisted input and admission receipt. */
   fingerprintDelivery(intent: ImmutableDelivery): string;
   /** Optional existing Runtime cancellation capability, used for Task notification retraction. */
-  cancelDelivery?(intent: DeliveryIntent): Promise<DeliveryAdmission>;
+  cancelDelivery?(intent: DeliveryIntent, withAuthority?: (commit: () => void) => void): Promise<DeliveryAdmission>;
 }
 
 export interface DeliveryResumeResult {

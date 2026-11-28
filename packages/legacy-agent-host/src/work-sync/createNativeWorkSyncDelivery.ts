@@ -30,7 +30,7 @@ export async function settleNativeWorkSyncDelivery(options: {
 }): Promise<void> {
   const { member, original, identity } = options;
   const delivery = member.delivery;
-  if (!delivery) throw new TeamOwnerError('hold');
+  if (!delivery || original.nativeInput.team.mode !== 'do') throw new TeamOwnerError('hold');
   const assertCurrent = () => {
     options.assertCurrent();
     assertAcceptedNativeWorkSyncInput({ original, ...delivery });

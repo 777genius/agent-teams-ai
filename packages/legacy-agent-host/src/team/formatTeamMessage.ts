@@ -62,7 +62,7 @@ export function formatTeamMessage(
   if (
     payload.messageId === undefined &&
     payload.summary === undefined &&
-    payload.actionMode === undefined
+    payload.actionMode === undefined && payload.autonomousGoal === undefined
   )
     return payload.text;
   const metadata = {
@@ -79,7 +79,7 @@ export function formatTeamMessage(
       : protocols.buildActionModeProtocolText(protocols.MEMBER_DELEGATE_DESCRIPTION)
     : '';
   const visibleReply =
-    actor === 'user'
+    actor === 'user' && !payload.autonomousGoal
       ? [
           'You received a direct message from the human user via the UI.',
           'CRITICAL: Send your human-readable reply with the exposed team MCP message_send tool to="user", including commandId and text.',
@@ -90,7 +90,10 @@ export function formatTeamMessage(
       : '';
   return [
     agentBlocks.wrapAgentBlock(
-      [protocol, visibleReply, `Message context: ${JSON.stringify(metadata)}`]
+      [protocol, visibleReply, ...(payload.autonomousGoal ? [
+        'The user enabled Continue until done for this objective. Read goal_status for scope and limits. Continue eligible work; respect approvals, Stop, exact task review and unresolved effects. Use member_work_sync_status/report for actionable work and bounded waits.',
+        'When the objective and required verification are complete, call goal_propose with the final result and exact evidence references, then finish this turn. Host will wait for all relevant native inputs to settle and publish the accepted result once. Progress messages remain allowed; do not send a second final answer.',
+      ] : []), `Message context: ${JSON.stringify(metadata)}`]
         .filter(Boolean)
         .join('\n')
     ),

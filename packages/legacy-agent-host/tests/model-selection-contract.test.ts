@@ -22,6 +22,7 @@ test('credential verification retains the complete qualified model through durab
   const hash = 'a'.repeat(64);
   const progress = openCodeV2CredentialProgressSchema.parse({ phase: 'probe-intent', integrationId: 'TEST-integration',
     nativeNamespace: hash, beforeAuthDigest: hash, credentialId: 'cred_TEST', authDigest: hash,
+    authWitnessKdf: { version: 1, salt: 'a'.repeat(32) },
     verification: { commandId: 'TEST-verify', modelId } });
   const completed = advanceOpenCodeV2Credential(progress, { ...progress, phase: 'probe-completed',
     verification: { ...progress.verification!, ok: true } });

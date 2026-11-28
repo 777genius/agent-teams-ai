@@ -22,9 +22,9 @@ export function createRuntimeDeliveryPort(
       assertAvailable(intent.binding);
       return runtime.lookupDelivery(intent);
     },
-    cancelDelivery: (intent: RuntimeDelivery) => {
-      assertAvailable(intent.binding);
-      return runtime.cancelDelivery(intent);
+    cancelDelivery: (...args: Parameters<RuntimeOwner['cancelDelivery']>) => {
+      assertAvailable(args[0].binding);
+      return runtime.cancelDelivery(...args);
     },
   };
 }

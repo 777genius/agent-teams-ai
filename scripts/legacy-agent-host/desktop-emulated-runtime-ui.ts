@@ -18,6 +18,7 @@ import { runDesktopEmulatedSelectionUi } from './desktop-emulated-selection-ui.t
 import { runDesktopEmulatedLifecycleUi } from './desktop-emulated-lifecycle-ui.ts';
 import { runDesktopEmulatedCollaborationUi } from './desktop-emulated-collaboration-ui.ts';
 import { isDesktopEmulatedCollaborationFixture } from './desktop-emulated-collaboration-fixture.ts';
+import { startDesktopAutonomousGoalStream } from './desktop-autonomous-goal-ui.ts';
 
 type Row = Record<string, unknown>;
 const array = (value: unknown): Row[] => { assert.ok(Array.isArray(value)); return value.map(record); };
@@ -175,11 +176,7 @@ export async function runDesktopEmulatedRuntimeUi(cdp: UiCdpPort, options: {
   };
   const leadBinding = record((await session()).binding), leadSourceId = runtimeDigest(leadBinding);
   const leadActivityPath = join(fixture.root, 'hoststore/runtime-events', leadSourceId + '.json');
-  const stream = await send('TEST_UI_STREAM');
-  await visible('TEST stream partial');
-  assert.equal(await cdp.evaluate('document.body.innerText.includes("TEST stream partial complete")'), false);
-  assert.notEqual(array((await session()).inputs).find(row => record(row.intent).inputId === stream.inputId)?.phase, 'terminal');
-  proof.partialScreenshot = await screenshot('partial');
+  const stream = await startDesktopAutonomousGoalStream(cdp, { ui, send, session, ownerState, screenshot, proof });
   const streamEvent = async (text: string, kind: 'text' | 'thinking' = 'text') => {
     const event = await poll(async () => {
       const retained = await json(leadActivityPath), { digest, ...body } = retained;

@@ -675,7 +675,7 @@ describe('selected Team attachment publication', () => {
       binding: f.delivery,
       delivery: f.delivery,
       baseProfile: profile,
-      profile,
+      profile: structuredClone(profile),
     } as unknown as MemberEntry;
     const operationRef = 'TEST-operation';
     const record = {
@@ -720,6 +720,16 @@ describe('selected Team attachment publication', () => {
     expect((await port.resolve(request, signal))?.bytes).toEqual(Buffer.from('TEST native bytes'));
     expect(await port.resolve({ ...request, inputId: 'TEST-other-input' }, signal)).toBeUndefined();
     expect(await port.resolve({ ...request, fingerprint: 'f'.repeat(64) }, signal)).toBeUndefined();
+    const { port: changedProfile } = createMemberAttachmentPort({
+      entry: {
+        ...entry,
+        profile: { ...entry.profile, configRevision: 'TEST-unselected-revision' },
+      },
+      storageRoot: f.root,
+      assertCurrent() {},
+      readRuntime: () => ({ record, attached: true }),
+    });
+    await expect(changedProfile.resolve(request, signal)).rejects.toMatchObject({ code: 'hold' });
     const teammate = {
       ...entry,
       team: {

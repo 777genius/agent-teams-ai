@@ -79,6 +79,7 @@ export interface MemberWorkSyncReport {
   expiresAt?: string | undefined;
   taskIds?: string[] | undefined;
   note?: string | undefined;
+  wait?: import('../core/domain/GoalWaitPolicy.js').GoalWaitReport | undefined;
   source?: ('mcp' | 'app' | 'test') | undefined;
   accepted: boolean;
   rejectionCode?: string | undefined;
@@ -322,6 +323,7 @@ export interface MemberWorkSyncReportRequest {
   note?: string | undefined;
   reportedAt?: string | undefined;
   leaseTtlMs?: number | undefined;
+  wait?: import('../core/domain/GoalWaitPolicy.js').GoalWaitReport | undefined;
   source?: ('mcp' | 'app' | 'test') | undefined;
 }
 

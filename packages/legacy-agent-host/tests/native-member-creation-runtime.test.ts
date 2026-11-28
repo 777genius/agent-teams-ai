@@ -604,6 +604,7 @@ test('cross-provider creation inherits original lead A and original locator; tar
   assert.equal(sourceProbe.purpose, undefined, 'Host-only native Create does not acquire Main-local authority');
   assert.equal(sourceProbe.localModelReadinessOrigin, undefined);
   assert.equal(sourceProbe.readinessScope?.kind, 'native');
+  assert.equal(sourceProbe.readinessRetired, undefined);
   assert.deepEqual(f.probeAdmissions, [{ opens: 2, closed: 0 }]);
   const restart = { commandId: 'TEST-native-created-restart', launchId: original.definition.launchId,
     rosterRevision: original.definition.rosterRevision, memberId: target.memberId,
@@ -621,6 +622,12 @@ test('cross-provider creation inherits original lead A and original locator; tar
   assert.equal(f.contexts.length, 4);
   const retained = f.store.read<TeamLaunchRecord>(f.path)!;
   assert.equal(retained.readiness?.consumers.find(row => row.actionId === restart.commandId)?.disposition, 'consumed');
+  assert.deepEqual(retained.readiness?.consumers.find(row => row.consumerId === consumer!.consumerId),
+    { ...consumer, disposition: 'retired' }, 'Restart preserves the original retired consumer facts');
+  assert.deepEqual(f.probeStore.read(sourceProbe.commandId), { ...sourceProbe, readinessRetired: true },
+    'Restart retires the original completed probe without changing its evidence');
+  assert.notEqual(retained.readiness?.consumers.find(row => row.actionId === restart.commandId)?.groupCommandId,
+    consumer!.groupCommandId, 'the consumed Restart reference belongs to the fresh probe');
 });
 
 test('lead MCP source changing A to C during native model preflight holds before target allocation, preserving original A in its receipt', async (t) => {

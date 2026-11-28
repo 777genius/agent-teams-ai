@@ -3,7 +3,7 @@ const kanbanStore = require('./kanbanStore.js');
 const kanban = require('./kanban.js');
 const { createReviewHumanActions } = require('./reviewHumanActions.js');
 const { createLeadSignoff } = require('./reviewLeadSignoff.js');
-const messages = require('./messages.js');
+const { sendTaskNotification } = require('./sendTaskNotification.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const reviewStateHelpers = require('./reviewState.js');
 const tasks = require('./tasks.js');
@@ -471,7 +471,7 @@ function requestReview(context, taskId, flags = {}) {
   }
 
   try {
-    messages.sendMessage(context, {
+    sendTaskNotification(context, task, {
       to: reviewer,
       from,
       text: buildReviewRequestMessage({
@@ -597,7 +597,7 @@ function approveReview(context, taskId, flags = {}) {
 
   if (shouldNotifyOwner && task.owner) {
     try {
-      messages.sendMessage(context, {
+      sendTaskNotification(context, task, {
         to: task.owner,
         from,
         text:
@@ -728,7 +728,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
   });
 
   try {
-    (fromHuman ? messages.sendTrustedMessage : messages.sendMessage)(context, {
+    sendTaskNotification(context, task, {
       to: task.owner,
       from,
       text:
@@ -739,7 +739,7 @@ function requestChangesWithAuthority(context, taskId, flags, fromHuman) {
       ...(fromHuman && decisionId ? { messageId: decisionId } : {}),
       source: 'system_notification',
       ...(leadSessionId ? { leadSessionId } : {}),
-    });
+    }, fromHuman);
   } catch (error) {
     warnNonCritical(`[review] owner fix-request notification failed for task ${task.id}`, error);
   }

@@ -20,6 +20,7 @@ import { runtimeDigest } from '../runtime/identity.js';
 import { captureMemberProviderAuthority } from './captureMemberProviderAuthority.js';
 import { readDefaultFreshAllocationContinuation } from './runtimeControlAuthority.js';
 import { captureNativeInputAuthority } from './captureNativeInputAuthority.js';
+import { createNativeGoalConnection } from './createNativeGoalConnection.js';
 import { createClaudeSubagents } from './createClaudeSubagents.js';
 import { createClaudeCheckpointSource } from './createClaudeCheckpointSource.js';
 import { createMemberEvidenceCapture } from './createMemberEvidenceCapture.js';
@@ -38,6 +39,7 @@ import type { createHostWorkSyncComposition } from './createHostWorkSyncComposit
 import type { TeamMcpNativeMemberActionPort } from '../mcp/nativeMemberActionContracts.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
 import type { MemberEntry } from './MemberEntry.js';
+import type { RuntimeMemberProfile } from './runtimeProfile.js';
 import type { ProcessCustody } from './processCustody.js';
 import type { HostWindowsLaunch } from '../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
@@ -56,6 +58,7 @@ export type MemberInputCapture = (
 export function createRuntimeMemberProviderFactory(options: {
   entries: ReadonlyMap<string, MemberEntry>;
   storageRoot: string;
+  initialRuntimeMembers?: readonly RuntimeMemberProfile[];
   profileId: string;
   principalId: string;
   hostIncarnation: string;
@@ -75,7 +78,7 @@ export function createRuntimeMemberProviderFactory(options: {
   crossTeam?(entry: MemberEntry, isCurrent: () => boolean): TeamMcpCrossTeamPort | undefined;
   workSync?(
     entry: MemberEntry,
-    captureSource: MemberInputCapture,
+    captureSource: NativeWorkSyncMemberContext['captureSource'],
     delivery: NonNullable<NativeWorkSyncMemberContext['delivery']>
   ): ReturnType<ReturnType<typeof createHostWorkSyncComposition>['member']> | undefined;
   settleDeliveries(entry: MemberEntry, assertOriginal: () => void): Promise<void>;
@@ -285,13 +288,19 @@ export function createRuntimeMemberProviderFactory(options: {
               owner.captureNativeMcpAuthority(principalId, delivery, raw, requireLead),
             assertCurrent: authority.assertCurrent,
           });
+        const goalConnection = createNativeGoalConnection({ entry, profileId: options.profileId,
+          hostIncarnation: options.hostIncarnation, readRuntime: options.readRuntime,
+          entries: options.entries, ownerStorageRoot: options.storageRoot,
+          ...(options.initialRuntimeMembers ? { initialRuntimeMembers: options.initialRuntimeMembers } : {}),
+          isCurrent: selected => { try { options.assertCurrent(selected); return true; } catch { return false; } },
+          config: capturedConfig, assertCurrent: authority.assertCurrent,
+          onProgress: () => options.onProgress(entry) });
         const groups = options.groups?.(entry, captureSource, authority.isCurrent);
         const crossTeam = options.crossTeam?.(entry, authority.isCurrent),
-          workSync = options.workSync?.(entry, captureSource, {
+          workSync = options.workSync?.(entry, goalConnection.captureWorkSync, {
             principalId,
             readRuntime: () => options.readRuntime(binding),
-            captureTeam: (raw) =>
-              owner.captureNativeMcpAuthority(principalId, delivery, raw, false),
+            captureTeam: goalConnection.captureWorkSyncTeam,
             assertCurrent: authority.assertCurrent,
             settleDeliveries: async () => {
               authority.assertCurrent();
@@ -304,6 +313,8 @@ export function createRuntimeMemberProviderFactory(options: {
         if (workSync) entry.settleWorkSync = workSync.settleAccepted;
         const connection = {
           ...owner.connect(principalId),
+          execute: goalConnection.execute,
+          goals: goalConnection.goals,
           ...(groups ? { groups } : {}),
           ...(crossTeam ? { crossTeam } : {}),
           ...(workSync ? { workSync } : {}),

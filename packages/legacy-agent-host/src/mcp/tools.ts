@@ -2,6 +2,7 @@ import { createGroupMcpTools } from './groupChatTools.js';
 import { createNativeMemberCreationMcpTools } from './nativeMemberCreationTools.js';
 import { createNativeMemberActionMcpTools } from './nativeMemberActionTools.js';
 import { createWorkSyncMcpTools } from './workSyncTools.js';
+import { createGoalMcpTools } from './goalTools.js';
 import { createReadMcpTools } from './readTools.js';
 import { createProcessMcpTools } from './processTools.js';
 import { defineTool as define, formatToolResult as result } from './toolDefinition.js';
@@ -293,6 +294,7 @@ export function createTeamMcpTools(connection: TeamMcpConnection) {
   if (connection.nativeMemberActions)
     tools.push(...createNativeMemberActionMcpTools(connection.nativeMemberActions));
   if (connection.workSync) tools.push(...createWorkSyncMcpTools(connection.workSync));
+  if (connection.goals) tools.push(...createGoalMcpTools(connection.goals));
   if (connection.readQueries) {
     const inventory = tools.findIndex((tool) => tool.definition.name === 'task_list');
     tools.splice(inventory, 1);

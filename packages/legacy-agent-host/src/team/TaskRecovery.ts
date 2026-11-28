@@ -1,12 +1,14 @@
 import { settledRuntimeAdmission } from './settledRuntimeAdmission.js';
-import { listProductCommandReceipts } from './commandEntries.js';
+import { listProductCommandReceipts, readProductCommand } from './commandEntries.js';
 import { TeamOwnerError } from './contracts.js';
 import { TaskPolicyRejected } from './ports.js';
 import { isUserTaskStartIntent } from './taskStartIntent.js';
-import { classifyProof, deliveryIdentity } from './DeliveryRecovery.js';
+import { classifyProof, deliveryIdentity, memberBinding } from './DeliveryRecovery.js';
+import { deliveryFingerprint } from '../runtime/identity.js';
 import { digest, effectId } from './identity.js';
 import { safeSegment } from './identity.js';
 import type { TaskStartCause } from './TaskStartCause.js';
+import type { GoalTaskInputCause } from './lookupEvidenceCause.js';
 
 import type { JsonValue } from '../contracts.js';
 import type {
@@ -28,6 +30,7 @@ import type {
 
 interface Retraction {
   intent: DeliveryIntent;
+  cause?: 'goal-reassignment';
   proof?: DeliveryAdmission;
   /** Captured from the official Runtime fingerprint function when the proof is checked. */
   fingerprint?: string;
@@ -132,6 +135,13 @@ export class TaskRecovery {
           .filter((intent) => plan.removedMessageIds.includes(intent.messageId))
           .map((intent) => ({ intent })),
       };
+      if (receipt.goal && receipt.command.operation === 'task.assign' && plan.reassignedTaskId) {
+        for (const intent of this.goalReassignmentInputs(receipt, plan.reassignedTaskId)) {
+          const prior = obligations.retractions.find(row => row.intent.inputId === intent.inputId);
+          if (prior) prior.cause = 'goal-reassignment';
+          else obligations.retractions.push({ intent, cause: 'goal-reassignment' });
+        }
+      }
       this.store.write(this.key(receipt), obligations);
     }
     // A cancellation proof must be durable before any product file is published.
@@ -176,6 +186,58 @@ export class TaskRecovery {
         expected.principalId === intent.principalId &&
         expected.authorityRevision === intent.authorityRevision
     );
+  }
+
+  /** Evidence-only cause: exact original canonical notification, including dependency/review fan-out. */
+  lookupGoalTaskCause(intent: DeliveryIntent, receipt: CommandReceipt): GoalTaskInputCause | null {
+    if (!receipt.goal || !receipt.command.operation.startsWith('task.')) return null;
+    const plan = this.mutations.load(receipt);
+    if (receipt.phase !== 'completed' || !this.owns(intent, receipt) || !plan ||
+        receipt.taskHash !== plan.taskHash || digest(receipt.result) !== digest(plan.result))
+      throw new TeamOwnerError('hold');
+    const member = receipt.taskRecipients?.find(row => row.delivery &&
+      digest(memberBinding(row.delivery)) === digest(memberBinding(intent.binding)));
+    const matching = plan.notifications.filter(row => row.member === member?.name &&
+      row.messageId === intent.messageId && row.content === intent.content);
+    const notification = matching[0];
+    if (matching.length !== 1 || !notification?.taskId) throw new TeamOwnerError('hold');
+    safeSegment(notification.taskId);
+    return Object.freeze({ goalTaskCommandId: receipt.commandId, goalTaskId: notification.taskId,
+      messageId: intent.messageId, deliveryId: intent.deliveryId, inputId: intent.inputId,
+      binding: Object.freeze(memberBinding(intent.binding)) });
+  }
+
+  private goalTaskScope(intent: DeliveryIntent, receipt: CommandReceipt, seen = new Set<string>()): string | undefined {
+    if (!receipt.goal) return undefined;
+    if (seen.has(intent.inputId) || seen.size >= 1000) throw new TeamOwnerError('hold');
+    seen.add(intent.inputId);
+    const continuation = receipt.goal.continuation;
+    if (continuation?.obligationKey.startsWith('task:')) {
+      if (digest(memberBinding(continuation.target)) !== digest(memberBinding(intent.binding)))
+        throw new TeamOwnerError('hold');
+      return safeSegment(continuation.obligationKey.split(':')[1]!);
+    }
+    if (receipt.command.operation !== 'message.send') return this.lookupGoalTaskCause(intent, receipt)?.goalTaskId;
+    const source = receipt.goal.source;
+    if (!source) return undefined;
+    const original = this.store.read<DeliveryIntent>(`outbox/${safeSegment(source.inputId)}.json`);
+    const cause = original && readProductCommand(this.store, original.commandId);
+    if (!original || !cause || deliveryFingerprint(original) !== source.inputFingerprint ||
+        digest(memberBinding(original.binding)) !== digest(memberBinding(source.binding)) ||
+        cause.goal?.goalId !== receipt.goal.goalId || cause.goal?.revision !== receipt.goal.revision)
+      throw new TeamOwnerError('hold');
+    return this.goalTaskScope(original, cause, seen);
+  }
+
+  private goalReassignmentInputs(receipt: CommandReceipt, taskId: string): DeliveryIntent[] {
+    safeSegment(taskId);
+    return this.store.list<DeliveryIntent>('outbox').filter(intent => {
+      if (intent.commandId === receipt.commandId) return false;
+      const original = readProductCommand(this.store, intent.commandId);
+      if (!original?.goal || original.goal.goalId !== receipt.goal!.goalId ||
+          original.goal.revision !== receipt.goal!.revision) return false;
+      return this.goalTaskScope(intent, original) === taskId;
+    });
   }
 
   /** Called only under Team's fence, using an exact persisted input/outbox identity. */
@@ -252,14 +314,28 @@ export class TaskRecovery {
     return outcome === 'not_admitted' || (outcome === 'admitted' && settledRuntimeAdmission(entry.proof));
   }
 
-  retracting(raw: ImmutableDelivery): boolean {
-    return this.store
+  retracting(raw: ImmutableDelivery, mode: 'delivery' | 'evidence' = 'delivery'): boolean {
+    const original = this.store
       .list<Obligations>('task-obligations')
       .some((obligations) =>
         obligations.retractions.some(
-          ({ intent }) => digest(deliveryIdentity(intent)) === digest(deliveryIdentity(raw))
+          (entry) => digest(deliveryIdentity(entry.intent)) === digest(deliveryIdentity(raw)) &&
+            !(mode === 'evidence' && entry.cause === 'goal-reassignment')
         )
       );
+    if (original || mode === 'evidence') return original;
+    const intent = this.store.read<DeliveryIntent>(`outbox/${safeSegment(raw.deliveryId)}.json`);
+    if (!intent || digest(deliveryIdentity(intent)) !== digest(deliveryIdentity(raw))) return false;
+    const receipt = readProductCommand(this.store, intent.commandId);
+    if (!receipt?.goal) return false;
+    const pending = listProductCommandReceipts(this.store).filter(row =>
+      !['completed', 'rejected'].includes(row.phase) && row.command.operation === 'task.assign' &&
+      row.goal?.goalId === receipt.goal!.goalId && row.goal?.revision === receipt.goal!.revision);
+    if (!pending.length) return false;
+    const taskId = this.goalTaskScope(intent, receipt);
+    if (!taskId) return false;
+    // Close this task's admission while original cancellation proofs are being collected outside Team's fence.
+    return pending.some(row => this.mutations.load(row)?.reassignedTaskId === taskId);
   }
 
   /** Cancellation is authorized by the current deleting Task principal, not a revoked prior sender. */

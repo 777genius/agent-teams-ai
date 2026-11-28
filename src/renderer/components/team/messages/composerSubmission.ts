@@ -1,6 +1,8 @@
 import { composerDraftRepository } from '@renderer/services/composerDraftRepository';
 import { isOpenCodeRuntimeDeliveryHardUxFailure } from '@renderer/utils/openCodeRuntimeDeliveryDiagnostics';
 
+import { GoalRequestPreparationRefusal } from './composerSendUtils';
+
 import type { ComposerBeginAttemptResult } from '@renderer/hooks/useComposerDraft';
 import type {
   ComposerAttemptOutcome,
@@ -93,7 +95,12 @@ export async function runComposerSubmission({
   let outcome: ComposerAttemptOutcome | null = null;
   let transportResult: TransportResult = null;
   try {
-    prepared = await prepare();
+    try {
+      prepared = await prepare();
+    } catch (error) {
+      if (!(error instanceof GoalRequestPreparationRefusal)) throw error;
+      return { kind: 'not-sent', attemptId, detail: error.message };
+    }
     if (!prepared || prepared.result.kind !== 'prepared') {
       return { kind: 'blocked', attemptId };
     }

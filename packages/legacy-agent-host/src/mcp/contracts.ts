@@ -22,6 +22,10 @@ export type TeamMcpConnection = Pick<
   readonly groups?: TeamMcpGroupPort;
   readonly crossTeam?: TeamMcpCrossTeamPort;
   readonly workSync?: TeamMcpWorkSyncPort;
+  readonly goals?: {
+    status(): (import('../team/goalContracts.js').GoalStatus & { objective: string }) | null;
+    propose(request: import('../team/goalContracts.js').GoalProposalRequest): Promise<import('../team/goalContracts.js').GoalStatus>;
+  };
   readonly nativeMemberCreation?: TeamMcpNativeMemberCreationPort;
   readonly nativeMemberActions?: TeamMcpNativeMemberActionPort;
   readonly process?: TeamMcpProcessPort;

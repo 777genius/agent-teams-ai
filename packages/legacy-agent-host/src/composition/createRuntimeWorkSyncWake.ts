@@ -5,6 +5,7 @@ export function createRuntimeWorkSyncWake(options: {
   entries: ReadonlyMap<string, MemberEntry>;
   isCurrent(entry: MemberEntry): boolean;
   isSealed(): boolean;
+  settleGoal?(entry: MemberEntry): Promise<void>;
 }) {
   const scheduler = new MemberWorkSyncNudgeDispatchScheduler({
     listLifecycleActiveTeamNames: async () =>
@@ -13,7 +14,11 @@ export function createRuntimeWorkSyncWake(options: {
         : [
             ...new Set(
               [...options.entries.values()]
-                .filter((entry) => entry.settleWorkSync && options.isCurrent(entry))
+                .filter((entry) => {
+                  try {
+                    return options.isCurrent(entry) && Boolean(entry.settleWorkSync || entry.team.owner.goals.snapshot());
+                  } catch { return false; } // One unavailable original cannot suppress another team's wake.
+                })
                 .map((entry) => entry.delivery.teamName)
             ),
           ],
@@ -22,9 +27,16 @@ export function createRuntimeWorkSyncWake(options: {
         if (options.isSealed() || signal?.aborted) break;
         if (teams.includes(entry.delivery.teamName) && options.isCurrent(entry)) {
           try {
+            await options.settleGoal?.(entry);
+          } catch {
+            /* Goal recovery cannot suppress an already accepted ordinary Work Sync receipt. */
+          }
+          if (options.isSealed() || signal?.aborted) break;
+          if (!options.isCurrent(entry)) continue;
+          try {
             await entry.settleWorkSync?.();
           } catch {
-            /* Original receipt remains held by its own owner. */
+            /* Original ordinary receipt remains held by its own owner. */
           }
         }
       }

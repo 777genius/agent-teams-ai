@@ -124,7 +124,10 @@ export async function assertFreeDisk(): Promise<void> {
     );
 }
 
-export async function discoverTarget(vendor: RealVendor): Promise<RealTarget> {
+export async function discoverTarget(
+  vendor: RealVendor,
+  purpose: 'suggestions' | 'autonomous-goal' = 'suggestions'
+): Promise<RealTarget> {
   const override = process.env[vendor === 'claude' ? 'REAL_CLAUDE_BIN' : 'REAL_CODEX_BIN'];
   const found = override
     ? await realpath(override).catch(() => undefined)
@@ -135,7 +138,20 @@ export async function discoverTarget(vendor: RealVendor): Promise<RealTarget> {
       `no ${vendor} executable (${override ? `REAL_${vendor.toUpperCase()}_BIN=${override} does not exist` : `not on PATH; set REAL_${vendor.toUpperCase()}_BIN`})`
     );
   const version = await versionOf(found);
-  if (vendor === 'codex' && !versionAtLeast(version, MIN_CODEX_VERSION))
+  if (vendor === 'codex' && purpose === 'autonomous-goal') {
+    // Goal qualification does not call thread/sample. Use the already captured
+    // native allowlist before account probing or any profile/Host allocation.
+    // Keep this lazy: ordinary discovery also runs before Host compilation.
+    const { qualifiedCodexProtocolRevision, RuntimeSourceAdmissionError } =
+      await import('../../../dist/composition/runtimeSourceQualification.js');
+    try { qualifiedCodexProtocolRevision(version); }
+    catch (error) {
+      if (!(error instanceof RuntimeSourceAdmissionError) || error.reason !== 'unqualified-version') throw error;
+      throw new Inconclusive('app-not-built', 'The captured Host does not qualify Codex ' + version +
+        ' on ' + process.platform + '-' + process.arch + '. Select an already qualified native target; no allocation ran.');
+    }
+  }
+  if (vendor === 'codex' && purpose === 'suggestions' && !versionAtLeast(version, MIN_CODEX_VERSION))
     throw new Inconclusive(
       'binary-too-old',
       `codex ${version} cannot sample next prompts, need >= ${MIN_CODEX_VERSION} (set REAL_CODEX_BIN)`

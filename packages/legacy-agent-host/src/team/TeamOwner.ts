@@ -5,9 +5,10 @@ import { pageOwnerTaskDetail } from './pageOwnerTaskDetail.js';
 import { pageOwnerKanban } from './pageOwnerKanban.js';
 import { pageOwnerSnapshot } from './pageOwnerSnapshot.js';
 import { executeTeamCommand, resumeHostCostCommands } from './executeTeamCommand.js';
-import { captureCommandSelection } from './captureCommandSelection.js';
+import { lookupTeamCommand } from './lookupTeamCommand.js';
+import { TeamGoals } from './TeamGoals.js';
+import type { GoalCommandPreparation } from './goalContracts.js';
 import { teamCommandFingerprint } from './teamCommandFingerprint.js';
-import { validateCommandAttachments } from './validateCommandAttachments.js';
 import { readGroupInputSource } from '../group-chats/readGroupInputSource.js';
 import type { NativeMcpAuthorityProof } from './NativeMcpAuthority.js';
 import { groupTargetCommand, canonicalGroupMessages } from '../group-chats/groupDelivery.js';
@@ -36,7 +37,7 @@ import { lookupEvidenceCause } from './lookupEvidenceCause.js';
 import { json } from './TeamReviewCommands.js';
 import { createTeamCommandAccess } from './createTeamCommandAccess.js';
 import type { TeamProcessRuntimeAccess } from './createTeamCommandAccess.js';
-import { readProductCommand, lookupOwnedProductCommand } from './commandEntries.js';
+import { readProductCommand } from './commandEntries.js';
 import { isUserTaskStartIntent, requiresHumanTaskActor } from './taskStartIntent.js';
 import { digest, safeSegment } from './identity.js';
 import { TeamOwnerError } from './contracts.js';
@@ -47,7 +48,7 @@ import { TeamRuntimeRegistration } from './TeamRuntimeRegistration.js';
 import type { RegisterTeamRuntime } from './runtimeRegistrationContracts.js';
 import { TeamRosterTransitions } from './TeamRosterTransitions.js';
 import { teamRosterRevision } from './rosterSchema.js';
-import { validateTeamCommand, validateTeamText } from './validateTeamCommand.js';
+import { validateTeamText } from './validateTeamCommand.js';
 
 import type {
   TaskMutationPort, TeamInputPreflight,
@@ -101,6 +102,7 @@ export type CapturedProviderCurrent = (owner: TeamOwner, binding: RuntimeMemberB
 export class TeamOwner {
   /** Trusted composition only; never exposed on connect/MCP. */
   readonly contextReminders: TeamContextReminders;
+  readonly goals: TeamGoals;
   readonly nativeRoster: Pick<TeamRosterTransitions, 'nativeCreation' | 'capturedMemberCurrent' | 'liveMembership' | 'replaceAuthored' | 'readExpectation'>;
   readonly hasRetainedRuntime = () => this.runtimeRegistration.hasRetained();
   private readonly commandAccess: ReturnType<typeof createTeamCommandAccess>;
@@ -200,7 +202,15 @@ export class TeamOwner {
       (intent) =>
         !this.taskRecovery.retracting(intent) && this.deliveryAuthority.deliveryAuthorized(intent)
     );
+    this.goals = new TeamGoals({ store: this.store, policy: this.policy, state: () => this.state(),
+      authorize: (principal, permission) => this.authorize(principal, permission),
+      authorizeDelivery: (raw, action) => this.deliveryAuthority.authorizeIntent(raw, action),
+      humanTaskStart: (intent, receipt) => !!this.taskRecovery.lookupTaskStartCause(intent, receipt, 'historical'),
+      execute: (principal, command, preparation) => this.execute(principal, command, undefined, undefined, undefined, undefined, preparation),
+      invalidate: () => this.productChanges.invalidate(),
+    });
     this.commandAccess.lifecycleContinuation.recover();
+    this.goals.resumeCommands();
   }
 
   assertExecutionAllowed(principalId: string): void {
@@ -308,6 +318,7 @@ export class TeamOwner {
 
   /** Trusted continuation of prepared Task facts and saved Host replies. */
   async resumeTaskCommands(runtime?: TeamRuntimeDeliveryPort) {
+    this.goals.resumeCommands();
     resumeHostCostCommands(this.store, receipt => this.execute(receipt.principalId, receipt.command));
     return this.taskRecovery.resume(runtime);
   }
@@ -322,7 +333,7 @@ export class TeamOwner {
       lookupEvidenceCause({
         store: this.store,
         recovery: this.taskRecovery,
-        raw,
+        raw, purpose: 'evidence',
         authorize: () => {
           this.authorize(principalId, 'read');
         },
@@ -432,7 +443,8 @@ export class TeamOwner {
     raw: ImmutableDelivery,
     action: 'read' | 'admit' | 'dispatch' | 'control' = 'admit'
   ): boolean {
-    return this.deliveryAuthority.authorizeIntent(raw, action);
+    return this.store.fenced(() => this.deliveryAuthority.authorizeIntent(raw, action) &&
+      ((action === 'admit' || action === 'dispatch') ? this.goals.authorizeInput(raw, action) : true));
   }
 
   isOriginalHumanDirectDelivery(raw: ImmutableDelivery): boolean { return this.deliveryAuthority.isOriginalHumanDirect(raw); }
@@ -519,31 +531,10 @@ export class TeamOwner {
     });
   }
 
-  /** Recovery reads verify the exact original command; they never execute or recapture it. */
   private lookupCommand(principalId: string, commandId: string, expected?: TeamCommand) {
-    if (expected) validateTeamCommand(expected);
-    return this.withLaunchAuthority(principalId, 'read', () => {
-      const receipt = lookupOwnedProductCommand(this.store, principalId, commandId);
-      if (receipt && digest(receipt.binding) !== digest(this.binding)) throw new TeamOwnerError('hold');
-      if (!expected || !receipt) return receipt;
-      const grant = this.authorize(principalId, expected.operation === 'message.send' ? 'message.write' : 'task.write');
-      if (requiresHumanTaskActor(expected) && grant.memberName !== 'user') throw new TeamOwnerError('forbidden');
-      if (expected.commandId !== commandId || digest(receipt.binding) !== digest(this.binding) ||
-        digest(receipt.command) !== digest(expected)) throw new TeamOwnerError('conflict');
-      if (teamCommandFingerprint(receipt) !== receipt.fingerprint) throw new TeamOwnerError('hold');
-      const selection = captureCommandSelection(expected, receipt, this.state().members, grant);
-      if (teamCommandFingerprint({ binding: this.binding, principalId, command: expected,
-        deliveryBinding: selection.deliveryBinding, taskRecipients: selection.taskRecipients,
-        messageRecipientRole: selection.messageRecipientRole, taskStartLeadName: selection.taskStartLeadName,
-        ...(receipt.hostCommand ? { hostCommand: receipt.hostCommand } : {}),
-        ...(receipt.workSyncNudge ? { workSyncNudge: receipt.workSyncNudge } : {}) }) !== receipt.fingerprint)
-        throw new TeamOwnerError('conflict');
-      if (receipt.messageRecipientRole !== undefined && receipt.messageRecipientRole !== selection.messageRecipient?.role)
-        throw new TeamOwnerError('hold');
-      // Exact recovery still requires the current original attachment and authority checks.
-      validateCommandAttachments(expected, this.policy.attachments);
-      return receipt;
-    });
+    return lookupTeamCommand({ store: this.store, binding: this.binding, policy: this.policy,
+      members: () => this.state().members, authorize: permission => this.authorize(principalId, permission),
+    }, principalId, commandId, expected);
   }
 
   private state(): OwnerState {
@@ -592,14 +583,7 @@ export class TeamOwner {
         !!current &&
         current.fingerprint === receipt.fingerprint &&
         current.authorityRevision === receipt.authorityRevision &&
-        receipt.fingerprint ===
-          digest({
-            binding: this.binding,
-            principalId: receipt.principalId,
-            command: receipt.command,
-            taskRecipients: receipt.taskRecipients,
-            taskStartLeadName: receipt.taskStartLeadName,
-          })
+        receipt.fingerprint === teamCommandFingerprint(receipt)
       );
     } catch {
       return false;
@@ -692,6 +676,8 @@ export class TeamOwner {
         ? { runtimeNeverLaunched: true }
         : {}),
       members,
+      autonomousGoalAvailable: this.goals.canStart(),
+      ...(state.autonomousGoal ? { autonomousGoal: this.goals.publicStatus(principalId) } : {}),
       tasks: this.policy.taskBoard().listTasks(),
       ...(this.policy.processes ? { processes: this.processCommands(principalId).list() } : {}),
       messages: this.productMessages(grant, [...members, ...(state.removedMembers ?? [])]),
@@ -756,6 +742,10 @@ export class TeamOwner {
   receiveCrossTeam(principalId: string, intent: CapturedCrossTeamIntent): CommandReceipt {
     return this.execute(principalId, crossTeamTargetCommand(intent), structuredClone(intent));
   }
+  /** Native/Host composition only; the public MCP command never supplies original input proof. */
+  executeGoalCommand(principalId: string, command: TeamCommand, preparation: GoalCommandPreparation) {
+    return this.execute(principalId, command, undefined, undefined, undefined, undefined, preparation);
+  }
   /** New admission captures this grant and roster once. */
   crossTeamIdentity(principalId: string, write = false) {
     return this.store.fenced(() => {
@@ -774,14 +764,17 @@ export class TeamOwner {
     crossTeam?: CapturedCrossTeamIntent,
     group?: CapturedGroupIntent,
     prepareHostCost?: Parameters<typeof executeTeamCommand>[5],
-    prepareWorkSyncNudge?: Parameters<typeof executeTeamCommand>[6]
+    prepareWorkSyncNudge?: Parameters<typeof executeTeamCommand>[6],
+    goalPreparation?: GoalCommandPreparation
   ): CommandReceipt {
     return executeTeamCommand(
       {
         binding: this.binding,
         store: this.store,
         policy: this.policy,
-        taskRecovery: this.taskRecovery, inputPreflight: this.inputPreflight,
+        taskRecovery: this.taskRecovery,
+        goals: this.goals,
+        inputPreflight: this.inputPreflight,
         assertTaskGroupAssociation: (principal, groupChatId) =>
           this.commandAccess.groups.assertTaskAssociation(principal, groupChatId),
         state: () => this.state(),
@@ -793,7 +786,7 @@ export class TeamOwner {
       principalId,
       rawCommand,
       crossTeam,
-      group, prepareHostCost, prepareWorkSyncNudge
+      group, prepareHostCost, prepareWorkSyncNudge, goalPreparation
     );
   }
 }
