@@ -99,7 +99,8 @@ function fixture(
   };
   let current = true,
     runs = 0,
-    closes = 0;
+    closes = 0,
+    credentialEffects = 0;
   const purposes: (string | undefined)[] = [];
   const deadlines: { phase: 'run' | 'close'; deadline: number | undefined }[] = [];
   const result = deferred<boolean>(),
@@ -141,7 +142,7 @@ function fixture(
     fence,
     assertCurrent: writer,
     select: () => ({ ...target }),
-    perform: async () => ({ ok: true, settled: true }),
+    perform: async () => { credentialEffects++; return { ok: true, settled: true }; },
   });
   return {
     root,
@@ -156,6 +157,7 @@ function fixture(
     close,
     runs: () => runs,
     closes: () => closes,
+    credentialEffects: () => credentialEffects,
     revoke: () => {
       current = false;
     },
@@ -471,6 +473,114 @@ test('expiry and orderly shutdown cancel only their original probe', async (t) =
   const late = closeCoordinationByDeadline(Promise.resolve(true), deadline);
   t.mock.timers.setTime(deadline + 1); // Move Date without dispatching the queued timer callback.
   assert.equal(await late, false);
+});
+
+test('initial probe publication followed by an exception preserves live and cold resource custody', async (t) => {
+  for (const competing of ['credential', 'probe'] as const) await t.test(competing, async t => {
+    const failure = new Error('TEST initial probe fsync failure after publication');
+    let claimAttempted = false;
+    const f = fixture({ store: base => ({ read: id => base.read(id), list: () => base.list(),
+      write(record) {
+        base.write(record);
+        if (!claimAttempted && record.kind === 'model.probe') {
+          claimAttempted = true;
+          throw failure;
+        }
+      },
+    }) });
+    t.after(f.cleanup);
+    assert.throws(() => f.owner.start(start), error => error === failure);
+    const saved = f.base.read(start.commandId);
+    assert.ok(saved?.kind === 'model.probe');
+    assert.equal(saved.phase, 'running');
+    assert.equal(saved.resourceHeld, true);
+    assert.equal(f.runs(), 0); assert.equal(f.closes(), 0);
+    const journal = () => readdirSync(join(f.root, 'management-commands')).sort()
+      .map(name => ({ name, bytes: readFileSync(join(f.root, 'management-commands', name)) }));
+    const originalBytes = journal();
+    const replacement: ModelProbePreparation = () => assert.fail('A retained or refused probe must not prepare');
+    const coldStore = new FileManagementCommandStore(f.root);
+    const coldFence = new ManagementResourceFence(coldStore.list());
+    const select = () => ({ profileId: saved.profileId, configRevision: saved.configRevision,
+      selectionDigest: saved.selectionDigest, resourceId: saved.resourceId });
+    const cold = new ModelProbeOwner({ store: coldStore, fence: coldFence,
+      assertWriter: () => {}, select, prepare: replacement });
+    let coldEffects = 0;
+    const coldCredentials = new CredentialCommandOwner({ store: coldStore, fence: coldFence,
+      assertCurrent: () => {}, select,
+      perform: async () => { coldEffects++; return { ok: true, settled: true }; } });
+    const forget = { ...lookup, providerId: start.providerId, kind: 'credential.forget' as const,
+      commandId: 'TEST-competing-credential' };
+    assert.throws(() => cold.start({ ...start, commandId: 'TEST-cold-probe' }), { code: 'held' });
+    await assert.rejects(coldCredentials.execute(forget), { code: 'held' });
+    assert.equal(coldEffects, 0);
+    for (const owner of [f.owner, cold]) {
+      assert.equal(owner.start(start, () => true, replacement).phase, 'held');
+      assert.equal(owner.read(lookup)?.phase, 'held');
+      assert.equal((await owner.cancel(lookup)).phase, 'held');
+    }
+    assert.deepEqual(journal(), originalBytes);
+    if (competing === 'credential')
+      await assert.rejects(f.credentials.execute(forget), { code: 'held' });
+    else
+      assert.throws(() => f.owner.start({ ...start, commandId: 'TEST-live-probe' },
+        () => true, replacement), { code: 'held' });
+    assert.equal(f.credentialEffects(), 0);
+    await f.owner.close(); await cold.close();
+    assert.equal(f.runs(), 0); assert.equal(f.closes(), 0);
+    assert.deepEqual(journal(), originalBytes);
+    assert.equal(f.base.read(forget.commandId), undefined);
+    assert.equal(f.base.read('TEST-live-probe'), undefined);
+    assert.equal(coldStore.read('TEST-cold-probe'), undefined);
+  });
+});
+
+test('an attempted initial probe write retains live custody even when the store did not publish', async t => {
+  const failure = new Error('TEST attempted probe publication failed');
+  let claimAttempted = false;
+  const f = fixture({ store: base => ({ read: id => base.read(id), list: () => base.list(),
+    write(record) {
+      if (!claimAttempted && record.kind === 'model.probe') { claimAttempted = true; throw failure; }
+      base.write(record);
+    },
+  }) });
+  t.after(f.cleanup);
+  assert.throws(() => f.owner.start(start), error => error === failure);
+  assert.equal(f.base.read(start.commandId), undefined);
+  assert.equal(f.runs(), 0); assert.equal(f.closes(), 0);
+  await assert.rejects(f.credentials.execute({ ...lookup, providerId: start.providerId,
+    commandId: 'TEST-after-unknown-write', kind: 'credential.forget' }), { code: 'held' });
+  assert.throws(() => f.owner.start({ ...start, commandId: 'TEST-after-unknown-probe' },
+    () => true, () => assert.fail('The uncertain original still holds this resource')), { code: 'held' });
+  await f.owner.close();
+  assert.equal(f.credentialEffects(), 0);
+  assert.equal(f.runs(), 0); assert.equal(f.closes(), 0);
+  assert.deepEqual(Array.from(f.base.list()), []);
+});
+
+test('definite probe preparation or timeout failure before writing leaves the namespace reusable', async t => {
+  for (const fault of ['preparation', 'timeout'] as const) await t.test(fault, async t => {
+    let writes = 0;
+    const failure = new Error('TEST preparation failed before the claim');
+    const f = fixture({ store: base => ({ read: id => base.read(id), list: () => base.list(),
+      write(record) { writes++; base.write(record); },
+    }) });
+    t.after(f.cleanup);
+    const prepare: ModelProbePreparation = (input, current) => {
+      if (fault === 'preparation') throw failure;
+      return { ...f.prepare(input, current), timeoutMs: 0 };
+    };
+    assert.throws(() => f.owner.start(start, () => true, prepare), fault === 'preparation'
+      ? error => error === failure : { code: 'invalid' });
+    assert.equal(writes, 0);
+    assert.equal(f.base.read(start.commandId), undefined);
+    assert.equal(f.runs(), 0); assert.equal(f.closes(), 0);
+    assert.equal(f.owner.start(start).phase, 'running');
+    f.result.resolve(true);
+    await until(() => f.owner.read(lookup)?.phase === 'completed');
+    assert.equal(f.runs(), 1); assert.equal(f.closes(), 1);
+    assert.equal(f.base.read(start.commandId)?.resourceHeld, false);
+  });
 });
 
 test('failed initial claim allocates nothing; writer revocation or target change cannot publish a completed model proof', async (t) => {

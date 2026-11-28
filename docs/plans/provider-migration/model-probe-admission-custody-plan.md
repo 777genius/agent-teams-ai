@@ -1,6 +1,6 @@
 # Model probe admission custody after an uncertain claim write
 
-Status: reviewed for publication; implementation and regression execution follow publication of this plan. This is a separate, narrow correction to the existing model-probe owner, not part of G2 secret-witness architecture.
+Status: plan published in `fa856b8f88c060a180561f20fa39f35f373049d7` before implementation; the finite correction and execution are recorded below. This is a separate, narrow correction to the existing model-probe owner, not part of G2 secret-witness architecture.
 
 Source review used `d4f4d989f126317642843381e573926ed9c8a30a`. The four relevant owner/store/fence/test files remain identical in the current checkout at `b26f085a65b982be213750795926614b154cb9b0`. The finding below is source-confirmed; the finite RED fixtures have not yet been run.
 
@@ -86,3 +86,22 @@ These are source and plan reviews. The RED and corrected runtime results remain 
 After plan publication and separate authorization, add the focused tests first and record their actual finite RED. Then apply the one-owner change, run the focused management-model-probe suite and relevant existing shared-fence regressions, and run the established Host build/test-types gate in the root-assigned slot. No blanket test expansion or native qualification is needed for this boundary.
 
 Report actual test outcomes, original-byte preservation, same live/cold refusal where a durable claim exists, and zero native run/close on the failed admission. Source review alone is not an executed reproduction, and the portable write-then-throw wrapper is not a claim that an operating-system fsync error was forced during the test.
+
+## Implementation and finite execution — 2026-11-28
+
+After the reviewed plan was published, the tests were added against the unchanged compiled owner. All three expected broken leaf assertions reproduced: a live competing credential reached its effect after a real publication-then-throw; a competing probe reached preparation; and an attempted write without an actual receipt also allowed a new credential. The focused RED output counts seven tests including parent cases: three passed and four failed. Cold refusal from the real persisted receipt, original replay/read/cancel byte preservation and definite pre-write retry controls already passed. Fixture wrappers model the real store interface boundary; no operating-system fsync fault was forced.
+
+The production change adds the local flag and changes only the existing catch's settled argument. The owner is 604 physical lines. Root and the independent reviewer inspected the exact two-file diff; the store, fence, record formats, provider adapters and native operation contracts are unchanged.
+
+| Executed check                               | Result                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Canonical Host build                         | PASS with pinned Node 24.21.0 and TypeScript 7.0.2.                                                        |
+| Complete model-probe test file               | 18/18 PASS, zero skipped.                                                                                  |
+| Existing credentials and command-store tests | 36/36 PASS, zero skipped.                                                                                  |
+| Strict changed-fixture compilation           | PASS using the existing Host test configuration and the installed type declarations; no strictness change. |
+| Production source-size and whitespace guards | PASS; 5548 production files and the unchanged 139 frozen exceptions.                                       |
+| Complete Host test typecheck                 | Terminated with exit 137 without compiler diagnostics; no PASS claimed.                                    |
+
+The corrected fault cases preserve the exact original receipt bytes, perform no native run/close or competing credential effect, and agree across live and newly constructed cold fences when a durable claim exists. A definite pre-write failure still permits an ordinary subsequent probe, which completes and releases normally. The empty-store write-exception case remains a conservative live hold without an invented cold receipt.
+
+These are local controlled execution results. Required current-head CI and the independently tracked Desktop/native qualification remain open. The correction does not claim the unresolved broader G2 or CodeQL finding is closed.
