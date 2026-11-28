@@ -102,7 +102,12 @@ export function assertNativeWorkSyncStatusBudget(options: {
 }
 
 /** The exact existing follow-up remains bound to the complete original agenda/token. */
-function followUp(value: Record<string, unknown>, status: MemberWorkSyncStatus, count = status.agenda.items.length) {
+function followUp(value: Record<string, unknown>, status: MemberWorkSyncStatus,
+  operation: WorkSyncCommandReceipt['operation'], count = status.agenda.items.length) {
+  const hasCall = value.nextRequiredToolCall !== undefined;
+  // A compact status with an original token must retain its prescribed report.
+  // Report results carry status/token data, but never a prescribed follow-up.
+  if (operation === 'status' ? Boolean(status.reportToken) !== hasCall : hasCall) return held();
   if (value.nextRequiredToolCall === undefined) {
     if (value.statusOnlyIncomplete !== undefined || value.nextRequiredAction !== undefined) held();
     return {};
@@ -147,7 +152,8 @@ const isCompactMarker = (value: unknown) =>
 
 /** Validate new retained compact receipts, without deriving an agenda from omitted items. */
 function validateCompactStatus(value: Record<string, unknown>,
-  identity: { teamName: string; memberName: string; incarnation: string }) {
+  identity: { teamName: string; memberName: string; incarnation: string },
+  operation: WorkSyncCommandReceipt['operation']) {
   if (!isCompactMarker(value.workSyncProjection) || value.detailsOmitted !== true ||
       value.detailsNotice !== detailsNotice ||
       !keysOnly(value, [...statusFields, 'agenda', 'workSyncProjection', 'detailsOmitted', 'detailsNotice',
@@ -204,10 +210,11 @@ function validateCompactStatus(value: Record<string, unknown>,
         !keysOnly(call, ['tool', 'arguments']) || !object(call.arguments) ||
         call.arguments.taskIds !== undefined) return held();
   } else if (value.reportScope !== undefined) return held();
-  followUp(value, status, agenda.totalItems);
+  followUp(value, status, operation, agenda.totalItems);
 }
 
-function compactStatus(value: Record<string, unknown>, status: MemberWorkSyncStatus) {
+function compactStatus(value: Record<string, unknown>, status: MemberWorkSyncStatus,
+  operation: WorkSyncCommandReceipt['operation']) {
   const summary = {
     ...pick(status, statusFields),
     agenda: {
@@ -220,7 +227,7 @@ function compactStatus(value: Record<string, unknown>, status: MemberWorkSyncSta
     workSyncProjection: compactMarker,
     detailsOmitted: true,
     detailsNotice,
-    ...followUp(value, status),
+    ...followUp(value, status, operation),
   };
   for (const field of ['report', 'lastAcceptedReport'] as const) {
     const report = status[field];
@@ -256,7 +263,7 @@ export function projectNativeWorkSyncResult(options: {
     if (object(markedStatus) && markedStatus.workSyncProjection !== undefined ||
         options.operation === 'report' && value.workSyncProjection !== undefined) {
       if (!object(markedStatus)) return held();
-      validateCompactStatus(markedStatus, options.identity);
+      validateCompactStatus(markedStatus, options.identity, options.operation);
       if (options.operation === 'report' &&
           (!isCompactMarker(value.workSyncProjection) ||
             !keysOnly(value, ['accepted', 'code', 'message', 'projectionDegraded', 'status', 'workSyncProjection']) ||
@@ -272,12 +279,12 @@ export function projectNativeWorkSyncResult(options: {
   if (options.operation === 'status' && object(value) && object(value.nextRequiredToolCall) &&
       object(value.nextRequiredToolCall.arguments) && Array.isArray(value.nextRequiredToolCall.arguments.taskIds) &&
       value.nextRequiredToolCall.arguments.taskIds.length > 200) {
-    value = json({ ...value, ...followUp(value, readStatus(value)) });
+    value = json({ ...value, ...followUp(value, readStatus(value), options.operation) });
   }
   if (fits(value)) return value;
   if (!object(value)) return held();
   if (options.operation === 'status') {
-    value = json(compactStatus(value, readStatus(value)));
+    value = json(compactStatus(value, readStatus(value), options.operation));
   } else {
     if (typeof value.accepted !== 'boolean' || typeof value.code !== 'string' || typeof value.message !== 'string' ||
         value.projectionDegraded !== undefined && typeof value.projectionDegraded !== 'boolean' ||
@@ -285,7 +292,7 @@ export function projectNativeWorkSyncResult(options: {
     value = json({
       ...pick(value, ['accepted', 'code', 'message', 'projectionDegraded']),
       workSyncProjection: compactMarker,
-      status: compactStatus(value.status, readStatus(value.status)),
+      status: compactStatus(value.status, readStatus(value.status), options.operation),
     });
   }
   if (!fits(value)) return held();

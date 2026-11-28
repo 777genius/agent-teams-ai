@@ -409,4 +409,48 @@ describe('Host project definition boundary', () => {
       expect(effects).toBe(1);
     }
   );
+  it.each(['target_conflict', 'completed'] as const)(
+    'keeps terminal %s results replayable without exhausting the unresolved settings-intent cap',
+    async (outcome) => {
+      const f = fixture();
+      let originalRequest: ReturnType<typeof settingsRequest> | undefined;
+      let originalResult: Awaited<ReturnType<typeof f.teams.updateMemberSettings>> | undefined;
+
+      // More than the former lifetime limit, all through the existing Host facade.
+      for (let index = 0; index < 1026; index++) {
+        const request = settingsRequest(`TEST-terminal-${outcome}-${index}`);
+        if (outcome === 'target_conflict') request.memberName = 'TEST-missing-member';
+        else request.expectedFingerprint = (index === 0 ? 'd' : 'e').repeat(64);
+        const result = await f.teams.updateMemberSettings(request);
+        expect(result.outcome).toBe(outcome);
+        if (index === 0) {
+          originalRequest = request;
+          originalResult = result;
+        }
+      }
+
+      // An old terminal command still returns its exact original outcome without
+      // recapturing another Team or invoking a second roster mutation.
+      const before = vi.mocked(f.backend.invoke).mock.calls.length;
+      expect(await f.teams.updateMemberSettings(originalRequest!)).toEqual({
+        ...originalResult!,
+        replayed: true,
+      });
+      expect(vi.mocked(f.backend.invoke)).toHaveBeenCalledTimes(before);
+      await expect(
+        f.teams.updateMemberSettings({
+          ...originalRequest!,
+          expectedFingerprint: 'f'.repeat(64),
+        })
+      ).rejects.toThrow('intent-conflict');
+      expect(vi.mocked(f.backend.invoke)).toHaveBeenCalledTimes(before);
+
+      if (outcome === 'target_conflict') {
+        // A terminal refusal cannot poison unrelated future valid saves.
+        expect(
+          await f.teams.updateMemberSettings(settingsRequest('TEST-after-1026-refusals'))
+        ).toMatchObject({ outcome: 'completed' });
+      }
+    }
+  );
 });
