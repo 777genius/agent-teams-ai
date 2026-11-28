@@ -136,6 +136,7 @@ vi.mock('@renderer/constants/teamColors', () => ({
 import { api } from '@renderer/api';
 import { EditTeamDialog } from '@renderer/components/team/dialogs/EditTeamDialog';
 import { createEditTeamHostSubmission } from '@renderer/components/team/dialogs/editTeamHostSubmission';
+import { invalidateContextScopedRequestEpoch } from '@renderer/store/utils/contextScopedRequestEpoch';
 
 import type { ResolvedTeamMember } from '@shared/types';
 
@@ -170,6 +171,7 @@ describe('EditTeamDialog canonical settings', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
+    vi.mocked(api.teams.getSavedRequest).mockReset();
     vi.unstubAllGlobals();
   });
 
@@ -296,6 +298,88 @@ describe('EditTeamDialog canonical settings', () => {
       ],
     };
   }
+
+  it('retries failed Host hydration on explicit Save without losing the edited draft', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest)
+      .mockRejectedValueOnce(new Error('TEST Host temporarily unavailable'))
+      .mockRejectedValueOnce(new Error('TEST Host still unavailable'))
+      .mockResolvedValue(saved);
+    const { root, click, host, onClose } = await setup(saved.teamName);
+    try {
+      await click('change-member-role');
+      await click('Save');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(2);
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('TEST Host still unavailable');
+      await click('Save');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(3);
+      expect(api.teams.replaceMembers).toHaveBeenCalledOnce();
+      const [target, request] = vi.mocked(api.teams.replaceMembers).mock.calls[0];
+      expect(target).toBe(saved.teamName);
+      expect(request.configuration?.expectedRevision).toBe(saved.savedSettingsFingerprint);
+      expect(request.members[0]).toMatchObject({ name: 'other', role: 'Developer' });
+      expect(api.teams.updateConfig).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledOnce();
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('does not retry failed Host hydration after the original context epoch changes', async () => {
+    const saved = hostSource();
+    vi.mocked(api.teams.getSavedRequest)
+      .mockRejectedValueOnce(new Error('TEST Host temporarily unavailable'))
+      .mockResolvedValue(saved);
+    const { root, click, host } = await setup(saved.teamName);
+    try {
+      await click('change-member-role');
+      invalidateContextScopedRequestEpoch();
+      await click('Save');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledOnce();
+      expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('Team context changed');
+    } finally {
+      await act(() => Promise.resolve(root.unmount()));
+    }
+  });
+
+  it('joins a pending hydration retry and refuses both waiting saves after the dialog retires', async () => {
+    const saved = hostSource();
+    let resolve: ((value: typeof saved) => void) | undefined;
+    vi.mocked(api.teams.getSavedRequest)
+      .mockRejectedValueOnce(new Error('TEST Host temporarily unavailable'))
+      .mockReturnValueOnce(
+        new Promise((done) => {
+          resolve = done;
+        })
+      );
+    let current = true;
+    const submission = createEditTeamHostSubmission({
+      teams: api.teams,
+      teamName: saved.teamName,
+      baseline: { name: 'Sandbox', description: '', color: 'blue', members: sourceMembers() },
+      isCurrent: () => current,
+    });
+    await Promise.resolve();
+    const values = { name: 'Sandbox', description: '', color: 'blue', members: saved.members };
+    const pending = Promise.allSettled([submission.submit(values), submission.submit(values)]);
+    const readCount = vi.mocked(api.teams.getSavedRequest).mock.calls.length;
+    current = false;
+    resolve?.(saved);
+    const results = await pending;
+    expect(readCount).toBe(2);
+    expect(results).toEqual(
+      [0, 1].map(() => ({
+        status: 'rejected',
+        reason: expect.objectContaining({
+          message: expect.stringContaining('Team context changed'),
+        }),
+      }))
+    );
+    expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+  });
 
   it('saves Host settings and edited roles through one original-revision roster CAS without legacy mutations', async () => {
     const saved = hostSource();
@@ -570,14 +654,18 @@ describe('EditTeamDialog canonical settings', () => {
 
   it('rejects a mismatched Host source without replacing its roster or changing the typed draft', async () => {
     const saved = hostSource();
-    vi.mocked(api.teams.getSavedRequest).mockResolvedValue({
-      ...saved,
-      members: saved.members.map((member) => ({ ...member, role: 'Newer role' })),
-    });
+    vi.mocked(api.teams.getSavedRequest)
+      .mockResolvedValueOnce({
+        ...saved,
+        members: saved.members.map((member) => ({ ...member, role: 'Newer role' })),
+      })
+      .mockResolvedValue(saved);
     const { root, click, host } = await setup(saved.teamName);
     try {
       await click('change-member-runtime');
       await click('Save');
+      await click('Save');
+      expect(api.teams.getSavedRequest).toHaveBeenCalledOnce();
       expect(api.teams.replaceMembers).not.toHaveBeenCalled();
       expect(api.teams.updateConfig).not.toHaveBeenCalled();
       expect(readDrafts(host)[0].model).toBe('edited/model');
