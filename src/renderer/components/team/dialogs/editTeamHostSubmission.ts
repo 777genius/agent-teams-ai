@@ -1,4 +1,8 @@
 import { HostTeamOperationError } from '@features/agent-backend/renderer';
+import {
+  captureContextScopedRequestEpoch,
+  isContextScopedRequestEpochCurrent,
+} from '@renderer/store/utils/contextScopedRequestEpoch';
 
 import {
   buildEditTeamMemberRosterSnapshot,
@@ -40,31 +44,48 @@ export function createEditTeamHostSubmission(options: {
   isCurrent(): boolean;
 }) {
   const baseline = structuredClone(options.baseline);
-  const source = options.teams.getSavedRequest(options.teamName).then((raw) => {
-    const saved = raw && structuredClone(raw);
-    if (
-      !saved ||
-      saved.teamName !== options.teamName ||
-      !/^[a-f0-9]{64}$/.test(saved.savedSettingsFingerprint ?? '') ||
-      (saved.displayName ?? baseline.name).trim() !== baseline.name.trim() ||
-      (saved.description ?? '').trim() !== baseline.description.trim() ||
-      (saved.color ?? '').trim() !== baseline.color.trim() ||
-      (baseline.prompt !== undefined && (saved.prompt ?? '').trim() !== baseline.prompt.trim()) ||
-      roster(saved.members) !== roster(baseline.members)
-    )
-      throw new Error('The saved team configuration changed. Refresh the team before editing.');
-    return saved;
-  });
-  // Hydration can fail before Save is clicked; the original error is surfaced by submit.
-  void source.catch(() => undefined);
+  const epoch = captureContextScopedRequestEpoch();
+  let source: Promise<TeamCreateRequest> | undefined;
+  function readSource(): Promise<TeamCreateRequest> {
+    if (source) return source;
+    const pending = options.teams.getSavedRequest(options.teamName).then(
+      (raw) => {
+        const saved = raw && structuredClone(raw);
+        if (
+          !saved ||
+          saved.teamName !== options.teamName ||
+          !/^[a-f0-9]{64}$/.test(saved.savedSettingsFingerprint ?? '') ||
+          (saved.displayName ?? baseline.name).trim() !== baseline.name.trim() ||
+          (saved.description ?? '').trim() !== baseline.description.trim() ||
+          (saved.color ?? '').trim() !== baseline.color.trim() ||
+          (baseline.prompt !== undefined &&
+            (saved.prompt ?? '').trim() !== baseline.prompt.trim()) ||
+          roster(saved.members) !== roster(baseline.members)
+        )
+          throw new Error('The saved team configuration changed. Refresh the team before editing.');
+        return saved;
+      },
+      (error: unknown) => {
+        // Only failed discovery may retry. A captured source or mismatch never silently rebases.
+        if (source === pending) source = undefined;
+        throw error;
+      }
+    );
+    source = pending;
+    return pending;
+  }
+  // Handle eager hydration failure; a later explicit Save may retry only that failed read.
+  void readSource().catch(() => undefined);
   let submitted: { signature: string; request: ReplaceMembersRequest } | undefined;
   const current = () => {
-    if (!options.isCurrent()) throw new Error('Team context changed. Save outcome is unavailable.');
+    if (!options.isCurrent() || !isContextScopedRequestEpochCurrent(epoch))
+      throw new Error('Team context changed. Save outcome is unavailable.');
   };
   return {
     async submit(values: EditTeamValues): Promise<void> {
       const captured = structuredClone(values);
-      const saved: TeamCreateRequest = await source;
+      current();
+      const saved = await readSource();
       current();
       const {
         teamName: _team,
