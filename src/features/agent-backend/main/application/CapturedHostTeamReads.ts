@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { hostTeamSelectionKey, parseHostTeamSelectionKey } from '../../contracts/teamSelection';
+import { readHostGroupCatalog } from '../../core/application/readHostGroupCatalog';
 import { readHostPagedSnapshot } from '../../core/application/readHostPagedSnapshot';
 import { TeamProductReadOrder } from '../../core/application/TeamProductReadOrder';
 
@@ -187,27 +188,20 @@ export class CapturedHostTeamReads {
     let promise = this.groups.get(selection);
     if (!promise) {
       promise = (async () => {
-        const result = await this.invoke({
-          handle: connection.handle,
-          commandId: randomUUID(),
-          operation: 'group.list',
-          payload: {},
-        });
-        if (!result.ok || !Array.isArray(result.value)) throw new Error('Host groups unavailable');
-        const entries: [string, string][] = [];
-        for (const group of result.value) {
-          if (
-            !group ||
-            typeof group !== 'object' ||
-            !('id' in group) ||
-            !('name' in group) ||
-            typeof group.id !== 'string' ||
-            typeof group.name !== 'string'
-          )
-            throw new Error('Invalid Host group catalog');
-          entries.push([group.id, group.name]);
-        }
-        return Object.fromEntries(entries);
+        const rows = await readHostGroupCatalog(
+          async (cursor) => {
+            const result = await this.invoke({
+              handle: connection.handle,
+              commandId: randomUUID(),
+              operation: 'group.list',
+              payload: cursor === undefined ? {} : { cursor },
+            });
+            if (!result.ok) throw new Error('Host groups unavailable');
+            return result.value;
+          },
+          () => this.assertCurrent()
+        );
+        return Object.fromEntries(rows.map((group) => [group.id, group.name]));
       })();
       this.groups.set(selection, promise);
     }
