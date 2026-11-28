@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "Anggaran bulanan",
+      "teamCardUnknown": "Pemakaian tidak diketahui",
+      "teamCardBlocked": "Batas tercapai - peluncuran diblokir",
+      "editor": {
+        "onExceeded": "Tindakan saat batas tercapai",
+        "notifyOnly": "Hanya beri tahu",
+        "blockLaunch": "Blokir peluncuran tim baru",
+        "stopTeam": "Hentikan tim dan blokir peluncuran",
+        "enforcementHint": "Jika data pemakaian terlambat atau tidak tersedia, peluncuran baru diblokir. Biaya adalah perkiraan dan tagihan bisa melebihi batas."
+      }
     }
   }
 }

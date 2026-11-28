@@ -193,5 +193,12 @@
         "files": 24631
       }
     }
+  },
+  "opencodeV2LocalProviderCandidate": {
+    "sourceRepository": "777genius/agent_teams_orchestrator",
+    "sourceCommit": "275251d2b4d0d3258149040a3f5936ff50e1f686",
+    "runtimeVersion": "0.0.162",
+    "qualificationScope": "authless-local-provider-app-launch",
+    "deliveryStatus": "candidate-not-delivered"
   }
 }

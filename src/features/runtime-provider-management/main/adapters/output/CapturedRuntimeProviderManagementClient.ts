@@ -443,8 +443,11 @@ export function createCapturedRuntimeProviderManagementClient(
           const option = provider.authOptions?.find(
             (option) => option.methodIndex === captured.authMethodIndex && option.type === 'oauth'
           );
-          if (!option?.supported ||
-              (captured.authOptionId != null && captured.authOptionId !== `oauth:${option.methodIndex}`))
+          if (
+            !option?.supported ||
+            (captured.authOptionId != null &&
+              captured.authOptionId !== `oauth:${option.methodIndex}`)
+          )
             return null;
           return {
             target: original,

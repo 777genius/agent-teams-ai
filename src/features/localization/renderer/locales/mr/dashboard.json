@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "मासिक बजेट",
+      "teamCardUnknown": "वापर अज्ञात",
+      "teamCardBlocked": "मर्यादा गाठली - नवीन सुरूवात बंद",
+      "editor": {
+        "onExceeded": "बजेट मर्यादा गाठल्यावर कृती",
+        "notifyOnly": "फक्त सूचना",
+        "blockLaunch": "टीमची नवीन सुरूवात रोखा",
+        "stopTeam": "चालू टीम थांबवा आणि नवीन सुरूवात रोखा",
+        "enforcementHint": "वापराची माहिती उपलब्ध नसेल किंवा उशिरा मिळाली तर नवीन सुरूवात रोखली जाईल. खर्च अंदाजे आहे; बिल मर्यादेपेक्षा जास्त असू शकते."
+      }
     }
   }
 }

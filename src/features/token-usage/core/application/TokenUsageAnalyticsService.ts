@@ -1,4 +1,4 @@
-import { teamIdForName, validateTeamIds } from '../../contracts';
+import { rawTeamName, teamIdForName, validateTeamIds } from '../../contracts';
 import { budgetPeriod, buildBudgetStatus, buildTokenUsageSnapshot } from '../domain';
 
 import { SerialQueue } from './SerialQueue';
@@ -19,6 +19,7 @@ import type {
   TokenUsageBudgetNotificationEvaluatorPort,
   TokenUsageBudgetNotificationSettingsPort,
   TokenUsageBudgetSettingsRepositoryPort,
+  TokenUsageBudgetTeamAliasResolution,
   TokenUsageClockPort,
   TokenUsageGatewayUsagePort,
   TokenUsageImporterPort,
@@ -42,6 +43,9 @@ export interface TokenUsageAnalyticsServiceDeps {
   publisher?: TokenUsageRealtimePublisherPort;
   taskAttributionSource?: TokenUsageTaskAttributionSourcePort;
   gatewayUsage?: TokenUsageGatewayUsagePort;
+  budgetTeamNameAliases?: (
+    names: readonly string[]
+  ) => Promise<TokenUsageBudgetTeamAliasResolution>;
   logger?: TokenUsageLoggerPort;
 }
 
@@ -209,11 +213,14 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
         throw error;
       }
       const active =
-        status.notificationPolicy.enabled &&
-        status.targets.some(
-          (target) =>
-            target.notificationsEnabled && target.thresholds.length > 0 && target.metrics.length > 0
-        );
+        status.targets.some((target) => target.onExceeded && target.onExceeded !== 'notify') ||
+        (status.notificationPolicy.enabled &&
+          status.targets.some(
+            (target) =>
+              target.notificationsEnabled &&
+              target.thresholds.length > 0 &&
+              target.metrics.length > 0
+          ));
       const refreshAge = now.getTime() - Date.parse(this.usageUpdatedAt ?? '');
       const recentlyRefreshed = refreshAge >= 0 && refreshAge < 120_000;
       const attemptAge = now.getTime() - this.lastRefreshAttempt;
@@ -246,12 +253,45 @@ export class TokenUsageAnalyticsService implements TokenUsageAnalyticsServicePor
     }
     const policy = this.deps.budgetNotificationSettings?.getSettings();
     const health = await this.gatewayHealth(ledger?.sourceStates ?? []);
+    const period = budgetPeriod(now);
+    const currentEvents = (ledger?.events ?? []).filter((event) => {
+      const occurredAt = Date.parse(event.occurredAt);
+      return occurredAt >= Date.parse(period.from) && occurredAt < Date.parse(period.to);
+    });
+    const currentRunIds = new Set(currentEvents.map((event) => event.appRunId));
+    const currentNames = [
+      ...(ledger?.runs ?? [])
+        .filter((run) => currentRunIds.has(run.appRunId))
+        .map((run) => run.teamName),
+      ...currentEvents.map((event) => event.teamName),
+      ...health.degradedTeamIds.map(rawTeamName),
+    ].filter((name): name is string => typeof name === 'string');
+    // Resolve all retained run names so historical project copies do not reappear
+    // as selectable physical-team targets after the monthly usage window rolls over.
+    const historicalRunNames = (ledger?.runs ?? [])
+      .map((run) => run.teamName)
+      .filter((name): name is string => typeof name === 'string');
+    const uniqueNames = [...new Set([...historicalRunNames, ...currentNames])];
+    let aliasResolution: TokenUsageBudgetTeamAliasResolution | undefined;
+    if (this.deps.budgetTeamNameAliases && uniqueNames.length) {
+      try {
+        aliasResolution = await this.deps.budgetTeamNameAliases(uniqueNames);
+      } catch (error) {
+        this.deps.logger?.warn('Failed to resolve team budget runtime ownership', error);
+        aliasResolution = { aliases: new Map(), unresolvedNames: uniqueNames };
+      }
+    }
     const status = buildBudgetStatus({
       now,
       settings,
       ledger,
+      teamNameAliases: aliasResolution?.aliases,
       usageUpdatedAt: this.usageUpdatedAt,
-      degraded: this.refreshDegraded || readFailed || health.degraded,
+      degraded:
+        this.refreshDegraded ||
+        readFailed ||
+        health.degraded ||
+        Boolean(aliasResolution?.unresolvedNames.some((name) => currentNames.includes(name))),
       policy: { enabled: policy?.enabled ?? false, nativeToasts: policy?.nativeToasts ?? false },
       gateway: {
         degradedTeamIds: health.degradedTeamIds,

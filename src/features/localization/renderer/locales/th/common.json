@@ -967,6 +967,18 @@
     "chats": "แชตที่ยังไม่ได้อ่าน",
     "openTask": "เปิดงาน: {{subject}} ใน {{team}}",
     "timeUnknown": "ไม่ทราบเวลา",
-    "teamAttention": "สิ่งที่ต้องจัดการ"
+    "teamAttention": "สิ่งที่ต้องจัดการ",
+    "filters": {
+      "title": "ตัวกรอง",
+      "description": "เลือกสิ่งที่จะแสดงในกล่องขาเข้า",
+      "itemType": "ประเภทรายการ",
+      "conversationType": "ประเภทแชท",
+      "direct": "ข้อความโดยตรง",
+      "group": "แชทกลุ่ม",
+      "teamFeed": "ฟีดทีม",
+      "waiting": "เวลารอของงาน",
+      "olderDay": "เกิน 24 ชั่วโมง",
+      "olderWeek": "เกิน 7 วัน"
+    }
   }
 }

@@ -200,6 +200,7 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
 import { createBudgetNotificationSink } from '@features/token-usage/main';
+import * as teamBudget from '@main/services/team/budget/createTeamBudgetControls';
 import { RendererRecoveryController } from '@main/utils/RendererRecoveryController';
 import { resolveRendererEntry } from '@main/utils/rendererEntry';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
@@ -1890,6 +1891,7 @@ async function initializeServices(): Promise<void> {
     () => teamGroupChatsFeature,
     resolveOpenCodeInputDeclaration,
     gatewayLaunchRuntime.seams,
+    teamBudget.createTeamBudgetAdmission(() => tokenUsageFeature),
     (teamName) => captureDesktopNativeStopWorkSyncFence(() => memberWorkSyncFeature, teamName)
   );
   teamDataService.setTeamProfileOwnership((teamName) =>
@@ -2283,6 +2285,12 @@ async function initializeServices(): Promise<void> {
     logger: createLogger('Feature:TerminalWorkspace'),
   });
   const tokenUsageLogger = createLogger('Feature:TokenUsage');
+  const budgetControls = teamBudget.createTeamBudgetControls(
+    () => tokenUsageFeature,
+    teamProvisioningService,
+    () => configManager.getConfig().notifications,
+    (message, error) => tokenUsageLogger.warn(message, error)
+  );
   tokenUsageFeature = createTokenUsageFeature({
     ledgerPath: join(getAppDataPath(), 'token-usage', 'ledger.json'),
     budgetSettingsPath: join(getAppDataPath(), 'token-usage', 'budget-settings.json'),
@@ -2305,22 +2313,14 @@ async function initializeServices(): Promise<void> {
     commandImporterRefreshIntervalMs: readOptionalEnvNumber(
       'AGENT_TEAMS_TOKEN_USAGE_COMMAND_REFRESH_MS'
     ),
-    budgetNotificationSettings: {
-      getSettings: () => {
-        const notifications = configManager.getConfig().notifications;
-        return {
-          enabled: notifications.notifyOnUsageBudgetAlerts,
-          notifyAtWarning: notifications.notifyOnUsageBudgetWarning,
-          notifyAtCritical: notifications.notifyOnUsageBudgetCritical,
-          nativeToasts: notifications.notifyOnUsageBudgetNativeToast,
-        };
-      },
-    },
+    budgetNotificationSettings: budgetControls.notificationSettings,
+    budgetTeamNameAliases: budgetControls.resolveBudgetAliases,
     budgetNotificationSink: createBudgetNotificationSink(notificationManager),
     publisher: {
       publishBudgetStatus: (status) => {
         safeSendToRenderer(mainWindow, TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
         httpServer?.broadcast(TOKEN_USAGE_BUDGET_STATUS_CHANGED, status);
+        budgetControls.observer.observe(status);
       },
       publishSnapshot: (snapshot) => {
         safeSendToRenderer(mainWindow, TOKEN_USAGE_SNAPSHOT_CHANGED, snapshot);

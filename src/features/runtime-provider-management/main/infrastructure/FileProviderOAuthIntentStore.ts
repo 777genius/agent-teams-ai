@@ -67,9 +67,10 @@ function capture(value: unknown): ProviderOAuthIntent {
     )
   )
     throw new Error('OAuth intent unavailable');
-  const fingerprintKdf = record.fingerprintKdf === undefined
-    ? undefined
-    : Object.freeze(secretFingerprintKdfSchema.parse(record.fingerprintKdf));
+  const fingerprintKdf =
+    record.fingerprintKdf === undefined
+      ? undefined
+      : Object.freeze(secretFingerprintKdfSchema.parse(record.fingerprintKdf));
   return Object.freeze({
     ...record,
     ...(fingerprintKdf === undefined ? {} : { fingerprintKdf }),

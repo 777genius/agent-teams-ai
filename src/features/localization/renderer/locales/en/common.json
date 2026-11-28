@@ -1024,6 +1024,18 @@
     "chats": "Unread chats",
     "openTask": "Open task: {{subject}} in {{team}}",
     "timeUnknown": "Time unknown",
-    "teamAttention": "Attention"
+    "teamAttention": "Attention",
+    "filters": {
+      "title": "Filters",
+      "description": "Choose what appears in the Inbox.",
+      "itemType": "Item type",
+      "conversationType": "Chat type",
+      "direct": "Direct messages",
+      "group": "Group chats",
+      "teamFeed": "Team feed",
+      "waiting": "Task waiting time",
+      "olderDay": "Over 24 hours",
+      "olderWeek": "Over 7 days"
+    }
   }
 }

@@ -17,19 +17,22 @@ import type { WindowsServiceIntent } from '../../owned-process/retainedServiceCo
 import type { HostWindowsLaunch } from '../../owned-process/HostWindowsLaunch.js';
 import type { RuntimeSourceProcessOrigin } from '../../composition/runtimeSourceProcessOrigin.js';
 import type { RuntimeProcessOutput } from '../../runtime/providerActivityContracts.js';
+import type { AcceptedOpenCodeV2FileKey } from './OpenCodeV2SelectedFileKey.js';
 
 /** Host-authenticated, optional native observation; never transports a product command. */
 export interface MemberPromptSuggestionBinding {
   readonly eligible: (input: Readonly<{ inputId: string; operationRef: string }>) => boolean;
-  readonly offer: (candidate: Readonly<{
-    provider: 'claude' | 'codex';
-    sessionRef: string;
-    inputId: string;
-    operationRef: string;
-    nativeSessionRef: string;
-    nativeTurnRef?: string;
-    text: string;
-  }>) => void;
+  readonly offer: (
+    candidate: Readonly<{
+      provider: 'claude' | 'codex';
+      sessionRef: string;
+      inputId: string;
+      operationRef: string;
+      nativeSessionRef: string;
+      nativeTurnRef?: string;
+      text: string;
+    }>
+  ) => void;
 }
 
 export interface MemberProviderContext {
@@ -52,6 +55,8 @@ export interface MemberProviderContext {
   canAllocate(): boolean;
   /** Exact consumed preparation's private credential commitment; checkpoint continuation uses its original scope. */
   assertReadinessCredential?(scopeDigest: string): void;
+  /** Nominal original selected-file proof; never a serialized selector or new allocation grant. */
+  readinessFileKey?: AcceptedOpenCodeV2FileKey;
   /** Team-fenced physical capture; original Runtime input is checked by the outer MCP wrapper. */
   canCaptureRegisteredProcess?(): boolean;
   readCheckpoint(reference: string, request: OpenConfig): Promise<unknown>;

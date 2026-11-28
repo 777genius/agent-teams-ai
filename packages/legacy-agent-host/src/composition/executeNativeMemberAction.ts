@@ -8,6 +8,9 @@ import { executeMemberAction, parseMemberAction } from './executeMemberAction.js
 import { executeUnconfiguredSkip } from './executeUnconfiguredSkip.js';
 import { readMemberActionView } from './readMemberActions.js';
 import { captureNativeMemberActionAdmission } from './nativeMemberActionAdmission.js';
+import { prepareMemberModelReadiness, assertMemberModelReadinessFileHandoffsAvailable,
+  assertPreparedMemberModelReadiness, installMemberModelReadinessFileKey,
+  settleMemberModelReadinessFileHandoff } from './prepareTeamModelReadiness.js';
 import type { captureNativeInputAuthority } from './captureNativeInputAuthority.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
 import type { RuntimeOwner } from '../runtime/RuntimeOwner.js';
@@ -140,16 +143,39 @@ export async function executeNativeMemberAction(
     admission.assertWorkCurrent(entry);
     await assertRuntimeWorktree(entry);
     admission.assertWorkCurrent(entry);
-    launch.retry(
-      {
+    const retryEntry = entry;
+    const assertCurrent = () => admission.assertWorkCurrent(retryEntry);
+    const isCurrent = () => { try { assertCurrent(); return true; } catch { return false; } };
+    const prior = actions.read(parsed.memberId).retries.find(row =>
+      row.commandId === commandId || row.attemptId === retry.attemptId);
+    let handoff: ReturnType<typeof installMemberModelReadinessFileKey> = undefined;
+    try {
+      if (!prior && retryEntry.profile.provider === 'opencode') {
+        assertMemberModelReadinessFileHandoffsAvailable([retryEntry]);
+        const prepared = await prepareMemberModelReadiness({ launch, entry: retryEntry, isCurrent,
+          ...(options.modelReadiness ? { management: options.modelReadiness } : {}) });
+        assertCurrent();
+        assertMemberModelReadinessFileHandoffsAvailable([retryEntry]);
+        if (prepared) {
+          if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
+          assertPreparedMemberModelReadiness({ management: options.modelReadiness,
+            profile: retryEntry.profile, prepared, isCurrent });
+          handoff = installMemberModelReadinessFileKey({ launch, entry: retryEntry, prepared,
+            expectedAttemptId: retry.attemptId, hostIncarnation: source.runtime.hostIncarnation,
+            assertCurrent });
+        }
+      }
+      launch.retry({
         commandId,
         launchId: retry.launchId,
         rosterRevision: retry.rosterRevision,
         attemptId: retry.attemptId,
         memberIds: [retry.memberId],
-      },
-      retryAuthority
-    );
+      }, retryAuthority);
+    } finally {
+      settleMemberModelReadinessFileHandoff({ launch, entry: retryEntry, handoff,
+        hostIncarnation: source.runtime.hostIncarnation, assertCurrent });
+    }
     source.assertCurrent();
     return launch.readNativeRetry(commandId, parsed.memberId, retryAuthority);
   }

@@ -94,6 +94,12 @@ export interface TokenUsageTaskAttributionSourcePort {
   listTaskAttributions(): Promise<TokenUsageTaskAttributionDto[]>;
 }
 
+export interface TokenUsageBudgetTeamAliasResolution {
+  aliases: ReadonlyMap<string, string>;
+  /** Unresolved project ownership makes the unaccounted spend unknown. */
+  unresolvedNames: readonly string[];
+}
+
 export interface TokenUsageClockPort {
   now(): Date;
 }

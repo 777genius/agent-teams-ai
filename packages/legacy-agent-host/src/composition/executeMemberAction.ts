@@ -11,10 +11,12 @@ import type { ExpectedLaunchMember } from '../team-launch/contracts.js';
 import { transitionRuntimeMember } from './transitionRuntimeMember.js';
 import type { createLaunchMemberActions, MemberActionInput } from '../team-launch/memberActions.js';
 import { attachMemberModelReadiness, captureActionModelReadiness,
-  captureNativeRestartReadiness } from './prepareTeamModelReadiness.js';
-import type { LocalModelReadinessAction } from './prepareTeamModelReadiness.js';
+  captureNativeRestartReadiness, assertMemberModelReadinessFileHandoffsAvailable,
+  assertPreparedMemberModelReadiness, installMemberModelReadinessFileKey,
+  settleMemberModelReadinessFileHandoff } from './prepareTeamModelReadiness.js';
+import type { LocalModelReadinessAction, PreparedModelReadinessReference } from './prepareTeamModelReadiness.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
-import type { ModelReadinessReference } from '../management/commandRecords.js';
+import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
 import { captureInitialRuntimeRestart } from './initialRuntimeModelAdmission.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
@@ -184,24 +186,39 @@ export function executeMemberAction(
     ? <T>(operation: () => T) => options.admission!.journalAuthority.authorized('control', operation)
     : undefined;
   const actorDigest = digest(known!.actor);
+  const admittedAt = Date.now(), readinessPayload = structuredClone(raw);
   let prepared: ReturnType<typeof captureActionModelReadiness> | undefined;
+  let prepareNativeSource: (() => Promise<void>) | undefined;
+  let nativeSourcePrepared = false;
   let initialRestart: ReturnType<typeof captureInitialRuntimeRestart>;
-  let reference: ModelReadinessReference | undefined;
+  let reference: PreparedModelReadinessReference | undefined;
   if (entry.profile.provider === 'opencode' && input.action === 'restart') {
     if (profile.provider !== 'opencode') throw new RuntimeOwnerError('hold');
     if (options.admission && authorized) initialRestart = captureInitialRuntimeRestart({
       launch, entry, input, actorDigest, profile, binding, assertCurrent: current, authorized });
     if (!initialRestart) {
       if (!options.modelReadiness) throw new RuntimeOwnerError('hold');
-      const nativeSource = options.admission ? captureNativeRestartReadiness({
-        management: options.modelReadiness, launch, entry, isCurrent,
-      }) : undefined;
-      prepared = captureActionModelReadiness({ management: options.modelReadiness, launch,
-        targets: [{ entry, profile, binding }], commandId, payload: raw, actorDigest,
+      const management = options.modelReadiness;
+      const capture = (nativeSource?: Awaited<ReturnType<typeof captureNativeRestartReadiness>>) =>
+        captureActionModelReadiness({ management, launch,
+        targets: [{ entry, profile, binding }], commandId, payload: readinessPayload, actorDigest, admittedAt,
         ...(options.captureProcessOrigin ? { captureProcessOrigin: options.captureProcessOrigin } : {}),
         ...(readiness ? { readiness } : {}), ...(nativeSource ? { nativeSource } : {}),
         ...(authorized ? { authorized } : {}), assertCurrent: current,
       });
+      if (options.admission) {
+        const cutoff = admittedAt + (teamModelProbeProfile(profile).modelProbeTimeoutMs ?? 90000);
+        prepareNativeSource = async () => {
+          if (nativeSourcePrepared) return;
+          current();
+          if (Date.now() >= cutoff) throw new RuntimeOwnerError('hold');
+          const nativeSource = await captureNativeRestartReadiness({ management, launch, entry, isCurrent, cutoff });
+          current();
+          if (Date.now() >= cutoff) throw new RuntimeOwnerError('hold');
+          prepared = capture(nativeSource);
+          nativeSourcePrepared = true;
+        };
+      } else prepared = capture();
     }
   } else if (entry.profile.provider === 'opencode') launch.retireModelReadiness(input.memberId);
   const cancelOriginalPreparation = async () => {
@@ -210,6 +227,19 @@ export function executeMemberAction(
         undefined, digest({ launchId: sourceBinding.runId, memberId: input.memberId }));
   };
   let selectedAuthority: (() => void) | undefined;
+  const assertSelectedCurrent = () => {
+    assertGrant();
+    if (!selectedAuthority) throw new RuntimeOwnerError('hold');
+    selectedAuthority();
+    options.assertNewWorkAllowed(entry);
+  };
+  const assertSelectedReference = () => {
+    assertSelectedCurrent();
+    if (!reference || !options.modelReadiness) throw new RuntimeOwnerError('hold');
+    assertPreparedMemberModelReadiness({ management: options.modelReadiness, profile: entry.profile,
+      prepared: reference, isCurrent: () => { try { assertSelectedCurrent(); return true; }
+        catch { return false; } } });
+  };
   return transitionRuntimeMember({
     input,
     sourceBinding,
@@ -224,11 +254,14 @@ export function executeMemberAction(
       assertGrant();
       options.assertNewWorkAllowed(entry);
     },
-    verifyNewWorkAllowed() {
-      return options.verifyNewWorkAllowed(entry);
+    async verifyNewWorkAllowed() {
+      await options.verifyNewWorkAllowed(entry);
+      // The existing transition flight is registered before this first continuation, still before Stop.
+      if (prepareNativeSource && !nativeSourcePrepared) await prepareNativeSource();
     },
-    ...(prepared ? { async prepareSelected() {
-      reference = (await prepared!.prepare()).get(input.memberId);
+    ...(prepared || prepareNativeSource ? { async prepareSelected() {
+      if (!prepared) throw new RuntimeOwnerError('hold');
+      reference = (await prepared.prepare()).get(input.memberId);
       if (!reference) throw new RuntimeOwnerError('hold');
     } } : {}),
     async retireUnallocated() {
@@ -278,8 +311,9 @@ export function executeMemberAction(
         });
       if (prepared) {
         if (!reference) throw new RuntimeOwnerError('hold');
-        selectedAuthority();
-        attachMemberModelReadiness({ launch, entry, reference, commandId, actorDigest,
+        assertMemberModelReadinessFileHandoffsAvailable([entry]);
+        assertSelectedReference();
+        attachMemberModelReadiness({ launch, entry, reference: reference.reference, commandId, actorDigest,
           inputDigest: prepared.inputDigest, cutoff: prepared.cutoff,
           ...(authorized ? { authorized } : {}) });
       }
@@ -289,17 +323,26 @@ export function executeMemberAction(
       }
     },
     startSelected() {
-      assertGrant();
-      return launch.startMember(
-        input.memberId,
-        () => {
-          assertGrant();
-          if (!selectedAuthority) throw new RuntimeOwnerError('hold');
-          selectedAuthority();
-          options.assertNewWorkAllowed(entry);
-        },
-        input.commandId
-      );
+      assertSelectedCurrent();
+      let handoff: ReturnType<typeof installMemberModelReadinessFileKey> = undefined;
+      let hostIncarnation: string | undefined;
+      try {
+        if (reference) {
+          assertMemberModelReadinessFileHandoffsAvailable([entry]);
+          assertSelectedReference();
+          const selected = launch.readModelReadiness({ binding: entry.binding,
+            configRevision: entry.profile.configRevision, configurationDigest: digest(entry.profile) });
+          if (digest(selected.reference ?? null) !== digest(reference.reference)) throw new RuntimeOwnerError('hold');
+          hostIncarnation = selected.attempt.hostIncarnation;
+          handoff = installMemberModelReadinessFileKey({ launch, entry, prepared: reference,
+            expectedAttemptId: selected.attempt.attemptId, hostIncarnation,
+            assertCurrent: assertSelectedCurrent });
+        }
+        return launch.startMember(input.memberId, assertSelectedCurrent, input.commandId);
+      } finally {
+        if (hostIncarnation) settleMemberModelReadinessFileHandoff({ launch, entry, handoff,
+          hostIncarnation, assertCurrent: assertSelectedCurrent });
+      }
     },
   });
 }

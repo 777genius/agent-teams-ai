@@ -967,6 +967,18 @@
     "chats": "చదవని చాట్‌లు",
     "openTask": "పనిని తెరవండి: {{subject}} — {{team}}",
     "timeUnknown": "సమయం తెలియదు",
-    "teamAttention": "శ్రద్ధ"
+    "teamAttention": "శ్రద్ధ",
+    "filters": {
+      "title": "ఫిల్టర్లు",
+      "description": "ఇన్‌బాక్స్‌లో ఏమి చూపించాలో ఎంచుకోండి.",
+      "itemType": "అంశం రకం",
+      "conversationType": "చాట్ రకం",
+      "direct": "నేరుగా సందేశాలు",
+      "group": "గ్రూప్ చాట్‌లు",
+      "teamFeed": "టీమ్ ఫీడ్",
+      "waiting": "పని వేచి ఉన్న సమయం",
+      "olderDay": "24 గంటలకు పైగా",
+      "olderWeek": "7 రోజులకు పైగా"
+    }
   }
 }

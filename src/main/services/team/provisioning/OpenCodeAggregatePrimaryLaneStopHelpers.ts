@@ -20,13 +20,31 @@ export function wasOpenCodePrimaryBlockedBeforeLaunch(run: object, runId: string
   return blockedBeforeLaunch.get(run) === runId;
 }
 
-/** Only record after both runtime Stop and exact-owned storage cleanup succeed. */
+/** Record confirmed cleanup, or an exact candidate that never entered launch or persistence. */
 export function recordOpenCodePrimaryCleanup(run: object, runId: string): void {
   confirmedCleanup.set(run, runId);
 }
 
 export function wasOpenCodePrimaryCleanupConfirmed(run: object, runId: string): boolean {
   return confirmedCleanup.get(run) === runId;
+}
+
+/** A freshly allocated incarnation has no native runtime or persisted lane yet. */
+export async function assertUnstartedOpenCodePrimaryAdmission(
+  run: { runId: string },
+  admit: () => Promise<void>,
+  assertCurrent: () => void
+): Promise<void> {
+  const runId = run.runId;
+  try {
+    await admit();
+    assertCurrent();
+  } catch (error) {
+    // Admission runs before the launch helper writes a manifest or dispatches a native command.
+    // Do not synthesize ownership and attempt Stop on this never-started candidate.
+    recordOpenCodePrimaryCleanup(run, runId);
+    throw error;
+  }
 }
 
 /**

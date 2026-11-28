@@ -147,10 +147,11 @@ async function start(value: unknown): Promise<void> {
   let selectedFileTransform: ((app: unknown) => unknown) | undefined;
   if (input.selectedFile !== undefined) {
     const selected = record(input.selectedFile);
-    if (Object.keys(selected).length !== 2 || !Object.hasOwn(selected, 'descriptor') ||
+    if (Object.keys(selected).sort().join(',') !== (selected.mode === 'catalog' ? 'descriptor,mode' : 'descriptor,mode,policy') ||
         !['fresh', 'restore', 'catalog'].includes(String(selected.mode))) return fail();
     selectedFileTransform = await createOpenCodeV2NativeFileTransform({
       descriptor: selected.descriptor, mode: selected.mode as OpenCodeV2SelectedFileMode,
+      ...(selected.mode === 'catalog' ? {} : { policy: selected.policy }),
       nonce: input.nonce, password: input.password, graph, signal: controller.signal,
     });
   }

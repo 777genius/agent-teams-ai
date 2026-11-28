@@ -9,6 +9,8 @@ import { normalizeBinding, runtimeDigest } from '../runtime/identity.js';
 import { modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
 import { applyLaunchConfiguration, launchConfigurationSchema } from './launchConfiguration.js';
 import { teamModelProbeProfile } from './teamLaunchModelProbe.js';
+import { assertMemberModelReadinessFileHandoffsAvailable,
+  assertPreparedMemberModelReadiness } from './prepareTeamModelReadiness.js';
 
 import type { ModelReadinessProbeScope } from '../management/commandRecords.js';
 import type { TeamHostProfile } from './TeamHost.js';
@@ -18,7 +20,7 @@ import type { TeamLaunchOwner } from '../team-launch/TeamLaunchOwner.js';
 import type { ProviderManagementCoordinator } from './ProviderManagementCoordinator.js';
 import type { RuntimeBinding } from '../runtime/contracts.js';
 import type { MemberActionInput } from '../team-launch/memberActions.js';
-import type { capturePreparedModelReference } from './prepareTeamModelReadiness.js';
+import type { capturePreparedModelReference, PreparedModelReadinessReference } from './prepareTeamModelReadiness.js';
 
 const id = z.string().min(1).max(256).refine(value => !/[\0\r\n]/u.test(value));
 const hash = z.string().regex(/^[a-f0-9]{64}$/u);
@@ -206,15 +208,18 @@ function sourceFor(entry: MemberEntry, captureDigest: string, isCurrent: () => b
   } };
 }
 
-/** Existing command entrypoint only, before its first await. No missing-profile or missing-proof fallback. */
-export function attachInitialRuntimeModelAdmission(options: {
+/** Capture the original initial action before crypto; no missing-profile or missing-proof fallback. */
+export async function attachInitialRuntimeModelAdmission(options: {
   launch: InitialLaunch; entries: readonly MemberEntry[]; method: InitialRuntimeModelAction['method'];
   teamId: string; commandId: string; payload: unknown; actorDigest: string; hostIncarnation: string;
   management?: Management; captureReference?: typeof capturePreparedModelReference; assertCurrent(): void;
-}): void {
-  options.assertCurrent();
-  const summary = options.launch.read();
-  let payload = options.payload;
+}): Promise<Map<string, PreparedModelReadinessReference>> {
+  const { launch, management, captureReference, assertCurrent, commandId, actorDigest, hostIncarnation } = options;
+  const entries = [...options.entries], originalPayload = structuredClone(options.payload);
+  assertCurrent();
+  assertMemberModelReadinessFileHandoffsAvailable(entries);
+  const summary = launch.read();
+  let payload = originalPayload;
   if (options.method === 'team.launch.start') {
     const raw = z.object({ launchId: id, rosterRevision: id, configuration: launchConfigurationSchema.optional(),
       initialPrompt: z.string().nullable().optional() }).strict().parse(payload);
@@ -222,52 +227,77 @@ export function attachInitialRuntimeModelAdmission(options: {
     const { launchId: _launchId, rosterRevision: _revision, ...intent } = raw;
     payload = intent;
   }
-  const action = actionSchema.parse({ method: options.method, teamId: options.teamId, commandId: options.commandId, payload });
-  const matches = options.entries[0]?.initialModelAdmission?.admissions.filter(row => equal(row.action, action)) ?? [];
+  const action = actionSchema.parse({ method: options.method, teamId: options.teamId, commandId, payload });
+  const matches = entries[0]?.initialModelAdmission?.admissions.filter(row => equal(row.action, action)) ?? [];
   const admission = matches[0];
-  if (matches.length !== 1 || !admission || !options.entries.length ||
-      !equal(admission.targets.map(row => row.memberId).sort(), options.entries.map(row => row.profile.memberId).sort())) held();
-  const isCurrent = () => { try { options.assertCurrent(); return true; } catch { return false; } };
-  const captured = options.entries.map(entry => {
+  if (matches.length !== 1 || !admission || !entries.length ||
+      !equal(admission.targets.map(row => row.memberId).sort(), entries.map(row => row.profile.memberId).sort())) held();
+  const originalAdmission = structuredClone(admission);
+  const isCurrent = () => { try { assertCurrent(); return true; } catch { return false; } };
+  const inspect = (entry: MemberEntry, current: ReturnType<InitialLaunch['read']>) => {
     const observed = sourceFor(entry, admission.captureDigest, isCurrent);
-    const member = summary.members.find(row => row.memberId === entry.profile.memberId);
-    const initialAttempt = `initial-${runtimeDigest({ launchId: summary.launchId, memberId: entry.profile.memberId })}`;
+    const member = current.members.find(row => row.memberId === entry.profile.memberId);
+    const initialAttempt = `initial-${runtimeDigest({ launchId: current.launchId, memberId: entry.profile.memberId })}`;
     if (entry.selection || !equal(entry.profile, entry.baseProfile) || !equal(entry.binding, observed.target.binding) ||
+        !equal(observed.admission, originalAdmission) || current.launchId !== summary.launchId ||
+        current.rosterRevision !== summary.rosterRevision ||
         !member || !equal(member.binding, entry.binding) || member.attempt.claimed || member.attempt.status === 'skipped' ||
-        member.attempt.attemptId !== initialAttempt || member.attempt.hostIncarnation !== options.hostIncarnation ||
+        member.attempt.attemptId !== initialAttempt || member.attempt.hostIncarnation !== hostIncarnation ||
         member.attempt.startedAtMs !== 0 || member.attempt.deadlineMs !== 0) held();
     const configured = action.method === 'team.launch.start'
       ? action.payload.configuration?.members.find(row => row.memberId === entry.profile.memberId) : undefined;
     if (configured && !equal(applyLaunchConfiguration(entry.baseProfile,
       Object.fromEntries(Object.entries(configured).filter(([name]) => name !== 'memberId'))), entry.profile)) held();
-    const reference = (() => {
-      if (observed.target.source.kind === 'native-bootstrap') return undefined;
-      const locator = observed.target.source.probe, management = options.management;
-      if (!management || !options.captureReference || entry.profile.provider !== 'opencode') return held();
+    return { entry, observed, initialAttempt };
+  };
+  const captured = entries.map(entry => ({ ...inspect(entry, summary),
+    admission: structuredClone(entry.initialModelAdmission), profile: structuredClone(entry.profile),
+    binding: structuredClone(entry.binding), baseProfile: structuredClone(entry.baseProfile) }));
+  const prepared = new Map<string, PreparedModelReadinessReference>();
+  for (const { entry, observed } of captured) {
+    if (observed.target.source.kind !== 'native-bootstrap') {
+      const locator = observed.target.source.probe;
+      if (!management || !captureReference || entry.profile.provider !== 'opencode') return held();
       const original = management.probes.readRetainedProbe(locator.commandId, locator.context);
       if (original.profileId !== locator.profileId || original.configRevision !== locator.configRevision ||
           !original.readinessScope || !equal(original.readinessScope,
             initialRuntimeModelProbeScope(admission, entry.profile, original.readinessScope.cutoff))) held();
-      return options.captureReference({ management, profile: entry.profile, commandId: locator.commandId,
+      const value = await captureReference({ management, profile: entry.profile, commandId: locator.commandId,
         context: locator.context, kind: 'native', isCurrent });
-    })();
-    return { entry, observed, reference, initialAttempt };
-  });
-  for (const row of captured) row.observed.assertCurrent();
-  for (const { entry, reference, initialAttempt } of captured) {
+      assertCurrent();
+      prepared.set(entry.profile.memberId, value);
+    }
+  }
+  assertCurrent();
+  assertMemberModelReadinessFileHandoffsAvailable(entries);
+  const current = launch.read();
+  for (const row of captured) {
+    if (!equal(row.entry.initialModelAdmission, row.admission) || !equal(row.entry.profile, row.profile) ||
+        !equal(row.entry.baseProfile, row.baseProfile) || !equal(row.entry.binding, row.binding)) held();
+    row.observed.assertCurrent();
+    inspect(row.entry, current).observed.assertCurrent();
+    const value = prepared.get(row.entry.profile.memberId);
+    if (value) {
+      if (!management) held();
+      assertPreparedMemberModelReadiness({ management, profile: row.profile, prepared: value, isCurrent });
+    }
+  }
+  for (const { entry, initialAttempt } of captured) {
+    const reference = prepared.get(entry.profile.memberId)?.reference;
     const consumer = {
-      memberId: entry.profile.memberId, actionId: options.commandId, actorDigest: options.actorDigest,
-      inputDigest: managementDigest(options.payload), binding: entry.binding,
+      memberId: entry.profile.memberId, actionId: commandId, actorDigest,
+      inputDigest: managementDigest(originalPayload), binding: entry.binding,
       baseConfigurationDigest: runtimeDigest(entry.baseProfile), configurationDigest: runtimeDigest(entry.profile),
       configRevision: entry.profile.configRevision,
     };
-    options.launch.attachModelReadiness(reference ? { reference, initialAttemptId: initialAttempt, consumer: { ...consumer,
+    launch.attachModelReadiness(reference ? { reference, initialAttemptId: initialAttempt, consumer: { ...consumer,
       cutoff: reference.expiresAt, groupCommandId: reference.commandId } } : { initialAttemptId: initialAttempt, consumer: {
       ...consumer, initialProfile: { kind: 'native-bootstrap',
         captureDigest: admission.captureDigest, commandId: admission.action.commandId, actionDigest: managementDigest(admission.action) },
     } });
   }
-  options.assertCurrent();
+  assertCurrent();
+  return prepared;
 }
 
 /** Source provenance is not execution proof; actual launch-claim time and provider allocation remain original. */

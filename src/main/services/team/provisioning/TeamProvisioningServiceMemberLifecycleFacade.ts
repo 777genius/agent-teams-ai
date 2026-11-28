@@ -150,6 +150,50 @@ function preserveProvisioningRemovalTombstones(store: TeamMembersMetaStore): Tea
 
 /** Owns lifecycle host construction and launch-preparation adaptation. */
 export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamProvisioningServiceRuntimeStateFacade {
+  constructor(
+    private readonly runtimeSpawnAdmission: (teamName: string) => Promise<void>,
+    ...args: ConstructorParameters<typeof TeamProvisioningServiceRuntimeStateFacade>
+  ) {
+    super(...args);
+  }
+
+  protected runAfterInFlightTeamOperation<T>(
+    teamName: string,
+    operation: () => Promise<T>
+  ): Promise<T> {
+    const pending = this.teamOpLocks.get(teamName);
+    return pending && !this.isLiveRosterMutationLockHeld(teamName)
+      ? pending.then(operation)
+      : operation();
+  }
+
+  private captureRuntimeSpawnAdmissionFence(teamName: string): () => void {
+    const stopAllGeneration = this.stopAllTeamsGeneration;
+    const stopTeamGeneration = this.getStopTeamGeneration(teamName);
+    return (): void => {
+      if (
+        this.stopAllTeamsGeneration !== stopAllGeneration ||
+        this.getStopTeamGeneration(teamName) !== stopTeamGeneration
+      ) {
+        throw new Error('Runtime spawn admission superseded by Stop');
+      }
+    };
+  }
+
+  protected runAfterInFlightSpawnOperation<T>(
+    teamName: string,
+    operation: (admit: () => Promise<void>) => Promise<T>
+  ): Promise<T> {
+    const assertCurrent = this.captureRuntimeSpawnAdmissionFence(teamName);
+    const admit = () => this.runtimeSpawnAdmission(teamName);
+    return this.runAfterInFlightTeamOperation(teamName, async () => {
+      assertCurrent();
+      await admit();
+      assertCurrent();
+      return operation(admit);
+    });
+  }
+
   /** Read-only admission evidence: includes active and queued stops, launches and roster mutations. */
   hasTeamOperationInProgress(teamName: string): boolean {
     return this.teamOpLocks.has(teamName.trim().toLowerCase());
@@ -278,8 +322,21 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
               token,
               completion,
             });
+            const canSpawn =
+              kind !== 'skip_for_launch' &&
+              kind !== 'opencode_member_removed' &&
+              kind !== 'primary_member_removed';
+            const assertCurrent = this.captureRuntimeSpawnAdmissionFence(teamName);
             try {
               await this.waitForOpenCodeAggregatePrimaryRestart(teamName, memberName);
+              if (canSpawn) {
+                // The enclosing retry request was admitted only once. Each
+                // candidate can take time to reattach, and a concurrent Save
+                // may tighten the budget before the next candidate spawns.
+                assertCurrent();
+                await this.runtimeSpawnAdmission(teamName);
+                assertCurrent();
+              }
               return await operation();
             } finally {
               resolveCompletion();

@@ -982,6 +982,18 @@
     "chats": "Непрочитані чати",
     "openTask": "Відкрити завдання: {{subject}} — {{team}}",
     "timeUnknown": "Час невідомий",
-    "teamAttention": "Увага"
+    "teamAttention": "Увага",
+    "filters": {
+      "title": "Фільтри",
+      "description": "Виберіть, що показувати у вхідних.",
+      "itemType": "Тип елемента",
+      "conversationType": "Тип чату",
+      "direct": "Особисті повідомлення",
+      "group": "Групові чати",
+      "teamFeed": "Стрічка команди",
+      "waiting": "Час очікування завдання",
+      "olderDay": "Понад 24 години",
+      "olderWeek": "Понад 7 днів"
+    }
   }
 }

@@ -12,6 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   parseWindowsProcesses,
+  processes,
   windowsCleanupEvidence,
   parseUnixProcesses,
   parseListeners,
@@ -46,6 +47,27 @@ test('OS process and listener output parsing fails closed', () => {
   assert.throws(() => parseWindowsProcesses('{"pid":42,"parent":1}'));
   assert.throws(() => parseUnixProcesses('garbage'));
   assert.throws(() => parseListeners('not a pid'));
+});
+test('captured PID census rejects unknown birth without rejecting unrelated system rows', () => {
+  const known = { pid: 42, parent: 1, birth: '2026-09-10T01:02:03.1234567Z' };
+  const system = { pid: 0, parent: 0, birth: null };
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system, known]), [42]), [known]);
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system]), [42]), []);
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system, known]), []), [known]);
+  const reused = { ...known, birth: '2026-09-10T01:02:04.1234567Z' };
+  assert.deepEqual(parseWindowsProcesses(JSON.stringify([system, reused]), [42]), [reused]);
+  for (const birth of [null, undefined, '', 'unavailable', 123]) {
+    assert.throws(() => parseWindowsProcesses(
+      JSON.stringify([system, { ...known, birth }]), [42]), /Invalid OS process birth identity/);
+  }
+  assert.deepEqual(parseWindowsProcesses('[]', Array(500).fill(42)), []);
+});
+test('captured PID census validates bounded positive integers before an OS read', () => {
+  for (const requiredPids of [null, {}, '42', [0], [-1], [1.5], [Number.MAX_SAFE_INTEGER + 1],
+    ['42; exit 0'], Array(501).fill(42)]) {
+    assert.throws(() => processes(requiredPids), /Invalid required process PIDs/);
+    assert.throws(() => parseWindowsProcesses('[]', requiredPids), /Invalid required process PIDs/);
+  }
 });
 test('one fresh Windows interpreter retains ordered original process and listener observations', () => {
   const launcher = { pid: 42, parent: 1, birth: '2026-09-10T01:00:00.0000000Z', executable: 'C:\\TEST\\app.exe' };
@@ -554,7 +576,8 @@ function observerWorkerFixture() {
 
 test('persistent Windows query owner keeps one child and delivers fresh ordered snapshots without coalescing', async () => {
   const f = observerWorkerFixture();
-  const first = [{ pid: 1, parent: 0, birth: 'first' }], second = [{ pid: 2, parent: 1, birth: 'second' }];
+  const first = [{ pid: 1, parent: 0, birth: '2026-09-10T01:02:03.0000000Z' }],
+    second = [{ pid: 2, parent: 1, birth: '2026-09-10T01:02:04.0000000Z' }];
   f.read(1);
   const bytes = Buffer.from(f.reply(1, first, '11\r\n'));
   f.child.stdout.write(bytes.subarray(0, 17));
@@ -577,12 +600,13 @@ test('persistent Windows query owner keeps one child and delivers fresh ordered 
   assert.deepEqual(f.messages.at(-1), { kind: 'closed', pid: 71, code: null, signal: 'SIGTERM', expected: true });
 });
 
-for (const kind of ['duplicate request', 'stale reply', 'malformed envelope', 'extra reply', 'stderr', 'partial close'])
+for (const kind of ['duplicate request', 'stale reply', 'malformed envelope', 'invalid birth', 'extra reply', 'stderr', 'partial close'])
 test('persistent Windows query owner refuses ' + kind + ' and retires only its original child', async () => {
   const f = observerWorkerFixture(); f.read(1);
   if (kind === 'duplicate request') f.read(1);
   else if (kind === 'stale reply') f.child.stdout.write(f.reply(2, []));
   else if (kind === 'malformed envelope') f.child.stdout.write('{"sequence":1,"observation":null}\n');
+  else if (kind === 'invalid birth') f.child.stdout.write(f.reply(1, [{ pid: 1, parent: 0, birth: 'not-a-birth' }]));
   else if (kind === 'extra reply') f.child.stdout.write(f.reply(1, []) + f.reply(1, []));
   else if (kind === 'stderr') f.child.stderr.write('TEST query failure');
   else { f.child.stdout.write(f.reply(1, []).slice(0, -1)); f.child.emit('close', 1, null); }

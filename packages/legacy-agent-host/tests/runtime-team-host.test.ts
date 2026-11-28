@@ -3069,6 +3069,47 @@ test('production aggregate launch RPC preserves configured and missing roster me
   assert.equal(f.opens(), 1);
 });
 
+test('actual Host RPC preserves the displayed retry attempt precondition and original replay', async (t) => {
+  const f = await fixture(t);
+  type Summary = { launchId: string; rosterRevision: string;
+    members: { memberId: string; attempt: { attemptId: string; status: string } }[] };
+  const before = await f.rpc('team.launch.read', {}) as { ok: boolean; value: Summary };
+  assert.equal(before.ok, true);
+  const scope = { launchId: before.value.launchId, rosterRevision: before.value.rosterRevision };
+  assert.equal((await f.rpc('team.launch.start', scope,
+    { commandId: 'TEST-bound-retry-start' }) as { ok: boolean }).ok, true);
+  await eventually(() => f.opens() === 1, 'configured control member opens once');
+  let failed = before.value.members.find(row => row.memberId === 'bob-id')!;
+  for (let count = 0; count < 40 && failed.attempt.status !== 'failed'; count++) {
+    await tick();
+    const current = await f.rpc('team.launch.read', {}) as { ok: boolean; value: Summary };
+    assert.equal(current.ok, true);
+    failed = current.value.members.find(row => row.memberId === 'bob-id')!;
+  }
+  assert.equal(failed.attempt.status, 'failed');
+  const input = { ...scope, memberIds: ['bob-id'], attemptId: 'TEST-bound-retry',
+    expectedAttemptId: failed.attempt.attemptId };
+  const command = { commandId: 'TEST-bound-retry-command' };
+  const accepted = await f.rpc('team.launch.retry', input, command) as { ok: boolean; value?: Summary };
+  assert.equal(accepted.ok, true, 'the renderer-bound retry must reach the existing launch owner');
+  assert.equal(accepted.value?.members.find(row => row.memberId === 'bob-id')?.attempt.attemptId,
+    input.attemptId);
+  const replay = await f.rpc('team.launch.retry', input, command) as { ok: boolean; value?: Summary };
+  assert.equal(replay.ok, true, 'original replay precedes the fresh-attempt precondition');
+  assert.equal(replay.value?.members.find(row => row.memberId === 'bob-id')?.attempt.attemptId,
+    input.attemptId);
+  assert.deepEqual(await f.rpc('team.launch.retry', { ...input,
+    expectedAttemptId: 'TEST-changed-original-precondition' }, command),
+  { ok: false, code: 'conflict', outcome: 'rejected', reason: 'retry-identity' });
+  assert.deepEqual(await f.rpc('team.launch.retry', { ...input, attemptId: 'TEST-stale-retry' },
+    { commandId: 'TEST-stale-retry-command' }),
+  { ok: false, code: 'conflict', outcome: 'rejected', reason: 'retry-attempt' });
+  assert.deepEqual(await f.rpc('team.launch.retry', { ...input, memberIds: ['alice-id', 'bob-id'] },
+    { commandId: 'TEST-multiple-bound-retry' }),
+  { ok: false, code: 'invalid', outcome: 'rejected' });
+  assert.equal(f.opens(), 1, 'replay and rejected preconditions allocate no provider');
+});
+
 test('launch options are durably selected before provider creation and replay survives Host restart without new allocation', async (t) => {
   let persistedBeforeFactory = false;
   const f = await fixture(t, {

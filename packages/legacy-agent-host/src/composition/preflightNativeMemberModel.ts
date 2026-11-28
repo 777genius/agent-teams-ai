@@ -1,8 +1,9 @@
-import { captureOpenCodeProbeAccount, capturePreparedModelReference } from './prepareTeamModelReadiness.js';
+import { captureOpenCodeProbeAccount, capturePreparedModelReference,
+  assertPreparedMemberModelReadiness } from './prepareTeamModelReadiness.js';
 import { captureTeamProbePreparation } from './captureTeamProbePreparation.js';
 import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import { modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
-import type { ModelReadinessReference } from '../management/commandRecords.js';
+import type { PreparedNativeMemberModel } from './createRuntimeNativeMemberCreation.js';
 import { effectId } from '../team/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
 import { TeamLaunchError } from '../team-launch/contracts.js';
@@ -22,7 +23,7 @@ export async function preflightNativeMemberModel(options: {
   input: NativeMemberCreationInput;
   teamBindingDigest: string;
   assertCurrent(): void;
-}): Promise<ModelReadinessReference | undefined> {
+}): Promise<PreparedNativeMemberModel | undefined> {
   const admittedAt = Date.now();
   const profile = structuredClone(options.profile),
     input = structuredClone(options.input);
@@ -115,8 +116,16 @@ export async function preflightNativeMemberModel(options: {
     current();
     if (value.phase !== 'completed' || !value.ok)
       throw new TeamLaunchError('hold', 'native-member-model-preflight');
-    return profile.provider === 'opencode' ? capturePreparedModelReference({ management: options.management,
-      profile, commandId: identity.commandId, context, kind: 'native', isCurrent }) : undefined;
+    if (profile.provider !== 'opencode') return undefined;
+    const prepared = await capturePreparedModelReference({ management: options.management,
+      profile, commandId: identity.commandId, context, kind: 'native', isCurrent });
+    const assertPrepared = () => {
+      current();
+      assertPreparedMemberModelReadiness({ management: options.management, profile, prepared, isCurrent });
+    };
+    assertPrepared();
+    // This original invocation's validator never enters the member handoff or provider context.
+    return { prepared, assertCurrent: assertPrepared };
   } catch (error) {
     // Cleanup only the exact original probe; never replace its command or retry inference.
     if (value.phase === 'running') {

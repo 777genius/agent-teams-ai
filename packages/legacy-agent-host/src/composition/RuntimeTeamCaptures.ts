@@ -310,7 +310,7 @@ export class RuntimeTeamCaptures {
     if (!original && readiness) {
       if (!this.options.modelReadiness) throw new TeamLaunchError('hold', 'capture-readiness-unavailable');
       const initial = compileRuntimeCapture(this.options.profile, team, intent, 'model-preflight', this.options.sources);
-      const prepared = captureLaunchModelReadiness({ management: this.options.modelReadiness,
+      const prepared = await captureLaunchModelReadiness({ management: this.options.modelReadiness,
         team, source: intent, profiles: initial.profiles, principalId: operator,
         hostIncarnation: this.options.hostIncarnation, transfer: readiness, admittedAt,
         isCurrent: () => { try { assertCurrent(); return true; } catch { return false; } } });

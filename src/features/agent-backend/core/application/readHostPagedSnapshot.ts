@@ -386,7 +386,10 @@ export async function readHostPagedSnapshot(
       if (first.processTotal !== undefined) {
         if (processes.length !== first.processTotal)
           throw new Error('Incomplete Host process history');
-        if (processes.length > 1024 || new Set(processes.map((row) => row.id)).size !== processes.length)
+        if (
+          processes.length > 1024 ||
+          new Set(processes.map((row) => row.id)).size !== processes.length
+        )
           throw new Error('Invalid Host process history');
       }
       const reconstructed = first.taskParts

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { CapturedProcess } from './CapturedProcess.js';
 import { createWindowsJobCustody } from './WindowsJobCustody.js';
 import { AcceptedOpenCodeV2FileKey, DeferredOpenCodeV2FileKey,
-  openCodeV2SelectedSourceReference } from './OpenCodeV2SelectedFileKey.js';
+  openCodeV2SelectedSourceReference, originalOpenCodeV2FilePolicy } from './OpenCodeV2SelectedFileKey.js';
 import type { OpenCodeV2SelectedFileMode } from './OpenCodeV2SelectedFileKey.js';
 import { verifyOpenCodeV2MediaWitness } from './OpenCodeV2MediaReceipt.js';
 import type { OpenCodeV2MediaProof } from './OpenCodeV2MediaReceipt.js';
@@ -57,7 +57,8 @@ export interface OpenCodeV2EmbeddedServerOptions {
   processCustody?: RegisteredProcessRootSource;
   startupTimeoutMs?: number;
   endpoint?: string;
-  selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode }>;
+  selectedFile?: Readonly<{ source: DeferredOpenCodeV2FileKey; mode: OpenCodeV2SelectedFileMode;
+    original?: AcceptedOpenCodeV2FileKey | Readonly<{ kind: 'legacy-checkpoint' }> }>;
   /** Only this original child/session may attest its actual image normalization. */
   mediaSessionId?: string;
   /** Synchronous observation only; never an admission, timer or cleanup callback. */
@@ -120,7 +121,7 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   const databasePath = options.databasePath;
   const startupTimeoutMs = options.startupTimeoutMs ?? 120_000;
   const requestedEndpoint = options.endpoint;
-  const selectedFile = options.selectedFile;
+  const selectedFile = options.selectedFile ? Object.freeze({ ...options.selectedFile }) : undefined;
   const mediaSessionId = options.mediaSessionId;
   if (mediaSessionId !== undefined && !/^ses_[A-Za-z0-9_-]+$/u.test(mediaSessionId)) return fail();
   const mediaKey = mediaSessionId === undefined ? undefined : randomBytes(32).toString('hex');
@@ -134,6 +135,8 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
   if (selectedFile && (!DeferredOpenCodeV2FileKey.is(selectedFile.source) ||
       !selectedFile.source.isCurrent() || selectedFile.source.descriptor.cwd !== profile.cwd ||
       !['fresh', 'restore', 'catalog'].includes(selectedFile.mode))) return fail();
+  const filePolicy = selectedFile
+    ? originalOpenCodeV2FilePolicy(selectedFile.source, selectedFile.mode, selectedFile.original) : undefined;
   if (
     requestedEndpoint !== undefined &&
     (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(requestedEndpoint) ||
@@ -304,7 +307,8 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
           databasePath,
           config,
           ...(mediaKey ? { media: { key: mediaKey, sessionId: mediaSessionId } } : {}),
-          ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode } } : {}),
+          ...(selectedFile ? { selectedFile: { descriptor: selectedFile.source.descriptor, mode: selectedFile.mode,
+            ...(filePolicy ? { policy: filePolicy } : {}) } } : {}),
         });
         if (Buffer.byteLength(input) + 1 > 256 * 1024) return fail();
         observe('native-launch');
@@ -439,11 +443,13 @@ export function createOpenCodeV2EmbeddedServer(options: OpenCodeV2EmbeddedServer
       selectedIntegration = integrationId;
       const reference = openCodeV2SelectedSourceReference(selectedFile.source.descriptor, nonce, integrationId, selectedFile.mode);
       return Object.freeze({ reference,
-        acceptProof(proof: Readonly<{ schemaVersion: 1; sourceReference: string; witness: string }>) {
-          if (!current() || proof.schemaVersion !== 1 || proof.sourceReference !== reference ||
+        acceptProof(proof: Readonly<{ schemaVersion: 1; sourceReference: string; witness: string }>,
+          request: Readonly<{ method: 'GET' | 'POST'; deadline: number; originalScopeDigest?: string }>) {
+          if (!current() || !filePolicy || proof.schemaVersion !== 1 || proof.sourceReference !== reference ||
               Object.keys(proof).length !== 3) return fail();
           return AcceptedOpenCodeV2FileKey.accept(selectedFile.source, proof.witness,
-            { nonce, pid: capture.pid, integrationId, reference }, current);
+            { nonce, pid: capture.pid, integrationId, reference }, current, { policy: filePolicy, password, request,
+              ...(selectedFile.original instanceof AcceptedOpenCodeV2FileKey ? { original: selectedFile.original } : {}) });
         },
       });
     },

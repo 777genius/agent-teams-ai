@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "งบประมาณรายเดือน",
+      "teamCardUnknown": "ไม่ทราบยอดการใช้งาน",
+      "teamCardBlocked": "ถึงขีดจำกัด - บล็อกการเริ่มทำงาน",
+      "editor": {
+        "onExceeded": "การดำเนินการเมื่อถึงขีดจำกัด",
+        "notifyOnly": "แจ้งเตือนเท่านั้น",
+        "blockLaunch": "บล็อกการเริ่มทีมครั้งใหม่",
+        "stopTeam": "หยุดทีมที่ทำงานอยู่และบล็อกการเริ่ม",
+        "enforcementHint": "หากข้อมูลการใช้งานไม่พร้อมหรือล่าช้า จะบล็อกการเริ่มครั้งใหม่ ค่าใช้จ่ายเป็นค่าประมาณและใบเรียกเก็บเงินอาจเกินขีดจำกัด"
+      }
     }
   }
 }

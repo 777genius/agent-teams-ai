@@ -147,9 +147,9 @@ test('V2 readiness proof for auto cannot qualify a captured provider/auto model'
   const capture = () => capturePreparedModelReference({ management: { probes, readinessTarget: () => target },
     profile: f.member, commandId: f.input.commandId, context, kind: 'native', isCurrent: () => true });
   try {
-    assert.equal(capture().commandId, f.input.commandId);
+    assert.equal((await capture()).reference.commandId, f.input.commandId);
     store.write({ ...saved, modelId: 'auto' });
-    assert.throws(capture, { code: 'held' }, 'a prefix collision cannot substitute another model proof');
+    await assert.rejects(capture, { code: 'held' }, 'a prefix collision cannot substitute another model proof');
   } finally { await probes.close(); }
 });
 

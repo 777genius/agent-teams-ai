@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "بودجه ماهانه",
+      "teamCardUnknown": "مصرف نامشخص",
+      "teamCardBlocked": "سقف بودجه رسیده - شروع مسدود است",
+      "editor": {
+        "onExceeded": "اقدام هنگام رسیدن به سقف بودجه",
+        "notifyOnly": "فقط اعلان",
+        "blockLaunch": "مسدود کردن شروع جدید تیم",
+        "stopTeam": "توقف تیم و مسدود کردن شروع‌ها",
+        "enforcementHint": "اگر داده مصرف ناموجود یا با تأخیر باشد، شروع جدید مسدود می‌شود. هزینه‌ها تخمینی‌اند و صورتحساب ممکن است از سقف بگذرد."
+      }
     }
   }
 }

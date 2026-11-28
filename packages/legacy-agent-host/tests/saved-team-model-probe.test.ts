@@ -1054,6 +1054,7 @@ test('Team probe read rejects completed evidence after physical config-directory
     const recordStore = new FileManagementCommandStore(own.root);
     let closed = false, nativeCalls = 0, witnessReads = 0;
     let complete!: (ok: boolean) => void;
+    const nativeReady = Promise.withResolvers<void>();
     let accepted: AcceptedOpenCodeV2FileKey | undefined;
     const evidence = (): NativeLocalReadinessEvidence => ({ schemaVersion: 1, ordinary: 'confirmed',
       coordination: 'not-applicable', decision: 'allow', reasons: ['not-applicable'],
@@ -1067,21 +1068,28 @@ test('Team probe read rejects completed evidence after physical config-directory
       readinessOriginCurrent: (origin: LocalModelReadinessOrigin) =>
         captureOpenCodeReadinessOrigin(origin, management, providerId, () => true).isCurrent(),
       prepare: () => ({ timeoutMs: 1000,
-        run: () => {
+        run: async () => {
+          try {
           nativeCalls++;
           if (mode !== 'missing') {
             const descriptor = deferred.descriptor, selected = mode === 'foreign'
               ? DeferredOpenCodeV2FileKey.capture({ ...descriptor, origin: {
                 ...descriptor.origin, value: descriptor.rawKey }, providerId: 'test-foreign',
                 environment: management.environment, isCurrent: () => true }) : deferred;
-            const materializer = createOpenCodeV2FileMaterialization(selected.descriptor, () => {});
+            const policy = { kind: 'protected' as const,
+              key: { version: 1 as const, salt: '1'.repeat(32) }, files: { version: 1 as const, salt: '2'.repeat(32) } };
+            const materializer = createOpenCodeV2FileMaterialization(selected.descriptor, () => {}, policy);
             const actual = selectedFilePaths(selected.descriptor).map(path => materializer.readFileString(path).trim()).join('');
             const nonce = 'c'.repeat(64), integrationId = selected.descriptor.providerId;
             const issuer = { nonce, pid: process.pid, integrationId,
               reference: openCodeV2SelectedSourceReference(selected.descriptor, nonce, integrationId, 'fresh') };
-            accepted = AcceptedOpenCodeV2FileKey.accept(selected, materializer.issue(actual, issuer), issuer, () => true);
+            const password = Buffer.alloc(32, 7).toString('base64url'), nativeRequest = { method: 'POST' as const, deadline: Date.now() + 1000 };
+            await materializer.prepareIssue(actual, issuer, nativeRequest, password);
+            accepted = AcceptedOpenCodeV2FileKey.accept(selected, materializer.issue(actual, issuer), issuer, () => true,
+              { policy, password, request: nativeRequest });
           }
-          return new Promise<boolean>(resolve => { complete = resolve; });
+          return new Promise<boolean>(resolve => { complete = resolve; nativeReady.resolve(); });
+          } catch (error) { nativeReady.reject(error); throw error; }
         },
         readiness: evidence,
         nativeFileKeyWitness: () => {
@@ -1135,6 +1143,7 @@ test('Team probe read rejects completed evidence after physical config-directory
       const admitted = original.readRetainedProbe(request.commandId, request.context);
       assert.equal(admitted.nativeFileKeyWitness, undefined);
       assert.equal(admitted.readinessScope?.accountDigest, undefined);
+      await nativeReady.promise;
       if (mode === 'late') await original.cancelContextual(request.commandId, request.context);
       complete(true);
       await original.awaitPrepared(request.commandId, request.context);
@@ -1163,21 +1172,48 @@ test('Team probe read rejects completed evidence after physical config-directory
         assert.throws(() => captureOpenCodeProbeAccount(management, request, () => true, saved), { code: 'held' });
       } else {
         assert.ok(saved.nativeFileKeyWitness); assert.equal(witnessReads, 1);
-        const account = captureOpenCodeProbeAccount(management, request, () => true, saved); assert.ok(account);
-        assert.equal(account.nativeCredentialScopeDigest, accepted?.scopeDigest);
         const manager = { probes: original, readinessTarget: () => target };
         const capture = () => capturePreparedModelReference({ management: manager, profile: member,
           commandId: request.commandId, context: request.context, ...(mode === 'native' ? { kind: 'native' as const } : {}),
           isCurrent: () => true });
-        const selected = capture();
+        const prepared = await capture(), selected = prepared.reference;
+        const account = captureOpenCodeProbeAccount(management, request, () => true, saved, undefined, prepared.fileKey); assert.ok(account);
+        assert.equal(account.nativeCredentialScopeDigest, accepted?.scopeDigest);
         assert.equal(selected.preparationDigest, managementDigest({ scope: saved.readinessScope,
           anchor: saved.localModelReadinessPreparation ?? null, origin: saved.localModelReadinessOrigin ?? null,
           nativeFileKeyWitness: managementDigest(saved.nativeFileKeyWitness) }));
         const cold = new ModelProbeOwner({ ...ownerOptions, fence: new ManagementResourceFence(recordStore.list()),
           prepare: () => { throw Error('TEST cold account inspection cannot create another probe'); } });
-        try { assert.deepEqual(capturePreparedModelReference({ management: { ...manager, probes: cold }, profile: member,
+        try { assert.deepEqual((await capturePreparedModelReference({ management: { ...manager, probes: cold }, profile: member,
           commandId: request.commandId, context: request.context, ...(mode === 'native' ? { kind: 'native' as const } : {}),
-          isCurrent: () => true }), selected); } finally { await cold.close(); }
+          isCurrent: () => true })).reference, selected); } finally { await cold.close(); }
+        if (mode === 'native') for (const change of ['missing', 'replaced', 'held'] as const) {
+          const reached = Promise.withResolvers<void>(), released = Promise.withResolvers<void>();
+          const retained = AcceptedOpenCodeV2FileKey.retained;
+          const barrier = t.mock.method(AcceptedOpenCodeV2FileKey, 'retained', async (...args: Parameters<typeof retained>) => {
+            try {
+              const proof = await retained(...args);
+              reached.resolve(); await released.promise; return proof;
+            } catch (error) { reached.reject(error); throw error; }
+          });
+          const pending = capture();
+          const refused = assert.rejects(pending, error => error instanceof Error && 'code' in error &&
+            (error.code === 'held' || error.code === 'conflict'));
+          try {
+            await reached.promise;
+            if (change === 'missing') rmSync(join(own.root, 'management-commands', managementDigest(saved.commandId) + '.json'));
+            else if (change === 'replaced') recordStore.write({ ...saved, fingerprint: 'f'.repeat(64) });
+            else {
+              const changed: StoredModelProbe = { ...saved, phase: 'held', ok: false, resourceHeld: true };
+              delete changed.nativeFileKeyWitness; delete changed.readiness; recordStore.write(changed);
+            }
+            const changedBytes = files(join(own.root, 'management-commands'));
+            released.resolve(); await refused;
+            assert.deepEqual(files(join(own.root, 'management-commands')), changedBytes,
+              'post-crypto refusal cannot repair a ' + change + ' original receipt');
+            assert.equal(nativeCalls, 1, 'post-crypto original readback never creates another native probe');
+          } finally { released.resolve(); barrier.mock.restore(); recordStore.write(saved); }
+        }
         const binding = { backendId: own.team.definition.binding.backendId, teamId: member.teamId,
           runId: 'TEST-file-run', memberId: member.memberId, generation: '1' };
         const entry: MemberEntry = { profile: member, baseProfile: structuredClone(member),
@@ -1213,20 +1249,20 @@ test('Team probe read rejects completed evidence after physical config-directory
                 delete changed.nativeFileKeyWitness; delete changed.readiness;
               }
               recordStore.write(changed);
-              try { assert.throws(admit, 'initial admission cannot adopt ' + invalid + ' proof'); }
+              try { await assert.rejects(() => admit(), 'initial admission cannot adopt ' + invalid + ' proof'); }
               finally { recordStore.write(saved); }
               assert.equal(nativeCalls, 1, 'a refused retained receipt cannot create replacement preparation');
             }
-            admit();
+            await admit();
             const attached = launch.readModelReadiness({ binding, configRevision: member.configRevision,
               configurationDigest: runtimeDigest(member) });
             assert.deepEqual(attached.reference, selected);
             assert.equal(attached.consumer.cutoff, saved.expiresAt);
             assert.equal(attached.consumer.initialProfile, undefined, 'the original Linux proof remains a prepared arm');
-            admit();
+            await admit();
             assert.deepEqual(launch.readModelReadiness({ binding, configRevision: member.configRevision,
               configurationDigest: runtimeDigest(member) }), attached, 'same original pending attachment is a read-only replay');
-            assert.throws(() => admit(runtimeDigest('TEST-another-actor')), { code: 'hold' },
+            await assert.rejects(() => admit(runtimeDigest('TEST-another-actor')), { code: 'hold' },
               'another actor cannot replace the retained initial attempt with a new consumer');
             assert.equal(nativeCalls, 1, 'initial attachment replay and refusal never spend a second probe');
             assert.deepEqual(original.readRetainedProbe(request.commandId, request.context), saved,
@@ -1234,22 +1270,24 @@ test('Team probe read rejects completed evidence after physical config-directory
           } else attachMemberModelReadiness({ launch, entry, reference: selected, commandId: 'TEST-consume',
             actorDigest: runtimeDigest('TEST-actor'), inputDigest: runtimeDigest(request), cutoff });
           const consumed = consumeMemberModelReadiness({ management: manager, launch, entry,
+            ...(prepared.fileKey ? { fileKey: prepared.fileKey } : {}),
             hostIncarnation: 'TEST-file-host', assertCurrent() {} });
           assert.equal(consumed.kind, 'preparation'); assert.ok(consumed.assertReadinessCredential);
           let handoffs = 0;
           assert.throws(() => { consumed.assertReadinessCredential!('f'.repeat(64)); handoffs++; }, { code: 'held' });
           assert.equal(handoffs, 0, 'a later foreign native scope is refused before business handoff');
           consumed.assertReadinessCredential(account.nativeCredentialScopeDigest!);
-          captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }).assertCurrent();
+          (await captureNativeRestartReadiness({ management: manager, launch, entry, cutoff, isCurrent: () => true })).assertCurrent();
           if (initialProfile) {
             assert.equal(saved.modelId, member.model,
               'the original native model is retained');
             for (const modelId of ['test-foreign/' + member.model, providerId + '/' + request.modelId]) {
               recordStore.write({ ...saved, modelId });
               try {
-                assert.throws(capture, { code: 'held' });
-                assert.throws(() => captureNativeRestartReadiness({ management: manager, launch, entry,
-                  isCurrent: () => true }), { code: 'held' });
+                // The exact native pair is rejected before retained file-proof verification.
+                await assert.rejects(capture, { code: 'conflict' });
+                await assert.rejects(() => captureNativeRestartReadiness({ management: manager, launch, entry,
+                  cutoff, isCurrent: () => true }), { code: 'conflict' });
               } finally { recordStore.write(saved); }
             }
             assert.deepEqual(original.readRetainedProbe(request.commandId, request.context), saved,
@@ -1258,7 +1296,7 @@ test('Team probe read rejects completed evidence after physical config-directory
           writeFileSync(file, 'TEST-drifted-original-key', { mode: 0o600 });
           assert.equal(account.isCurrent(), false);
           assert.throws(consumed.assertCurrent);
-          assert.throws(() => captureNativeRestartReadiness({ management: manager, launch, entry, isCurrent: () => true }));
+          await assert.rejects(() => captureNativeRestartReadiness({ management: manager, launch, entry, cutoff, isCurrent: () => true }));
           assert.equal(nativeCalls, 1, 'post-close currentness never starts a replacement native owner');
         } finally { launch.seal(); }
       }
@@ -1825,7 +1863,7 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
   const options = { management, team: own.team, source, profiles: compiled.profiles,
     principalId: own.profile.principalId, hostIncarnation: 'TEST-retained-host', transfer,
     admittedAt: Date.now(), isCurrent: () => true };
-  const transferred = captureLaunchModelReadiness(options);
+  const transferred = await captureLaunchModelReadiness(options);
   assert.equal(transferred.groups.length, 1);
   assert.equal(transferred.groups[0]!.commandId, commandId);
   assert.equal(transferred.groups[0]!.context, captured.context);
@@ -1844,26 +1882,26 @@ async function assertRetainedProductRosterTransfer(t: TestContext) {
   ]) {
     try {
       records.write({ ...original, readinessScope: { ...original.readinessScope!, actionDigest } });
-      assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' });
+      await assert.rejects(() => captureLaunchModelReadiness(options), { code: 'held' });
     } finally {
       records.write(original); assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
     }
   }
-  assert.throws(() => captureLaunchModelReadiness({ ...options, transfer: { ...transfer,
+  await assert.rejects(() => captureLaunchModelReadiness({ ...options, transfer: { ...transfer,
     probes: [{ commandId: commandId + '-foreign', selection: payload }] } }), { code: 'conflict' });
-  assert.throws(() => captureLaunchModelReadiness({ ...options, transfer: { ...transfer,
+  await assert.rejects(() => captureLaunchModelReadiness({ ...options, transfer: { ...transfer,
     probes: [{ commandId, selection: { ...payload, model: providerId + '/TEST-other-model' } }] } }), { code: 'conflict' });
   try {
     records.write({ ...original, expiresAt: Date.now() - 1 });
-    assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' });
+    await assert.rejects(() => captureLaunchModelReadiness(options), { code: 'held' });
   } finally {
     records.write(original); assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   }
   t.mock.timers.setTime(original.expiresAt - 1);
-  assert.deepEqual(captureLaunchModelReadiness(options), transferred,
+  assert.deepEqual(await captureLaunchModelReadiness(options), transferred,
     'the original readiness remains usable strictly before its unchanged cutoff');
   t.mock.timers.setTime(original.expiresAt);
-  assert.throws(() => captureLaunchModelReadiness(options), { code: 'held' },
+  await assert.rejects(() => captureLaunchModelReadiness(options), { code: 'held' },
     'the original readiness expires exactly at its cutoff without any lease extension');
   assert.deepEqual(files(join(own.root, 'management-commands')), originalBytes);
   assert.equal(runs, 1); assert.equal(closes, 1); assert.equal(allocations, 0);

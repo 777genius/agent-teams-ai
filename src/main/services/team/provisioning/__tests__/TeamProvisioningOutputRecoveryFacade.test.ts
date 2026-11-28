@@ -151,6 +151,7 @@ function makeService(): TeamProvisioningOutputRecoveryFacadeServiceAdapter<TestR
     appendCliLogs: vi.fn(),
     handleStreamJsonMessage: vi.fn(),
     shiftProvisioningOutputIndexesAfterRemoval: vi.fn(),
+    assertTeamBudgetAdmission: vi.fn(async () => undefined),
     getStopAllTeamsGeneration: vi.fn(() => 7),
     stopFilesystemMonitor(this: { events: string[] }) {
       this.events.push('stop-fs');
@@ -231,6 +232,8 @@ describe('TeamProvisioningOutputRecoveryFacade', () => {
     deps.service.updateProgress(run, 'spawning', 'Starting');
     deps.service.emitLogsProgress(run);
     expect(deps.service.getStopAllTeamsGeneration()).toBe(7);
+    await deps.service.assertTeamBudgetAdmission(run.teamName);
+    expect(service.assertTeamBudgetAdmission).toHaveBeenCalledWith(run.teamName);
     deps.service.stopFilesystemMonitor(run);
     deps.service.startFilesystemMonitor(run, run.request);
     await deps.service.tryCompleteAfterTimeout(run);

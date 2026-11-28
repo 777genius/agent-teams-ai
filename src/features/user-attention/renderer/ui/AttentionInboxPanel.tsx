@@ -7,7 +7,16 @@ import { Input } from '@renderer/components/ui/input';
 import { agentAvatarUrl, displayMemberName } from '@renderer/utils/memberHelpers';
 import { AlertCircle, Inbox, MessageCircle, RefreshCw } from 'lucide-react';
 
+import {
+  attentionFilterCount,
+  type AttentionFilters,
+  attentionTeamOptions,
+  DEFAULT_ATTENTION_FILTERS,
+  filterAttentionEntries,
+} from '../view-models/filterAttentionEntries';
 import { relativeAttentionAge, toAttentionChatRow } from '../view-models/toAttentionChatRow';
+
+import { AttentionFiltersDialog } from './AttentionFiltersDialog';
 
 import type { AttentionTaskCandidate } from '../../contracts';
 import type { AttentionChat, AttentionModel } from '../../core/domain/buildAttention';
@@ -39,33 +48,28 @@ export const AttentionInboxPanel = ({
   const [taskLimit, setTaskLimit] = useState(variant === 'compact' ? 8 : 50);
   const [chatLimit, setChatLimit] = useState(variant === 'compact' ? 8 : 50);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<AttentionFilters>({ ...DEFAULT_ATTENTION_FILTERS });
 
   useEffect(() => {
     const interval = window.setInterval(() => setNow(Date.now()), 60_000);
     return () => window.clearInterval(interval);
   }, []);
 
-  // Tasks are decisions: prioritize the longest known wait. Chats are updates:
-  // newest unread first. Separate caps prevent either type hiding the other.
-  const { tasks, chats } = useMemo(() => {
-    const search = variant === 'full' ? searchQuery.trim().toLocaleLowerCase() : '';
-    const matches = (...values: Array<string | undefined>): boolean =>
-      !search || values.some((value) => value?.toLocaleLowerCase().includes(search));
-    return {
-      tasks: (model?.tasks ?? []).filter((task) =>
-        matches(task.subject, task.teamName, task.teamDisplayName, task.owner)
-      ),
-      chats: (model?.chats ?? []).filter((chat) =>
-        matches(
-          chat.name,
-          chat.teamName,
-          chat.teamDisplayName,
-          chat.latestUnread.from,
-          chat.latestUnread.text
-        )
-      ),
-    };
-  }, [model, searchQuery, variant]);
+  // One shared pure policy combines search and the full-page filters.
+  // The compact Dashboard always shows the original unfiltered priority order.
+  const applied = variant === 'full' ? filters : DEFAULT_ATTENTION_FILTERS;
+  const { tasks, chats } = useMemo(
+    () => filterAttentionEntries(model, applied, variant === 'full' ? searchQuery : '', now),
+    [model, applied, searchQuery, variant, now]
+  );
+  const teams = useMemo(() => attentionTeamOptions(model), [model]);
+  const filteredEmpty =
+    variant === 'full' &&
+    model?.complete &&
+    (searchQuery.trim().length > 0 || attentionFilterCount(filters) > 0) &&
+    tasks.length === 0 &&
+    chats.length === 0;
+
   const shownTasks = tasks.slice(0, taskLimit);
   const shownChats = chats.slice(0, chatLimit);
   const empty =
@@ -143,19 +147,30 @@ export const AttentionInboxPanel = ({
         </div>
       </header>
 
-      {variant === 'full' && model && (model.taskCount > 0 || model.chatCount > 0) && (
-        <Input
-          type="search"
-          aria-label={t('search.placeholder')}
-          placeholder={t('search.placeholder')}
-          value={searchQuery}
-          onChange={(event) => {
-            setSearchQuery(event.target.value);
-            setTaskLimit(50);
-            setChatLimit(50);
-          }}
-          className="mb-4"
-        />
+      {variant === 'full' && (
+        <div className="mb-4 flex min-w-0 items-center gap-2">
+          <Input
+            type="search"
+            aria-label={t('search.placeholder')}
+            placeholder={t('search.placeholder')}
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setTaskLimit(50);
+              setChatLimit(50);
+            }}
+            className="min-w-0 flex-1"
+          />
+          <AttentionFiltersDialog
+            filters={filters}
+            teams={teams}
+            onApply={(next) => {
+              setFilters(next);
+              setTaskLimit(50);
+              setChatLimit(50);
+            }}
+          />
+        </div>
       )}
 
       {loading && !model && (
@@ -179,13 +194,9 @@ export const AttentionInboxPanel = ({
       {empty && variant === 'full' && (
         <p className="py-2 text-sm text-text-secondary">{t('attention.nothing')}</p>
       )}
-      {variant === 'full' &&
-        searchQuery.trim() &&
-        tasks.length === 0 &&
-        chats.length === 0 &&
-        model?.complete && (
-          <p className="py-4 text-xs text-text-secondary">{t('search.noResults')}</p>
-        )}
+      {!empty && filteredEmpty && (
+        <p className="py-4 text-xs text-text-secondary">{t('search.noResults')}</p>
+      )}
 
       <div
         data-testid="attention-sections"

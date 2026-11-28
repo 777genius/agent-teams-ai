@@ -465,7 +465,17 @@
       "project": "Project",
       "loadFailed": "Failed to load budget settings",
       "notificationSettings": "Notification settings",
-      "saveFailed": "Failed to save budget settings"
+      "saveFailed": "Failed to save budget settings",
+      "teamCardBudget": "每月预算",
+      "teamCardUnknown": "使用量未知",
+      "teamCardBlocked": "已达上限 - 禁止启动",
+      "editor": {
+        "onExceeded": "达到预算上限时的操作",
+        "notifyOnly": "仅通知",
+        "blockLaunch": "阻止团队的新启动",
+        "stopTeam": "停止正在运行的团队并阻止启动",
+        "enforcementHint": "使用数据缺失或延迟时，将阻止新启动。费用为估算值，实际账单可能超过限额。"
+      }
     }
   }
 }

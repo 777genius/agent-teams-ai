@@ -40,6 +40,7 @@ export const RUN_SUPERSESSION_POLICY = {
     'landing-hetzner-release',
     'notification-channels-desktop-e2e',
     'opencode-desktop-e2e',
+    'opencode-local-provider-app-launch',
     'opencode-v2-cold-dashboard-e2e',
     'opencode-v2-stage1-preflight',
     'provider-real-runtime-e2e',

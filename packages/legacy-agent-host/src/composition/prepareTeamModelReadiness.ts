@@ -6,23 +6,17 @@ import { replaceRosterPayloadSchema } from '../team/rosterSchema.js';
 import { teamModelProbeSelectionSchema } from './teamLaunchModelProbe.js';
 import { teamModelProbeProfile, teamModelProbeEffort, teamModelProbeActionDigest } from './teamLaunchModelProbe.js';
 import { actualCaptureReadinessCommandId, modelReadinessMechanismDigest } from '../team-launch/launchReadiness.js';
-import { captureOpenCodeConfigurationSource } from '../adapters/providers/OpenCodeConfigurationSource.js';
 import { captureOpenCodeReadinessOrigin, captureReadinessPreparation,
   originalReadinessSubset } from '../adapters/providers/OpenCodeReadinessOrigin.js';
-import { captureOpenCodeV2Configuration } from '../adapters/providers/OpenCodeV2CapturedConfiguration.js';
-import { OpenCodeV2CredentialScope } from '../adapters/providers/OpenCodeV2CredentialScope.js';
-import { AcceptedOpenCodeV2FileKey } from '../adapters/providers/OpenCodeV2SelectedFileKey.js';
 import { ManagementCommandError } from '../management/commandRecords.js';
 import { nativeLocalReadinessPurpose } from '../management/ModelProbeOwner.js';
-import { managementDigest } from '../management/identity.js';
+import { managementDigest, managementValuesEqual } from '../management/identity.js';
 import { runtimeDigest } from '../runtime/identity.js';
-import { assertOpenCodeV2NativeModel } from './openCodeV2ModelSelection.js';
 import { inspectInitialRuntimeModelAdmission } from './initialRuntimeModelAdmission.js';
 import { captureTeamProbePreparation, hasV1NativeModelProbeIdentity } from './captureTeamProbePreparation.js';
 import type { TeamProbeManagement } from './captureTeamProbePreparation.js';
 import type { RuntimeSourceProcessOrigin } from './runtimeSourceProcessOrigin.js';
 
-import type { ModelProbeInput } from '../management/ModelProbeOwner.js';
 import type { ModelReadinessProbeScope, ModelReadinessReference, ReadinessPreparationAnchor,
   LocalModelReadinessOrigin, StoredModelProbe } from '../management/commandRecords.js';
 import type { LocalModelReadinessPreparation } from '../management/commandRecords.js';
@@ -36,6 +30,10 @@ import type { RuntimeCaptureSource } from './runtimeCaptureSource.js';
 import type { LaunchReadinessCaptureAdmission } from '../team-launch/launchReadiness.js';
 import type { CreateTeamLaunchPreparationInput } from '../team-registry/createLaunchContracts.js';
 import type { RuntimeBinding } from '../runtime/contracts.js';
+import { captureOpenCodeProbeAccount, captureOpenCodeProbeAccountInspection, prepareOpenCodeProbeFileKey } from './openCodeProbeAccount.js';
+import type { PreparedModelFileKey } from './openCodeProbeAccount.js';
+export { captureOpenCodeProbeAccount } from './openCodeProbeAccount.js';
+export type { PreparedModelFileKey } from './openCodeProbeAccount.js';
 import { projectReadinessLocatorSchema } from '../team-project-context/contracts.js';
 import { assertProjectReadinessTransfer } from '../team-project-context/projectReadinessTransfer.js';
 import { readCreatedProjectReadinessTransfer } from '../team-project-context/projectReadinessTransfer.js';
@@ -67,14 +65,116 @@ export type CaptureModelReadinessTransfer = LocalModelReadinessTransfer | Creati
 export type LocalModelReadinessAction = {
   preparation: LocalModelReadinessPreparation; owner: unknown; handleId: string; scope: unknown;
 };
+export interface PreparedModelReadinessReference {
+  readonly reference: ModelReadinessReference;
+  readonly fileKey?: PreparedModelFileKey;
+}
+type ReadinessLaunch = Pick<TeamLaunchOwner, 'readModelReadiness'>;
+type FileHandoffOptions = {
+  launch: ReadinessLaunch; entry: MemberEntry; hostIncarnation: string; assertCurrent(): void;
+};
+export interface MemberModelReadinessFileHandoff {
+  readonly launch: ReadinessLaunch;
+  readonly entry: MemberEntry;
+  readonly prepared: PreparedModelReadinessReference & { readonly fileKey: PreparedModelFileKey };
+  readonly bindingDigest: string;
+  readonly configurationDigest: string;
+  readonly baseConfigurationDigest: string;
+  readonly requestDigest: string;
+  readonly expectedAttemptId: string;
+  readonly hostIncarnation: string;
+  readonly cutoff: number;
+}
 
 const object = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 function held(): never { throw new ManagementCommandError('held'); }
 
-function openCodeModelId(providerId: string, modelId: string): string {
-  return modelId.startsWith(providerId + '/') ? modelId.slice(providerId.length + 1) : modelId;
+/** A competing invocation cannot retire a consumer while its original factory is queued. */
+export function assertMemberModelReadinessFileHandoffsAvailable(entries: readonly MemberEntry[]): void {
+  if (entries.some(entry => entry.modelReadinessFileHandoff !== undefined)) held();
 }
+
+function checkFileHandoff(options: FileHandoffOptions, handoff: MemberModelReadinessFileHandoff) {
+  const { entry } = options;
+  options.assertCurrent();
+  if (handoff.launch !== options.launch || handoff.entry !== entry ||
+      handoff.hostIncarnation !== options.hostIncarnation ||
+      handoff.bindingDigest !== runtimeDigest(entry.binding) ||
+      handoff.configurationDigest !== runtimeDigest(entry.profile) ||
+      handoff.baseConfigurationDigest !== runtimeDigest(entry.baseProfile) ||
+      handoff.requestDigest !== runtimeDigest(entry.config)) held();
+  const current = options.launch.readModelReadiness({ binding: entry.binding,
+    configRevision: entry.profile.configRevision, configurationDigest: handoff.configurationDigest });
+  if (!current.reference || !managementValuesEqual(current.reference, handoff.prepared.reference) ||
+      current.consumer.baseConfigurationDigest !== handoff.baseConfigurationDigest ||
+      current.consumer.cutoff !== handoff.cutoff || Date.now() >= handoff.cutoff ||
+      !handoff.prepared.fileKey.proof.filesCurrent()) held();
+  options.assertCurrent();
+  return current;
+}
+
+export function installMemberModelReadinessFileKey(options: FileHandoffOptions & {
+  prepared: PreparedModelReadinessReference; expectedAttemptId: string;
+}): MemberModelReadinessFileHandoff | undefined {
+  options.assertCurrent();
+  assertMemberModelReadinessFileHandoffsAvailable([options.entry]);
+  const { fileKey, reference } = options.prepared, entry = options.entry;
+  if (!fileKey) return undefined;
+  if (fileKey.commandId !== reference.commandId || fileKey.context !== reference.context) held();
+  const current = options.launch.readModelReadiness({ binding: entry.binding,
+    configRevision: entry.profile.configRevision, configurationDigest: runtimeDigest(entry.profile) });
+  if (current.consumer.cutoff === undefined) held();
+  const handoff: MemberModelReadinessFileHandoff = Object.freeze({
+    launch: options.launch, entry, hostIncarnation: options.hostIncarnation,
+    expectedAttemptId: options.expectedAttemptId, cutoff: current.consumer.cutoff,
+    prepared: Object.freeze({ reference: Object.freeze(structuredClone(reference)), fileKey: Object.freeze({ ...fileKey }) }),
+    bindingDigest: runtimeDigest(entry.binding), configurationDigest: runtimeDigest(entry.profile),
+    baseConfigurationDigest: runtimeDigest(entry.baseProfile), requestDigest: runtimeDigest(entry.config),
+  });
+  checkFileHandoff(options, handoff);
+  assertMemberModelReadinessFileHandoffsAvailable([entry]);
+  entry.modelReadinessFileHandoff = handoff;
+  return handoff;
+}
+
+export function readMemberModelReadinessFileKey(options: FileHandoffOptions): PreparedModelFileKey | undefined {
+  const handoff = options.entry.modelReadinessFileHandoff;
+  if (!handoff) return undefined;
+  checkFileHandoff(options, handoff);
+  return handoff.prepared.fileKey;
+}
+
+function pendingFileHandoff(current: ReturnType<ReadinessLaunch['readModelReadiness']>, handoff: MemberModelReadinessFileHandoff): boolean {
+  const { attempt, consumer } = current;
+  return consumer.disposition === 'pending' && attempt.attemptId === handoff.expectedAttemptId &&
+    attempt.hostIncarnation === handoff.hostIncarnation && attempt.claimed && !attempt.noAllocation &&
+    attempt.status === 'pending-bootstrap' && attempt.reason === 'opening' && attempt.startedAtMs > 0 &&
+    attempt.deadlineMs > attempt.startedAtMs && Date.now() < attempt.deadlineMs;
+}
+
+export function takeMemberModelReadinessFileKey(options: FileHandoffOptions & {
+  config: MemberEntry['config'];
+}): PreparedModelFileKey | undefined {
+  const handoff = options.entry.modelReadinessFileHandoff;
+  if (!handoff) return undefined;
+  if (runtimeDigest(options.config) !== handoff.requestDigest ||
+      !pendingFileHandoff(checkFileHandoff(options, handoff), handoff) ||
+      options.entry.modelReadinessFileHandoff !== handoff) held();
+  delete options.entry.modelReadinessFileHandoff;
+  return handoff.prepared.fileKey;
+}
+
+export function settleMemberModelReadinessFileHandoff(options: FileHandoffOptions & {
+  handoff: MemberModelReadinessFileHandoff | undefined;
+}): void {
+  const { entry, handoff } = options;
+  if (!handoff || entry.modelReadinessFileHandoff !== handoff) return;
+  try { if (pendingFileHandoff(checkFileHandoff(options, handoff), handoff)) return; }
+  catch { /* A failed read only discards this invocation's unused material. */ }
+  if (entry.modelReadinessFileHandoff === handoff) delete entry.modelReadinessFileHandoff;
+}
+
 function sameCapturedModel(profile: OpenCodeManagementProfile, providerId: string,
   actual: string, expected: string): boolean {
   // Private producers persist profile.model unchanged. A pre-fix V1 probe could have
@@ -83,166 +183,8 @@ function sameCapturedModel(profile: OpenCodeManagementProfile, providerId: strin
     !expected.startsWith(providerId + '/') || hasV1NativeModelProbeIdentity(profile));
 }
 
-/** The original URL classifier's loopback branch only; no DNS, metadata or network observation. */
-function loopback(value: unknown): boolean {
-  if (typeof value !== 'string') return false;
-  let url: URL;
-  try { url = new URL(value.trim()); } catch { return false; }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash)
-    return false;
-  let hostname = url.hostname.toLowerCase().replace(/(?:^\[|\]$)/g, '');
-  if (hostname.includes(':')) {
-    const mapped = /^\[::ffff:([a-f0-9]+):([a-f0-9]+)\]$/.exec(new URL('https://[' + hostname + ']').hostname);
-    if (mapped) {
-      const high = Number.parseInt(mapped[1]!, 16), low = Number.parseInt(mapped[2]!, 16);
-      hostname = [high >>> 8, high & 255, low >>> 8, low & 255].join('.');
-    }
-  }
-  const octets = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(hostname)?.slice(1).map(Number);
-  return hostname === 'localhost' || hostname.endsWith('.localhost') || hostname === '::1' ||
-    !!octets?.every(value => value <= 255) && octets[0] === 127;
-}
-
-/** Existing private configuration/key readers only. No native allocation or inference. */
-export function captureOpenCodeProbeAccount(
-  profile: OpenCodeManagementProfile,
-  input: Pick<ModelProbeInput, 'providerId' | 'modelId'>,
-  ownerCurrent: () => boolean,
-  original?: Readonly<StoredModelProbe>,
-  capturedOrigin = original?.localModelReadinessOrigin
-): { digest: string; isCurrent(): boolean; nativeCredentialScopeDigest?: string } | undefined {
-  return captureOpenCodeProbeAccountInspection(profile, input, ownerCurrent, original, capturedOrigin)?.account;
-}
-
-/** The same synchronous account inspection also owns its freshly captured policy inspector. */
-function captureOpenCodeProbeAccountInspection(
-  profile: OpenCodeManagementProfile,
-  input: Pick<ModelProbeInput, 'providerId' | 'modelId'>,
-  ownerCurrent: () => boolean,
-  original?: Readonly<StoredModelProbe>,
-  capturedOrigin = original?.localModelReadinessOrigin,
-  memberTarget?: () => ReturnType<ProviderManagementCoordinator['readinessTarget']>
-): {
-  account: NonNullable<ReturnType<typeof captureOpenCodeProbeAccount>>;
-  origin: ReturnType<typeof captureOpenCodeReadinessOrigin> | undefined;
-  memberReference?: {
-    target: ReturnType<ProviderManagementCoordinator['readinessTarget']>;
-    originCurrent: boolean; accountDigest: string;
-  };
-} | undefined {
-  if (profile.nativeGeneration === 'v2') assertOpenCodeV2NativeModel(profile, input);
-  // The original declaration is only a hint; the complete source observation below
-  // must confirm it before grouping this private, synchronous, read-only inspection.
-  const workspace = memberTarget && capturedOrigin?.workspaces.find(row => row.path === profile.cwd);
-  const declared = workspace && ((!workspace.project.invalid &&
-    workspace.project.providers.find(row => row.providerId === input.providerId)) ||
-    (!('notConsulted' in workspace.global) &&
-      workspace.global.providers.find(row => row.providerId === input.providerId)));
-  const bracket = memberTarget !== undefined && profile.nativeGeneration !== 'v2' &&
-    original !== undefined && original.nativeFileKeyWitness === undefined &&
-    !!declared && declared.hasConfiguredApiKey === true;
-  const before = bracket && capturedOrigin
-    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined;
-  if (bracket && before?.policy?.hasConfiguredApiKey !== true) held();
-  const resolve = (value: unknown): unknown => {
-    if (typeof value !== 'string') return value;
-    if (value.includes('{file:')) return held();
-    return value.replace(/\{env:([A-Za-z_][A-Za-z0-9_]*)\}|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/gu,
-      (_match: string, braced: string | undefined, shell: string | undefined) => {
-        const selected = profile.environment[braced ?? shell!];
-        if (selected === undefined || selected.includes('\0')) return held();
-        return selected;
-      });
-  };
-  let capturedConfig: Record<string, unknown> | undefined, capturedConfiguredKey: unknown;
-  const source = captureOpenCodeConfigurationSource(profile,
-    profile.nativeGeneration === 'v2' ? profile.embedded?.configurationSource : undefined, ownerCurrent, undefined,
-    bracket ? value => {
-      capturedConfig = value;
-      const provider = object(value.provider) ? value.provider[input.providerId] : undefined;
-      const apiKey = object(provider) && object(provider.options) ? provider.options.apiKey : undefined;
-      capturedConfiguredKey = typeof apiKey === 'string' && apiKey.includes('{file:') ? apiKey : resolve(apiKey);
-    } : undefined);
-  const policy = before ?? (capturedOrigin
-    ? captureOpenCodeReadinessOrigin(capturedOrigin, profile, input.providerId, ownerCurrent) : undefined);
-  const raw = bracket ? capturedConfig ?? held() : source.read();
-  const provider = object(raw.provider) ? raw.provider[input.providerId] : undefined;
-  const options = object(provider) && object(provider.options) ? provider.options : {};
-  const configuredKey = bracket ? capturedConfiguredKey : ((policy || profile.nativeGeneration === 'v2') &&
-    typeof options.apiKey === 'string' && options.apiKey.includes('{file:') ? options.apiKey : resolve(options.apiKey));
-  const selectedUrl = policy ? policy.policy?.baseUrl
-    : object(provider) && provider.npm === '@ai-sdk/openai-compatible' ? resolve(options.baseURL) : undefined;
-  const configured = policy?.policy?.hasConfiguredApiKey ??
-    (typeof configuredKey === 'string' && Boolean(configuredKey.trim()));
-  const modelId = profile.nativeGeneration === 'v2' ? input.modelId
-    : openCodeModelId(input.providerId, input.modelId);
-  const configuration = profile.nativeGeneration === 'v2' && profile.embedded?.configurationSource
-    ? captureOpenCodeV2Configuration(profile, { providerId: input.providerId, modelId }, ownerCurrent,
-      'model', { source, config: raw }) : undefined;
-  const needsKey = !configuration?.selectedFile && (profile.nativeGeneration === 'v2' || loopback(selectedUrl) && !configured);
-  const fallbackKey = needsKey && !configuration?.key
-    ? new OpenCodeV2CredentialScope(profile, input.providerId, source.isCurrent).capture() : undefined;
-  const key = needsKey ? configuration?.key ?? fallbackKey : undefined;
-  const v2Fallback = profile.nativeGeneration === 'v2' ? fallbackKey : undefined;
-  let fileProof: AcceptedOpenCodeV2FileKey | undefined;
-  const nativeCurrent = () => {
-    try {
-      // This locally captured fallback brackets every auth read with the exact
-      // source's fresh config and owner checks, including absent source files.
-      if (v2Fallback !== undefined)
-        return v2Fallback.isCurrent() && (fileProof?.filesCurrent() ?? true);
-      // The private V1 bracket enters the same full owner check in source.isCurrent().
-      if (!bracket && !ownerCurrent()) return false;
-      // A nominal configuration key carries configuration.isCurrent itself.
-      // Only a separate fallback key needs another check after that same callback.
-      return source.isCurrent() && (configuration?.isCurrent() ?? true) &&
-        (key === configuration?.key || (key?.isCurrent() ?? true)) && (fileProof?.filesCurrent() ?? true);
-    } catch { return false; }
-  };
-  const current = () => {
-    try { return nativeCurrent() && (policy?.isCurrent() ?? true); } catch { return false; }
-  };
-  if (!bracket && !current()) held();
-  if (configuration?.selectedFile) {
-    // Initial scope commits the original source/selection but cannot invent its future native key.
-    if (!original) return undefined;
-    const assertOriginal = () => {
-      if (!current() || original.phase !== 'completed' || !original.ok || original.resourceHeld ||
-          !original.context || original.profileId !== profile.profileId || original.configRevision !== profile.configRevision ||
-          original.providerId !== input.providerId ||
-          (profile.nativeGeneration === 'v2' ? original.modelId !== input.modelId
-            : original.modelId !== input.modelId && `${input.providerId}/${original.modelId}` !== input.modelId) ||
-          (original.purpose === undefined ? original.readinessScope?.kind !== 'native' :
-            original.purpose !== nativeLocalReadinessPurpose || !original.readiness || original.readiness.context !== original.context ||
-            original.readiness.selectionDigest !== original.selectionDigest ||
-            original.readiness.evidence.ordinary !== 'confirmed' || original.readiness.evidence.decision !== 'allow')) held();
-    };
-    assertOriginal();
-    if (!original.nativeFileKeyWitness) held();
-    fileProof = AcceptedOpenCodeV2FileKey.retained(configuration.selectedFile, original.nativeFileKeyWitness, assertOriginal);
-  }
-  if (original?.nativeFileKeyWitness !== undefined && !fileProof) held();
-  const nativeCredentialScopeDigest = fileProof?.scopeDigest ?? (key?.present ? key.digest : undefined);
-  const account = {
-    digest: managementDigest({ binding: profile.accountBinding, key: fileProof?.scopeDigest ?? key?.digest ?? null,
-      configuredKey: typeof configuredKey === 'string' ? configuredKey : null }),
-    isCurrent: current,
-    ...(profile.nativeGeneration === 'v2' && nativeCredentialScopeDigest !== undefined ? { nativeCredentialScopeDigest } : {}),
-  };
-  if (bracket) {
-    // The pure configured-key read is inside source capture's closing freshness check.
-    // No source effect/await intervenes; future account checks still use nativeCurrent.
-    if (configuration || key || fileProof) held();
-    const target = memberTarget!();
-    return { account, origin: policy, memberReference: {
-      target, originCurrent: policy!.isCurrent(), accountDigest: account.digest,
-    } };
-  }
-  return { account, origin: policy };
-}
-
 /** Caller already validated its exact product publication; this never admits a replacement profile. */
-export function capturePreparedModelReference(options: {
+export async function capturePreparedModelReference(options: {
   management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   profile: RuntimeMemberProfile;
   commandId: string;
@@ -251,11 +193,22 @@ export function capturePreparedModelReference(options: {
   isCurrent(): boolean;
   withAccountRead?: <T>(read: () => T) => T;
   observeAccount?(account: ReturnType<typeof captureOpenCodeProbeAccount>): void;
-}): ModelReadinessReference {
-  return readPreparedModelReference(options);
+}): Promise<PreparedModelReadinessReference> {
+  // V1/non-file account fencing retains its original single qualified snapshot.
+  if (options.profile.provider !== 'opencode' || options.profile.nativeGeneration !== 'v2')
+    return { reference: readPreparedModelReference(options) };
+  const readOriginal = () => options.management.probes.readRetainedProbe(options.commandId, options.context);
+  const original = readOriginal();
+  if (original.nativeFileKeyWitness === undefined) return { reference: readPreparedModelReference(options) };
+  const profile = { ...teamModelProbeProfile(options.profile),
+    profileId: original.profileId, configRevision: original.configRevision };
+  if (profile.provider !== 'opencode') held();
+  const fileKey = await prepareOpenCodeProbeFileKey({ ...options, profile, original, readOriginal });
+  if (!fileKey) held();
+  return { reference: readPreparedModelReference({ ...options, fileKey }), fileKey };
 }
 
-function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0],
+function readPreparedModelReference(options: Parameters<typeof capturePreparedModelReference>[0] & { fileKey?: PreparedModelFileKey },
   memberInspection = false, accountTiming?: () => () => void): ModelReadinessReference {
   return options.management.probes.captureReadinessReference(options.commandId, options.context, saved => {
     const inspect = () => {
@@ -276,7 +229,8 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
       const endAccount = accountTiming?.();
       try {
         inspected = captureOpenCodeProbeAccountInspection(candidate, saved, options.isCurrent, saved,
-          saved.localModelReadinessOrigin, memberInspection ? () => options.management.readinessTarget(candidate) : undefined);
+          saved.localModelReadinessOrigin, memberInspection ? () => options.management.readinessTarget(candidate) : undefined,
+          options.fileKey);
       } finally { endAccount?.(); }
     }
     if (inspected?.memberReference) {
@@ -295,6 +249,37 @@ function readPreparedModelReference(options: Parameters<typeof capturePreparedMo
     };
     return options.withAccountRead ? options.withAccountRead(inspect) : inspect();
   });
+}
+
+export function assertPreparedMemberModelReadiness(options: {
+  management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
+  profile: RuntimeMemberProfile; prepared: PreparedModelReadinessReference; isCurrent(): boolean;
+  withAccountRead?: <T>(read: () => T) => T;
+}): void {
+  const { reference, fileKey } = options.prepared;
+  const current = readPreparedModelReference({ ...options, commandId: reference.commandId, context: reference.context,
+    ...(reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}), ...(fileKey ? { fileKey } : {}) });
+  if (!managementValuesEqual(reference, current)) held();
+}
+
+/** An existing consumer is observed only; a retry advances it solely in the launch owner. */
+export async function prepareMemberModelReadiness(options: {
+  management?: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
+  launch: TeamLaunchOwner; entry: MemberEntry; isCurrent(): boolean;
+  withAccountRead?: <T>(read: () => T) => T;
+}): Promise<PreparedModelReadinessReference | undefined> {
+  if (!options.isCurrent()) held();
+  const selected = { binding: structuredClone(options.entry.binding), configRevision: options.entry.profile.configRevision,
+    configurationDigest: runtimeDigest(options.entry.profile) };
+  const original = options.launch.readModelReadiness(selected);
+  if (original.consumer.continuation || original.consumer.initialProfile) return undefined;
+  if (!options.management || !original.reference) held();
+  const prepared = await capturePreparedModelReference({ ...options, management: options.management,
+    profile: options.entry.profile, commandId: original.reference.commandId, context: original.reference.context,
+    ...(original.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}) });
+  if (!options.isCurrent() || !managementValuesEqual(original, options.launch.readModelReadiness(selected)) ||
+      !managementValuesEqual(original.reference, prepared.reference)) held();
+  return prepared;
 }
 
 export function attachMemberModelReadiness(options: {
@@ -320,7 +305,7 @@ export async function prepareCapturedLaunchReadiness(options: {
   management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: TeamLaunchOwner; entries: readonly MemberEntry[]; commandId: string; payload: unknown;
   principalId: string; isCurrent(): boolean;
-}): Promise<void> {
+}): Promise<{ references: Map<string, PreparedModelReadinessReference>; cutoff: number } | undefined> {
   const summary = options.launch.read();
   const eligible = new Set(options.launch.readModelProbeSelection('read').memberIds);
   const selected = options.entries.filter(entry => entry.profile.provider === 'opencode' &&
@@ -339,7 +324,7 @@ export async function prepareCapturedLaunchReadiness(options: {
     }
     catch { return false; }
   };
-  const prepared: { entry: MemberEntry; reference: ModelReadinessReference }[] = [];
+  const references = new Map<string, PreparedModelReadinessReference>();
   for (const entry of selected) {
     const target = capture.targets.find(row => row.memberId === entry.profile.memberId);
     if (!target || target.retired || runtimeDigest(entry.team.definition.binding) !== capture.teamBindingDigest) held();
@@ -356,15 +341,13 @@ export async function prepareCapturedLaunchReadiness(options: {
       : options.management.probes.readRetainedProbe(commandId, target.originalContext);
     if (changed) await options.management.probes.awaitPrepared(commandId, original.context!);
     if (!current()) held();
-    const reference = capturePreparedModelReference({ management: options.management, profile: entry.profile,
+    const prepared = await capturePreparedModelReference({ management: options.management, profile: entry.profile,
       commandId, context: original.context!, isCurrent: current });
-    if (!changed && runtimeDigest(options.launch.readModelReadinessGroup(commandId) ?? null) !== runtimeDigest(reference)) held();
-    prepared.push({ entry, reference });
+    if (!changed && runtimeDigest(options.launch.readModelReadinessGroup(commandId) ?? null) !== runtimeDigest(prepared.reference)) held();
+    references.set(entry.profile.memberId, prepared);
   }
   if (!current()) held();
-  for (const { entry, reference } of prepared) attachMemberModelReadiness({ ...options, entry, reference,
-    actorDigest: runtimeDigest(entry.team.owner.withLaunchAuthority(options.principalId, 'control', revision =>
-      ({ principalId: options.principalId, revision }))), inputDigest: runtimeDigest(options.payload), cutoff: capture.cutoff });
+  return { references, cutoff: capture.cutoff };
 }
 
 /** Synchronous allocation check; no preparation/native effects are allowed at this boundary. */
@@ -373,6 +356,7 @@ export function inspectMemberModelReadiness(options: {
   launch: TeamLaunchOwner; entry: MemberEntry; assertCurrent(): void;
   withAccountRead?: <T>(read: () => T) => T;
   authorityTiming?: ModelReadinessAuthorityTiming;
+  fileKey?: PreparedModelFileKey;
   hostIncarnation: string; phase?: 'preclaim' | 'allocation';
 }): { assertCurrent(): void; consumerId: string; kind: 'preparation' | 'continuation' | 'initial';
   reference?: ModelReadinessReference; assertReadinessCredential?(scopeDigest: string): void } {
@@ -416,6 +400,7 @@ export function inspectMemberModelReadiness(options: {
       boundary?.('reference');
       const observed = readPreparedModelReference({ management: options.management, profile: entry.profile,
         commandId: current.reference.commandId, context: current.reference.context,
+        ...(options.fileKey ? { fileKey: options.fileKey } : {}),
         ...(options.withAccountRead ? { withAccountRead: options.withAccountRead } : {}),
         ...(current.reference.purpose === 'ordinary' ? { kind: 'native' as const } : {}),
         observeAccount: value => { if (value) observedAccount.value = value; else delete observedAccount.value; },
@@ -494,13 +479,16 @@ export function attachCheckpointModelReadiness(launch: TeamLaunchOwner, entry: M
 }
 
 /** Only the original captured native action can use these unchanged source facts for a new Restart. */
-export function captureNativeRestartReadiness(options: {
+export async function captureNativeRestartReadiness(options: {
   management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   launch: Pick<TeamLaunchOwner, 'readModelReadinessSource'>; entry: MemberEntry; isCurrent(): boolean;
+  cutoff: number;
 }) {
   const { entry, management } = options;
-  const source = options.launch.readModelReadinessSource({ binding: entry.binding,
-    configRevision: entry.profile.configRevision, configurationDigest: runtimeDigest(entry.profile) });
+  const selected = { binding: structuredClone(entry.binding), configRevision: entry.profile.configRevision,
+    configurationDigest: runtimeDigest(entry.profile) };
+  const readSource = () => options.launch.readModelReadinessSource(selected);
+  const source = readSource();
   if (!source?.reference || source.consumer.baseConfigurationDigest !== runtimeDigest(entry.baseProfile)) held();
   const reference = source.reference;
   const profile = { ...teamModelProbeProfile(entry.profile),
@@ -508,22 +496,30 @@ export function captureNativeRestartReadiness(options: {
   if (profile.provider !== 'opencode' || entry.profile.provider !== 'opencode' ||
       modelReadinessMechanismDigest(profile) !== reference.mechanismDigest) held();
   const providerId = entry.profile.nativeOptions.providerId, model = entry.profile.model;
+  const current = () => options.isCurrent() && Date.now() < options.cutoff &&
+    selected.configurationDigest === runtimeDigest(entry.profile) &&
+    runtimeDigest(selected.binding) === runtimeDigest(entry.binding) &&
+    source.consumer.baseConfigurationDigest === runtimeDigest(entry.baseProfile) && managementValuesEqual(source, readSource() ?? null);
+  const readOriginal = () => management.probes.readRetainedProbe(reference.commandId, reference.context);
+  const initial = readOriginal();
+  const fileKey = await prepareOpenCodeProbeFileKey({ profile, original: initial, readOriginal, isCurrent: current });
   const read = () => management.probes.readReadinessProvenance(reference, saved => {
-    if (!options.isCurrent() || saved.providerId !== providerId ||
+    if (!current() || saved.providerId !== providerId ||
         !sameCapturedModel(profile, providerId, saved.modelId, model) ||
         saved.effort !== profile.variant) held();
     const policy = saved.localModelReadinessOrigin
-      ? captureOpenCodeReadinessOrigin(saved.localModelReadinessOrigin, profile, providerId, options.isCurrent)
+      ? captureOpenCodeReadinessOrigin(saved.localModelReadinessOrigin, profile, providerId, current)
       : undefined;
     const account = saved.readiness || saved.readinessScope?.accountDigest !== undefined || saved.nativeFileKeyWitness !== undefined
-      ? captureOpenCodeProbeAccount(profile, saved, options.isCurrent, saved) : undefined;
+      ? captureOpenCodeProbeAccount(profile, saved, current, saved, undefined, fileKey) : undefined;
     if (saved.nativeFileKeyWitness !== undefined && !account) held();
     return { target: management.readinessTarget(profile),
-      originCurrent: options.isCurrent() && (policy?.isCurrent() ?? true) && (account?.isCurrent() ?? true),
+      originCurrent: current() && (policy?.isCurrent() ?? true) && (account?.isCurrent() ?? true),
       ...(account ? { accountDigest: account.digest } : {}) };
   });
   const original = read();
-  return { reference, original, assertCurrent: () => { read(); } };
+  if (!managementValuesEqual(initial, original)) held();
+  return { reference, original, assertCurrent: () => { if (!managementValuesEqual(original, read())) held(); } };
 }
 
 /** One explicit action attachment in the existing launch record, before Stop or workspace awaits. */
@@ -532,12 +528,13 @@ export function captureActionModelReadiness(options: {
   launch: Pick<TeamLaunchOwner, 'attachModelReadiness' | 'readModelReadinessAction'>;
   targets: readonly { entry: MemberEntry; profile: RuntimeMemberProfile; binding: RuntimeBinding }[];
   commandId: string; payload: unknown; actorDigest: string; readiness?: LocalModelReadinessAction;
-  nativeSource?: ReturnType<typeof captureNativeRestartReadiness>;
+  nativeSource?: Awaited<ReturnType<typeof captureNativeRestartReadiness>>;
+  admittedAt?: number;
   captureProcessOrigin?(entry: MemberEntry): RuntimeSourceProcessOrigin | undefined;
   authorized?: <T>(operation: () => T) => T;
   assertCurrent(): void;
 }) {
-  const admittedAt = Date.now(), payload = structuredClone(options.payload), inputDigest = runtimeDigest(payload);
+  const admittedAt = options.admittedAt ?? Date.now(), payload = structuredClone(options.payload), inputDigest = runtimeDigest(payload);
   const targets = options.targets.filter(row => row.profile.provider === 'opencode');
   if (!targets.length || targets.length > 256 || options.readiness && options.nativeSource) held();
   options.assertCurrent();
@@ -576,6 +573,8 @@ export function captureActionModelReadiness(options: {
   options.nativeSource?.assertCurrent();
   const cutoff = Math.min(prepared?.anchor.expiresAt ?? Infinity,
     ...captured.map(row => admittedAt + (teamModelProbeProfile(row.profile).modelProbeTimeoutMs ?? 90000)));
+  if (Date.now() >= cutoff) held();
+  assertMemberModelReadinessFileHandoffsAvailable(captured.map(row => row.entry));
   for (const target of captured) options.launch.attachModelReadiness({ consumer: {
     memberId: target.entry.profile.memberId, actionId: options.commandId,
     actorDigest: options.actorDigest, inputDigest, binding: target.sourceBinding,
@@ -603,7 +602,7 @@ export function captureActionModelReadiness(options: {
   return { cutoff, inputDigest, async prepare() {
     if (invoked || !current()) held();
     invoked = true;
-    const references = new Map<string, ModelReadinessReference>();
+    const references = new Map<string, PreparedModelReadinessReference>();
     for (const [key, rows] of groups) {
       const target = rows[0]!, profile = target.profile;
       if (profile.provider !== 'opencode') held();
@@ -651,7 +650,7 @@ export async function prepareTeamModelReadiness(options: {
   prepared?: { anchor: ReadinessPreparationAnchor; origin?: LocalModelReadinessOrigin };
   processOrigin?: RuntimeSourceProcessOrigin;
   isCurrent(): boolean;
-}): Promise<ModelReadinessReference> {
+}): Promise<PreparedModelReadinessReference> {
   const profile = teamModelProbeProfile(options.profile);
   if (profile.provider !== 'opencode' || !options.isCurrent() || Date.now() >= options.cutoff ||
       options.scope.cutoff !== options.cutoff ||
@@ -676,12 +675,12 @@ export async function prepareTeamModelReadiness(options: {
 }
 
 /** Exact original publication bridge; the old pre-CAS roster callback is deliberately not re-run. */
-export function captureLaunchModelReadiness(options: {
+export async function captureLaunchModelReadiness(options: {
   management: Pick<ProviderManagementCoordinator, 'probes' | 'readinessTarget'>;
   team: HostedTeam; source: RuntimeCaptureSource; profiles: RuntimeMemberProfile[];
   principalId: string; hostIncarnation: string; transfer: CaptureModelReadinessTransfer;
   admittedAt: number; isCurrent(): boolean;
-}): { capture: LaunchReadinessCaptureAdmission; groups: ModelReadinessReference[] } {
+}): Promise<{ capture: LaunchReadinessCaptureAdmission; groups: ModelReadinessReference[] }> {
   const { team, source, transfer } = options;
   const creating = 'kind' in transfer && transfer.kind === 'create';
   const createdProjectSettings = creating ? readCreatedProjectReadinessTransfer(transfer) : undefined;
@@ -703,6 +702,7 @@ export function captureLaunchModelReadiness(options: {
     catch { return false; }
   };
   const groups: ModelReadinessReference[] = [];
+  const preparations: { profile: RuntimeMemberProfile; prepared: PreparedModelReadinessReference }[] = [];
   const targets: LaunchReadinessCaptureAdmission['targets'] = [];
   const expected = options.profiles.filter(row => row.provider === 'opencode');
   for (const profile of expected) {
@@ -753,12 +753,16 @@ export function captureLaunchModelReadiness(options: {
         if (runtimeDigest(settings) !== runtimeDigest(destination.settings)) held();
       }
     }
-    const reference = capturePreparedModelReference({ management: options.management, profile,
+    const prepared = await capturePreparedModelReference({ management: options.management, profile,
       commandId: saved.commandId, context: saved.context!, isCurrent: current });
+    preparations.push({ profile, prepared });
+    const { reference } = prepared;
     if (!groups.some(row => row.commandId === reference.commandId)) groups.push(reference);
     targets.push({ memberId: profile.memberId, originalProbeCommandId: saved.commandId,
       originalContext: saved.context!, originalWorkspace: saved.readinessScope!.workspace });
   }
+  for (const { profile, prepared } of preparations)
+    assertPreparedMemberModelReadiness({ management: options.management, profile, prepared, isCurrent: current });
   if (!targets.length || !current()) held();
   const cutoff = Math.min(creating ? transfer.cutoff : options.admittedAt + savedTransfer.remainingMs,
     ...groups.map(row => row.expiresAt));
