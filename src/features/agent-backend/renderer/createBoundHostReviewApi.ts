@@ -68,9 +68,16 @@ export function createBoundHostReviewApi(
       captured = structuredClone(found);
       return captured;
     });
-    const result = await connection;
-    assertCurrent();
-    return result;
+    const pending = connection;
+    try {
+      const result = await pending;
+      assertCurrent();
+      return result;
+    } catch (error) {
+      // Release only a failed discovery, never an already captured owner or a newer attempt.
+      if (!captured && connection === pending) connection = undefined;
+      throw error;
+    }
   }
   async function query<O extends BackendReviewOperation>(
     operation: O,

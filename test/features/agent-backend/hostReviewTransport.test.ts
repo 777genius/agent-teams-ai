@@ -77,6 +77,104 @@ function fixture() {
 }
 
 describe('captured original Review API', () => {
+  for (const failure of ['rejection', 'hold', 'missing selection'] as const) {
+    it('recovers an initial ' + failure + ' without rebinding a captured owner', async () => {
+      const f = fixture();
+      const discover = vi.mocked(f.backend.getConnections);
+      if (failure === 'rejection') discover.mockRejectedValueOnce(new Error('TEST offline'));
+      else if (failure === 'hold') discover.mockResolvedValueOnce({ state: 'hold', bindings: [] });
+      else
+        discover.mockResolvedValueOnce({
+          state: 'ready',
+          bindings: [{ handle: second, label: 'TEST other', members: [] }],
+        });
+      const api = createBoundHostReviewApi(f.legacy, f.backend, aKey, {}, () => () => true);
+      const read = () => api.previewReject('/TEST/file.ts', 'before', 'after', [], []);
+      await expect(read()).rejects.toThrow(
+        failure === 'rejection' ? 'TEST offline' : 'Host review unavailable'
+      );
+      await api.unwatchFiles();
+      expect(discover).toHaveBeenCalledOnce();
+      expect(f.backend.invoke).not.toHaveBeenCalled();
+      expect(f.backend.unwatchReviewFiles).not.toHaveBeenCalled();
+
+      await Promise.all([read(), api.watchFiles('/TEST', ['/TEST/file.ts'])]);
+      expect(discover).toHaveBeenCalledTimes(2);
+      expect(f.backend.invoke).toHaveBeenCalledOnce();
+      expect(f.backend.watchReviewFiles).toHaveBeenCalledWith(
+        expect.objectContaining({ handle: first })
+      );
+
+      discover.mockResolvedValue({
+        state: 'ready',
+        bindings: [{ handle: second, label: 'TEST other', members: [] }],
+      });
+      vi.mocked(f.backend.watchReviewFiles).mockRejectedValueOnce(new Error('TEST watch failed'));
+      await expect(api.watchFiles('/TEST', ['/TEST/file.ts'])).rejects.toThrow('TEST watch failed');
+      await read();
+      await api.unwatchFiles();
+      expect(discover).toHaveBeenCalledTimes(2);
+      expect(f.backend.invoke).toHaveBeenLastCalledWith(expect.objectContaining({ handle: first }));
+      expect(f.backend.unwatchReviewFiles).toHaveBeenCalledWith(
+        expect.objectContaining({ handle: first })
+      );
+      expect(f.legacy.previewReject).not.toHaveBeenCalled();
+      expect(f.legacy.watchFiles).not.toHaveBeenCalled();
+    });
+  }
+
+  it('shares a failed pending discovery and permits one new capture for concurrent callers', async () => {
+    const f = fixture();
+    let reject!: (error: Error) => void;
+    const discover = vi.mocked(f.backend.getConnections);
+    discover.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        })
+    );
+    const api = createBoundHostReviewApi(f.legacy, f.backend, aKey, {}, () => () => true);
+    const read = () => api.previewReject('/TEST/file.ts', 'before', 'after', [], []);
+    const watch = () => api.watchFiles('/TEST', ['/TEST/file.ts']);
+    const refused = Promise.allSettled([read(), watch()]);
+    reject(new Error('TEST offline'));
+    expect((await refused).map((result) => result.status)).toEqual(['rejected', 'rejected']);
+    expect(discover).toHaveBeenCalledOnce();
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    expect(f.backend.watchReviewFiles).not.toHaveBeenCalled();
+    await Promise.all([read(), watch()]);
+    expect(discover).toHaveBeenCalledTimes(2);
+    expect(f.backend.invoke).toHaveBeenCalledOnce();
+    expect(f.backend.watchReviewFiles).toHaveBeenCalledOnce();
+  });
+
+  it('does not rediscover after revocation while an initial capture is pending', async () => {
+    const f = fixture();
+    let alive = true;
+    let release!: (value: Awaited<ReturnType<AgentBackendApi['getConnections']>>) => void;
+    vi.mocked(f.backend.getConnections).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    const api = createBoundHostReviewApi(f.legacy, f.backend, aKey, {}, () => () => alive);
+    const refused = expect(api.watchFiles('/TEST', ['/TEST/file.ts'])).rejects.toThrow(
+      'Review context changed'
+    );
+    alive = false;
+    release({ state: 'ready', bindings: [{ handle: first, label: 'TEST', members: [] }] });
+    await refused;
+    await expect(api.previewReject('/TEST/file.ts', 'before', 'after', [], [])).rejects.toThrow(
+      'Review context changed'
+    );
+    await api.unwatchFiles();
+    expect(f.backend.getConnections).toHaveBeenCalledOnce();
+    expect(f.backend.invoke).not.toHaveBeenCalled();
+    expect(f.backend.watchReviewFiles).not.toHaveBeenCalled();
+    expect(f.backend.unwatchReviewFiles).not.toHaveBeenCalled();
+  });
+
   it('keeps path-only calls and watcher cleanup bound to two originating views on the same path', async () => {
     const f = fixture();
     let aliveA = true;
