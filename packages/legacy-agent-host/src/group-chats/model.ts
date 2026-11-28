@@ -1,4 +1,4 @@
-import type { GroupMembership } from './contracts.js';
+import type { GroupMembership, GroupSendRefusalCode } from './contracts.js';
 
 /** Private immutable admission and payload, unaffected by later membership or archive changes. */
 export interface AgentGroupCreation {
@@ -62,6 +62,13 @@ export class GroupChatError extends Error {
   ) {
     super(message);
     this.name = 'GroupChatError';
+  }
+}
+
+/** Private effect-boundary proof, never constructed from a public error payload. */
+export class GroupSendRefusal extends GroupChatError {
+  constructor(code: GroupSendRefusalCode, message: string) {
+    super(code, message);
   }
 }
 

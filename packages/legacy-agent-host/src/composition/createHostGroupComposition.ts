@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { TeamOwnerError } from '../team/contracts.js';
 import { digest } from '../team/identity.js';
 import { teamRegistryScopeSchema } from '../team-registry/contracts.js';
-import { GroupChatError } from '../group-chats/model.js';
+import { GroupChatError, GroupSendRefusal } from '../group-chats/model.js';
+import { isGroupSendRefusalCode } from '../group-chats/contracts.js';
 import { parseGroupPayload } from '../group-chats/operations.js';
 import type { HostMethod } from '../index.js';
 import type { HostedTeam, MemberEntry } from './MemberEntry.js';
@@ -91,13 +92,15 @@ export function createHostGroupComposition(options: {
           options.assertCurrent();
           return { ok: true, value: json(result) };
         } catch (error) {
+          if (operation === 'send' && error instanceof GroupSendRefusal && isGroupSendRefusalCode(error.code))
+            return { ok: false, code: error.code, outcome: 'rejected' };
           const code =
             error instanceof TeamOwnerError
               ? error.code
               : error instanceof z.ZodError
                 ? 'invalid'
                 : error instanceof GroupChatError
-                  ? error.code === 'storage-unavailable'
+                  ? operation === 'send' || error.code === 'storage-unavailable'
                     ? 'hold'
                     : 'invalid'
                   : 'hold';

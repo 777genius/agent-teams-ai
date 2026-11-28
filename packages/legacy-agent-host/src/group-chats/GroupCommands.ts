@@ -1,4 +1,6 @@
 import { groupReactionTargetSchema, parseGroupPayload } from './operations.js';
+import { isGroupSendRefusalCode } from './contracts.js';
+import { GroupChatError, GroupSendRefusal } from './model.js';
 import { TeamOwnerError } from '../team/contracts.js';
 import { teamCommandPath, validateCommandEntry } from '../team/commandEntries.js';
 import { digest } from '../team/identity.js';
@@ -227,14 +229,24 @@ export function createGroupCommands(options: GroupCommandContext) {
             return project(saved, commandId);
           });
         } catch (error) {
-          options.store.fenced(() => {
+          const noEffect = options.store.fenced(() => {
             const saved = read(commandId);
-            if (saved?.phase === 'prepared') {
+            if (!saved || saved.fingerprint !== receipt.fingerprint) return false;
+            if (saved.phase === 'prepared') {
               saved.phase = 'held';
               validateGroupCommandReceipt(saved);
               options.store.write(teamCommandPath(commandId), saved);
             }
+            return saved.phase === 'held' && saved.publication === 'not-requested' &&
+              saved.deliveries.length === 0 && saved.response === undefined;
           });
+          if (
+            noEffect && request.operation === 'send' && receipt.actor === 'user' &&
+            error instanceof GroupChatError && isGroupSendRefusalCode(error.code)
+          ) {
+            guard();
+            throw new GroupSendRefusal(error.code, error.message);
+          }
           throw error;
         }
       });

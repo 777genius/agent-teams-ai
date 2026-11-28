@@ -421,3 +421,59 @@ it('group Composer persists same-owner foreign Task refs as immutable metadata a
   expect(legacyRead).not.toHaveBeenCalled();
   expect(f.legacy.send).not.toHaveBeenCalled();
 });
+
+
+it.each(['invalid-recipient', 'archived', 'recipient-unavailable', 'invalid-input'] as const)(
+  'preserves a proven %s refusal through Main and renderer without mutation replay',
+  async (code) => {
+    const f = fixture();
+    const router = { request: vi.fn<BackendOwnerRouter['request']>(), lookup: vi.fn<BackendOwnerRouter['lookup']>() };
+    router.request.mockResolvedValue({ ok: false, code, outcome: 'rejected' });
+    const facade = new BackendOperationsFacade(router);
+    vi.mocked(f.backend.invoke).mockImplementation(async request =>
+      request.operation === 'team.snapshot' ? { ok: true, value: f.snapshot } : facade.invoke(request)
+    );
+    const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => true);
+    await expect(api.send({ teamName: key, groupChatId: id, messageId: post, text: 'Keep draft', recipientName: 'alice' }))
+      .rejects.toMatchObject({ code, outcome: 'rejected' });
+    expect(router.request).toHaveBeenCalledOnce();
+    expect(router.lookup).not.toHaveBeenCalled();
+    expect(f.legacy.send).not.toHaveBeenCalled();
+  }
+);
+
+it('never projects actionable group refusal for unknown outcome, lookup or another operation', async () => {
+  const router = { request: vi.fn<BackendOwnerRouter['request']>(), lookup: vi.fn<BackendOwnerRouter['lookup']>() };
+  const facade = new BackendOperationsFacade(router);
+  const handle = { handleId: 'TEST-opaque' }, commandId = 'TEST-refusal';
+  const send = { handle, commandId, operation: 'group.send',
+    payload: { groupChatId: id, messageId: post, text: 'Keep draft' } };
+  for (const outcome of ['unknown', 'not-dispatched']) {
+    router.request.mockResolvedValueOnce({ ok: false, code: 'invalid-recipient', outcome });
+    await expect(facade.invoke(send)).resolves.toEqual({ ok: false, code: 'hold', outcome: 'unknown' });
+  }
+  router.request.mockResolvedValue({ ok: false, code: 'invalid-recipient', outcome: 'rejected' });
+  await expect(facade.invoke({ handle, commandId, operation: 'group.lookup', payload: {} }))
+    .resolves.toEqual({ ok: false, code: 'hold', outcome: 'unknown' });
+  await expect(facade.invoke({ handle, commandId, operation: 'group.archive', payload: { groupChatId: id, archived: true } }))
+    .resolves.toEqual({ ok: false, code: 'hold', outcome: 'unknown' });
+});
+
+it.each(['unknown-outcome', 'lost-response'] as const)(
+  'renderer retains original draft authority on %s despite an actionable-looking error',
+  async (mode) => {
+    const f = fixture();
+    const invoke = vi.mocked(f.backend.invoke);
+    invoke.mockResolvedValueOnce({ ok: true, value: f.snapshot });
+    if (mode === 'lost-response') invoke.mockRejectedValueOnce(new Error('TEST lost response'));
+    invoke.mockResolvedValueOnce({ ok: false, code: 'invalid-recipient',
+      outcome: mode === 'lost-response' ? 'rejected' : 'unknown' });
+    const api = createHostGroupChatsApi(f.legacy, f.backend, () => () => true);
+    await expect(api.send({ teamName: key, groupChatId: id, messageId: post, text: 'Keep draft' }))
+      .rejects.toMatchObject({ code: 'hold', outcome: 'unknown' });
+    expect(invoke.mock.calls.map(([request]) => request.operation)).toEqual(
+      mode === 'lost-response' ? ['team.snapshot', 'group.send', 'group.lookup'] : ['team.snapshot', 'group.send']
+    );
+    expect(f.legacy.send).not.toHaveBeenCalled();
+  }
+);

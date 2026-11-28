@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util';
 
 import { attachmentReferenceSchema } from '@agent-teams/legacy-agent-host/attachments/contracts';
 import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
+import { isGroupSendRefusalCode } from '@agent-teams/legacy-agent-host/group-chats/contracts';
 import {
   readGroupCatalogValue,
   readGroupCommand,
@@ -346,12 +347,18 @@ export function projectBackendResult(
   raw: unknown
 ): BackendOperationResult {
   const source = row(raw);
-  if (source.ok === false)
+  if (source.ok === false) {
+    if (isGroupSendRefusalCode(source.code)) {
+      if (request.operation !== 'group.send' || source.outcome !== 'rejected')
+        throw new Error('Invalid group refusal');
+      return { ok: false, code: source.code, outcome: 'rejected' };
+    }
     return {
       ok: false,
       code: oneOf(source.code, ['invalid', 'conflict', 'forbidden', 'hold', 'busy']),
       outcome: oneOf(source.outcome, ['not-dispatched', 'rejected', 'unknown']),
     };
+  }
   if (source.ok !== true) throw new Error('Invalid result');
   if (
     request.operation === 'crossTeam.send' ||
