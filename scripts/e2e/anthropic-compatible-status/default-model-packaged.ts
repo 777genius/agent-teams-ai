@@ -2,6 +2,7 @@
 // Real packaged app -> bundled released status -> inherited UI -> native save ->
 // saved-model inference. No team is launched; every provider request is localhost.
 import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -15,6 +16,7 @@ import {
   startDefaultModelGateway,
 } from './default-model-gateway.ts';
 import { defaultArtifact, qualifyDefaultArtifact } from './packaged-default-artifact.ts';
+import { proveWindowsProductTeam } from './product-team-packaged.ts';
 import { PackagedDefaultCdp, pause } from './packaged-default-cdp.ts';
 import {
   nativeDiagnosticProgress,
@@ -261,7 +263,10 @@ try {
     evidence.gitBash = await fingerprint(gitBash);
   }
   const sentinel = (await prepareExistingProject(data)) as string;
-  gateway = await startDefaultModelGateway();
+  const productProbe = process.platform === 'win32' &&
+    process.env.AGENT_TEAMS_E2E_PRODUCT_PROBE === '1';
+  const productMarker = productProbe ? 'WINDOWS_PRODUCT_TEAM_E2E_' + randomUUID() : undefined;
+  gateway = await startDefaultModelGateway({ productMarker });
   // These are fixture launch inputs. The app's normal provider/settings paths
   // construct all native child environments; no child launcher is substituted.
   Object.assign(env, {
@@ -626,6 +631,48 @@ try {
   record('saved-model-inference-and-native-children-complete', {
     diagnosticCount: complete.length,
   });
+  if (productProbe) {
+    assert(cdp && appIdentity && gateway && productMarker);
+    evidence.productTeam = await proveWindowsProductTeam({
+      cdp, ledger, appIdentity, gatewayRequests: gateway.requests,
+      project: data.project, evidenceRoot, marker: productMarker,
+    });
+    // Stop proves the original worker's PID+birth retired. Separately require
+    // app-owned native children to drain, including asynchronous diagnostic
+    // PowerShell processes started by Electron during the Stop IPC. A single
+    // immediately-after-Stop census can catch such a still-exiting process;
+    // this is an observation-only wait, never a test-side kill or exception.
+    const productStopDrainDeadline = Date.now() + 45_000;
+    let quietSince: number | null = null;
+    let drainConfirmed = false;
+    let activeAfterStop = await ledger.runtimeQuiet(data.artifact.app.path);
+    while (Date.now() < productStopDrainDeadline) {
+      if (activeAfterStop.length === 0 && gateway.inFlight() === 0) {
+        quietSince ??= Date.now();
+        if (Date.now() - quietSince >= 1_000) {
+          drainConfirmed = true;
+          break;
+        }
+      } else {
+        quietSince = null;
+      }
+      await pause(300);
+      activeAfterStop = await ledger.runtimeQuiet(data.artifact.app.path);
+    }
+    evidence.productStopNativeDrain = {
+      confirmed: drainConfirmed,
+      active: activeAfterStop,
+      quietDurationMs: quietSince === null ? 0 : Date.now() - quietSince,
+    };
+    assert.deepEqual(
+      activeAfterStop, [],
+      'Real product Stop must retire the original teammate and tools'
+    );
+    assert(
+      drainConfirmed && gateway.inFlight() === 0,
+      'Real product Stop must confirm stable native child retirement before deadline'
+    );
+  }
   scenarioComplete = true;
 } catch (error) {
   evidence.error = redact(error instanceof Error ? error.stack : error);
@@ -646,7 +693,20 @@ try {
     try {
       if (app && !appIdentity) await stopUnregisteredApp(app);
     } finally {
-      evidence.cleanup = await ledger.stop();
+      try {
+        evidence.cleanup = await ledger.stop();
+      } catch (error) {
+        // On Windows the spawned child handle remains an independent cleanup
+        // authority even when the CIM inventory cannot verify every PID.
+        if (app && appIdentity && process.platform === 'win32') {
+          try {
+            await stopUnregisteredApp(app);
+          } catch (handleError) {
+            evidence.appHandleCleanupError = redact(handleError);
+          }
+        }
+        throw error;
+      }
     }
     const events = await preflightEvents();
     await writeFile(

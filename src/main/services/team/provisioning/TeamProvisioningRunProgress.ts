@@ -1,4 +1,5 @@
 import { killProcessTree, killProcessTreeAndWait } from '@main/utils/childProcess';
+import { killWindowsProcessTreeAndWait } from '@main/utils/windowsProcessTree';
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 
 import { boundLaunchDiagnostics, buildProgressLogsTail } from '../progressPayload';
@@ -108,11 +109,16 @@ export async function killTeamProcessAndWait(
       settled = true;
       removeListeners();
       rejectExit(new Error(`Team process ${child.pid} did not stop after SIGKILL`));
-    }, TEAM_PROCESS_EXIT_CONFIRM_TIMEOUT_MS);
+    }, process.platform === 'win32' ? 30_000 : TEAM_PROCESS_EXIT_CONFIRM_TIMEOUT_MS);
   }
 
   try {
-    await Promise.all([killProcessTreeAndWait(child, 'SIGKILL'), exitConfirmed]);
+    await Promise.all([
+      process.platform === 'win32'
+        ? killWindowsProcessTreeAndWait(child, 'SIGKILL')
+        : killProcessTreeAndWait(child, 'SIGKILL'),
+      exitConfirmed,
+    ]);
   } catch (error) {
     cancelExitWait();
     throw error;
