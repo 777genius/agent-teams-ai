@@ -59,9 +59,14 @@ it('refuses original revision changes and revocation after awaited continuation'
 });
 
 it('rejects repeated, malformed and incomplete pages before returning group data', async () => {
-  const first = pageGroupCatalog({ ...option, rows });
-  expect(Array.isArray(first)).toBe(false);
-  if (Array.isArray(first)) throw new Error('Missing TEST page');
+  const first = pageGroupCatalog({ ...option, rows }) as {
+    kind: 'group-catalog-page';
+    groups: typeof rows;
+    revision: string;
+    total: number;
+    nextCursor: string | null;
+  };
+  expect(first.kind).toBe('group-catalog-page');
   await expect(readHostGroupCatalog(async cursor => {
     if (!cursor) return first;
     return { ...first, nextCursor: cursor };
