@@ -10,6 +10,8 @@ import { fileURLToPath } from 'node:url';
 import { openCodeV2ContractQualifies, readOpenCodeV2Contract } from '../src/features/opencode-compatibility/core/domain/openCodeV2Contract.ts';
 import { resolveLiveSmokeOrchestratorCliPath } from './lib/live-smoke-runtime.mjs';
 import { preflightOpenCodeLiveEnvironment } from './lib/opencode-live-preflight.mjs';
+import { admitGenuineFreeModel, assertGenuineFreeAdmissionFresh, GENUINE_FREE_MODEL,
+  genuineFreeProjectConfig, preflightGenuineFreeNative } from './lib/opencode-full-free-admission.mjs';
 
 // An explicit project must contain this exact opt-in; a name containing "test" is insufficient.
 export const TEST_PROJECT_MARKER = '.opencode-full-team-test-only';
@@ -236,6 +238,13 @@ export function isCompleteSmokeProof(proof, kind, models) {
   if (!nonempty(proof.runId)) return false;
   if (kind === 'FULL') {
     return proof.model === models[0] && proof.initialStopConfirmed === true &&
+      proof.leadAssignedTask?.createdBy === 'team-lead' && proof.leadAssignedTask?.owner === 'alice' &&
+      nonempty(proof.leadAssignedTask?.id) && proof.leadAssignedTask?.completed === true &&
+      proof.leadAssignedTask?.ownerCommentConfirmed === true &&
+      proof.peerSettlement?.settled === true && proof.peerSettlement?.unavailable === false &&
+      Array.isArray(proof.peerSettlement?.checks) && proof.peerSettlement.checks.length === 4 &&
+      new Set(proof.peerSettlement.checks.map(row => row.messageId)).size === 4 &&
+      proof.peerSettlement.checks.every(row => nonempty(row.messageId) && row.inboxRead === true && row.readCommitted === true) &&
       nonempty(proof.relaunch?.runId) && proof.relaunch.runId !== proof.runId &&
       names.every((name) => nonempty(proof.initialSessions?.[name])) &&
       new Set(names.map((name) => proof.initialSessions[name])).size === names.length &&
@@ -269,12 +278,22 @@ export function isCompleteSmokeProof(proof, kind, models) {
 export async function runFullTeamSmoke({
   sourceEnv = process.env,
   preflight = preflightOpenCodeFullTeamEnvironment,
+  freeNativePreflight = preflightGenuineFreeNative,
+  freePriceAdmission = admitGenuineFreeModel,
   spawn = spawnSync,
   vitestEntryPath = path.join(repoRoot, 'node_modules/vitest/vitest.mjs'),
   log = console.log,
 } = {}) {
   if (sourceEnv.OPENCODE_E2E !== '1' || sourceEnv.OPENCODE_E2E_FULL_TEAM !== '1') {
     throw new Error('Explicit OPENCODE_E2E=1 and OPENCODE_E2E_FULL_TEAM=1 opt-in required');
+  }
+  const authMode = sourceEnv.OPENCODE_E2E_AUTH_MODE ?? 'selected-auth';
+  if (!['selected-auth', 'genuine-free'].includes(authMode)) throw new Error('Invalid FULL auth mode');
+  const genuineFree = authMode === 'genuine-free';
+  if (genuineFree && (sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH !== undefined ||
+      sourceEnv.OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH !== undefined ||
+      sourceEnv.OPENCODE_E2E_MODEL !== GENUINE_FREE_MODEL)) {
+    throw new Error('Genuine-free FULL requires its fixed model without auth or caller config inputs');
   }
   if (
     !path.isAbsolute(vitestEntryPath) ||
@@ -322,7 +341,7 @@ export async function runFullTeamSmoke({
   if (!runtimeCli || !path.isAbsolute(runtimeCli)) {
     throw new Error('Set an explicit absolute CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH');
   }
-  if (!sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH?.trim()) {
+  if (!genuineFree && !sourceEnv.OPENCODE_E2E_TEST_AUTH_PATH?.trim()) {
     throw new Error(
       'Set OPENCODE_E2E_TEST_AUTH_PATH explicitly to the selected provider auth store'
     );
@@ -427,6 +446,11 @@ export async function runFullTeamSmoke({
       repoRoot,
     });
     writeSmokeOwnership(env, 'FULL');
+    if (genuineFree) {
+      fs.writeFileSync(path.join(projectPath, 'opencode.json'), JSON.stringify(genuineFreeProjectConfig()), {
+        flag: 'wx', mode: 0o600,
+      });
+    }
     const projectConfigFile = sourceEnv.OPENCODE_E2E_TEST_PROJECT_CONFIG_PATH;
     if (projectConfigFile) {
       if (!path.isAbsolute(projectConfigFile)) throw new Error('TEST project config must be absolute');
@@ -442,6 +466,7 @@ export async function runFullTeamSmoke({
       `OpenCode full team proof: ${model}, project ${projectPath}, CLI ${env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH}`
     );
     log(`Sanitized progress/proof: ${proofDirectory}`);
+    const freeNativeEvidence = genuineFree ? await freeNativePreflight({ env, projectPath }) : null;
     const readiness = await preflight({
       repoRoot,
       projectPath,
@@ -454,6 +479,13 @@ export async function runFullTeamSmoke({
       // Provider/CLI failures may include secret material; keep raw state, never print it.
       log(`Prerequisite check failed at stage=${readiness.stage}; no inference submitted. Inspect owned state locally.`);
       return 1;
+    }
+    if (genuineFree) {
+      const admission = await freePriceAdmission(freeNativeEvidence);
+      fs.writeFileSync(path.join(proofDirectory, 'free-admission.json'), JSON.stringify(admission), {
+        flag: 'wx', mode: 0o600,
+      });
+      assertGenuineFreeAdmissionFresh(admission);
     }
     const result = spawn(
       process.execPath,
@@ -471,7 +503,9 @@ export async function runFullTeamSmoke({
         stdio: 'pipe',
         encoding: 'utf8',
         maxBuffer: 8 * 1024 * 1024,
-        timeout: 30 * 60_000,
+        // Vitest allows 35 minutes including owned-host cleanup; the outer
+        // process needs a separate five-minute startup/teardown reserve.
+        timeout: 40 * 60_000,
         killSignal: 'SIGTERM',
       }
     );

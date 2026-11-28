@@ -1,5 +1,3 @@
-import { compareTeamModelRecommendations } from '@renderer/utils/teamModelRecommendations';
-
 import { compareModelFreshness } from './teamModelFreshness';
 
 import type { TeamRuntimeModelOption } from '@renderer/utils/teamModelAvailability';
@@ -53,16 +51,11 @@ export function selectVisibleOpenCodeModelOptions<T extends OpenCodeModelOptionC
     )
     .filter(matchesModelQuery)
     .sort((left, right) => {
-      const recommendationOrder = compareTeamModelRecommendations(
-        'opencode',
-        left.option.value,
-        right.option.value
-      );
-      if (recommendationOrder !== 0) {
-        return recommendationOrder;
-      }
       if (left.isFree !== right.isFree) {
         return left.isFree ? -1 : 1;
+      }
+      if (left.isNew !== right.isNew) {
+        return left.isNew ? -1 : 1;
       }
       const freshnessOrder = compareModelFreshness(left, right);
       if (freshnessOrder !== 0) {
