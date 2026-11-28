@@ -48,6 +48,23 @@ export interface OAuthNativeConversation {
   close(): Promise<boolean>;
 }
 
+interface PendingOAuthStart {
+  input: OAuthStart;
+  result: Promise<ProviderOAuthSnapshot>;
+  abort: AbortController;
+  target?: ManagementTarget;
+  native?: OAuthNativeConversation;
+  expiresAt: number;
+  timer?: NodeJS.Timeout;
+  closing?: Promise<void>;
+  reason?: NonNullable<StoredOAuthCommand['reason']>;
+  retired: boolean;
+  transferred: boolean;
+  claimWriteAttempted: boolean;
+  receiptConflict?: true;
+  resourceHeld: boolean;
+}
+
 interface ActiveOAuth {
   saved: StoredOAuthCommand;
   native: OAuthNativeConversation;
@@ -68,6 +85,7 @@ interface ActiveOAuth {
 /** One flow per auth namespace. Reconnect, code submission and cancel never reselect a native host. */
 export class OAuthOperationOwner {
   private readonly active = new Map<string, ActiveOAuth>();
+  private readonly pendingStarts = new Map<string, PendingOAuthStart>();
   private readonly cleanupDebt = new Set<string>();
   private sealed = false;
 
@@ -82,59 +100,155 @@ export class OAuthOperationOwner {
     }
   ) {}
 
-  start(raw: unknown): ProviderOAuthSnapshot {
-    const input = startSchema.parse(raw);
-    this.assertAdmission();
-    const target = this.options.select(input.profileId, input.configRevision);
-    const fingerprint = managementDigest(input);
-    const previous = this.options.store.read(input.operationId);
-    if (previous) {
-      if (previous.kind !== 'oauth') throw new ManagementCommandError('conflict');
-      assertManagementTarget(previous, target);
-      if (previous.fingerprint !== fingerprint) throw new ManagementCommandError('conflict');
-      return this.snapshot(previous);
-    }
-    this.options.fence.reserve(target.resourceId, input.operationId);
-    let native: OAuthNativeConversation;
-    let entry: ActiveOAuth;
-    let claimWriteAttempted = false;
+  start(raw: unknown): Promise<ProviderOAuthSnapshot> {
     try {
-      native = this.options.prepare(input); // Construction only, no native allocation.
-      if (
-        !Number.isSafeInteger(native.timeoutMs) ||
-        native.timeoutMs < 1 ||
-        native.timeoutMs > 17 * 60_000
-      )
-        throw new ManagementCommandError('invalid');
-      const saved: StoredOAuthCommand = {
-        schemaVersion: 1,
-        ...target,
-        commandId: input.operationId,
-        kind: 'oauth',
-        providerId: input.providerId,
-        methodIndex: input.methodIndex,
-        fingerprint,
-        phase: 'authorizing',
-        completionMethod: null,
-        resourceHeld: true,
-        sequence: 1,
-        expiresAt: Date.now() + native.timeoutMs,
+      const input = startSchema.parse(raw);
+      this.assertAdmission();
+      const original = this.pendingStarts.get(input.operationId);
+      if (original) {
+        if (!managementValuesEqual(original.input, input)) throw new ManagementCommandError('conflict');
+        return original.result;
+      }
+      const result = Promise.withResolvers<ProviderOAuthSnapshot>();
+      const pending: PendingOAuthStart = { input, result: result.promise, abort: new AbortController(),
+        expiresAt: Date.now(), retired: false, transferred: false,
+        claimWriteAttempted: false, resourceHeld: false };
+      this.pendingStarts.set(input.operationId, pending);
+      const clear = () => {
+        if (this.pendingStarts.get(input.operationId) === pending) this.pendingStarts.delete(input.operationId);
       };
-      claimWriteAttempted = true;
+      void this.prepareStart(pending).then(
+        snapshot => { clear(); result.resolve(snapshot); },
+        error => { clear(); result.reject(error); },
+      );
+      return result.promise;
+    } catch (error) { return Promise.reject(error); }
+  }
+
+  private startIdentity(saved: StoredOAuthCommand) {
+    const { phase: _phase, sequence: _sequence, reason: _reason, resourceHeld: _held,
+      completionMethod: _method, completionCommandId: _command,
+      completionFingerprint: _fingerprint, completionFingerprintKdf: _kdf, ...original } = saved;
+    return structuredClone(original);
+  }
+
+  private async replayStart(input: OAuthStart, saved: StoredOAuthCommand): Promise<ProviderOAuthSnapshot> {
+    const original = this.startIdentity(saved), active = this.active.get(input.operationId);
+    if (active && !managementValuesEqual(original, this.startIdentity(active.saved))) {
+      this.fenceChangedReceipt(active, false);
+      throw new ManagementCommandError('conflict');
+    }
+    const fingerprint = original.fingerprintKdf === undefined ? managementDigest(input)
+      : (await this.fingerprint(input, original.fingerprintKdf)).fingerprint;
+    this.assertAdmission();
+    let latest: StoredOAuthCommand | undefined;
+    try { latest = this.readOriginal(input); }
+    catch (error) { this.fenceChangedReceipt(active, false); throw error; }
+    if (!latest || !managementValuesEqual(original, this.startIdentity(latest))) {
+      this.fenceChangedReceipt(active, false);
+      throw new ManagementCommandError('conflict');
+    }
+    if (!secretFingerprintsEqual(original.fingerprint, fingerprint)) throw new ManagementCommandError('conflict');
+    return this.snapshot(latest, false);
+  }
+
+  private async prepareStart(pending: PendingOAuthStart): Promise<ProviderOAuthSnapshot> {
+    const input = pending.input;
+    try {
+      const active = this.active.get(input.operationId);
+      if (active && (active.saved.profileId !== input.profileId ||
+          active.saved.configRevision !== input.configRevision)) throw new ManagementCommandError('conflict');
+      let previous: StoredOAuthCommand | undefined;
+      try { previous = this.readOriginal(input); }
+      catch (error) { this.fenceChangedReceipt(active, false); throw error; }
+      if (previous) return await this.replayStart(input, previous);
+      if (active) { this.fenceChangedReceipt(active, false); throw new ManagementCommandError('conflict'); }
+      if (this.cleanupDebt.has(input.operationId)) throw new ManagementCommandError('held');
+      const target = structuredClone(this.options.select(input.profileId, input.configRevision));
+      this.options.fence.reserve(target.resourceId, input.operationId);
+      pending.target = target;
+      pending.resourceHeld = true;
+      const admittedAt = Date.now();
+      const native = this.options.prepare(input); // Construction only, no native allocation.
+      pending.native = native;
+      const timeout = native.timeoutMs;
+      if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 17 * 60_000)
+        throw new ManagementCommandError('invalid');
+      pending.expiresAt = admittedAt + timeout;
+      pending.timer = setTimeout(() => { void this.stopPendingStart(pending, 'expired'); },
+        Math.max(0, pending.expiresAt - Date.now()));
+      pending.timer.unref();
+      this.assertPendingStart(pending);
+      const proof = await this.fingerprint(input);
+      this.assertPendingStart(pending);
+      try {
+        if (this.options.store.read(input.operationId)) throw new ManagementCommandError('conflict');
+      } catch (error) { pending.receiptConflict = true; throw error; }
+      const saved: StoredOAuthCommand = {
+        schemaVersion: 1, ...target, commandId: input.operationId, kind: 'oauth',
+        providerId: input.providerId, methodIndex: input.methodIndex, ...proof,
+        phase: 'authorizing', completionMethod: null, resourceHeld: true,
+        sequence: 1, expiresAt: pending.expiresAt,
+      };
+      pending.claimWriteAttempted = true;
       this.options.store.write(saved);
-      entry = { saved, native, abort: new AbortController(), retired: false };
+      const entry: ActiveOAuth = { saved, native, abort: pending.abort, retired: false };
+      pending.transferred = true;
+      pending.resourceHeld = false;
+      if (pending.timer) clearTimeout(pending.timer);
       this.active.set(input.operationId, entry);
+      entry.timer = setTimeout(() => { void this.stop(entry, 'expired'); },
+        Math.max(0, saved.expiresAt - Date.now()));
+      entry.timer.unref();
+      this.emit(entry);
+      void this.authorize(entry, input.fields);
+      return this.snapshot(saved);
     } catch (error) {
-      this.options.fence.release(target.resourceId, input.operationId, !claimWriteAttempted);
+      await this.stopPendingStart(pending,
+        pending.timer && Date.now() >= pending.expiresAt ? 'expired' : 'native-outcome-unknown');
       throw error;
     }
-    entry.timer = setTimeout(() => {
-      void this.stop(entry, 'expired');
-    }, native.timeoutMs);
-    entry.timer.unref();
-    this.emit(entry);
-    void this.authorize(entry, input.fields);
-    return this.snapshot(entry.saved);
+  }
+
+  private assertPendingStart(pending: PendingOAuthStart): void {
+    this.assertAdmission();
+    if (!pending.target || pending.retired || pending.transferred ||
+        this.pendingStarts.get(pending.input.operationId) !== pending || Date.now() >= pending.expiresAt)
+      throw new ManagementCommandError('held');
+    assertManagementTarget(pending.target, this.options.select(pending.input.profileId, pending.input.configRevision));
+  }
+
+  private stopPendingStart(
+    pending: PendingOAuthStart, reason: NonNullable<StoredOAuthCommand['reason']>
+  ): Promise<void> {
+    if (pending.transferred) return Promise.resolve();
+    if (pending.closing) return pending.closing;
+    pending.retired = true;
+    pending.reason = reason;
+    if (pending.timer) clearTimeout(pending.timer);
+    pending.closing = Promise.resolve().then(async () => {
+      let clean = !pending.native;
+      try { if (pending.native) clean = await pending.native.close(); } catch { clean = false; }
+      if (pending.target && this.pendingStarts.get(pending.input.operationId) === pending && !pending.transferred) {
+        try {
+          if (this.options.store.read(pending.input.operationId)) pending.receiptConflict = true;
+        } catch { pending.receiptConflict = true; }
+        clean = clean && !pending.claimWriteAttempted && !pending.receiptConflict;
+        this.options.fence.release(pending.target.resourceId, pending.input.operationId, clean);
+        pending.resourceHeld = !clean;
+        if (!clean) this.cleanupDebt.add(pending.input.operationId);
+      }
+    });
+    pending.abort.abort();
+    return pending.closing;
+  }
+
+  private pendingSnapshot(pending: PendingOAuthStart): ProviderOAuthSnapshot {
+    const input = pending.input;
+    return { operationId: input.operationId, profileId: input.profileId, configRevision: input.configRevision,
+      providerId: input.providerId, methodIndex: input.methodIndex,
+      phase: pending.resourceHeld ? 'held' : 'cancelled', completionMethod: null,
+      sequence: 1, expiresAt: pending.expiresAt, ...(pending.reason ? { reason: pending.reason } : {}) };
   }
 
   read(raw: unknown): ProviderOAuthSnapshot | null {
@@ -213,9 +327,10 @@ export class OAuthOperationOwner {
     }
   }
 
-  private async fingerprint(input: OAuthComplete, original?: SecretFingerprintKdf) {
+  private async fingerprint(input: OAuthComplete | OAuthStart, original?: SecretFingerprintKdf) {
     try {
-      return await deriveSecretFingerprint({ commandId: input.commandId, code: input.code ?? null }, original);
+      return await deriveSecretFingerprint('commandId' in input
+        ? { commandId: input.commandId, code: input.code ?? null } : input, original);
     } catch (error) {
       if (error instanceof SecretFingerprintError)
         throw new ManagementCommandError(error.code === 'failed' ? 'held' : error.code);
@@ -331,6 +446,13 @@ export class OAuthOperationOwner {
   async cancel(raw: unknown): Promise<ProviderOAuthSnapshot> {
     const input = identity.parse(raw);
     this.assertAdmission();
+    const pending = this.pendingStarts.get(input.operationId);
+    if (pending?.target && !pending.transferred) {
+      if (pending.input.profileId !== input.profileId || pending.input.configRevision !== input.configRevision)
+        throw new ManagementCommandError('conflict');
+      await this.stopPendingStart(pending, 'cancelled');
+      return this.pendingSnapshot(pending);
+    }
     const entry = this.active.get(input.operationId);
     const captured = entry && entry.saved.profileId === input.profileId &&
       entry.saved.configRevision === input.configRevision ? entry : undefined;
@@ -354,6 +476,8 @@ export class OAuthOperationOwner {
 
   seal(): void {
     this.sealed = true;
+    for (const pending of this.pendingStarts.values())
+      if (pending.target && !pending.transferred) void this.stopPendingStart(pending, 'owner-changed');
     for (const entry of this.active.values()) {
       entry.retired = true;
       entry.abort.abort();
@@ -364,8 +488,11 @@ export class OAuthOperationOwner {
   async close(): Promise<void> {
     this.seal();
     const entries = [...this.active.values()];
-    await Promise.allSettled(entries.map((entry) => this.stop(entry, 'cancelled')));
-    if (this.cleanupDebt.size || entries.some((entry) => entry.saved.resourceHeld))
+    const pending = [...this.pendingStarts.values()].filter(entry => entry.target && !entry.transferred);
+    await Promise.allSettled([...entries.map(entry => this.stop(entry, 'cancelled')),
+      ...pending.map(entry => this.stopPendingStart(entry, 'cancelled'))]);
+    if (this.cleanupDebt.size || entries.some(entry => entry.saved.resourceHeld) ||
+        pending.some(entry => entry.resourceHeld))
       throw new ManagementCommandError('held');
   }
 

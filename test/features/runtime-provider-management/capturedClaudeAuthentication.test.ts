@@ -299,3 +299,53 @@ it('retains finite original auth outcomes and context/decoding failures without 
     expect(JSON.stringify(entries)).not.toContain(secret);
   } finally { stop(); }
 });
+
+it.each(['target', 'account-read'] as const)(
+  'cancels the original Claude caller during %s before creating an OAuth intent',
+  async stage => {
+    const f = fixture(), form = await f.load();
+    const input = f.input(form.setupForm!.connectionContextToken!);
+    const entered = Promise.withResolvers<void>(), released = Promise.withResolvers<void>();
+    const originalRequest = f.target.request.bind(f.target);
+    const isCurrent = f.target.isCurrent.bind(f.target);
+    f.target.isCurrent = () => {
+      if (stage === 'target') entered.resolve();
+      return isCurrent();
+    };
+    f.target.request = async (operation, payload) => {
+      if (stage === 'account-read' && operation === 'claude.auth') {
+        entered.resolve(); await released.promise;
+      }
+      return originalRequest(operation, payload);
+    };
+    const before = f.requests.length;
+    let settled = false, cancelStarted = false;
+    // Queue cancellation before the original target promise resumes, or while its account read waits.
+    const cancellation = entered.promise.then(() => {
+      cancelStarted = true;
+      return f.oauth.cancel({ operationId: input.oauthOperationId });
+    });
+    const pending = f.port.connectProvider(input).then(value => { settled = true; return value; });
+    try {
+      await vi.waitFor(() => expect(cancelStarted).toBe(true), { timeout: 2_000 });
+      const cancelled = await cancellation;
+      released.resolve();
+      await vi.waitFor(() => expect(settled ||
+        f.requests.some(request => request.operation === 'oauth.start')).toBe(true));
+      expect(cancelled).toEqual({ ok: true });
+      expect(f.intents.size).toBe(0);
+      expect(f.requests.slice(before).map(request => request.operation))
+        .toEqual(stage === 'account-read' ? ['claude.auth'] : []);
+      expect(f.capture).toHaveBeenCalledTimes(1);
+      expect(f.openExternal).not.toHaveBeenCalled();
+      expect(f.fallback).not.toHaveBeenCalled();
+      expect((await pending).error).toBeDefined();
+    } finally {
+      entered.resolve();
+      released.resolve();
+      await f.oauth.cancel({ operationId: input.oauthOperationId });
+      await pending;
+      await cancellation;
+    }
+  }
+);

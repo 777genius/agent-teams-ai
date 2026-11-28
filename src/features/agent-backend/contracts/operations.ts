@@ -41,7 +41,7 @@ import type {
   BackendMemberActionView,
 } from './memberActions';
 import type {
-  BackendProcess,
+  BackendProcessCatalog,
   BackendProcessOperationPayloads,
   BackendProcessPending,
   BackendProcessReceipt,
@@ -523,7 +523,7 @@ export type BackendOperationResult =
         | AttachmentUploadResult
         | BackendAttachmentMetadata[]
         | BackendAttachmentChunk
-        | BackendProcess[]
+        | BackendProcessCatalog
         | BackendMemberActionView
         | BackendMemberActionRead
         | BackendProcessReceipt

@@ -79,7 +79,7 @@ function fixture(timeoutMs = 30_000, fault?: {
     get closeCalls() { return closeCalls; },
     get completeCalls() { return completeCalls; },
     async waiting() {
-      owner.start(input);
+      await owner.start(input);
       authorize.resolve({
         authorizationUrl: 'https://example.invalid/oauth',
         instructions: 'TEST', completionMethod: 'code',

@@ -1,6 +1,7 @@
 import {
   assertOriginalProcessStop,
   isProcessRef,
+  readBackendProcessCatalog,
   readBackendProcesses,
 } from '../../../contracts/processes';
 
@@ -12,7 +13,7 @@ function object(value: unknown) {
   return value as Record<string, unknown>;
 }
 export function projectProcessResult(request: BackendOperationRequest, value: unknown) {
-  if (request.operation === 'process.list') return readBackendProcesses(value);
+  if (request.operation === 'process.list') return readBackendProcessCatalog(value);
   if (request.operation === 'process.pending.read') {
     if (!Array.isArray(value) || value.length > 64)
       throw new Error('Invalid original stop inventory');

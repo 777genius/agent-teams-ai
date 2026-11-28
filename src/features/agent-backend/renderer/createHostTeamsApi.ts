@@ -1,6 +1,6 @@
 import { captureHostNotification } from '../contracts/hostNotification';
-import { readBackendProcesses } from '../contracts/processes';
 import { isHostTeamRunId } from '../contracts/teamRunSelection';
+import { readHostProcessCatalog } from '../core/application/readHostProcessCatalog';
 
 import { createHostDefinitionEdits } from './createHostDefinitionEdits';
 import { createHostLaunchDiagnostics } from './createHostLaunchDiagnostics';
@@ -351,20 +351,26 @@ export function createHostTeamsApi(
     async getData(key: string) {
       const check = captureScope();
       const { connection, snapshot, assertCurrent } = await selected(key, check);
+      const handle = { handleId: connection.handle.handleId };
       const state = await lifecycle.read(connection, check);
       current(check);
       assertCurrent();
-      const processes = await backend.invoke({
-        handle: connection.handle,
-        commandId: crypto.randomUUID(),
-        operation: 'process.list',
-        payload: {},
+      const processes = await readHostProcessCatalog(async (cursor) => {
+        const page = await backend.invoke({
+          handle: { ...handle },
+          commandId: crypto.randomUUID(),
+          operation: 'process.list',
+          payload: cursor === undefined ? {} : { cursor },
+        });
+        if (!page.ok) throw new Error(`Host process read ${page.code}`);
+        return page.value;
+      }, () => {
+        current(check);
+        assertCurrent();
+        if (connection.handle.handleId !== handle.handleId) throw new Error('Host process selection changed');
       });
-      current(check);
-      assertCurrent();
-      if (!processes.ok) throw new Error(`Host process read ${processes.code}`);
       const result = view(
-        { ...snapshot, processes: readBackendProcesses(processes.value) },
+        { ...snapshot, processes },
         connection,
         state === null && snapshot.runtimeNeverLaunched && !snapshot.lifecycle?.cleanupPending
           ? false

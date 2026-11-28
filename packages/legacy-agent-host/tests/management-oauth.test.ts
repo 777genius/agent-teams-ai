@@ -26,10 +26,21 @@ function deferred<T>() {
   });
   return { promise, resolve, reject };
 }
-async function until(check: () => boolean): Promise<void> {
+async function until(check: () => boolean, message = 'the original operation reaches its expected durable state'): Promise<void> {
   const deadline = performance.now() + 2000;
   while (!check() && performance.now() < deadline) await new Promise<void>((done) => setImmediate(done));
-  assert.ok(check(), 'the original operation reaches its expected durable state');
+  assert.ok(check(), message);
+}
+async function bounded<T>(operation: Promise<T>, message: string): Promise<T> {
+  const result: { outcome?: { ok: true; value: T } | { ok: false; error: unknown } } = {};
+  void Promise.resolve(operation).then(
+    value => { result.outcome = { ok: true, value }; },
+    error => { result.outcome = { ok: false, error }; },
+  );
+  await until(() => result.outcome !== undefined, message);
+  const outcome = result.outcome; assert.ok(outcome, message);
+  if (outcome.ok) return outcome.value;
+  throw outcome.error;
 }
 const initial = {
   operationId: 'TEST-oauth-one',
@@ -83,6 +94,7 @@ function fixture(
     completeCalls: number;
     closeCalls: number;
     code: string | undefined;
+    fields: Record<string, string> | undefined;
   }[] = [];
   const fence = new ManagementResourceFence(store.list());
   const assertWriter = () => {
@@ -95,7 +107,7 @@ function fixture(
   };
   const prepare = (input: { operationId: string }) => {
     options.beforePrepare?.();
-    const native = {
+    const native: (typeof conversations)[number] = {
       authorize: deferred<Authorization>(),
       complete: deferred<boolean>(),
       close: deferred<boolean>(),
@@ -104,14 +116,16 @@ function fixture(
       completeCalls: 0,
       closeCalls: 0,
       code: undefined as string | undefined,
+      fields: undefined,
     };
     conversations.push(native);
     return {
       timeoutMs: options.timeoutMs ?? 30_000,
       ...(options.confirmedRejection ? { nativeCompletion: Promise.resolve(false), nativeRejectionConfirmed: true }
         : options.browser ? { nativeCompletion: native.browser.promise } : {}),
-      async authorize() {
+      async authorize(fields: Record<string, string> | undefined) {
         native.authorizeCalls++;
+        native.fields = structuredClone(fields);
         assert.equal(base.read(input.operationId)?.phase, 'authorizing');
         return native.authorize.promise;
       },
@@ -151,6 +165,7 @@ function fixture(
     credentials,
     base,
     store,
+    fence,
     events,
     conversations,
     countWrites: () => credentialWrites,
@@ -195,11 +210,22 @@ function controlledFingerprints(t: TestContext) {
     callbacks.push(error => callback(error ?? null, crypto.createHash('sha256').update(input).update(salt).digest()));
   });
   syncBuiltinESMExports();
-  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  t.after(async () => {
+    try {
+      for (let count = 0; callbacks.length && count < 32; count++) {
+        const next = callbacks.shift(); assert.ok(next);
+        next(new Error('TEST fingerprint barrier cleanup'));
+        await new Promise<void>(done => setImmediate(done));
+      }
+      assert.equal(callbacks.length, 0, 'all captured TEST crypto gates are released');
+    } finally { t.mock.restoreAll(); syncBuiltinESMExports(); }
+  });
   return { started: () => started, finish(error?: Error) { const next = callbacks.shift(); assert.ok(next); next(error); } };
 }
-async function waiting(f: ReturnType<typeof fixture>) {
-  f.owner.start(initial);
+async function waiting(f: ReturnType<typeof fixture>, controlled?: ReturnType<typeof controlledFingerprints>) {
+  const started = f.owner.start(initial);
+  controlled?.finish();
+  await bounded(started, 'original start settles after its fingerprint callback');
   const native = f.conversations[0]!;
   native.authorize.resolve(authorization);
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-code');
@@ -231,9 +257,12 @@ for (const phase of ['authorizing', 'completing'] as const) {
         else bytes = changeReceipt(f, change);
       } });
       t.after(() => f.cleanup());
-      if (phase === 'authorizing') f.owner.start(initial);
+      if (phase === 'authorizing') {
+        const started = f.owner.start(initial); controlled.finish();
+        await bounded(started, 'controlled start settles after its fingerprint callback');
+      }
       else {
-        await waiting(f);
+        await waiting(f, controlled);
         const submitted = f.owner.complete({ ...lookup, commandId: 'TEST-progress', code: 'TEST-code' });
         controlled.finish(); await submitted;
       }
@@ -252,7 +281,7 @@ for (const action of ['authorize', 'complete'] as const) {
   test(`G1c late ${action} result cannot publish after the original deadline`, async t => {
     t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
     const f = fixture(); t.after(() => f.cleanup());
-    if (action === 'authorize') f.owner.start(initial);
+    if (action === 'authorize') await f.owner.start(initial);
     else {
       await waiting(f);
       await f.owner.complete({ ...lookup, commandId: 'TEST-late-result', code: 'TEST-code' });
@@ -359,7 +388,7 @@ for (const phase of ['waiting-for-code', 'completed', 'cancelling', 'cancelled']
       }) });
       t.after(() => f.cleanup());
       if (phase === 'waiting-for-code') {
-        f.owner.start(initial); f.conversations[0]!.authorize.resolve(authorization);
+        await f.owner.start(initial); f.conversations[0]!.authorize.resolve(authorization);
       } else {
         const native = await waiting(f);
         if (phase === 'completed') {
@@ -374,10 +403,10 @@ for (const phase of ['waiting-for-code', 'completed', 'cancelling', 'cancelled']
       assert.equal(f.conversations[0]!.completeCalls, phase === 'completed' ? 1 : 0);
       const held = original(f).resourceHeld, originalPath = f.files()[0]!;
       const cold = f.restart();
-      if (held) assert.throws(() => cold.start({ ...initial, operationId: 'TEST-cold-after-write' }), { code: 'held' });
+      if (held) await assert.rejects(cold.start({ ...initial, operationId: 'TEST-cold-after-write' }), { code: 'held' });
       else {
         assert.equal(cold.read(lookup)?.phase, phase);
-        assert.equal(cold.start({ ...initial, operationId: 'TEST-cold-after-write' }).phase, 'authorizing');
+        assert.equal((await cold.start({ ...initial, operationId: 'TEST-cold-after-write' })).phase, 'authorizing');
       }
       assert.equal(readFileSync(originalPath, 'utf8'), bytes, 'cold recovery keeps the original receipt');
     });
@@ -434,14 +463,14 @@ test('legacy pasted-code and code-capable native null-code completions retain th
 
 test('identical in-flight code joins once and browser completion cannot replace its original claim', async t => {
   const controlled = controlledFingerprints(t), f = fixture({ browser: true });
-  t.after(() => f.cleanup()); const native = await waiting(f);
+  t.after(() => f.cleanup()); const native = await waiting(f, controlled);
   const input = { ...lookup, commandId: 'TEST-code', code: 'TEST-paste' };
   const first = f.owner.complete(input), duplicate = f.owner.complete(input);
   assert.equal(first, duplicate);
   await assert.rejects(f.owner.complete({ ...input, code: 'TEST-changed' }), { code: 'conflict' });
   await assert.rejects(f.owner.complete({ ...input, commandId: 'TEST-other' }), { code: 'conflict' });
   native.browser.resolve(true); await Promise.resolve();
-  assert.equal(native.completeCalls, 0); assert.equal(controlled.started(), 1);
+  assert.equal(native.completeCalls, 0); assert.equal(controlled.started(), 2);
   controlled.finish();
   assert.deepEqual(await first, await duplicate);
   assert.equal(original(f).completionCommandId, input.commandId);
@@ -451,7 +480,7 @@ test('identical in-flight code joins once and browser completion cannot replace 
 
 test('failed A allows B before the browser observer continues and B retains the only native completion', async t => {
   const controlled = controlledFingerprints(t), f = fixture({ browser: true });
-  t.after(() => f.cleanup()); const native = await waiting(f);
+  t.after(() => f.cleanup()); const native = await waiting(f, controlled);
   const first = f.owner.complete({ ...lookup, commandId: 'TEST-A', code: 'TEST-A-code' });
   let second: Promise<ProviderOAuthSnapshot> | undefined;
   const retry = first.catch(error => {
@@ -460,7 +489,7 @@ test('failed A allows B before the browser observer continues and B retains the 
   });
   native.browser.resolve(true); await Promise.resolve();
   controlled.finish(new Error('TEST failed A')); await retry;
-  assert.ok(second); assert.equal(controlled.started(), 2);
+  assert.ok(second); assert.equal(controlled.started(), 3);
   assert.equal(native.completeCalls, 0);
   controlled.finish(); await second;
   assert.equal(original(f).completionCommandId, 'TEST-B');
@@ -472,7 +501,7 @@ test('busy or failed code preparation leaves the original browser outcome and na
   const controlled = controlledFingerprints(t);
   for (const busy of [false, true]) for (const ok of [false, true]) {
     const f = fixture({ browser: true }); t.after(() => f.cleanup());
-    const native = await waiting(f);
+    const native = await waiting(f, controlled);
     const fillers = busy ? Array.from({ length: 9 }, (_, index) => deriveSecretFingerprint('TEST-fill-' + index)) : [];
     const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-rejected-code', code: 'TEST-code' }),
       { code: busy ? 'busy' : 'held' });
@@ -499,7 +528,7 @@ test('busy or failed code preparation leaves the original browser outcome and na
 test('cancel and close clean before crypto settles while seal immediately fences and aborts', async t => {
   const controlled = controlledFingerprints(t);
   for (const action of ['cancel', 'close', 'seal'] as const) {
-    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f, controlled);
     const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-late-code', code: 'TEST-code' }), { code: 'held' });
     if (action === 'cancel') await f.owner.cancel(lookup);
     else {
@@ -508,8 +537,9 @@ test('cancel and close clean before crypto settles while seal immediately fences
     }
     assert.equal(native.closeCalls, 1);
     const path = f.files()[0]!, bytes = readFileSync(path);
-    if (action === 'cancel') f.owner.start({ ...initial, operationId: 'TEST-next-flow' });
+    const successor = action === 'cancel' ? f.owner.start({ ...initial, operationId: 'TEST-next-flow' }) : undefined;
     controlled.finish(); await rejected;
+    if (successor) { controlled.finish(); await bounded(successor, 'successor settles after its fingerprint callback'); }
     assert.deepEqual(readFileSync(path), bytes);
     assert.equal(native.completeCalls, 0);
     if (action === 'cancel') assert.equal(f.conversations[1]?.completeCalls, 0);
@@ -521,7 +551,7 @@ test('original deadline, writer and target are rechecked after crypto even befor
   t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
   for (const fault of ['expired', 'writer', 'target'] as const) {
     t.mock.timers.setTime(100_000);
-    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f, controlled);
     const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-stale-code', code: 'TEST-code' }));
     const bytes = f.serialized();
     if (fault === 'expired') t.mock.timers.setTime(original(f).expiresAt);
@@ -562,7 +592,7 @@ test('a missing or replaced receipt after derivation stays untouched through ori
   t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
   for (const missing of [false, true]) for (const expired of [false, true]) {
     t.mock.timers.setTime(100_000);
-    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f, controlled);
     const expiresAt = original(f).expiresAt;
     const rejected = assert.rejects(f.owner.complete({ ...lookup, commandId: 'TEST-stale-receipt', code: 'TEST-code' }), { code: 'conflict' });
     if (missing) unlinkSync(f.files()[0]!);
@@ -581,7 +611,7 @@ test('a missing or replaced receipt after derivation stays untouched through ori
 test('retained replay returns advanced progress and fences changed receipts without itself performing cleanup', async t => {
   const controlled = controlledFingerprints(t);
   for (const change of ['progress', 'missing', 'salt'] as const) {
-    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f);
+    const f = fixture(); t.after(() => f.cleanup()); const native = await waiting(f, controlled);
     const input = { ...lookup, commandId: 'TEST-replay', code: 'TEST-code' };
     const first = f.owner.complete(input); controlled.finish(); await first;
     const replay = f.owner.complete(input);
@@ -627,7 +657,7 @@ test('completion write that commits then throws preserves its ID and descriptor 
   const controlled = controlledFingerprints(t), failure = new Error('TEST completion fsync after rename');
   const f = fixture({ blockClose: true, store: base => ({ read: id => base.read(id), list: () => base.list(),
     write(record) { base.write(record); if (record.phase === 'completing') throw failure; } }) });
-  t.after(() => f.cleanup()); const native = await waiting(f);
+  t.after(() => f.cleanup()); const native = await waiting(f, controlled);
   const input = { ...lookup, commandId: 'TEST-unknown-publication', code: 'TEST-code' };
   const rejected = assert.rejects(f.owner.complete(input), error => error === failure);
   controlled.finish(); await rejected; await until(() => native.closeCalls === 1);
@@ -639,9 +669,9 @@ test('completion write that commits then throws preserves its ID and descriptor 
   assert.equal(original(f).completionFingerprintKdf?.version, 1);
   assert.equal(original(f).phase, 'completing');
   const bytes = f.serialized();
-  assert.throws(() => f.owner.start({ ...initial, operationId: 'TEST-live-next' }), { code: 'held' });
+  await assert.rejects(f.owner.start({ ...initial, operationId: 'TEST-live-next' }), { code: 'held' });
   const cold = f.restart();
-  assert.throws(() => cold.start({ ...initial, operationId: 'TEST-cold-next' }), { code: 'held' });
+  await assert.rejects(cold.start({ ...initial, operationId: 'TEST-cold-next' }), { code: 'held' });
   const replay = cold.complete(input); controlled.finish();
   assert.equal((await replay).phase, 'held');
   assert.equal(f.serialized(), bytes);
@@ -651,12 +681,12 @@ test('completion write that commits then throws preserves its ID and descriptor 
 test('code OAuth admits once, persists before callback, publishes safe ordered progress and never journals auth material', async (t) => {
   const f = fixture();
   t.after(() => f.cleanup());
-  assert.equal(f.owner.start(initial).phase, 'authorizing');
+  assert.equal((await f.owner.start(initial)).phase, 'authorizing');
   const native = f.conversations[0]!;
   assert.equal(native.authorizeCalls, 1);
-  assert.equal(f.owner.start(initial).phase, 'authorizing');
+  assert.equal((await f.owner.start(initial)).phase, 'authorizing');
   assert.equal(f.conversations.length, 1);
-  assert.throws(() => f.owner.start({ ...initial, fields: { 'TEST-client': 'TEST-different' } }), {
+  await assert.rejects(f.owner.start({ ...initial, fields: { 'TEST-client': 'TEST-different' } }), {
     code: 'conflict',
   });
   native.authorize.resolve(authorization);
@@ -676,7 +706,7 @@ test('code OAuth admits once, persists before callback, publishes safe ordered p
   });
   native.complete.resolve(true);
   await until(() => f.owner.read(lookup)?.phase === 'completed');
-  assert.equal(f.owner.start(initial).phase, 'completed');
+  assert.equal((await f.owner.start(initial)).phase, 'completed');
   assert.equal(f.owner.authorization(lookup), null);
   assert.deepEqual(
     f.events.map((event) => event.phase),
@@ -700,7 +730,7 @@ test('code OAuth admits once, persists before callback, publishes safe ordered p
 test('automatic OAuth has the same bound callback identity and rejects an injected authorization code', async (t) => {
   const f = fixture();
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   const native = f.conversations[0]!;
   native.authorize.resolve({ ...authorization, completionMethod: 'auto' });
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-browser');
@@ -718,18 +748,18 @@ test('automatic OAuth has the same bound callback identity and rejects an inject
 test('cancel fences before cleanup, retains the namespace until confirmed stop and ignores late authorization after reconnect', async (t) => {
   const f = fixture({ blockClose: true });
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   const old = f.conversations[0]!;
   const cancelled = f.owner.cancel(lookup);
   assert.equal(f.owner.read(lookup)?.phase, 'cancelling');
-  assert.throws(() => f.owner.start({ ...initial, operationId: 'TEST-replacement' }), {
+  await assert.rejects(f.owner.start({ ...initial, operationId: 'TEST-replacement' }), {
     code: 'busy',
   });
   await until(() => old.closeCalls === 1);
   old.close.resolve(true);
   assert.equal((await cancelled).phase, 'cancelled');
   const replacement = { ...initial, operationId: 'TEST-replacement' };
-  f.owner.start(replacement);
+  await f.owner.start(replacement);
   old.authorize.resolve(authorization);
   await new Promise<void>((done) => setImmediate(done));
   assert.equal(f.owner.authorization(lookup), null);
@@ -757,7 +787,7 @@ test('cancel fences before cleanup, retains the namespace until confirmed stop a
 test('cancel during callback closes the original target and a late success cannot complete the next account flow', async (t) => {
   const f = fixture();
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   const old = f.conversations[0]!;
   old.authorize.resolve(authorization);
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-code');
@@ -766,7 +796,7 @@ test('cancel during callback closes the original target and a late success canno
   assert.equal((await f.owner.cancel(lookup)).phase, 'cancelled');
   assert.equal(old.closeCalls, 1);
   const next = { ...initial, operationId: 'TEST-other-account' };
-  f.owner.start(next);
+  await f.owner.start(next);
   old.complete.resolve(true);
   await new Promise<void>((done) => setImmediate(done));
   assert.equal(f.owner.read(lookup)?.phase, 'cancelled');
@@ -782,12 +812,12 @@ test('cancel during callback closes the original target and a late success canno
 test('cold recovery holds the original pending OAuth request and cannot repeat authorization or create a second writer', async (t) => {
   const f = fixture();
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   const recovered = f.restart();
   assert.equal(recovered.read(lookup)?.phase, 'held');
-  assert.equal(recovered.start(initial).phase, 'held');
+  assert.equal((await recovered.start(initial)).phase, 'held');
   assert.equal(recovered.authorization(lookup), null);
-  assert.throws(() => recovered.start({ ...initial, operationId: 'TEST-new-id' }), {
+  await assert.rejects(recovered.start({ ...initial, operationId: 'TEST-new-id' }), {
     code: 'held',
   });
   assert.equal(f.conversations.length, 1);
@@ -796,7 +826,7 @@ test('cold recovery holds the original pending OAuth request and cannot repeat a
 test('unconfirmed OAuth writer cleanup remains held for credential mutations and shutdown', async (t) => {
   const f = fixture({ closeFails: true });
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   assert.equal((await f.owner.cancel(lookup)).phase, 'held');
   assert.equal(f.base.read(initial.operationId)?.resourceHeld, true);
   await assert.rejects(
@@ -817,13 +847,13 @@ for (const clean of [true, false]) {
   test(`confirmed native rejection requires original cleanup before retry: cleanup=${clean}`, async (t) => {
     const f = fixture({ confirmedRejection: true, blockClose: true });
     t.after(() => f.cleanup());
-    f.owner.start(initial);
+    await f.owner.start(initial);
     const native = f.conversations[0]!;
     native.authorize.resolve({ ...authorization, completionMethod: 'auto' });
     await until(() => native.closeCalls === 1);
     assert.equal(f.owner.read(lookup)?.phase, 'cancelling');
     const next = { ...initial, operationId: 'TEST-explicit-retry' };
-    assert.throws(() => f.owner.start(next), { code: 'busy' });
+    await assert.rejects(f.owner.start(next), { code: 'busy' });
     native.close.resolve(clean);
     await until(() => f.owner.read(lookup)?.phase === (clean ? 'failed' : 'held'));
     assert.equal(f.owner.read(lookup)?.reason, 'native-rejected');
@@ -831,9 +861,9 @@ for (const clean of [true, false]) {
     assert.equal(f.owner.authorization(lookup), null);
     assert.equal(native.completeCalls, 0, 'rejection cannot become successful completion');
     if (clean) {
-      assert.equal(f.owner.start(next).phase, 'authorizing');
+      assert.equal((await f.owner.start(next)).phase, 'authorizing');
       f.conversations[1]!.close.resolve(true);
-    } else assert.throws(() => f.owner.start(next), { code: 'held' });
+    } else await assert.rejects(f.owner.start(next), { code: 'held' });
   });
 }
 
@@ -849,7 +879,7 @@ test('completion admission loss stops the original flow without submitting a cod
     }),
   });
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   const native = f.conversations[0]!;
   native.authorize.resolve(authorization);
   await until(() => f.owner.read(lookup)?.phase === 'waiting-for-code');
@@ -863,9 +893,13 @@ test('completion admission loss stops the original flow without submitting a cod
 });
 
 test('expiration cancels the captured flow and later authorization cannot restore it', async (t) => {
+  const controlled = controlledFingerprints(t);
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 100_000 });
   const f = fixture({ timeoutMs: 25 });
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  const started = f.owner.start(initial); controlled.finish();
+        await bounded(started, 'controlled start settles after its fingerprint callback');
+  t.mock.timers.tick(25);
   await until(() => f.owner.read(lookup)?.phase === 'cancelled');
   assert.equal(f.owner.read(lookup)?.reason, 'expired');
   f.conversations[0]!.authorize.resolve(authorization);
@@ -877,7 +911,7 @@ test('expiration cancels the captured flow and later authorization cannot restor
 test('revoked writer cannot publish late OAuth progress or overwrite its original claim', async (t) => {
   const f = fixture();
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   f.revoke();
   f.conversations[0]!.authorize.resolve(authorization);
   await until(() => f.conversations[0]!.closeCalls === 1);
@@ -894,14 +928,15 @@ test('initial OAuth write that commits then throws keeps live and cold custody w
   const f = fixture({ store: base => ({ read: id => base.read(id), list: () => base.list(),
     write(record) { base.write(record); throw failure; } }) });
   t.after(() => f.cleanup());
-  assert.throws(() => f.owner.start(initial), error => error === failure);
+  await assert.rejects(f.owner.start(initial), error => error === failure);
   const bytes = f.serialized();
   assert.equal(f.base.read(initial.operationId)?.phase, 'authorizing');
   assert.equal(f.base.read(initial.operationId)?.resourceHeld, true);
   assert.equal(f.conversations[0]?.authorizeCalls, 0);
-  assert.throws(() => f.owner.start({ ...initial, operationId: 'TEST-live-next' }), { code: 'held' });
+  assert.equal(f.conversations[0]?.closeCalls, 1);
+  await assert.rejects(f.owner.start({ ...initial, operationId: 'TEST-live-next' }), { code: 'held' });
   const cold = f.restart();
-  assert.throws(() => cold.start({ ...initial, operationId: 'TEST-cold-next' }), { code: 'held' });
+  await assert.rejects(cold.start({ ...initial, operationId: 'TEST-cold-next' }), { code: 'held' });
   assert.equal(f.serialized(), bytes);
   assert.equal(f.conversations.length, 1);
 });
@@ -918,8 +953,9 @@ test('attempted initial publication failure retains custody even without a visib
     }),
   });
   t.after(() => f.cleanup());
-  assert.throws(() => f.owner.start(initial));
+  await assert.rejects(f.owner.start(initial));
   assert.equal(f.conversations[0]?.authorizeCalls, 0);
+  assert.equal(f.conversations[0]?.closeCalls, 1);
   assert.equal(f.base.read(initial.operationId), undefined);
   await assert.rejects(f.credentials.execute({
     commandId: 'TEST-set',
@@ -936,11 +972,11 @@ test('construction failure before an initial write keeps the same live namespace
   let fail = true;
   const f = fixture({ beforePrepare() { if (fail) throw new Error('TEST prepare before claim'); } });
   t.after(() => f.cleanup());
-  assert.throws(() => f.owner.start(initial), /prepare before claim/);
+  await assert.rejects(f.owner.start(initial), /prepare before claim/);
   assert.equal(f.base.read(initial.operationId), undefined);
   assert.equal(f.conversations.length, 0);
   fail = false;
-  assert.equal(f.owner.start({ ...initial, operationId: 'TEST-after-prepare' }).phase, 'authorizing');
+  assert.equal((await f.owner.start({ ...initial, operationId: 'TEST-after-prepare' })).phase, 'authorizing');
   assert.equal(f.conversations[0]?.authorizeCalls, 1);
 });
 
@@ -948,7 +984,7 @@ test('unsafe authorization URLs never leave the captured flow and cause confirme
   for (const url of ['file:///TEST-private', 'https://TEST-user:TEST-password@TEST.invalid/']) {
     const f = fixture();
     t.after(() => f.cleanup());
-    f.owner.start(initial);
+    await f.owner.start(initial);
     f.conversations[0]!.authorize.resolve({ ...authorization, authorizationUrl: url });
     await until(() => f.owner.read(lookup)?.phase === 'held');
     assert.equal(f.owner.authorization(lookup), null);
@@ -960,19 +996,322 @@ test('unsafe authorization URLs never leave the captured flow and cause confirme
 test('orderly shutdown cancels the owned pending flow durably and cold recovery permits a separate new intent', async (t) => {
   const f = fixture();
   t.after(() => f.cleanup());
-  f.owner.start(initial);
+  await f.owner.start(initial);
   await f.owner.close();
   assert.equal(f.base.read(initial.operationId)?.phase, 'cancelled');
   assert.equal(f.base.read(initial.operationId)?.resourceHeld, false);
   const recovered = f.restart();
-  assert.equal(recovered.start(initial).phase, 'cancelled');
+  assert.equal((await recovered.start(initial)).phase, 'cancelled');
   assert.equal(f.conversations.length, 1);
   assert.equal(
-    recovered.start({ ...initial, operationId: 'TEST-new-after-shutdown' }).phase,
+    (await recovered.start({ ...initial, operationId: 'TEST-new-after-shutdown' })).phase,
     'authorizing'
   );
   f.conversations[0]!.authorize.resolve(authorization);
   await new Promise<void>((done) => setImmediate(done));
   assert.equal(recovered.read(lookup)?.phase, 'cancelled');
   assert.equal(f.conversations[0]!.closeCalls, 1);
+});
+
+type StartInput = Omit<typeof initial, 'fields'> & { fields?: Record<string, string> };
+function legacyStartPreimage(input: StartInput): string {
+  return JSON.stringify({
+    configRevision: input.configRevision,
+    ...(input.fields === undefined ? {} : { fields: Object.fromEntries(
+      Object.entries(input.fields).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0),
+    ) }),
+    methodIndex: input.methodIndex, operationId: input.operationId,
+    profileId: input.profileId, providerId: input.providerId,
+  });
+}
+function retainedStart(input: StartInput = initial, patch: Partial<StoredOAuthCommand> = {}): StoredOAuthCommand {
+  return { schemaVersion: 1, kind: 'oauth', commandId: input.operationId,
+    profileId: input.profileId, configRevision: input.configRevision, providerId: input.providerId,
+    selectionDigest: 'a'.repeat(64), resourceId: 'b'.repeat(64), methodIndex: input.methodIndex,
+    fingerprint: crypto.createHash('sha256').update(legacyStartPreimage(input)).digest('hex'),
+    phase: 'held', completionMethod: null, resourceHeld: true, sequence: 1,
+    expiresAt: Date.now() + 30_000, ...patch };
+}
+
+test('G1d one-character and empty starts retain only salted private fingerprints with exact canonical bytes', async t => {
+  const cases: Record<string, string>[] = [{ z: 'x', a: 'TEST-private' }, {}];
+  for (const fields of cases) {
+    const f = fixture(); t.after(() => f.cleanup());
+    const input: StartInput = { ...initial, fields };
+    await f.owner.start(input);
+    const saved = original(f), descriptor = saved.fingerprintKdf;
+    assert.ok(descriptor); assert.equal(descriptor.version, 1);
+    const expected = await new Promise<Buffer>((resolve, reject) => crypto.scrypt(
+      legacyStartPreimage(input), Buffer.from(descriptor.salt, 'hex'), 32,
+      { N: 32768, r: 8, p: 3, maxmem: 64 * 1024 * 1024 },
+      (error, derived) => error ? reject(error) : resolve(derived),
+    ));
+    assert.equal(saved.fingerprint, expected.toString('hex')); expected.fill(0);
+    assert.equal(f.serialized().includes(retainedStart(input).fingerprint), false);
+    assert.equal(f.serialized().includes('TEST-private'), false);
+    assert.equal('fields' in saved, false);
+    assert.equal(JSON.stringify(f.conversations[0]!.fields), JSON.stringify(fields));
+    assert.equal(JSON.stringify(f.events).includes('fingerprint'), false);
+    assert.equal(f.conversations[0]!.authorizeCalls, 1);
+  }
+});
+
+test('G1d pending identical starts join once, reject changed identity, and capture mutable fields before crypto', async t => {
+  const controlled = controlledFingerprints(t), f = fixture(); t.after(() => f.cleanup());
+  const input = structuredClone(initial), first = f.owner.start(input);
+  const duplicate = f.owner.start(structuredClone(initial));
+  assert.equal(first, duplicate);
+  assert.equal(controlled.started(), 1);
+  assert.equal(f.conversations.length, 1); assert.equal(f.conversations[0]!.authorizeCalls, 0);
+  assert.deepEqual(f.files(), []);
+  input.fields['TEST-client'] = 'TEST-mutated-after-call';
+  await assert.rejects(f.owner.start(input), { code: 'conflict' });
+  await assert.rejects(f.owner.start({ ...initial, profileId: 'TEST-another-resource' }), { code: 'conflict' });
+  await assert.rejects(f.owner.start({ ...initial, operationId: 'TEST-same-namespace' }), { code: 'busy' });
+  assert.equal(f.owner.start(structuredClone(initial)), first);
+  controlled.finish();
+  assert.deepEqual(await bounded(first, 'the joined start settles after one fingerprint callback'), await duplicate);
+  assert.deepEqual(f.conversations[0]!.fields, initial.fields);
+  assert.equal(controlled.started(), 1); assert.equal(f.conversations[0]!.authorizeCalls, 1);
+  assert.equal(original(f).fingerprintKdf?.version, 1);
+});
+
+for (const action of ['cancel', 'expired', 'seal', 'close'] as const)
+  test('G1d preclaim ' + action + ' closes without awaiting crypto and cannot release a successor', async t => {
+    const controlled = controlledFingerprints(t);
+    t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 100_000 });
+    const f = fixture(); t.after(() => f.cleanup());
+    const started = f.owner.start(initial), rejected = assert.rejects(started, { code: 'held' });
+    const native = f.conversations[0]!;
+    assert.equal(native.authorizeCalls, 0); assert.deepEqual(f.files(), []);
+    if (action === 'cancel') assert.equal((await bounded(f.owner.cancel(lookup), 'original cancellation settles without waiting for crypto')).phase, 'cancelled');
+    else if (action === 'expired') t.mock.timers.tick(30_000);
+    else if (action === 'seal') f.owner.seal();
+    else await bounded(f.owner.close(), 'preclaim close settles without waiting for crypto');
+    await until(() => native.closeCalls === 1);
+    assert.deepEqual(f.files(), []); assert.equal(native.authorizeCalls, 0);
+    assert.doesNotThrow(() => f.fence.assertAvailable('b'.repeat(64)));
+    if (action === 'cancel' || action === 'expired') {
+      assert.equal(f.owner.start(initial), started, 'the original token remains until its crypto callback');
+      const successor = f.owner.start({ ...initial, operationId: 'TEST-successor' });
+      assert.throws(() => f.fence.assertAvailable('b'.repeat(64)), { code: 'busy' });
+      controlled.finish(); await bounded(rejected, 'original rejection settles after its fingerprint callback');
+      assert.throws(() => f.fence.assertAvailable('b'.repeat(64)), { code: 'busy' });
+      controlled.finish(); await bounded(successor, 'successor start settles after its fingerprint callback');
+      assert.equal(f.conversations[1]!.authorizeCalls, 1);
+      assert.equal(f.conversations[1]!.closeCalls, 0);
+    } else {
+      await bounded(f.owner.close(), 'sealed cleanup settles without waiting for crypto');
+      controlled.finish(); await bounded(rejected, 'original rejection settles after its fingerprint callback');
+    }
+    assert.equal(native.closeCalls, 1); assert.equal(native.authorizeCalls, 0);
+    assert.equal(f.base.read(initial.operationId), undefined);
+  });
+
+for (const fault of ['expired', 'writer', 'target'] as const)
+  test('G1d preclaim rechecks original ' + fault + ' after crypto before any claim', async t => {
+    const controlled = controlledFingerprints(t);
+    t.mock.timers.enable({ apis: ['Date'], now: 100_000 });
+    const f = fixture(); t.after(() => f.cleanup());
+    const rejected = assert.rejects(f.owner.start(initial));
+    if (fault === 'expired') t.mock.timers.setTime(130_000);
+    if (fault === 'writer') f.revoke();
+    if (fault === 'target') f.changeTarget();
+    assert.equal(f.conversations[0]!.closeCalls, 0, 'the actual expiry callback has not fired');
+    controlled.finish(); await bounded(rejected, 'original rejection settles after its fingerprint callback');
+    assert.equal(f.conversations[0]!.authorizeCalls, 0);
+    assert.equal(f.conversations[0]!.closeCalls, 1);
+    assert.deepEqual(f.files(), []);
+    assert.doesNotThrow(() => f.fence.assertAvailable('b'.repeat(64)));
+  });
+
+test('G1d crypto wait consumes the original deadline and active custody receives only its remaining time', async t => {
+  const controlled = controlledFingerprints(t);
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 100_000 });
+  const f = fixture(); t.after(() => f.cleanup());
+  const started = f.owner.start(initial);
+  t.mock.timers.setTime(110_000);
+  controlled.finish();
+  assert.equal((await bounded(started, 'the admitted start settles before checking its original deadline')).expiresAt, 130_000);
+  assert.equal(original(f).expiresAt, 130_000);
+  t.mock.timers.tick(19_999);
+  assert.equal(f.owner.read(lookup)?.phase, 'authorizing');
+  assert.equal(f.conversations[0]!.closeCalls, 0);
+  t.mock.timers.tick(1);
+  await until(() => f.owner.read(lookup)?.phase === 'cancelled');
+  assert.equal(f.owner.read(lookup)?.reason, 'expired');
+  assert.equal(f.conversations[0]!.closeCalls, 1);
+});
+
+for (const fault of ['busy', 'failed'] as const)
+  test('G1d ' + fault + ' fingerprint leaves a clean unclaimed ID and namespace retryable', async t => {
+    const controlled = controlledFingerprints(t), f = fixture(); t.after(() => f.cleanup());
+    const fillers = fault === 'busy'
+      ? Array.from({ length: 9 }, (_, index) => deriveSecretFingerprint('TEST-start-queue-' + index)) : [];
+    const rejected = assert.rejects(f.owner.start(initial), { code: fault === 'busy' ? 'busy' : 'held' });
+    if (fault === 'failed') controlled.finish(new Error('TEST derivation unavailable'));
+    await bounded(rejected, 'original rejection settles after its fingerprint callback');
+    assert.deepEqual(f.files(), []);
+    assert.equal(f.conversations[0]!.authorizeCalls, 0); assert.equal(f.conversations[0]!.closeCalls, 1);
+    assert.doesNotThrow(() => f.fence.assertAvailable('b'.repeat(64)));
+    for (let index = 0; index < fillers.length; index++) controlled.finish();
+    await Promise.all(fillers);
+    const retry = f.owner.start(initial); controlled.finish(); await bounded(retry, 'explicit retry settles after its fingerprint callback');
+    assert.equal(f.conversations.length, 2); assert.equal(f.conversations[1]!.authorizeCalls, 1);
+  });
+
+for (const close of ['false', 'throw'] as const)
+  test('G1d unconfirmed preclaim close=' + close + ' keeps original custody without a fabricated receipt', async t => {
+    const controlled = controlledFingerprints(t);
+    const f = fixture({ closeFails: close === 'false', blockClose: close === 'throw' });
+    t.after(() => f.cleanup());
+    const rejected = assert.rejects(f.owner.start(initial), { code: 'held' });
+    const cancelled = f.owner.cancel(lookup), native = f.conversations[0]!;
+    await until(() => native.closeCalls === 1);
+    if (close === 'throw') native.close.reject(new Error('TEST constructed close unknown'));
+    assert.equal((await bounded(cancelled, 'original construction cleanup settles')).phase, 'held');
+    assert.deepEqual(f.files(), []); assert.equal(native.authorizeCalls, 0);
+    controlled.finish(); await bounded(rejected, 'original rejection settles after its fingerprint callback');
+    await assert.rejects(f.owner.start(initial), { code: 'held' });
+    await assert.rejects(f.owner.start({ ...initial, operationId: 'TEST-next-after-close' }), { code: 'held' });
+    await assert.rejects(f.owner.close(), { code: 'held' });
+    assert.equal(native.closeCalls, 1); assert.equal(f.conversations.length, 1);
+  });
+
+for (const stage of ['before-claim', 'other-resource', 'during-close', 'deleted-after-conflict', 'corrupt-during-close'] as const)
+  test('G1d ' + stage + ' original appearance cannot release held native custody or replace its bytes', async t => {
+    const controlled = controlledFingerprints(t), f = fixture({ blockClose: true });
+    t.after(() => f.cleanup());
+    const started = f.owner.start(initial);
+    const rejected = assert.rejects(started,
+      { code: ['before-claim', 'other-resource', 'deleted-after-conflict'].includes(stage) ? 'conflict' : 'held' });
+    let cancelled: ReturnType<OAuthOperationOwner['cancel']> | undefined;
+    if (stage === 'during-close' || stage === 'corrupt-during-close') {
+      cancelled = f.owner.cancel(lookup);
+      await until(() => f.conversations[0]!.closeCalls === 1);
+    }
+    f.base.write(retainedStart(initial, { fingerprint: 'e'.repeat(64),
+      ...(stage === 'other-resource' ? { resourceId: 'd'.repeat(64), selectionDigest: 'c'.repeat(64) } : {}) }));
+    if (stage === 'corrupt-during-close') writeFileSync(f.files()[0]!, 'TEST-corrupt-original');
+    if (!cancelled) {
+      controlled.finish(); await until(() => f.conversations[0]!.closeCalls === 1);
+      if (stage === 'deleted-after-conflict') unlinkSync(f.files()[0]!);
+    }
+    const bytes = f.serialized();
+    f.conversations[0]!.close.resolve(true);
+    if (cancelled) { assert.equal((await bounded(cancelled, 'original construction cleanup settles')).phase, 'held'); controlled.finish(); }
+    await bounded(rejected, 'original rejection settles after its fingerprint callback');
+    assert.throws(() => f.fence.assertAvailable('b'.repeat(64)), { code: 'held' });
+    await assert.rejects(f.owner.start({ ...initial, operationId: 'TEST-custody-not-forgotten' }), { code: 'held' });
+    assert.equal(f.serialized(), bytes);
+    assert.equal(f.conversations[0]!.authorizeCalls, 0); assert.equal(f.conversations[0]!.closeCalls, 1);
+  });
+
+test('G1d cancel during retained start replay closes the actual original, not the replay token', async t => {
+  const controlled = controlledFingerprints(t), f = fixture(); t.after(() => f.cleanup());
+  const native = await waiting(f, controlled), replay = f.owner.start(initial);
+  assert.equal(controlled.started(), 2);
+  const cancelled = await bounded(f.owner.cancel(lookup), 'retained replay cannot intercept original cancellation');
+  assert.equal(cancelled.phase, 'cancelled'); assert.equal(cancelled.sequence, 4);
+  assert.equal(original(f).phase, 'cancelled'); assert.equal(original(f).resourceHeld, false);
+  assert.equal(native.closeCalls, 1);
+  const bytes = f.serialized();
+  controlled.finish();
+  assert.equal((await bounded(replay, 'read-only start replay settles after its fingerprint callback')).phase, 'cancelled');
+  assert.equal(f.serialized(), bytes);
+  assert.equal(f.conversations.length, 1); assert.equal(native.authorizeCalls, 1);
+});
+
+test('G1d retained start replay permits completion to advance and returns the latest durable projection', async t => {
+  const controlled = controlledFingerprints(t), f = fixture({ browser: true }); t.after(() => f.cleanup());
+  const native = await waiting(f, controlled), replay = f.owner.start(initial);
+  native.browser.resolve(true); await until(() => native.completeCalls === 1);
+  native.complete.resolve(true); await until(() => f.owner.read(lookup)?.phase === 'completed');
+  const bytes = f.serialized();
+  controlled.finish();
+  assert.equal((await bounded(replay, 'read-only start replay settles after its fingerprint callback')).phase, 'completed');
+  assert.equal(f.serialized(), bytes);
+  assert.equal(native.authorizeCalls, 1); assert.equal(native.completeCalls, 1);
+  assert.equal(native.closeCalls, 0); assert.equal(f.conversations.length, 1);
+});
+
+for (const change of ['missing', 'descriptor', 'corrupt', 'wrong-fields'] as const)
+  test('G1d retained start replay with ' + change + ' never reauthorizes or itself closes the native original', async t => {
+    const controlled = controlledFingerprints(t), f = fixture(); t.after(() => f.cleanup());
+    const native = await waiting(f, controlled);
+    const input = change === 'wrong-fields' ? { ...initial, fields: { 'TEST-client': 'TEST-wrong' } } : initial;
+    const rejected = assert.rejects(f.owner.start(input), { code: change === 'corrupt' ? 'held' : 'conflict' });
+    if (change === 'missing') unlinkSync(f.files()[0]!);
+    else if (change === 'descriptor')
+      f.base.write({ ...original(f), fingerprintKdf: { version: 1, salt: 'f'.repeat(32) } });
+    else if (change === 'corrupt') writeFileSync(f.files()[0]!, 'TEST-corrupt-start');
+    const bytes = f.serialized();
+    controlled.finish(); await bounded(rejected, 'original rejection settles after its fingerprint callback');
+    assert.equal(native.closeCalls, 0);
+    assert.equal(native.authorizeCalls, 1); assert.equal(f.conversations.length, 1);
+    assert.equal(f.serialized(), bytes);
+    if (change === 'wrong-fields') {
+      assert.equal(f.owner.authorization(lookup)?.instructions, authorization.instructions);
+      assert.equal((await bounded(f.owner.cancel(lookup), 'original cancellation settles without waiting for crypto')).phase, 'cancelled');
+    } else {
+      await assert.rejects(f.owner.close(), { code: 'held' });
+      assert.equal(f.serialized(), bytes);
+    }
+  });
+
+test('G1d salted cold start replay keeps its descriptor and original route after expiry and selection drift', async t => {
+  const f = fixture(); t.after(() => f.cleanup());
+  await f.owner.start(initial); await f.owner.cancel(lookup);
+  const saved = original(f), bytes = f.serialized();
+  assert.ok(saved.fingerprintKdf);
+  f.changeTarget(); const cold = f.restart();
+  t.mock.timers.enable({ apis: ['Date'], now: saved.expiresAt + 1 });
+  assert.equal((await cold.start(initial)).phase, 'cancelled');
+  await assert.rejects(cold.start({ ...initial, fields: { 'TEST-client': 'TEST-wrong' } }), { code: 'conflict' });
+  assert.equal(f.serialized(), bytes); assert.equal(f.conversations.length, 1);
+  assert.equal(f.conversations[0]!.authorizeCalls, 1);
+});
+
+test('G1d markerless completed start replay retains exact legacy preimage without derivation, migration or selection', async t => {
+  const f = fixture(); t.after(() => f.cleanup());
+  const input = { ...initial, fields: { z: 'TEST-last', a: 'TEST-first' } };
+  const saved = retainedStart(input, { phase: 'completed', resourceHeld: false, sequence: 4,
+    completionMethod: 'code', completionCommandId: 'TEST-legacy-completed',
+    completionFingerprint: 'e'.repeat(64), expiresAt: 1 });
+  assert.equal(saved.fingerprint, managementDigest(input));
+  f.base.write(saved); const bytes = f.serialized();
+  f.changeTarget(); const cold = f.restart();
+  t.mock.method(crypto, 'scrypt', () => { assert.fail('legacy start replay cannot derive'); });
+  syncBuiltinESMExports();
+  t.after(() => { t.mock.restoreAll(); syncBuiltinESMExports(); });
+  assert.equal((await cold.start({ ...input, fields: { a: 'TEST-first', z: 'TEST-last' } })).phase, 'completed');
+  await assert.rejects(cold.start({ ...input, fields: { z: 'TEST-changed', a: 'TEST-first' } }), { code: 'conflict' });
+  assert.equal(f.serialized(), bytes); assert.equal(original(f).fingerprintKdf, undefined);
+  assert.equal(f.conversations.length, 0); assert.deepEqual(f.events, []);
+});
+
+test('G1d malformed retained start descriptor is held without selecting a fresh native operation', async t => {
+  const f = fixture(); t.after(() => f.cleanup());
+  f.base.write(retainedStart());
+  const malformed = { ...original(f), fingerprintKdf: { version: 2, salt: 'a'.repeat(32) } };
+  writeFileSync(f.files()[0]!, JSON.stringify({ ...malformed, digest: managementDigest(malformed) }));
+  const bytes = f.serialized();
+  await assert.rejects(f.owner.start(initial), { code: 'held' });
+  assert.equal(f.serialized(), bytes); assert.equal(f.conversations.length, 0);
+  assert.deepEqual(f.events, []);
+});
+
+test('G1d an already-replaced live START identity is fenced before derivation without read-only native cleanup', async t => {
+  const controlled = controlledFingerprints(t), f = fixture({ browser: true }); t.after(() => f.cleanup());
+  const native = await waiting(f, controlled);
+  f.base.write({ ...original(f), selectionDigest: 'c'.repeat(64) });
+  const bytes = f.serialized(), count = controlled.started();
+  await assert.rejects(f.owner.start(initial), { code: 'conflict' });
+  assert.equal(controlled.started(), count);
+  assert.equal(native.closeCalls, 0);
+  native.browser.resolve(true);
+  await until(() => native.closeCalls === 1);
+  await assert.rejects(f.owner.close(), { code: 'held' });
+  assert.equal(f.serialized(), bytes); assert.equal(native.completeCalls, 0);
+  assert.equal(f.conversations.length, 1);
 });

@@ -35,6 +35,10 @@
       "types": "./dist/management/contracts.d.ts",
       "import": "./dist/management/contracts.js"
     },
+    "./management/secret-fingerprint": {
+      "types": "./dist/management/secretFingerprint.d.ts",
+      "import": "./dist/management/secretFingerprint.js"
+    },
     "./cli": "./dist/cli.js",
     "./team": {
       "types": "./dist/team/TeamOwner.d.ts",

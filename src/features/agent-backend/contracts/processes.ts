@@ -28,7 +28,7 @@ export interface BackendProcessReceipt {
   result?: BackendProcess | BackendProcess[];
 }
 export interface BackendProcessOperationPayloads {
-  'process.list': Record<string, never>;
+  'process.list': { cursor?: string };
   'process.pending.read': Record<string, never>;
   'process.lookup': { originalCommandId: string };
   'process.terminate': { processRef: string };
@@ -130,6 +130,34 @@ export function readBackendProcesses(value: unknown): BackendProcess[] {
   if (new Set(rows.map((row) => row.id)).size !== rows.length)
     throw new Error('Duplicate process identity');
   return rows;
+}
+
+export interface BackendProcessCatalogPage {
+  kind: 'process-catalog-page';
+  processes: BackendProcess[];
+  total: number;
+  revision: string;
+  nextCursor: string | null;
+}
+export type BackendProcessCatalog = BackendProcess[] | BackendProcessCatalogPage;
+
+export const isProcessCatalogCursor = (value: unknown): value is string =>
+  typeof value === 'string' && /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.exec(value)?.[0] === value;
+
+/** Project only complete public process rows and the bounded continuation metadata. */
+export function readBackendProcessCatalog(value: unknown): BackendProcessCatalog {
+  if (Array.isArray(value)) return readBackendProcesses(value);
+  if (!value || typeof value !== 'object') throw new Error('Invalid process catalog page');
+  const page = value as Record<string, unknown>;
+  const total = page.total, revision = page.revision, nextCursor = page.nextCursor;
+  if (page.kind !== 'process-catalog-page' || typeof total !== 'number' ||
+      !Number.isSafeInteger(total) || total < 1 || total > 1024 ||
+      typeof revision !== 'string' || revision.length !== 64 || !/^[a-f0-9]{64}$/.test(revision) ||
+      (nextCursor !== null && !isProcessCatalogCursor(nextCursor)))
+    throw new Error('Invalid process catalog page');
+  const processes = readBackendProcesses(page.processes);
+  if (!processes.length || processes.length > total) throw new Error('Invalid process catalog page');
+  return { kind: 'process-catalog-page', processes, total, revision, nextCursor };
 }
 
 export type BackendProcessControlRequest = { handle: { handleId: string }; commandId: string } & (

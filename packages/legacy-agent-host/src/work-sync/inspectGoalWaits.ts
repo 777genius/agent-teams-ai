@@ -26,7 +26,10 @@ function waitFacts(reports: readonly WorkSyncCommandReceipt[]) {
   for (const receipt of reports) {
     if (receipt.operation !== 'report' || receipt.phase !== 'completed' ||
         receipt.nativeInput.team.mode !== 'goal' || !object(receipt.result) ||
-        receipt.result.accepted !== true || !object(receipt.payload) || !isGoalWaitReport(receipt.payload.wait)) continue;
+        receipt.result.accepted !== true) continue;
+    if (!object(receipt.payload)) throw new TeamOwnerError('hold');
+    if (receipt.payload.wait === undefined) continue;
+    if (!isGoalWaitReport(receipt.payload.wait)) throw new TeamOwnerError('hold');
     rows.push({ receipt, wait: receipt.payload.wait });
   }
   rows.sort((a, b) => Date.parse(a.receipt.receivedAt) - Date.parse(b.receipt.receivedAt) ||

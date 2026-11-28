@@ -13,7 +13,7 @@ import {
   readAutonomousGoalControl,
   readAutonomousGoalOptions,
 } from '../../../contracts/autonomousGoal';
-import { isProcessRef } from '../../../contracts/processes';
+import { isProcessCatalogCursor, isProcessRef } from '../../../contracts/processes';
 
 import { InvalidBackendOperation, object, stringArray, text } from './backendOperationInput';
 import { parseCrossTeamSend } from './crossTeamValues';
@@ -79,12 +79,17 @@ function payload(
       return { capability };
     }
     case 'host.recovery.capture':
-    case 'process.list':
     case 'process.pending.read':
     case 'crossTeam.lookup':
     case 'command.lookup':
       object(value, []);
       return {};
+    case 'process.list': {
+      const p = object(value, ['cursor']);
+      if (p.cursor === undefined) return {};
+      if (!isProcessCatalogCursor(p.cursor)) throw new InvalidBackendOperation();
+      return { cursor: p.cursor };
+    }
     case 'crossTeam.outbox.read': {
       const p = object(value, ['cursor']);
       if (p.cursor === undefined) return {};

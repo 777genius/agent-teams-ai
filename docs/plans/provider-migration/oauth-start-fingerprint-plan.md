@@ -1,6 +1,6 @@
 # PR #982 — G1d: protect OAuth start-field fingerprints and retain one original operation
 
-Status: R1/frontend design, independently approved by coordination for Main/caller flows, provider for Host custody, and root for the combined contract. Published before G1d production changes. The reviewed G1c owner is frozen at 606 lines (SHA-256 e11c1629381d4713b8aafef68f7a39fc8b3056ed514c9985fed15c9c444dbd0f).
+Status: focused execution qualification completed with the original-cleanup presentation correction below; full current-source PR qualification remains pending. The plan was published before G1d production changes. Its reviewed G1c baseline was 606 lines (SHA-256 e11c1629381d4713b8aafef68f7a39fc8b3056ed514c9985fed15c9c444dbd0f).
 
 ## Confirmed source problem and public flow
 
@@ -134,3 +134,26 @@ R1 traces UI inputs and both journal preimages, original ownership and the earli
 
 Estimate: 330–470 changed production lines across8 files, including roughly40–65 caller integration lines; 500–750 focused test lines plus direct-await adjustments. Complexity8/10 (two existing custody owners and cancellation across async derivation); source diagnosis confidence10/10, plan confidence8/10 until R2/R3 barriers; reliability target9/10 after combined tests. No claim that G1d closes unrelated CodeQL/G2 secret witnesses.
 
+## Candidate scope and execution qualification
+
+The reviewed candidate changes the eight planned production files (+491/-156 lines) and seven existing test files (+1060/-61 lines). It adds 20 Main cases, 29 Host OAuth cases and two stored-schema cases, and adjusts existing direct callers to await start without weakening their behavior assertions. The extra volume over the estimate covers original-publication barriers, real caller cancellation and separate clean/uncertain preclaim custody. Main OAuth is 582 lines and Host OAuth is 733 lines; the existing 800-line production cap is unchanged. Complexity remains 8/10.
+
+Independent source reviews covered both owners, actual callers, original receipt replay, helper export and test barriers. They caught and corrected two draft issues before publication: preparation must capture the caller's original context before the first journal await; a receipt appearing during derivation or cleanup must permanently prevent a clean preclaim reservation release. These were draft findings, not claimed executions against the published baseline. A final source check also corrected the new import ordering.
+
+The local executor is unavailable. The planned local RED step, new runtime tests, compiler checks and hooks have not run for this candidate; no local PASS is claimed. Delivery uses the existing PR branch and the ordinary source-triggered CI. The ready-PR selectors include all affected files: the Host test job builds the package, strictly checks its tests and executes tests/*.test.ts; the Main shards include the three changed Vitest files; validate includes workspace types/build and the unchanged source-size guard. Those jobs must actually succeed on the resulting source, including the existing G1b/G1c and related integration tests. Source review or the presence of a queued job is not execution evidence.
+
+The exact candidate preserves the independently published Desktop process catalog changes. No manual workflow control, CI rule change, merge into main, default Host activation, dependency/runtime pin change or native acceptance claim accompanies this delivery. CodeQL/G2 investigation and separately owned genuine native/macOS qualification remain distinct outstanding checks.
+
+## Recovered execution and original-cleanup presentation correction
+
+After publication of d4f4d989, the executor recovered. The complete source was restored and its Git tree matched c6da51a18c8471cbd36a54d19ce2d841c0d6f93d. Checks used pinned Node 24.21.0 and native TypeScript 7.0.2, unchanged compiler options, and the existing Vitest 3.2.6 installation (within the declared ^3.2.5 range); no dependencies were installed or changed.
+
+Selected regressions were then executed against the original eight production files: all four actual OpenCode/Claude caller-cancellation cases failed, as did the Host fingerprint case and both Main secret/empty-field cases. The latter two used only a temporary test resolver alias to the existing helper, because the original package had no new subpath export; the earlier collection error is not counted as a behavioral failure. All original production logic remained unchanged for these RED checks.
+
+On the published G1d production, Host build passed, the source-size guard checked 5548 production files with the unchanged 139 frozen exceptions, and scoped strict checks passed for eleven related Host test files and eight Main files with six existing ambient declarations. The combined eleven-file Host runtime cohort passed 172/172, zero skipped, including the G1b/G1c cases, new G1d races, real canonical Desktop process frames and authenticated HTTP/MCP paging.
+
+The first complete eight-file Main run exposed seven failures: six existing presentation cases and the controlled-process E2E retained the old instructions after cancellation. The new synchronous cancellation fence correctly stopped polling, but cancel itself did not project the validated original Host cleanup response. Four additional cases reproduced the same defect for completed, held, failed and cancelling replies. The correction adds three logical production lines after snapshot validation and the final original-token check, emitting only observed cleanup states without presentation. Only an actual cancelled state still returns ok:true; all admission guards, late-effect fences, immutable receipts and Host custody remain unchanged. Tests add 31 lines and replace one fixture default with an optional override whose default preserves the old behavior. Complexity is 2/10 for this follow-up.
+
+With that correction, the complete Main cohort passed 223/223 across eight files, zero skipped. It includes actual Main IPC, captured Desktop ownership, a standalone Host and a separate TEST process, plus new and legacy replay, cancellation barriers, complete process catalog reconstruction and snapshot paging. It launches no vendor CLI, uses only TEST roots and loopback HTTP, and does not qualify genuine native/macOS behavior. The normal pre-commit formatter applies only to the changed Main source; the existing production size limit remains intact.
+
+These results are finite local execution evidence. Required whole-PR CI on the resulting commit, the open CodeQL/G2 investigation and separately owned native/macOS acceptance still require their own successful results. No CI controls, protection changes, default activation, runtime pin changes or merge into main are part of this correction.

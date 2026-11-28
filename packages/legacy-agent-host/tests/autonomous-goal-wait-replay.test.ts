@@ -7,8 +7,9 @@ import { MemberWorkSyncReporter } from '../dist/work-sync/policy/core/applicatio
 import { inspectGoalWaits } from '../dist/work-sync/inspectGoalWaits.js';
 import { goalWaitKey } from '../dist/work-sync/policy/core/domain/GoalWaitPolicy.js';
 import type { GoalContinuation, GoalStatus } from '../dist/team/goalContracts.js';
-import type { CommandReceipt } from '../dist/team/contracts.js';
-import type { WorkSyncCommandReceipt } from '../dist/work-sync/commandContracts.js';
+import { TeamOwnerError, type CommandReceipt } from '../dist/team/contracts.js';
+import { listTeamCommandEntries, teamCommandPath } from '../dist/team/commandEntries.js';
+import { workSyncCommandFingerprint, type WorkSyncCommandReceipt } from '../dist/work-sync/commandContracts.js';
 import type { GoalWaitReport } from '../dist/work-sync/policy/core/domain/GoalWaitPolicy.js';
 import type { MemberWorkSyncStatus } from '../dist/work-sync/policy/contracts/types.js';
 import { eventually, goalHost, success } from './fixtures/autonomous-goal-host.ts';
@@ -169,6 +170,60 @@ function waitReports(f: WaitHost): WorkSyncCommandReceipt[] {
   return f.teamStore.fenced(() => f.teamStore.list<WorkSyncCommandReceipt>('commands'))
     .filter(row => row.family === 'work-sync' && row.operation === 'report' && row.phase === 'completed');
 }
+
+test('self-consistent unsupported retained report or wait facts hold after the original receipt decoder', async t => {
+  const f = await waitGoal(t), wait = { ...baseWait(), status: 'pending' as const };
+  const status = await f.tool('lead', 'member_work_sync_status', { commandId: 'TEST-ordinary-status' }) as MemberWorkSyncStatus;
+  assert.ok(status.reportToken);
+  const ordinaryResult = await f.tool('lead', 'member_work_sync_report', {
+    commandId: 'TEST-ordinary-report', state: 'caught_up', taskIds: [],
+    agendaFingerprint: status.agenda.fingerprint, reportToken: status.reportToken,
+  }) as { accepted: boolean };
+  assert.equal(ordinaryResult.accepted, true, JSON.stringify(ordinaryResult));
+  const ordinary = waitReports(f).find(row => row.commandId === 'TEST-ordinary-report')!;
+  assert.deepEqual(inspectGoalWaits([ordinary], [], f.goal()!.deadlineAt), [], 'an ordinary report has no required wait');
+
+  await acceptedWait(f, 'TEST-required-retained-wait', wait);
+  const original = waitReports(f).find(row => row.commandId === 'TEST-required-retained-wait');
+  assert.ok(original);
+  const path = teamCommandPath(original.commandId), debits = structuredClone(f.goal()!.debits);
+  const submits = f.session().submits.length;
+  const write = (receipt: WorkSyncCommandReceipt) => f.teamStore.fenced(() => f.teamStore.write(path, receipt));
+  const read = () => f.teamStore.fenced(() => listTeamCommandEntries(f.teamStore));
+  const held = (error: unknown) => error instanceof TeamOwnerError && error.code === 'hold';
+  try {
+    const payload = original.payload as Record<string, unknown>;
+    for (const [label, unsupportedPayload] of [
+      ['wait-null', { ...payload, wait: null }],
+      ['wait-future-kind', { ...payload, wait: { ...wait, kind: 'future-ci' } }],
+      ['wait-future-field', { ...payload, wait: { ...wait, futureVersionField: true } }],
+      ['payload-null', null], ['payload-string', 'future-report'],
+      ['payload-number', 1], ['payload-boolean', true], ['payload-array', [payload]],
+    ] as const) {
+      // Model a self-consistent future retained fact, not a value the current MCP can accept.
+      // Original Runtime/input authority and all goal debits remain untouched.
+      const retained = JSON.parse(JSON.stringify({ ...original, payload: unsupportedPayload })) as WorkSyncCommandReceipt;
+      write(retained);
+      assert.throws(read, held, 'ordinary payload corruption is already held by the unchanged fingerprint guard');
+      retained.fingerprint = workSyncCommandFingerprint(retained);
+      write(retained);
+      assert.deepEqual(read().find(row => row.commandId === original.commandId), retained,
+        'the existing outer decoder accepts this self-consistent retained receipt');
+      assert.throws(() => inspectGoalWaits([retained], [], f.goal()!.deadlineAt), held, label);
+      assert.deepEqual(await f.tool('lead', 'goal_propose', {
+        commandId: 'TEST-unsupported-wait-proposal-' + label, result: 'TEST retained check still needs an understood outcome',
+      }), { error: { code: 'hold' } }, label);
+      assert.equal(f.goal()!.disposition, 'active');
+      assert.equal(f.goal()!.proposal, undefined);
+      assert.equal(f.goal()!.published, undefined);
+    }
+  } finally { write(original); }
+  const restored = inspectGoalWaits(waitReports(f), [], f.goal()!.deadlineAt);
+  assert.equal(restored.length, 1);
+  assert.equal(restored[0]!.pending, true);
+  assert.deepEqual(f.goal()!.debits, debits);
+  assert.equal(f.session().submits.length, submits);
+});
 
 test('explicit failed-check replacement verifies repaired work without discarding independent pending CI', async t => {
   const f = await waitGoal(t, { solo: true, capture: true }), original = baseWait();
