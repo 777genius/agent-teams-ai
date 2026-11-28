@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { pageProcessCatalog } from '../../../packages/legacy-agent-host/src/process/pageProcessCatalog';
+import { parseBackendOperation } from '../../../src/features/agent-backend/main/adapters/input/validateBackendOperation';
+import { projectBackendResult } from '../../../src/features/agent-backend/main/adapters/output/projectBackendResult';
+
 import { BackendOperationsFacade } from '../../../src/features/agent-backend/main/adapters/input/BackendOperationsFacade';
 import { projectDeletedTasks } from '../../../src/features/agent-backend/main/adapters/output/projectDeletedTasks';
 import { projectTeamSnapshot } from '../../../src/features/agent-backend/main/adapters/output/projectTeamSnapshot';
@@ -31,6 +35,7 @@ import type {
 } from '../../../src/features/agent-backend/contracts/launch';
 import type { AgentBackendApi } from '../../../src/features/agent-backend/contracts/operations';
 import type { BackendRuntimeSnapshot } from '../../../src/features/agent-backend/contracts/operations';
+import type { BackendProcess } from '../../../src/features/agent-backend/contracts/processes';
 import type { BackendRosterConfiguration } from '../../../src/features/agent-backend/contracts/roster';
 import type { BackendTeamSnapshot } from '../../../src/features/agent-backend/contracts/teamSnapshot';
 import type { TeamsAPI } from '../../../src/shared/types/api';
@@ -1282,3 +1287,102 @@ describe('legacy liveness with explicitly unconfigured Host discovery', () => {
     expect(f.legacy.getData).not.toHaveBeenCalled();
   });
 });
+
+it('Desktop process paging reconstructs fresh capabilities after an independently paginated product snapshot', async () => {
+  const f = fixture();
+  const originalInvoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+  const rows: BackendProcess[] = Array.from({ length: 250 }, (_, index) => ({
+    id: `TEST-process-${index}`, pid: 1001 + index, label: `TEST original process ${index}`,
+    registeredAt: '2026-11-28T00:00:00.000Z', command: 'X'.repeat(4096),
+    processRef: `p1:TEST-process-${index}:${'a'.repeat(64)}`,
+    observation: 'same-live', canTerminate: true,
+  }));
+  const pending = rows[249];
+  if (!pending) throw new Error('Missing TEST pending row');
+  pending.canTerminate = false;
+  pending.pendingStop = {
+    commandId: 'TEST-original-stop', originalProcessRef: pending.processRef, native: 'unknown',
+  };
+  const snapshotRows = rows.map(row => {
+    const snapshot = { ...row, observation: 'unknown' as const, canTerminate: false };
+    delete snapshot.command;
+    return snapshot;
+  });
+  expect(Buffer.byteLength(JSON.stringify(rows))).toBeGreaterThan(1024 * 1024);
+  const cursor = '1.' + 'b'.repeat(64);
+  const secondTask = { ...f.snapshot.tasks[0], id: '2', subject: 'TEST continued task', status: 'in_progress' as const };
+  const first = { ...f.snapshot, processTotal: rows.length, processes: snapshotRows.slice(0, 125),
+    messages: f.snapshot.messages.slice(0, 1), nextCursor: cursor };
+  const second = { ...f.snapshot, processTotal: rows.length, processes: snapshotRows.slice(125),
+    tasks: [secondTask], messages: f.snapshot.messages.slice(1), nextCursor: null };
+  const processPages: unknown[] = [];
+  vi.mocked(f.backend.invoke).mockImplementation(async request => {
+    if (request.operation === 'team.snapshot')
+      return { ok: true, value: projectTeamSnapshot(request.payload.cursor ? second : first) };
+    if (request.operation !== 'process.list') return originalInvoke(request);
+    const parsed = parseBackendOperation(request);
+    if (parsed.operation !== 'process.list') throw new Error('Wrong TEST process request');
+    const page = pageProcessCatalog({
+      rows, key: 'TEST-original-process-catalog',
+      ...(parsed.payload.cursor === undefined ? {} : { cursor: parsed.payload.cursor }),
+    });
+    processPages.push(page);
+    return projectBackendResult(parsed, { ok: true, value: JSON.parse(JSON.stringify(page)) });
+  });
+  const data = await createHostTeamsApi(f.legacy, f.backend).getData(f.key);
+  expect(data.tasks.map(task => task.id)).toEqual(['1', '2']);
+  expect(data.processes).toEqual(rows);
+  expect(data.processes?.[0]).toMatchObject({ observation: 'same-live', canTerminate: true });
+  expect(data.processes?.[249]?.pendingStop).toEqual(pending.pendingStop);
+  expect(processPages.length).toBeGreaterThan(1);
+  expect(processPages.every(page => Buffer.byteLength(JSON.stringify(page)) <= 240 * 1024)).toBe(true);
+  const processRequests = vi.mocked(f.backend.invoke).mock.calls
+    .filter(([request]) => request.operation === 'process.list');
+  expect(processRequests).toHaveLength(processPages.length);
+  expect(processRequests.every(([request]) => request.handle.handleId === 'TEST-original-A')).toBe(true);
+  expect(processRequests[0]?.[0].payload).toEqual({});
+  expect(processRequests.slice(1).every(([request]) => 'cursor' in request.payload)).toBe(true);
+  expect(f.legacy.getData).not.toHaveBeenCalled();
+});
+
+it.each(['scope', 'read-order', 'handle', 'handle-before-list'] as const)(
+  'does not publish a partial fresh process catalog when the original %s changes',
+  async mode => {
+    const f = fixture(), order = new TeamProductReadOrder();
+    const originalInvoke = vi.mocked(f.backend.invoke).getMockImplementation()!;
+    const connections = await f.backend.getConnections(), binding = connections.bindings[0];
+    if (!binding) throw new Error('Missing TEST original binding');
+    vi.mocked(f.backend.getConnections).mockResolvedValue(connections);
+    const original = f.snapshot.processes?.[0];
+    if (!original) throw new Error('Missing TEST original process');
+    const rows: BackendProcess[] = [
+      { ...original, observation: 'same-live', canTerminate: true },
+      { ...original, id: 'TEST-other-process', pid: 1002,
+        processRef: 'p1:TEST-other-process:' + 'd'.repeat(64), observation: 'same-live', canTerminate: true },
+    ];
+    const cursor = '1.' + 'a'.repeat(64), dispatched: string[] = [];
+    let current = true, reads = 0;
+    vi.mocked(f.backend.invoke).mockImplementation(async request => {
+      if (request.operation === 'team.launch.read' && mode === 'handle-before-list')
+        binding.handle = { handleId: 'TEST-replacement-owner' };
+      if (request.operation !== 'process.list') return originalInvoke(request);
+      dispatched.push(request.handle.handleId);
+      reads++;
+      if (reads === 2) {
+        if (mode === 'scope') current = false;
+        if (mode === 'read-order') order.invalidateReads('TEST-original-A');
+        if (mode === 'handle') binding.handle = { handleId: 'TEST-replacement-owner' };
+      }
+      const value = {
+        kind: 'process-catalog-page', processes: [rows[reads - 1]],
+        revision: 'c'.repeat(64), total: 2, nextCursor: reads === 1 ? cursor : null,
+      };
+      return projectBackendResult(parseBackendOperation(request), { ok: true, value });
+    });
+    const api = createHostTeamsApi(f.legacy, f.backend, () => () => current, order);
+    await expect(api.getData(f.key)).rejects.toThrow();
+    expect(reads).toBe(mode === 'handle-before-list' ? 0 : 2);
+    expect(dispatched.every(handleId => handleId === 'TEST-original-A')).toBe(true);
+    expect(f.legacy.getData).not.toHaveBeenCalled();
+  }
+);

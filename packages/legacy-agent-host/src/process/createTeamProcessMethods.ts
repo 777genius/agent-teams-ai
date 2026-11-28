@@ -1,6 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import type { JsonValue } from '../contracts.js';
 import { TeamOwnerError } from '../team/contracts.js';
+import { digest } from '../team/identity.js';
+import { pageProcessCatalog } from './pageProcessCatalog.js';
 import { projectProcessReceipt as receipt } from './projectProcessViews.js';
 import type { createTeamProcessCommands } from './TeamProcessCommands.js';
 import type { ProcessMetadataSelector } from './registeredProcessContracts.js';
@@ -30,6 +33,7 @@ const reference = (value: unknown) => {
 export function createTeamProcessMethods(options: {
   resolve(binding: unknown): { commands: Commands; assertCurrent(): void };
 }) {
+  const pageKey = randomUUID();
   const methods: Record<string, { lane: 'control'; handle(raw: unknown): Promise<JsonValue> }> = {};
   for (const method of [
     'register',
@@ -56,11 +60,22 @@ export function createTeamProcessMethods(options: {
             return action();
           };
           switch (method) {
-            case 'list':
-              object(envelope.payload, []);
-              result = await call(() => target.commands.windows
+            case 'list': {
+              const payload = object(envelope.payload, ['cursor']);
+              const cursor = payload.cursor;
+              if (cursor !== undefined &&
+                  (typeof cursor !== 'string' ||
+                   /^[1-9][0-9]{0,8}\.[a-f0-9]{64}$/.exec(cursor)?.[0] !== cursor))
+                throw new Error('process:invalid');
+              // Bind before native observation; another request id never changes the original catalog.
+              const key = digest({ pageKey, binding: envelope.binding });
+              const rows = await call(() => target.commands.windows
                 ? target.commands.windows.list(deadline) : target.commands.list());
+              target.assertCurrent();
+              result = pageProcessCatalog({ rows, key,
+                ...(cursor === undefined ? {} : { cursor }) });
               break;
+            }
             case 'pending.read':
               object(envelope.payload, []);
               result = call(() => target.commands.pending());

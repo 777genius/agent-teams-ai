@@ -1,6 +1,6 @@
 # PR #982: bounded Desktop process catalog
 
-Status: reviewed plan, published before implementation; implementation is not applied.
+Status: implementation candidate delivered after the independently reviewed plan; execution qualification is pending.
 Baseline: e88c9a2e87a0d916312ad3c306221e57cd10a405.
 Finding: https://github.com/777genius/agent-teams-ai/pull/982#issuecomment-7231365203.
 
@@ -44,7 +44,7 @@ getData captures a copy of the original handle once and uses this reader for the
 
 ## Required regression evidence
 
-Before applying production changes, execute a finite baseline regression that reaches the real Desktop handler and demonstrates the reported large accepted catalog cannot pass the current HostOutput limit.
+The original independent Codex review reproduced the large accepted catalog through the real Desktop handler and HostOutput on e16383cc5a65706d508acdb6bc8965655125f0ba; the relevant source blobs are unchanged through the published plan. Retain that reported execution as baseline evidence. The new regression reaches the same handler and asserts actual frame admission before inspecting a page, so the old unbounded response fails at the transport boundary. Local execution of this new regression remains pending.
 
 After the change:
 - Real canonical process registration/public projection of at least 250 4096-character command rows, actual createTeamProcessMethods and actual HostOutput: each bounded frame accepted, no priority_overflow, decoded wire pages reconstruct every exact row in order under the unchanged default and review-v1 process frame cap.
@@ -63,6 +63,14 @@ Use TEST-only process ports and canonical registration metadata, not real vendor
 - The cursor tests must isolate identity from revision: identical rows under another validated binding in the same factory, and identical rows/binding in a new factory, both reject the old cursor. A malformed cursor performs zero Owner list reads.
 - The original registry is bounded to 8 MiB and 1024 rows, with at most 64 additional retained missing rows within the same 1024 total. The unchanged 128-page ceiling accommodates accepted whole-record pages; no larger cap is needed.
 - These are source reviews, not execution results. The executable baseline, strict checks and current-source native acceptance remain pending while the local executor is unavailable.
+
+## Verification execution during the local environment outage
+
+The local executor became unavailable before this slice could run. Independent source reviews approved delivering the complete candidate through the existing GitHub PR and validating it with the ordinary CI triggered by that source commit. This changes where validation runs; it does not relax a validation gate.
+
+The independent baseline reproduction above is attributed to the original review, not to a local run by this implementation owner. The new Host and Main/renderer regressions, canonical package build, strict test compilation and current-source native acceptance are all pending at delivery. No local hook, compiler, unit, native or end-to-end PASS is claimed.
+
+The canonical Host test command builds the package, checks tsconfig.test.json, and includes tests/*.test.ts. Normal PR CI must establish the result. A failure requires a source or fixture correction followed by the normal checks on the resulting commit. No manual CI run, rerun, cancellation, change of limits or substitution of skipped/old results is authorized by this note.
 
 ## Delivery and coordination
 

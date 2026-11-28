@@ -9,7 +9,7 @@ import { isGroupUuid } from '@agent-teams/legacy-agent-host/group-chats/policy';
 import { taskAttachmentReadSchema } from '@agent-teams/legacy-agent-host/stopped-team-import';
 import { parseStandaloneSlashCommand } from '@shared/utils/slashCommands';
 
-import { isProcessRef } from '../../../contracts/processes';
+import { isProcessCatalogCursor, isProcessRef } from '../../../contracts/processes';
 
 import { InvalidBackendOperation, object, stringArray, text } from './backendOperationInput';
 import { parseCrossTeamSend } from './crossTeamValues';
@@ -73,12 +73,17 @@ function payload(
       return { capability };
     }
     case 'host.recovery.capture':
-    case 'process.list':
     case 'process.pending.read':
     case 'crossTeam.lookup':
     case 'command.lookup':
       object(value, []);
       return {};
+    case 'process.list': {
+      const p = object(value, ['cursor']);
+      if (p.cursor === undefined) return {};
+      if (!isProcessCatalogCursor(p.cursor)) throw new InvalidBackendOperation();
+      return { cursor: p.cursor };
+    }
     case 'crossTeam.outbox.read': {
       const p = object(value, ['cursor']);
       if (p.cursor === undefined) return {};
