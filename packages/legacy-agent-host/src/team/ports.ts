@@ -174,6 +174,8 @@ export interface TeamStore {
   read<T>(name: string, decode?: (text: string) => T): T | undefined;
   write(name: string, value: unknown): void;
   list<T>(directory: string): T[];
+  /** Pure decoding of every freshly enumerated/read JSON file; missing enumerated files fail closed. */
+  listDecoded?<T>(directory: string, decode: (bytes: Uint8Array) => T): T[];
   productFingerprint(teamName: string): string;
 }
 

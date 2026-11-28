@@ -67,7 +67,7 @@ async function fixture() {
     store,
     binding: f.binding,
     coordinator,
-    assertWriter() {},
+    assertWriter: f.options.assertCurrent,
     withReadAuthority: (operation) =>
       f.owner.withLaunchAuthority('native-connection', 'read', operation),
   });
@@ -339,7 +339,7 @@ it('bound MCP status/report follow-up settles one original command and cannot re
       }
       return f.identity;
     },
-    assertCurrent() {},
+    assertCurrent: f.options.assertCurrent,
   });
   try {
     const port = feature.member({
@@ -388,6 +388,59 @@ it('bound MCP status/report follow-up settles one original command and cannot re
     await feature.close();
   }
 });
+
+it.each(['status', 'report'] as const)(
+  'refuses native WorkSync %s without effects when the profile writer is revoked during identity await',
+  async (operation) => {
+    const f = await fixture();
+    const before = f.store.list('commands');
+    let identityObserved = false;
+    const feature = createHostWorkSyncComposition({
+      teamsBasePath: join(f.root, 'teams'),
+      identity: async () => {
+        await Promise.resolve();
+        identityObserved = true;
+        f.revokeWriter();
+        return f.identity;
+      },
+      assertCurrent: f.options.assertCurrent,
+    });
+    try {
+      const port = feature.member({
+        teamId: f.binding.teamId,
+        teamName: f.binding.teamName,
+        owner: f.owner,
+        providerId: 'anthropic',
+        sourceRevision: runtimeDigest({ binding: f.source, configuration: f.record.config }),
+        captureSource: () => captureNativeInputAuthority(f.options),
+      });
+      const commandId = 'TEST-revoked-writer-' + operation;
+      const call = operation === 'status'
+        ? port.status(commandId, {})
+        : port.report(commandId, {
+            state: 'still_working',
+            agendaFingerprint: 'TEST-agenda',
+            reportToken: 'TEST-report-token',
+          });
+      await expect(call).rejects.toThrow(/Profile writer unavailable/);
+      expect(identityObserved).toBe(true);
+      expect(f.options.assertCurrent).toThrow(/Profile writer unavailable/);
+      expect(f.owner.workSyncCommands('native-connection').lookup(commandId)).toBeUndefined();
+      expect(f.store.list('commands')).toEqual(before);
+      for (const path of [
+        f.paths.getMemberStatusPath(f.binding.teamName, 'alice'),
+        f.paths.getMemberReportsPath(f.binding.teamName, 'alice'),
+        f.paths.getMemberJournalPath(f.binding.teamName, 'alice'),
+        f.paths.getMetricsIndexPath(f.binding.teamName),
+        f.paths.getPendingReportsIndexPath(f.binding.teamName),
+        f.paths.getReportTokenSecretPath(f.binding.teamName),
+      ])
+        await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+    } finally {
+      await feature.close();
+    }
+  }
+);
 
 function createHttpToolCaller(endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>>) {
   let sequence = 0;
@@ -458,7 +511,7 @@ it.each([3, 6])(
     const feature = createHostWorkSyncComposition({
       teamsBasePath: join(f.root, 'teams'),
       identity: async () => f.identity,
-      assertCurrent: f.authority.assertCurrent,
+      assertCurrent: f.options.assertCurrent,
     });
     let endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>> | undefined;
     try {
@@ -477,6 +530,7 @@ it.each([3, 6])(
         expiresAtMs: 60_000,
         now: () => 1000,
         isCurrentBinding(captured) {
+          // This endpoint deliberately retains the fixture's original DO input.
           f.authority.assertCurrent();
           return runtimeDigest(captured) === runtimeDigest(binding);
         },
@@ -597,7 +651,7 @@ it('qualifies the 200/201 task boundary through the original Owner and HTTP MCP'
   for (let index = 1; index <= 200; index++) seed(index);
   const feature = createHostWorkSyncComposition({
     teamsBasePath: join(f.root, 'teams'), identity: async () => f.identity,
-    assertCurrent: f.authority.assertCurrent,
+    assertCurrent: f.options.assertCurrent,
   });
   let endpoint: Awaited<ReturnType<typeof startTeamMcpEndpoint>> | undefined;
   try {
@@ -612,6 +666,7 @@ it('qualifies the 200/201 task boundary through the original Owner and HTTP MCP'
       connection: { ...f.owner.connect('native-connection'), workSync: port },
       binding, expiresAtMs: 60_000, now: () => 1000,
       isCurrentBinding(captured) {
+        // This endpoint deliberately retains the fixture's original DO input.
         f.authority.assertCurrent();
         return runtimeDigest(captured) === runtimeDigest(binding);
       },
@@ -723,7 +778,7 @@ it('refuses an unrepresentable historical accepted fingerprint before canonical 
   const feature = createHostWorkSyncComposition({
     teamsBasePath: join(f.root, 'teams'),
     identity: async () => f.identity,
-    assertCurrent: f.authority.assertCurrent,
+    assertCurrent: f.options.assertCurrent,
   });
   try {
     const port = feature.member({

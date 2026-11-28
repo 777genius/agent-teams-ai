@@ -207,6 +207,26 @@ export class TeamOwnerStore implements TeamStore {
     }
   }
 
+  listDecoded<T>(directory: string, decode: (bytes: Uint8Array) => T): T[] {
+    const target = join(this.directory, directory);
+    let names: string[];
+    try {
+      names = readdirSync(target);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
+      throw new TeamOwnerError('hold');
+    }
+    return names.filter((name) => name.endsWith('.json')).map((name) => {
+      try {
+        // A disappeared enumerated file is not an absent command directory.
+        // Decoder results, including false, are distinct from malformed JSON.
+        return decode(readFileSync(join(target, name)));
+      } catch {
+        throw new TeamOwnerError('hold');
+      }
+    });
+  }
+
   /** Exact bytes establish not-applied after a synchronous policy rejection. */
   productFingerprint(teamName: string): string {
     const files: Record<string, string> = {};
