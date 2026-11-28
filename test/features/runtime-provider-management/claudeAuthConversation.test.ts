@@ -152,7 +152,7 @@ function fixture() {
       current = false;
     },
     authorize: async () => {
-      start();
+      await start();
       await until(() => !!login());
       login().child.stdout.write(
         "Opening browser to sign in…\nIf the browser didn't open, visit: https://TEST.invalid/authorize?state=TEST-original\nPaste code here if prompted > "
@@ -179,13 +179,12 @@ describe('captured official Claude sign-in', () => {
       ['auth', 'login', '--claudeai'],
     ]);
     expect(f.owner.authorization(f.scope)).toMatchObject({ browserOwner: 'native' });
-    expect(
-      f.owner.complete({
-        ...f.scope,
-        commandId: 'TEST-original-code',
-        code: 'TEST-code#TEST-original',
-      }).phase
-    ).toBe('completing');
+    const completing = await f.owner.complete({
+      ...f.scope,
+      commandId: 'TEST-original-code',
+      code: 'TEST-code#TEST-original',
+    });
+    expect(completing.phase).toBe('completing');
     expect(f.login().input).toEqual(['TEST-code#TEST-original\n']);
     f.finish();
     await until(() => f.owner.read(f.scope)?.phase === 'completed');
@@ -211,7 +210,7 @@ describe('captured official Claude sign-in', () => {
       })()
     ).toMatch(/^native:[a-f0-9]{64}$/u);
     expect(f.login().input).toEqual([]);
-    f.start();
+    await f.start();
     expect(f.launches.filter((row) => row.args[1] === 'login')).toHaveLength(1);
   });
 
