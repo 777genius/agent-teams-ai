@@ -45,7 +45,9 @@ function arrange(
   const child = { pid: root.pid, exitCode: null, signalCode: null, kill } as unknown as ChildProcess;
   return { child, kill, commands, unread: () => pending.length };
 }
-beforeEach(() => execMock.mockReset());
+beforeEach(() => {
+  execMock.mockReset();
+});
 
 describe('identity-bound original Win32 process census', () => {
   it('rejects malformed identities and recycled parent relationships', () => {
