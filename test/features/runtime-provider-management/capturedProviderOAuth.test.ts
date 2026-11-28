@@ -31,6 +31,7 @@ async function fixture(
     authorizationUrl?: string;
     instructions?: string;
     holdAuto?: boolean;
+    cancelPhase?: 'completed' | 'held' | 'failed' | 'cancelling';
     sequence?: number;
     read?: (snapshot: ProviderOAuthSnapshot) => ProviderOAuthSnapshot | Promise<ProviderOAuthSnapshot>;
   } = {}
@@ -88,7 +89,7 @@ async function fixture(
         sequence++;
       }
       if (operation === 'oauth.cancel' && phase !== 'completed') {
-        phase = 'cancelled';
+        phase = options.cancelPhase ?? 'cancelled';
         sequence++;
       }
       const snapshot: ProviderOAuthSnapshot = {
@@ -308,6 +309,35 @@ it('retains sanitized device instructions while the original auto callback waits
   } finally {
     await f.oauth.cancel({ operationId: f.input.operationId });
     await pending;
+  }
+});
+
+it.each([
+  ['completed', 'completing'],
+  ['held', 'failed'],
+  ['failed', 'failed'],
+  ['cancelling', 'cancelled'],
+] as const)('clears original instructions for a %s cancel response without confirming cancellation', async (phase, publicPhase) => {
+  const f = await fixture('auto', { holdAuto: true, cancelPhase: phase });
+  const pending = f.oauth.connect(f.target, f.input).catch(() => undefined);
+  try {
+    await vi.waitFor(() =>
+      expect(f.calls.filter((call) => call.operation === 'oauth.complete')).toHaveLength(1)
+    );
+    expect(f.progress.at(-1)?.instructions).toContain(f.instructionPrefix);
+    expect(await f.oauth.cancel({ operationId: f.input.operationId })).toMatchObject({ ok: false });
+    await pending;
+    expect(f.progress.at(-1)).toMatchObject({
+      operationId: f.input.operationId, phase: publicPhase, instructions: null,
+    });
+    expect(f.progress.at(-1)?.authorizationUrl).toBeUndefined();
+    expect(f.calls.filter((call) => call.operation === 'oauth.start')).toHaveLength(1);
+    expect(f.calls.filter((call) => call.operation === 'oauth.complete')).toHaveLength(1);
+    expect(f.openExternal).toHaveBeenCalledTimes(1);
+  } finally {
+    await f.oauth.cancel({ operationId: f.input.operationId });
+    await pending;
+    await rm(f.directory, { recursive: true, force: true });
   }
 });
 

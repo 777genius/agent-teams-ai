@@ -59,18 +59,25 @@ interface PendingOAuth {
   startAttempted: boolean;
 }
 const captureIntent = (value: ProviderOAuthIntent | null): ProviderOAuthIntent | null =>
-  value === null ? null : Object.freeze({
-    ...value,
-    ...(value.fingerprintKdf === undefined ? {} : {
-      fingerprintKdf: Object.freeze({ ...value.fingerprintKdf }),
-    }),
-  });
+  value === null
+    ? null
+    : Object.freeze({
+        ...value,
+        ...(value.fingerprintKdf === undefined
+          ? {}
+          : {
+              fingerprintKdf: Object.freeze({ ...value.fingerprintKdf }),
+            }),
+      });
 const sameIntent = (left: ProviderOAuthIntent | null, right: ProviderOAuthIntent): boolean =>
   left !== null && canonicalManagementValue(left) === canonicalManagementValue(right);
 const captureConnectInput = (input: OAuthConnectInput): OAuthConnectInput => {
   const captured = { ...input, ...(input.fields ? { fields: { ...input.fields } } : {}) };
-  if (!validOAuthOperationId(captured.operationId) ||
-      !Number.isSafeInteger(captured.methodIndex) || captured.methodIndex < 0)
+  if (
+    !validOAuthOperationId(captured.operationId) ||
+    !Number.isSafeInteger(captured.methodIndex) ||
+    captured.methodIndex < 0
+  )
     throw new Error('OAuth intent invalid');
   return captured;
 };
@@ -98,8 +105,10 @@ export class CapturedProviderOAuth {
   connect(target: CapturedProviderManagement, input: OAuthConnectInput): Promise<void> {
     try {
       const captured = captureConnectInput(input);
-      return this.enter(captured.operationId, ['direct', target.targetId, captured],
-        async () => ({ target, input: captured })).then(() => undefined);
+      return this.enter(captured.operationId, ['direct', target.targetId, captured], async () => ({
+        target,
+        input: captured,
+      })).then(() => undefined);
     } catch (error) {
       return Promise.reject(error);
     }
@@ -110,7 +119,10 @@ export class CapturedProviderOAuth {
     prepare: (assertCurrent: () => void) => Promise<PreparedOAuth | null>
   ): Promise<CapturedProviderManagement | null> {
     try {
-      const captured = { ...input, metadata: input.metadata ? { ...input.metadata } : input.metadata };
+      const captured = {
+        ...input,
+        metadata: input.metadata ? { ...input.metadata } : input.metadata,
+      };
       if (!validOAuthOperationId(captured.oauthOperationId))
         throw new Error('OAuth intent invalid');
       return this.enter(captured.oauthOperationId, ['prepared', captured], prepare);
@@ -133,10 +145,15 @@ export class CapturedProviderOAuth {
     }
     const completion = Promise.withResolvers<CapturedProviderManagement | null>();
     const pending: PendingOAuth = {
-      operationId, identity, cancelled: false, result: completion.promise,
+      operationId,
+      identity,
+      cancelled: false,
+      result: completion.promise,
       original: Promise.resolve().then(async () =>
-        captureIntent(await this.deps.intents.read(operationId))),
-      createAttempted: false, startAttempted: false,
+        captureIntent(await this.deps.intents.read(operationId))
+      ),
+      createAttempted: false,
+      startAttempted: false,
     };
     this.active.set(operationId, pending);
     // Capture the caller's original context now, before the journal read can yield.
@@ -144,7 +161,8 @@ export class CapturedProviderOAuth {
     let preparation: Promise<PreparedOAuthOutcome>;
     try {
       preparation = Promise.resolve(prepare(() => this.assertPending(pending))).then(
-        (value) => ({ value }), (error: unknown) => ({ error })
+        (value) => ({ value }),
+        (error: unknown) => ({ error })
       );
     } catch (error) {
       preparation = Promise.resolve({ error });
@@ -153,8 +171,14 @@ export class CapturedProviderOAuth {
       if (this.active.get(operationId) === pending) this.active.delete(operationId);
     };
     void this.admit(pending, preparation).then(
-      (target) => { retire(); completion.resolve(target); },
-      (error: unknown) => { retire(); completion.reject(error); }
+      (target) => {
+        retire();
+        completion.resolve(target);
+      },
+      (error: unknown) => {
+        retire();
+        completion.reject(error);
+      }
     );
     return pending.result;
   }
@@ -167,7 +191,10 @@ export class CapturedProviderOAuth {
   private values(targetId: string, input: OAuthConnectInput): unknown[] {
     return [
       ...(input.runtimeId === 'claude' ? ['claude'] : []),
-      targetId, input.providerId, input.methodIndex, input.authOptionId,
+      targetId,
+      input.providerId,
+      input.methodIndex,
+      input.authOptionId,
       Object.entries(input.fields ?? {}).sort(([a], [b]) => a.localeCompare(b)),
     ];
   }
@@ -178,25 +205,34 @@ export class CapturedProviderOAuth {
     input: OAuthConnectInput,
     saved: ProviderOAuthIntent
   ): Promise<CapturedProviderManagement> {
-    if (saved.operationId !== input.operationId || saved.targetId !== target.targetId ||
-        (saved.runtimeId ?? 'opencode') !== (input.runtimeId ?? 'opencode') ||
-        saved.providerId !== input.providerId || saved.methodIndex !== input.methodIndex ||
-        saved.authOptionId !== input.authOptionId)
+    if (
+      saved.operationId !== input.operationId ||
+      saved.targetId !== target.targetId ||
+      (saved.runtimeId ?? 'opencode') !== (input.runtimeId ?? 'opencode') ||
+      saved.providerId !== input.providerId ||
+      saved.methodIndex !== input.methodIndex ||
+      saved.authOptionId !== input.authOptionId
+    )
       throw new Error('OAuth intent conflict');
     const values = this.values(saved.targetId, input);
-    const fingerprint = saved.fingerprintKdf === undefined
-      ? createHash('sha256').update(JSON.stringify(values)).digest('hex')
-      : (await deriveSecretFingerprint(values, saved.fingerprintKdf)).fingerprint;
+    const fingerprint =
+      saved.fingerprintKdf === undefined
+        ? createHash('sha256').update(JSON.stringify(values)).digest('hex')
+        : (await deriveSecretFingerprint(values, saved.fingerprintKdf)).fingerprint;
     this.assertPending(pending);
-    if (!secretFingerprintsEqual(saved.fingerprint, fingerprint) ||
-        !sameIntent(captureIntent(await this.deps.intents.read(saved.operationId)), saved))
+    if (
+      !secretFingerprintsEqual(saved.fingerprint, fingerprint) ||
+      !sameIntent(captureIntent(await this.deps.intents.read(saved.operationId)), saved)
+    )
       throw new Error('OAuth intent conflict');
     this.assertPending(pending);
     const original = await this.deps.restore(saved.targetId);
     this.assertPending(pending);
     if (original.targetId !== saved.targetId) throw new Error('OAuth intent conflict');
     const snapshot = this.snapshot(
-      await original.request('oauth.read', { operationId: saved.operationId }), saved, original
+      await original.request('oauth.read', { operationId: saved.operationId }),
+      saved,
+      original
     );
     this.assertPending(pending);
     if (snapshot.phase !== 'completed')
@@ -216,7 +252,8 @@ export class CapturedProviderOAuth {
       if ('error' in outcome) throw outcome.error;
       const prepared = outcome.value;
       if (!prepared) return null;
-      const input = captureConnectInput(prepared.input), target = prepared.target;
+      const input = captureConnectInput(prepared.input),
+        target = prepared.target;
       if (input.operationId !== pending.operationId) throw new Error('OAuth intent conflict');
       pending.target = target;
       if (previous) return await this.replay(pending, target, input, previous);
@@ -227,9 +264,12 @@ export class CapturedProviderOAuth {
       const intent: ProviderOAuthIntent = Object.freeze({
         schemaVersion: 1,
         ...(input.runtimeId === 'claude' ? { runtimeId: 'claude' as const } : {}),
-        operationId: input.operationId, targetId: target.targetId,
-        providerId: input.providerId, methodIndex: input.methodIndex,
-        authOptionId: input.authOptionId, displayName: input.displayName,
+        operationId: input.operationId,
+        targetId: target.targetId,
+        providerId: input.providerId,
+        methodIndex: input.methodIndex,
+        authOptionId: input.authOptionId,
+        displayName: input.displayName,
         fingerprint: derived.fingerprint,
         fingerprintKdf: Object.freeze({ ...derived.fingerprintKdf }),
       });
@@ -534,15 +574,18 @@ export class CapturedProviderOAuth {
     if (pending) pending.cancelled = true;
     const assertOriginalToken = () => {
       const current = this.active.get(operationId);
-      if (pending && current && current !== pending)
-        throw new Error('OAuth operation replaced');
+      if (pending && current && current !== pending) throw new Error('OAuth operation replaced');
     };
     try {
       let intent = await (pending?.original ?? this.deps.intents.read(operationId));
       assertOriginalToken();
       if (pending?.createAttempted) {
         let created: boolean | undefined;
-        try { created = await pending.creation; } catch { /* Reconcile the uncertain original only. */ }
+        try {
+          created = await pending.creation;
+        } catch {
+          /* Reconcile the uncertain original only. */
+        }
         assertOriginalToken();
         const retained = captureIntent(await this.deps.intents.read(operationId));
         assertOriginalToken();
@@ -565,14 +608,21 @@ export class CapturedProviderOAuth {
         if (!intent) return { ok: true };
       }
       if (!intent) return failed();
-      const target = pending?.target?.targetId === intent.targetId
-        ? pending.target : await this.deps.restore(intent.targetId);
+      const target =
+        pending?.target?.targetId === intent.targetId
+          ? pending.target
+          : await this.deps.restore(intent.targetId);
       assertOriginalToken();
       if (target.targetId !== intent.targetId) return failed();
       const snapshot = this.snapshot(
-        await target.request('oauth.cancel', { operationId }), intent, target
+        await target.request('oauth.cancel', { operationId }),
+        intent,
+        target
       );
       assertOriginalToken();
+      // Cancellation fences polling; publish the observed original cleanup without presentation.
+      if (['cancelled', 'completed', 'held', 'failed', 'cancelling'].includes(snapshot.phase))
+        this.emit(intent, snapshot);
       // A confirmed completion wins; cancelling never deletes those credentials.
       return snapshot.phase === 'cancelled' ? { ok: true } : failed();
     } catch {
